@@ -1,6 +1,40 @@
 {
   "releases": [
     {
+      "version": "0.24.0",
+      "date": "2026-11-13",
+      "notes": [
+        {
+          "ru": "Необязательные подписи и пропуск подписанта. У каждого места подписи на контрольной точке автор может поставить галочку «Подпись необязательна», в том числе на уже идущем маршруте. Если очередь дошла до подписанта, у которого все подписи необязательны, автор нажимает «Пропустить», и маршрут идёт дальше без перезапуска и без потери согласий.",
+          "en": "Optional signatures and skipping a signer. For each signature slot on a checkpoint the author can tick “Signature is optional”, even on a route that is already running. When it is the turn of a signer whose signatures are all optional, the author presses “Skip” and the route goes on without a restart and without losing approvals."
+        },
+        {
+          "ru": "Пропущенный подписант получает уведомление и письмо «подпись не требуется», событие пишется в журнал аудита. Если над документом уже стоит электронная подпись, плашка пропущенного остаётся, иначе документ фиксируется заново без неё. Вернуть пропущенного можно новой отправкой. Через MCP пропускать нельзя, только читать.",
+          "en": "A skipped signer gets a “signature not required” notice and email, and the event is recorded in the audit log. If an e-signature already stands over the document, the skipped signer's mark stays, otherwise the document is frozen again without it. A skipped signer can be brought back by sending a new version. MCP can read this but not skip."
+        },
+        {
+          "ru": "Пакет для сдачи не блокируется пропущенной или необязательной подписью. В КАК_ПРОВЕРИТЬ.txt она отмечена как не требуется. Пока маршрут не завершён, пакет не собирается, и вместо английской ошибки 400 карточка «Папка проекта» объясняет причину: шаг маршрута и кого ждём.",
+          "en": "The submission pack is not blocked by a skipped or optional signature, and HOW_TO_VERIFY.txt lists it as not required. While a route is not finished the pack cannot be built, and instead of an English 400 error the Project folder card explains why: the route step and who we are waiting for."
+        },
+        {
+          "ru": "Комментарии из превью PDF. В панели выделения появилась кнопка «Комментировать». Комментарий привязывается к LaTeX-исходнику через SyncTeX, а если место там не найдено или исходника нет, к месту на странице PDF. На полях страниц видны метки, сбоку панель «Комментарии», работает и на телефоне. На серверах с раннерами SyncTeX теперь возвращается вместе с PDF, поэтому заработали «В исходнике» и Ctrl+клик.",
+          "en": "Comments from the PDF preview. The selection bar has a new “Comment” button. A comment is anchored to the LaTeX source through SyncTeX, or to the place on the PDF page when the source is not found or there is none. Margin marks and a Comments panel show them, also on phones. On servers with runners SyncTeX now comes back with the PDF, so “In source” and Ctrl+click work."
+        },
+        {
+          "ru": "Регистрация: исключения из одобрения администратором. В настройках входа можно перечислить адреса и домены (hse.ru, *.hse.ru, name@example.com), которым одобрение не нужно. Исключение действует только для подтверждённой почты: после письма или при входе через единый вход. Строка «Проверить адрес» показывает результат до сохранения, пропуск по правилу записывается в журнал аудита.",
+          "en": "Registration: exemptions from admin approval. In the sign-in settings you can list addresses and domains (hse.ru, *.hse.ru, name@example.com) that do not need approval. The exemption applies only to a confirmed address: after the email or on single sign-on. The “Check address” line shows the result before saving, and a pass by rule is written to the audit log."
+        },
+        {
+          "ru": "Двойная точка после инициалов («Петров П. П..») исправлена на странице подписи, в карточке маршрута и в других местах. Страница подписи стала легче: редкие окна подгружаются только при открытии.",
+          "en": "The double dot after initials (“Petrov P. P..”) is fixed on the signing page, the route card and elsewhere. The signing page is lighter: rare dialogs load only when opened."
+        },
+        {
+          "ru": "На телефоне строка вкладок документа прокручивается с подсказкой у края, выбранная вкладка сама оказывается в поле зрения, а кнопка «…» остаётся на экране.",
+          "en": "On phones the document tab row scrolls with an edge hint, the selected tab scrolls into view, and the “…” button stays on screen."
+        }
+      ]
+    },
+    {
       "version": "0.23.0",
       "date": "2026-11-11",
       "notes": [

@@ -6,43 +6,15 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.24.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.23.0...v0.24.0) (2026-11-13)
+## [0.24.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.23.0...v0.24.0) - 2026-11-13
 
-
-### Features
-
-* **admin:** approval exemptions field and address check ([f3bc511](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f3bc5111065a35945963cfbc154007a2be8fa2a2))
-* **admin:** approval exemptions field and address check ([d1412a7](https://github.com/AlexeyShalaev/hse-doc-studio/commit/d1412a71f5aa0995ad7c22ce2f264c4eb48216a4))
-* **auth:** approval exemptions for confirmed addresses ([759af0a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/759af0a457da2ca89e861d41bc96cd41b1967c14))
-* **auth:** approval exemptions for confirmed addresses ([50d85a2](https://github.com/AlexeyShalaev/hse-doc-studio/commit/50d85a27c11c31f794531ac282d39483935ab831))
-* **db:** drop retired mail_outbox table in contract migration ([45f511e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/45f511e95dc1798e29c9d70866ceec58556f4ab4))
-* **db:** drop retired mail_outbox table in contract migration ([a2398bd](https://github.com/AlexeyShalaev/hse-doc-studio/commit/a2398bd9fbd052febca974b986b2f8e67895ca69))
-* **review:** comment threads from the PDF preview anchored via SyncTeX ([859429d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/859429d0fc484fb350885a0209a1304aaa34e15f))
-* **review:** comment threads from the PDF preview anchored via SyncTeX ([066e856](https://github.com/AlexeyShalaev/hse-doc-studio/commit/066e856df4d3a5e9b2bd540d45fc948c78871728))
-* **runner:** bring SyncTeX back from runner builds; e2e and help for PDF preview comments ([99d2f29](https://github.com/AlexeyShalaev/hse-doc-studio/commit/99d2f2940f366e372474124a8ed4300a6b7f39ef))
-* **runner:** bring SyncTeX back from runner builds; e2e and help for PDF preview comments ([e6a31d3](https://github.com/AlexeyShalaev/hse-doc-studio/commit/e6a31d33608fe5ce3b6c9c826841a0cfc55d0f68))
-* **signatures:** optional signatures and skipped slots in files, plan and package ([5ffcccb](https://github.com/AlexeyShalaev/hse-doc-studio/commit/5ffcccbf3abe73ded5ab137cec10f8f667e55f5c))
-* **signatures:** optional signatures and skipped slots in files, plan and package ([5f8659c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/5f8659c289d558b6d9b856aa1780cca8e744d0be))
-* **signing-route:** R20 skip in route core and storage: Skip/Unskip effects, transitions.skip, sr_11_skip ([208b633](https://github.com/AlexeyShalaev/hse-doc-studio/commit/208b63313f5368864a48b1823b7f356ef9648075))
-* **signing-route:** R21 skip a participant, optional/extra contract, signing_skipped notice ([da03604](https://github.com/AlexeyShalaev/hse-doc-studio/commit/da03604b83f55117199fd165d8b2868ca005f02a))
-* **signing-route:** R21 skip a participant: POST .../skip, extra/optional/skip fields, signing_skipped notice and letter, audit, MCP fields, contract fixtures ([3edc802](https://github.com/AlexeyShalaev/hse-doc-studio/commit/3edc802f2eeebe2be93d8a13993ff3c71bb54ea3))
-* **web:** comment from the PDF preview with margin marks and the comments panel ([a4ae050](https://github.com/AlexeyShalaev/hse-doc-studio/commit/a4ae050f70fec2dba18d06637e55460f20303821))
-* **web:** comment from the PDF preview with margin marks and the comments panel ([fe59103](https://github.com/AlexeyShalaev/hse-doc-studio/commit/fe59103bc3b3b2ee06f7c83f5a4ef56b9741be37))
-* **web:** optional signatures and skip contract (W12) ([7c38e81](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7c38e815f0c4ba99e00e39e9d76eabcbb6f8efcc))
-* **web:** optional signatures W12: contract 13.6, demo and the optional checkbox ([f5f1a2f](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f5f1a2fba1b9f15d26a7ff348d83650a4afbfd42))
-* **web:** optional signatures W13, skip a signer and the skipped state ([a80e68f](https://github.com/AlexeyShalaev/hse-doc-studio/commit/a80e68f84b9578d0b3ff48b59f2d399b1c66f36b))
-* **web:** optional signatures W13: skip a signer, skipped state on the signing page, inbox kind ([910fc12](https://github.com/AlexeyShalaev/hse-doc-studio/commit/910fc1294380c99d29da6d9436c756a89c3c11f5))
-
-
-### Bug Fixes
-
-* **signing:** single dot after initials and slimmer signing page budget ([931ce88](https://github.com/AlexeyShalaev/hse-doc-studio/commit/931ce8864ea87f4d1336b722f67a75ef4ee35d80))
-* **signing:** single dot after initials and slimmer signing page budget ([2bfd091](https://github.com/AlexeyShalaev/hse-doc-studio/commit/2bfd09111b0ce99ab513c52a45e78a0576f1b27f))
-* **submission:** explain pack refusals during a signing route ([5dc40df](https://github.com/AlexeyShalaev/hse-doc-studio/commit/5dc40dfed13c67b1f2d5de6cbc82c89cd14eaa98))
-* **submission:** explain pack refusals during a signing route ([1c20bdf](https://github.com/AlexeyShalaev/hse-doc-studio/commit/1c20bdf6cab1be0b37ed636da0231a40aca5080b))
-* **web-app:** document tabs scroll with an edge hint on phones ([3daf475](https://github.com/AlexeyShalaev/hse-doc-studio/commit/3daf47564ea160642f6533c91d4d38c45ca1b668))
-* **web-app:** scroll document tabs with an edge hint on phones ([15bdb3d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/15bdb3d3dfb1c324f7259785d85d52335f841bca))
-* **web:** keep the preview comments sheet at the bottom of a phone screen ([29cd9e0](https://github.com/AlexeyShalaev/hse-doc-studio/commit/29cd9e05eb5fe1411ebcba61e5156b75d7e5697b))
+- Optional signatures and skipping a signer. For each signature slot on a checkpoint the author can tick “Signature is optional”, even on a route that is already running. When it is the turn of a signer whose signatures are all optional, the author presses “Skip” and the route goes on without a restart and without losing approvals.
+- A skipped signer gets a “signature not required” notice and email, and the event is recorded in the audit log. If an e-signature already stands over the document, the skipped signer's mark stays, otherwise the document is frozen again without it. A skipped signer can be brought back by sending a new version. MCP can read this but not skip.
+- The submission pack is not blocked by a skipped or optional signature, and HOW_TO_VERIFY.txt lists it as not required. While a route is not finished the pack cannot be built, and instead of an English 400 error the Project folder card explains why: the route step and who we are waiting for.
+- Comments from the PDF preview. The selection bar has a new “Comment” button. A comment is anchored to the LaTeX source through SyncTeX, or to the place on the PDF page when the source is not found or there is none. Margin marks and a Comments panel show them, also on phones. On servers with runners SyncTeX now comes back with the PDF, so “In source” and Ctrl+click work.
+- Registration: exemptions from admin approval. In the sign-in settings you can list addresses and domains (hse.ru, *.hse.ru, name@example.com) that do not need approval. The exemption applies only to a confirmed address: after the email or on single sign-on. The “Check address” line shows the result before saving, and a pass by rule is written to the audit log.
+- The double dot after initials (“Petrov P. P..”) is fixed on the signing page, the route card and elsewhere. The signing page is lighter: rare dialogs load only when opened.
+- On phones the document tab row scrolls with an edge hint, the selected tab scrolls into view, and the “…” button stays on screen.
 
 ## [0.23.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.22.0...v0.23.0) - 2026-11-11
 
