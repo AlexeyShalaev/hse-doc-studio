@@ -6,40 +6,19 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.26.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.25.0...v0.26.0) (2026-11-13)
+## [0.26.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.25.1...v0.26.0) - 2026-11-13
 
+- Checkpoint deadlines. Each submission checkpoint in a project can have a deadline, date and time in Moscow time. The template does not set it, it only hints when it is usually announced. The checkpoint shows “in N days”, “today”, “package built” or “overdue”, and the project list marks the nearest deadline. MCP reads it and sets it with set_checkpoint_deadline.
+- The signing route deadline is now set automatically, one day before the checkpoint deadline, to leave time to build the package. Three days before the checkpoint deadline the owner and authors get a reminder in the Inbox and by email, unless the package is already built.
+- Route from the template. A template can define the route steps for a checkpoint, extra signatures with a condition (for example, the academic supervisor only when the supervisor is not from HSE), optional signatures, and signature places and date marks for each document. A new route draft is built from this preset. The editor shows “from the template” and “Changed by you” marks and offers “Reset to template” and “Reset place to template”. The template never touches places you set by hand or routes already sent. Ready routes for the course project come with the next template version.
+- A template update moves “from the template” signature places to the new version. Places set by hand, documents out for signing and signed documents stay as they were, and the preview shows what will and will not change. Undoing the update restores the places.
+- MSc course project template 2026.1.4. City and year in the documents come from the project: the year in the application and signing dates is the build year in Moscow and can be overridden, and the city is translated on the English page. The topic application is printed as one page in the project language. The consultant line appears only when a consultant is set, and the academic supervisor's consent line only when the supervisor is not from HSE. The supervisor switch is now called “HSE / Not from HSE”. In the bachelor templates 2026.1.1 the city on English title pages also comes from the project.
+- MCP connection guides for Codex, OpenCode, Gemini CLI, Windsurf, Zed, Cline and JetBrains Junie. The “AI clients (MCP)” page lets you pick a client and shows its ready config, taking the token from the HSE_STUDIO_TOKEN environment variable where the client supports it.
+- For template authors: the Signatures tab “⋯” menu has “Copy as template preset”. It produces a ready YAML fragment with signature places and date marks for the template.
 
-### Features
+## [0.25.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.25.0...v0.25.1) - 2026-11-13
 
-* **api:** checkpoint deadlines R29: route deadline from the checkpoint and checkpoint_due reminder ([78cd796](https://github.com/AlexeyShalaev/hse-doc-studio/commit/78cd7963bb22a217c794b0a287a517a02f87de87))
-* **api:** checkpoint deadlines R29: route deadline from the checkpoint deadline and the checkpoint_due reminder ([04c2ff5](https://github.com/AlexeyShalaev/hse-doc-studio/commit/04c2ff545eaee88ea820f1caeaaa763a8790d966))
-* **packs:** form fixes — city and year from project data, one-language topic application, conditional lines ([6c3c3ae](https://github.com/AlexeyShalaev/hse-doc-studio/commit/6c3c3aef710761a4ce610284061814d97c6987e4))
-* **packs:** hse-cs-se coursework и vkr 2026.1.1 — город на английских титулах из проекта ([eafadfa](https://github.com/AlexeyShalaev/hse-doc-studio/commit/eafadfa001faa7f2fb990f5c8def3f48df859f61))
-* **packs:** hse-cs-sse 2026.1.4 — город и год из проекта, заявление на языке проекта, строки по условию ([f0fb72f](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f0fb72f41a584634215a224c2ad512ec70be81f0))
-* **signing-route:** apply the checkpoint route preset from the pack (R25) ([6c086eb](https://github.com/AlexeyShalaev/hse-doc-studio/commit/6c086ebd62029476c70f9265e09cc343e2c35a3b))
-* **signing-route:** apply the checkpoint route preset from the pack (R25) ([0363642](https://github.com/AlexeyShalaev/hse-doc-studio/commit/0363642a6b788a8c188d7d31693149560e409389))
-* **signing-route:** preset base_version stored on the route, W15 contract fixtures (R25) ([3e81c9e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/3e81c9efab0940fd211600596d70cfdfff08f7d3))
-* **signing-route:** R28 checkpoint deadlines in the project, pack hint, state, API and MCP ([ad5b0df](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ad5b0df9f76d1d130d320b508616e61a31a5644c))
-* **signing-route:** route presets in the pack and placement origin (R24) ([9cb99bf](https://github.com/AlexeyShalaev/hse-doc-studio/commit/9cb99bfff8d648a6cc2d4267ae4b6c49327becdc))
-* **signing-route:** route presets in the pack and placement origin (R24) ([b47d310](https://github.com/AlexeyShalaev/hse-doc-studio/commit/b47d310afa68ceeab8b05d47a4898ea5f4c58d01))
-* **template-update:** move template signature places on template update (R26) ([7d6161c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7d6161c7c8505a36abb2434b60e79dcd9b08bbad))
-* **template-update:** move template signature places on template update (R26) ([139a90f](https://github.com/AlexeyShalaev/hse-doc-studio/commit/139a90f88ded621d5f074fcd826213b02e294d7e))
-* **templates:** год сборки по Москве в контексте рендера (build.year) ([8830de4](https://github.com/AlexeyShalaev/hse-doc-studio/commit/8830de4353f2538fb8a864fb418ad950e0cb7ebd))
-* **web:** «В новой версии шаблона другой маршрут этой точки» в шапке редактора маршрута ([7cead11](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7cead111df9c4f74609cf4e437e4feeb948edb14))
-* **web:** «ВШЭ / Не из ВШЭ» у руководителя, в плане обновления подсказка про новую версию маршрута ([d20a716](https://github.com/AlexeyShalaev/hse-doc-studio/commit/d20a716248339c6c4be1a45dedcd3af16bb82a28))
-* **web:** checkpoint deadlines UI (W16) ([be455c0](https://github.com/AlexeyShalaev/hse-doc-studio/commit/be455c0a25e53da9db58a51ebcfc8fdbd955fca3))
-* **web:** checkpoint deadlines W16: deadline on the checkpoint, project list mark, route editor hint, inbox checkpoint_due, contract and demo ([4112b56](https://github.com/AlexeyShalaev/hse-doc-studio/commit/4112b563ed44effae14871ef286951089c4de4c0))
-* **web:** copy signature places as a template preset ([6531868](https://github.com/AlexeyShalaev/hse-doc-studio/commit/65318685d43b0af38ef59a31f0d310d905ed9010))
-* **web:** copy signature places as a template preset ([caa21c5](https://github.com/AlexeyShalaev/hse-doc-studio/commit/caa21c570217fa3287f79d18c39b60dcd8a7e56a))
-* **web:** MCP configs for Codex, OpenCode, Gemini CLI, Windsurf, Zed, Cline and Junie ([581fb7e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/581fb7e740bbc719f0eba397cf1fc204b46573bf))
-* **web:** route presets W15: "from the template" marks, reset to template, reset place, contract 15.11, demo and gallery ([452f0ef](https://github.com/AlexeyShalaev/hse-doc-studio/commit/452f0ef9df839d28cb6d2ecde49db42fa2700b7b))
-* **web:** signing route presets W15, from-template marks and reset to template ([e6bac75](https://github.com/AlexeyShalaev/hse-doc-studio/commit/e6bac75217af2233ec93af2d8076b2777fc1272f))
-
-
-### Bug Fixes
-
-* **signing-route:** sign the uploaded custom PDF instead of the template build ([b9ef8dc](https://github.com/AlexeyShalaev/hse-doc-studio/commit/b9ef8dcfad074d08b44e7525436f400b73e23726))
-* **signing-route:** sign the uploaded custom PDF instead of the template build ([87aac5b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/87aac5bff8f6427ca298aa088f231df6fddb9d16))
+- A document replaced with your own PDF showed as not built on the send for signing page, and signatures and freezing used the wrong file. The signature plan, the route, freezing and the pack now use the uploaded PDF. Studio doesn't see a signature drawn inside the uploaded PDF: upload the signature as an image into the slot.
 
 ## [0.25.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.24.0...v0.25.0) - 2026-11-13
 

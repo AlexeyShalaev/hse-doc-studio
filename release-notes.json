@@ -1,6 +1,50 @@
 {
   "releases": [
     {
+      "version": "0.26.0",
+      "date": "2026-11-13",
+      "notes": [
+        {
+          "ru": "Сроки контрольных точек. У каждой точки сдачи в проекте можно указать срок: дата и время по Москве. Шаблон срок не ставит, а только подсказывает, когда его обычно объявляют. На точке видно «через N дней», «сегодня», «пакет собран» или «просрочено», в списке проектов пометка ближайшего срока. Через MCP срок читается и задаётся инструментом set_checkpoint_deadline.",
+          "en": "Checkpoint deadlines. Each submission checkpoint in a project can have a deadline, date and time in Moscow time. The template does not set it, it only hints when it is usually announced. The checkpoint shows “in N days”, “today”, “package built” or “overdue”, and the project list marks the nearest deadline. MCP reads it and sets it with set_checkpoint_deadline."
+        },
+        {
+          "ru": "Срок маршрута подписания теперь ставится сам: на день раньше срока точки, чтобы осталось время собрать пакет. За 3 дня до срока точки владелец и авторы получают напоминание во «Входящие» и письмом, если пакет ещё не собран.",
+          "en": "The signing route deadline is now set automatically, one day before the checkpoint deadline, to leave time to build the package. Three days before the checkpoint deadline the owner and authors get a reminder in the Inbox and by email, unless the package is already built."
+        },
+        {
+          "ru": "Маршрут из шаблона. Шаблон может задать для точки шаги маршрута, подписи сверх точки с условием (например, академрук только при научруке не из ВШЭ), необязательные подписи, места подписей и метки даты по каждому документу. Новый черновик маршрута собирается из этой заготовки. В редакторе видны пометки «из шаблона» и «Изменён вами», есть кнопки «Вернуть как в шаблоне» и «Вернуть место из шаблона». Ручные места и уже отправленные маршруты шаблон не трогает. Готовые маршруты для КП придут со следующей версией шаблона.",
+          "en": "Route from the template. A template can define the route steps for a checkpoint, extra signatures with a condition (for example, the academic supervisor only when the supervisor is not from HSE), optional signatures, and signature places and date marks for each document. A new route draft is built from this preset. The editor shows “from the template” and “Changed by you” marks and offers “Reset to template” and “Reset place to template”. The template never touches places you set by hand or routes already sent. Ready routes for the course project come with the next template version."
+        },
+        {
+          "ru": "Обновление шаблона переносит на новую версию места подписей «из шаблона». Места, поставленные вручную, документы на подписании и подписанные документы остаются как были, предпросмотр показывает, что обновится и что нет. Отмена обновления возвращает места.",
+          "en": "A template update moves “from the template” signature places to the new version. Places set by hand, documents out for signing and signed documents stay as they were, and the preview shows what will and will not change. Undoing the update restores the places."
+        },
+        {
+          "ru": "Шаблон КП магистратуры 2026.1.4. Город и год в документах берутся из проекта: год в заявлении и датах подписей по году сборки по Москве, его можно переопределить, на английской странице город переводится. Заявление о выборе темы печатается одной страницей на языке проекта. Строка консультанта появляется, только если он указан, строка согласия академрука, только если научрук не из ВШЭ. Переключатель у руководителя теперь называется «ВШЭ / Не из ВШЭ». В шаблонах бакалавриата 2026.1.1 город на английских титулах тоже берётся из проекта.",
+          "en": "MSc course project template 2026.1.4. City and year in the documents come from the project: the year in the application and signing dates is the build year in Moscow and can be overridden, and the city is translated on the English page. The topic application is printed as one page in the project language. The consultant line appears only when a consultant is set, and the academic supervisor's consent line only when the supervisor is not from HSE. The supervisor switch is now called “HSE / Not from HSE”. In the bachelor templates 2026.1.1 the city on English title pages also comes from the project."
+        },
+        {
+          "ru": "Инструкции по подключению MCP для Codex, OpenCode, Gemini CLI, Windsurf, Zed, Cline и JetBrains Junie. На странице «ИИ-клиенты (MCP)» выбирается клиент и показывается его готовый конфиг, токен по возможности берётся из переменной окружения HSE_STUDIO_TOKEN.",
+          "en": "MCP connection guides for Codex, OpenCode, Gemini CLI, Windsurf, Zed, Cline and JetBrains Junie. The “AI clients (MCP)” page lets you pick a client and shows its ready config, taking the token from the HSE_STUDIO_TOKEN environment variable where the client supports it."
+        },
+        {
+          "ru": "Для авторов шаблонов: на вкладке «Подписи» в меню «⋯» появилась команда «Скопировать как пресет шаблона». Она выдаёт готовый фрагмент YAML с местами подписей и метками даты для шаблона.",
+          "en": "For template authors: the Signatures tab “⋯” menu has “Copy as template preset”. It produces a ready YAML fragment with signature places and date marks for the template."
+        }
+      ]
+    },
+    {
+      "version": "0.25.1",
+      "date": "2026-11-13",
+      "notes": [
+        {
+          "ru": "Документ со своим загруженным PDF на странице отправки на подписание показывался несобранным, а подписи и фиксация брали не тот файл. Теперь план подписей, маршрут, фиксация и пакет берут загруженный PDF. Подпись, нарисованная внутри загруженного PDF, Студии не видна: загрузите подпись картинкой в слот.",
+          "en": "A document replaced with your own PDF showed as not built on the send for signing page, and signatures and freezing used the wrong file. The signature plan, the route, freezing and the pack now use the uploaded PDF. Studio doesn't see a signature drawn inside the uploaded PDF: upload the signature as an image into the slot."
+        }
+      ]
+    },
+    {
       "version": "0.25.0",
       "date": "2026-11-13",
       "notes": [
