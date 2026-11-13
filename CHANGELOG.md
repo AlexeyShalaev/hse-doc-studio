@@ -6,18 +6,13 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.25.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.24.0...v0.25.0) (2026-11-13)
+## [0.25.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.24.0...v0.25.0) - 2026-11-13
 
-
-### Features
-
-* **signing-route:** E4 date mark hint by remaining actions, marks_edited in the demo, date mark fixes ([6cedd09](https://github.com/AlexeyShalaev/hse-doc-studio/commit/6cedd0956fa23518e99c51a15506f35281b3d89f))
-* **signing-route:** R22 signing date marks in files and on the page ([6afbeb3](https://github.com/AlexeyShalaev/hse-doc-studio/commit/6afbeb3ef14bf9d51bca22fcdef7dec9de8322c2))
-* **signing-route:** R22 signing date marks: DateMark and signed_at in files, dates.py, drawing, PUT .../dates outside a route, plan and MCP fields, verify guide lines, Moscow day for sign_date, pack default_dates ([c8f5080](https://github.com/AlexeyShalaev/hse-doc-studio/commit/c8f508043793ac5fcf9a4557de066efe442199d9))
-* **signing-route:** R23 signing dates on the route — RecordSignedAt, marks edit scenario, resets_signatures, re-request to sign ([7b85b6d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7b85b6d0b8e7e7b5454598c3a413803b69450ba2))
-* **signing-route:** R23 signing dates on the route: RecordSignedAt and backfill, dates make a changer, marks edit scenario with resets_signatures, re-request to sign after refreeze, marks_edited event and audit, dates in the signer task ([4ae951c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/4ae951cc927c0b31fc798603995f557987e4c43a))
-* **web:** signing dates W14 — date marks in the placement and route editors ([489b81a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/489b81ab55d39857d4af9887aae9b461543b3190))
-* **web:** signing dates W14: date marks in the placement and route editors, contract 14.7, demo and gallery ([504bcd8](https://github.com/AlexeyShalaev/hse-doc-studio/commit/504bcd80c15c017881273468290c825bde9c92d4))
+- Signing date. A signature slot can now have date marks: “Add date” on the Signatures tab or in the “Where signatures go” block of the route editor. A mark can sit on any page, apart from the signature. Formats: day, month as a word, month as a number, year, two-digit year, and the full date in numbers or words.
+- The date in a mark is the moment the signer approved on the route, in Moscow time, for both an image and an e-signature. If the person approved before the marks were added, the date is taken from that approval automatically. Outside a route the author sets the day in the “Signing date” field. A skipped signer gets no date. On the signing page the signer's own frames are labelled “Approval date”.
+- Date marks can be added on a running or finished route without stopping it. If an e-signature already stands over the document, the Studio first warns whose signatures will be reset. After you confirm, the document is frozen again and those people get a new request to sign the final PDF. HOW_TO_VERIFY.txt gains the lines “date on the page” and “signing time”.
+- Fixed: the date inside a signature frame used UTC, so a night-time approval in Moscow printed the previous day. A double full stop after initials in the signature reset warning. A new mark near the right edge of the sheet no longer goes past the page edge.
+- Building a document with date marks needs runner 0.25.0 or newer. Update runners in the admin panel, Runners section.
 
 ## [0.24.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.23.0...v0.24.0) - 2026-11-13
 
