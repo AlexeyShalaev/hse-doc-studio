@@ -35,7 +35,7 @@ const base = {
   archived: false,
   shared_enabled: true,
   via_link: false,
-  // Ближайший срок точки (signing-route.md, 16.6); демо сроков пока не задаёт (W16).
+  // Ближайший срок точки (signing-route.md, 16.6): список считает его по срокам демо точки сдачи.
   next_deadline: null,
 };
 

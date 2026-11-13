@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { ProjectRoleSchema, ProjectSummarySchema } from "@entities/session";
+import {
+  NextDeadlineSchema,
+  ProjectRoleSchema,
+  ProjectSummarySchema,
+} from "@entities/session";
 
 const ProjectLockSchema = z.object({
   pack_id: z.string(),
@@ -72,6 +76,9 @@ export const ProjectResponseSchema = z.object({
   // links: роль держится на ссылке (гость или вошедший по ссылке) и подпись этой ссылки.
   via_link: z.boolean().optional(),
   link_label: z.string().nullish(),
+  // Ближайший срок контрольной точки (signing-route.md, 16.6): только в списке проектов обоих
+  // режимов; старый сервер поля не присылает.
+  next_deadline: NextDeadlineSchema.nullish(),
   // Что эта Студия может делать с проектом (только в GET /projects/{id}).
   // mode ∈ full | read_only | files_only; reasons — коды причин ограничения.
   access: z

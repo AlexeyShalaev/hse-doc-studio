@@ -1,14 +1,23 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
+import { z } from "zod";
 import { createDemoRouter } from "@shared/api/demo";
 import type { DemoRequest, DemoResponse } from "@shared/api/demo";
 import {
   CreateServerProjectRequestSchema,
+  NextDeadlineSchema,
   ProjectImportResultSchema,
   ProjectSummaryPageSchema,
 } from "@entities/session";
 import { ProjectResponseSchema } from "@entities/project";
+import { SigningRouteSchema } from "@entities/signing-route";
+import {
+  CheckpointDeadlineSchema,
+  SubmissionProfileSchema,
+  routeDeadlineFromPoint,
+  toMoscowIso,
+} from "@entities/submission";
 import { activateServerScenario } from "./index";
 import { serverDemoRoutes, setServerDemoActive } from "./routes";
 
@@ -72,7 +81,23 @@ describe("демо проектов сервера", () => {
     const expected = (
       fixture("ProjectSummaryList", "two") as Record<string, unknown>[]
     )[0];
-    expect(first).toEqual(expected);
+    // Срок точки в демо считается от «сейчас» (signing-route.md, 16.6): сверяется отдельно.
+    const { next_deadline: next, ...rest } = first as Record<string, unknown>;
+    expect(rest).toEqual({ ...expected, next_deadline: undefined });
+    expect(NextDeadlineSchema.parse(next)).toMatchObject({
+      profile_id: "topic-approval",
+      state: "soon",
+    });
+  });
+
+  it("ближайший срок: сегодня, просрочено, без срока нет пометки", async () => {
+    const items = await list();
+    expect(items.map((p) => [p.name, p.next_deadline?.state ?? null])).toEqual([
+      ["Bertie: курсовой проект", "soon"],
+      ["Industry adoption of CI", "today"],
+      ["Анализ нагрузки на очередь задач", "overdue"],
+      ["Практика 2025: отчёт", null],
+    ]);
   });
 
   it("новичок видит пустой список, аноним получает 401", async () => {
@@ -193,5 +218,78 @@ describe("демо импорта проекта из zip", () => {
   it("аноним получает 401", async () => {
     activateServerScenario("registration_open");
     expect((await upload("thesis.zip")).status).toBe(401);
+  });
+
+  describe("сроки контрольных точек (signing-route.md, 16)", () => {
+    const PRACTICE = "p_01hxa4n7pq";
+    const profiles = async (projectId: string) =>
+      z
+        .array(SubmissionProfileSchema)
+        .parse(
+          (await call("GET", `/projects/${projectId}/submissions/profiles`))
+            .data,
+        );
+
+    it("срок ставится, читается у точки и попадает в список", async () => {
+      expect((await profiles(PRACTICE))[0]).toMatchObject({
+        deadline: null,
+        deadline_state: "none",
+        deadline_hint: { ru: expect.any(String) as string },
+      });
+      const deadline = toMoscowIso(Date.now() + 10 * 24 * 60 * 60 * 1000);
+      const res = await call(
+        "PUT",
+        `/projects/${PRACTICE}/submissions/profiles/topic-approval/deadline`,
+        { deadline },
+      );
+      expect(res.status).toBe(200);
+      expect(CheckpointDeadlineSchema.parse(res.data)).toEqual({
+        profile_id: "topic-approval",
+        deadline,
+        state: "upcoming",
+        packaged_at: null,
+      });
+      expect((await profiles(PRACTICE))[0]?.deadline).toBe(deadline);
+      const item = (await list()).find((p) => p.id === PRACTICE);
+      expect(item?.next_deadline?.state).toBe("upcoming");
+      const cleared = await call(
+        "PUT",
+        `/projects/${PRACTICE}/submissions/profiles/topic-approval/deadline`,
+        { deadline: null },
+      );
+      expect((cleared.data as { state: string }).state).toBe("none");
+    });
+
+    it("коды отказа как у сервера", async () => {
+      const put = (projectId: string, profileId: string, body: unknown) =>
+        call(
+          "PUT",
+          `/projects/${projectId}/submissions/profiles/${profileId}/deadline`,
+          body,
+        );
+      expect(
+        (await put(PRACTICE, "topic-approval", { deadline: "2026-11-15" }))
+          .status,
+      ).toBe(400);
+      expect((await put(PRACTICE, "nope", { deadline: null })).status).toBe(
+        404,
+      );
+      // Читатель срок не меняет.
+      expect(
+        (await put("p_01hxa3k2jm", "topic-approval", { deadline: null }))
+          .status,
+      ).toBe(403);
+    });
+
+    it("новый черновик маршрута получает срок на сутки раньше срока точки", async () => {
+      const res = await call("POST", "/projects/p_01hxa1c4de/signing-routes", {
+        profile_id: "topic-approval",
+      });
+      const route = SigningRouteSchema.parse(res.data);
+      const point = (await profiles("p_01hxa1c4de"))[0]?.deadline ?? null;
+      expect(route.point_deadline).toBe(point);
+      expect(route.deadline).toBe(routeDeadlineFromPoint(point, Date.now()));
+      expect(route.deadline).not.toBeNull();
+    });
   });
 });

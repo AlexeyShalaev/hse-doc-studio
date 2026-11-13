@@ -10,6 +10,10 @@ import {
   type SigningRouteBlocker,
   type SigningRoutePreview,
 } from "@entities/signing-route";
+import {
+  RoutePointDeadline,
+  type CheckpointDeadlineProfile,
+} from "@features/checkpoint-deadline";
 import { pickLocalized } from "@shared/lib";
 import { Notice, Spinner } from "@shared/ui";
 import { deadlineToIso, isoToDeadline } from "../lib/labels";
@@ -34,6 +38,10 @@ export type RouteSendCardProps = {
   }) => void;
   /** «К размещению»: показать слот в блоке «Где подписи». */
   onPlace: (slot: RouteSlotRef) => void;
+  /** Профиль точки маршрута со сроком сдачи (16.2): строка срока точки под сроком маршрута. */
+  pointProfile?: CheckpointDeadlineProfile | undefined;
+  /** «Сейчас» для строки срока точки; галерея и тесты задают своё. */
+  now?: number;
 };
 
 /** Низ экрана: срок, сообщение подписантам, что мешает, и «Отправить на подписание». */
@@ -48,14 +56,21 @@ export const RouteSendCard = ({
   onSaveTexts,
   onSend,
   onPlace,
+  pointProfile,
+  now,
 }: RouteSendCardProps) => {
   const { t, i18n } = useTranslation("signingRouteEditor");
   const [day, setDay] = useState(isoToDeadline(route.deadline));
   const [message, setMessage] = useState(route.message ?? "");
   const [passphrase, setPassphrase] = useState("");
 
+  // Поле держит день; срок с другим временем (из срока точки, 16.5) остаётся, пока день тот же.
+  const [exact, setExact] = useState(route.deadline);
   const texts = () => ({
-    deadline: deadlineToIso(day),
+    deadline:
+      exact !== null && day === isoToDeadline(exact)
+        ? exact
+        : deadlineToIso(day),
     message: message.trim() === "" ? null : message.trim(),
   });
   const dirty = () => {
@@ -153,6 +168,20 @@ export const RouteSendCard = ({
           data-testid="route-deadline"
         />
       </label>
+      <RoutePointDeadline
+        projectId={route.project_id}
+        profile={pointProfile}
+        routeDeadline={route.deadline}
+        pointDeadlineAtDraft={route.point_deadline}
+        canEdit
+        busy={sending}
+        onApply={(deadline) => {
+          setExact(deadline);
+          setDay(isoToDeadline(deadline));
+          onSaveTexts({ ...texts(), deadline });
+        }}
+        {...(now === undefined ? {} : { now })}
+      />
       <label
         className="flex flex-col"
         style={{ gap: "0.25rem", fontSize: "0.75rem" }}
