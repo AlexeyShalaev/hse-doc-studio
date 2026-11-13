@@ -149,7 +149,7 @@ class GetSignaturesUC:
             if doc is None:
                 continue
             try:
-                _, output_file = self._template_service.resolve_instance_source(project, doc, version)
+                output_file = self._template_service.resolve_signing_output(project, doc, version)
             except NotFoundError:
                 continue
             # Сверка с источником подписи: версией на подписи маршрута, иначе текущей сборкой (signing-route.md, 12.4).
