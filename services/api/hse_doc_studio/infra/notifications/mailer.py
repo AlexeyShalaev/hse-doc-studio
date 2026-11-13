@@ -1,4 +1,5 @@
-"""Письма уведомлений: приглашение в проект, запрос доступа, передача владения, маршрут подписания (ru и en).
+"""Письма уведомлений: приглашение в проект, запрос доступа, передача владения, маршрут подписания и срок
+контрольной точки (ru и en).
 
 В письме только подписи из уведомления и ссылка на «Входящие», страницу приглашения, страницу подписи или точку
 сдачи: секретов там нет, кроме токена ссылки приглашения, который адресат и должен получить. Ссылки маршрута
@@ -30,18 +31,25 @@ _TEMPLATES: dict[NotificationKind, MailTemplate] = {
     NotificationKind.signing_skipped: MailTemplate.signing_skipped,
     NotificationKind.signing_returned: MailTemplate.signing_returned,
     NotificationKind.signing_completed: MailTemplate.signing_completed,
+    NotificationKind.checkpoint_due: MailTemplate.checkpoint_due,
 }
 # Подписанту письмо ведёт на страницу подписи, автору на точку сдачи.
 _TO_SIGNING_PAGE = frozenset(
     {NotificationKind.signing_request, NotificationKind.signing_reminder, NotificationKind.signing_skipped}
 )
-_TO_CHECKPOINT = frozenset({NotificationKind.signing_returned, NotificationKind.signing_completed})
-# Объект письма в журнале (L9): `ref_id` уведомления это id приглашения, запроса, передачи или маршрута.
+_TO_CHECKPOINT = frozenset(
+    {NotificationKind.signing_returned, NotificationKind.signing_completed, NotificationKind.checkpoint_due}
+)
+# Объект письма в журнале (L9): `ref_id` уведомления это id приглашения, запроса, передачи или маршрута. У
+# напоминания о сроке точки (`checkpoint_due`) объекта нет: письмо о проекте и точке, не о маршруте.
 _REF_KINDS: dict[NotificationKind, MailRefKind] = {
     NotificationKind.project_invitation: MailRefKind.project_invitation,
     NotificationKind.access_request: MailRefKind.access_request,
     NotificationKind.transfer_request: MailRefKind.transfer,
-    **dict.fromkeys(_TO_SIGNING_PAGE | _TO_CHECKPOINT, MailRefKind.signing_route),
+    **dict.fromkeys(
+        (*_TO_SIGNING_PAGE, NotificationKind.signing_returned, NotificationKind.signing_completed),
+        MailRefKind.signing_route,
+    ),
 }
 
 

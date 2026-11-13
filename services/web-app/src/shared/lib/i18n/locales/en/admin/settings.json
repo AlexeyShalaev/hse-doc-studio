@@ -245,6 +245,7 @@
       "signing_skipped": "Signing route: signature not required",
       "signing_returned": "Signing route: returned for revision",
       "signing_completed": "Signing route: everyone has signed",
+      "checkpoint_due": "Checkpoint deadline soon",
       "smtp_test": "Test email"
     }
   }

@@ -61,7 +61,7 @@ const route = (
   props: {
     point: CheckpointDeadlineProfile;
     routeDeadline: string | null;
-    atDraft: string | null | undefined;
+    atDraft: string | null;
   },
 ) => ({
   id,
@@ -228,7 +228,7 @@ export const getCheckpointDeadlineGallery = (): GalleryGroup[] => [
             deadline_state: "soon",
           }),
           routeDeadline: null,
-          atDraft: undefined,
+          atDraft: null,
         },
       ),
       route(
@@ -254,7 +254,7 @@ export const getCheckpointDeadlineGallery = (): GalleryGroup[] => [
             deadline_state: "soon",
           }),
           routeDeadline: "2026-11-17T23:59:00+03:00",
-          atDraft: undefined,
+          atDraft: null,
         },
       ),
       route(

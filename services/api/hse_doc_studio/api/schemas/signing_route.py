@@ -239,6 +239,9 @@ class SigningRouteResponse(StrictModel):
     # Пресет точки (15.11): только тому, кто управляет маршрутом, у маршрута, который можно править
     # (`draft`, `paused`, `returned`, `cancelled`), и если шаблон пресет задаёт; иначе null.
     preset: RoutePreset | None
+    # Срок точки сдачи, из которого сервер посчитал срок черновика (16.5), по Москве: по нему редактор пишет «Срок
+    # точки изменился». Как пресет, только тому, кто управляет маршрутом, и у маршрута, который можно править.
+    point_deadline: datetime | None
 
 
 class SigningWaitingFor(StrictModel):

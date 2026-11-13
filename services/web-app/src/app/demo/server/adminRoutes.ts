@@ -52,6 +52,7 @@ const DEMO_MAIL_TEMPLATES = [
   "signing_skipped",
   "signing_returned",
   "signing_completed",
+  "checkpoint_due",
   "smtp_test",
 ];
 

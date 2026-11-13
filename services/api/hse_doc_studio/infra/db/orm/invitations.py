@@ -41,6 +41,8 @@ NOTIFICATION_KINDS = (
     "signing_skipped",
     # Админ очистил диск личного раннера (storage-cleanup.md, 8.2), миграция dk_01_runner_disk.
     "runner_disk_cleaned",
+    # Срок контрольной точки через 3 дня (signing-route.md, 16.7), миграция dl_02_checkpoint_reminders.
+    "checkpoint_due",
 )
 
 

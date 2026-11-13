@@ -371,7 +371,9 @@ class SigningRoute:
     у идущего (`active`) и завершённого (`completed`) маршрута. `stopped_by` участник, чей возврат или уход
     остановил маршрут. `preset_version` версия шаблона, по пресету которой собран состав (черновик из пресета,
     «Вернуть как в шаблоне», 15.5 и 15.6); None, если состав собран не по пресету (маршрут до раздела 15, пак без
-    пресета). По ней редактор пишет «В новой версии шаблона другой маршрут этой точки» (15.7).
+    пресета). По ней редактор пишет «В новой версии шаблона другой маршрут этой точки» (15.7). `point_deadline`
+    срок точки сдачи, из которого посчитан срок нового черновика (16.5); по нему редактор пишет «Срок точки
+    изменился». None, если срока точки при создании не было (или маршрут старше раздела 16).
 
     `version` номер записи в хранилище: 0 у ещё не сохранённого, каждое сохранение его увеличивает. Хранилище
     принимает маршрут, только если с момента чтения его никто не перезаписал (`ISigningRouteRepository.save`),
@@ -399,6 +401,7 @@ class SigningRoute:
     stop_reason: StopReason | None = None
     stopped_by: UUID | None = None
     preset_version: str | None = None
+    point_deadline: datetime | None = None
     version: int = 0
     created_at: datetime | None = field(default=None, compare=False)
     updated_at: datetime | None = field(default=None, compare=False)

@@ -88,6 +88,9 @@ class NotificationKind(StrEnum):
     signing_skipped = "signing_skipped"
     # Админ установки очистил диск личного раннера (storage-cleanup.md, 8.2): владельцу, только «Входящие».
     runner_disk_cleaned = "runner_disk_cleaned"
+    # Срок контрольной точки через 3 дня (signing-route.md, 16.7): владельцу и авторам, «Входящие» и письмо.
+    # `profile_id` точка, `excerpt` её название на языке получателя, `deadline` срок точки; `ref_id` пуст.
+    checkpoint_due = "checkpoint_due"
 
 
 # Письмо уходит только для этих видов (S15), и только если SMTP настроен. Возврат и завершение маршрута
@@ -102,6 +105,7 @@ MAILED_KINDS = frozenset(
         NotificationKind.signing_returned,
         NotificationKind.signing_completed,
         NotificationKind.signing_skipped,
+        NotificationKind.checkpoint_due,
     }
 )
 
@@ -124,7 +128,7 @@ class NotificationPayload:
     excerpt: str | None = None
     doc_id: str | None = None
     # Маршрут подписания: точка сдачи (`ref_id` id маршрута, `excerpt` название точки или комментарий возврата)
-    # и срок маршрута в ISO 8601, если автор его поставил.
+    # и срок маршрута в ISO 8601, если автор его поставил. У `checkpoint_due` срок точки, `ref_id` пуст.
     profile_id: str | None = None
     deadline: str | None = None
     # Запрос (`signing_request`) раунда новой версии, где изменился документ получателя (12.6).

@@ -1,5 +1,6 @@
 """Фоновые задачи маршрутов подписания (docs/design/signing-route.md): автонапоминания подписантам (5.7),
-периодическая сверка маршрутов с проектами (5.5) и разовый перенос маршрутов 0.20.0 (12.11)."""
+периодическая сверка маршрутов с проектами (5.5), разовый перенос маршрутов 0.20.0 (12.11) и напоминание автору о
+сроке контрольной точки (16.7)."""
 
 from __future__ import annotations
 
@@ -19,6 +20,7 @@ logger = structlog.get_logger()
 SIGNING_REMINDERS_TASK = "signing_reminders"
 SIGNING_ROUTE_SWEEP_TASK = "signing_route_sweep"
 SIGNING_ROUTE_MIGRATE_TASK = "signing_route_migrate"
+CHECKPOINT_REMINDERS_TASK = "checkpoint_reminders"
 
 
 def install_signing_reminders(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
@@ -90,4 +92,22 @@ def install_signing_route_migration(app: FastAPI, container: AsyncContainer, cfg
             run=_migrate,
             run_on_start=True,
         )
+    )
+
+
+def install_checkpoint_reminders(app: FastAPI, container: AsyncContainer, cfg: Settings) -> None:
+    """Напоминание владельцу и авторам за 3 дня до срока контрольной точки; идёт только у лидера.
+
+    Что уже отправлено, видно по уведомлениям с ключом повтора, поэтому перезапуск и смена лидера напоминаний не
+    повторяют. `checkpoint.reminder_days = 0` выключает напоминание, задача тогда ничего не делает.
+    """
+    from hse_doc_studio.use_cases.submission.checkpoint_reminders import CheckpointReminderSweeper  # noqa: PLC0415
+
+    async def _remind() -> None:
+        sent = await (await container.get(CheckpointReminderSweeper)).run()
+        if sent:
+            logger.info("checkpoint_reminders_sent", count=sent)
+
+    app.state.background.register(
+        PeriodicTask(name=CHECKPOINT_REMINDERS_TASK, interval_s=cfg.checkpoint.reminder_interval_s, run=_remind)
     )

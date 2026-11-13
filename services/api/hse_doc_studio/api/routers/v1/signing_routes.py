@@ -24,6 +24,7 @@ from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.catalog import SlotCondition
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.signatures.dates import DISPLAY_ZONE
 from hse_doc_studio.core.signatures.errors import StampingError
 from hse_doc_studio.core.signatures.key_policy import SigningKeyStorageDeniedError
 from hse_doc_studio.core.signing_route.drafting import PersonDraft
@@ -159,6 +160,7 @@ def route_response(details: RouteDetails) -> s.SigningRouteResponse:
         ],
         changed_docs=list(details.changed_docs),
         preset=_preset(details),
+        point_deadline=_point_deadline(details),
     )
 
 
@@ -189,6 +191,14 @@ def _condition(when: SlotCondition | None) -> s.RoutePresetCondition | None:
         person=cast(s.PresetPersonName, when.person),
         role=when.role.value if when.role is not None else None,
     )
+
+
+def _point_deadline(details: RouteDetails) -> datetime | None:
+    """Срок точки при создании черновика (16.5): тем же, кому пресет, по Москве, как срок в профилях сдачи."""
+    route = details.route
+    if route.point_deadline is None or not details.manages or route.status not in EDITABLE_STATUSES:
+        return None
+    return route.point_deadline.astimezone(DISPLAY_ZONE)
 
 
 def _preset(details: RouteDetails) -> s.RoutePreset | None:

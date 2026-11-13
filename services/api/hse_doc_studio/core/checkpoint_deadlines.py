@@ -2,7 +2,8 @@
 
 Срок точки задаёт пользователь для своего проекта (`Project.deadlines`), пак даёт точке только подсказку текстом
 (`SubmissionProfile.deadline_hint`). Здесь разбор срока, его состояние для точки, списка проектов и MCP (16.6) и
-проверка подсказки пака (16.4): одно определение для API, лоадера, `pack_lint` и напоминания (R29).
+проверка подсказки пака (16.4): одно определение для API, лоадера, `pack_lint` и напоминания (R29). Здесь же срок
+нового черновика маршрута из срока точки (16.5) и правила напоминания автору `checkpoint_due` (16.7).
 
 Состояние считается по Москве (`DISPLAY_ZONE`, 14.4): «сегодня» значит, что срок приходится на сегодняшний день по
 Москве и ещё не наступил, «скоро» на один из трёх следующих дней. После срока точка «пакет собран», если пакет этой
@@ -11,11 +12,13 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import StrEnum
+from uuid import UUID
 
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.signatures.dates import DISPLAY_ZONE
@@ -32,6 +35,14 @@ MIN_YEAR = 2000
 # Подсказка пака (16.4): обе локали, не длиннее этого.
 HINT_LANGS = ("ru", "en")
 HINT_MAX_LEN = 200
+
+# Срок маршрута на столько раньше срока точки (16.5), если до срока точки не меньше `ROUTE_MARGIN_MIN`.
+ROUTE_MARGIN = timedelta(days=1)
+ROUTE_MARGIN_MIN = timedelta(days=2)
+# Напоминание автору за столько суток до срока точки (16.7); настройка `checkpoint.reminder_days`.
+REMINDER_DAYS = 3
+# Ключ повтора уведомления не длиннее колонки `notifications.dedupe_key`.
+_KEY_MAX = 128
 
 BAD_DEADLINE = "bad_deadline"
 
@@ -92,6 +103,37 @@ def deadline_state(deadline: datetime | None, *, now: datetime, packaged: dateti
     if days <= 0:
         return DeadlineState.today
     return DeadlineState.soon if days <= SOON_DAYS else DeadlineState.upcoming
+
+
+def route_deadline_from_point(point: datetime | None, *, now: datetime) -> datetime | None:
+    """Срок нового черновика маршрута из срока точки (16.5): на сутки раньше в то же время по Москве; если до срока
+    точки меньше двух суток, ровно срок точки; срок точки прошёл или его нет, значит срока маршрута нет."""
+    if point is None or point <= now:
+        return None
+    moment = point.astimezone(DISPLAY_ZONE)
+    return moment if moment - now < ROUTE_MARGIN_MIN else moment - ROUTE_MARGIN
+
+
+def reminder_due(deadline: datetime, *, now: datetime, packaged: datetime | None, days: int = REMINDER_DAYS) -> bool:
+    """Пора ли напомнить автору о сроке точки (16.7): за `days` суток до срока и до него самого, пока пакет точки
+    к сроку не собран. После срока напоминаний нет, `days <= 0` их выключает."""
+    if days <= 0 or packaged is not None:
+        return False
+    return deadline - timedelta(days=days) <= now < deadline
+
+
+def reminder_key(project_id: UUID, profile_id: str, deadline: datetime) -> str:
+    """Ключ повтора напоминания `checkpoint:<проект>:<точка>:<срок>:due`: одно на срок, новый срок даёт новое.
+
+    Срок в ключе это момент в секундах UTC, поэтому тот же срок в другом поясе ключ не меняет. Слишком длинный id
+    точки заменяется отпечатком, чтобы ключ влез в колонку.
+    """
+    moment = int(deadline.timestamp())
+    key = f"checkpoint:{project_id.hex}:{profile_id}:{moment}:due"
+    if len(key) <= _KEY_MAX:
+        return key
+    digest = hashlib.sha256(profile_id.encode()).hexdigest()[:16]
+    return f"checkpoint:{project_id.hex}:#{digest}:{moment}:due"
 
 
 @dataclass(frozen=True)

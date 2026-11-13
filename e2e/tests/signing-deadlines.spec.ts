@@ -22,9 +22,9 @@ import {
  * 1. Автор на странице точки видит «Срок сдачи не указан», указывает дату через 5 дней по Москве и 23:59: строка
  *    «Срок: ДД.ММ, 23:59», состояние `upcoming` у профиля и `next_deadline` в списке проектов, пометка «через 5 дней»
  *    на карточке проекта.
- * 2. Редактор маршрута той же точки: срок маршрута на день раньше срока точки. Пока сервер не ставит его сам (R29),
- *    редактор предлагает «Поставить срок маршрута …?», и «Поставить» сохраняет его; после R29 срок уже стоит.
- *    Строка «Срок маршрута: …. На день раньше срока точки (…)».
+ * 2. Редактор маршрута той же точки: срок маршрута на день раньше срока точки. Его ставит сервер при создании
+ *    черновика (R29), поэтому «Поставить» не предлагается; строка «Срок маршрута: …. На день раньше срока точки (…)»,
+ *    а у маршрута `point_deadline` равен сроку точки.
  *
  * Пресет маршрута из пака (раздел 15) здесь не проверяется: в e2e-стенде нет версии шаблона с `signing_slots` и
  * местами по документам (2026.1.4 заморожена без них, пресеты придут в 2026.1.5). Его покрывают серверные тесты R25
@@ -131,30 +131,24 @@ test.describe("сроки контрольных точек", () => {
     const point = page.getByTestId("route-point-deadline");
     await expect(point).toBeVisible();
 
-    // До R29 сервер срок черновика не ставит: редактор предлагает его, «Поставить» сохраняет.
-    const offer = point.getByTestId("route-point-offer");
-    if (await offer.isVisible()) {
-      await expect(offer).toContainText(
-        `Срок точки: ${shown(pointDay)}. Поставить срок маршрута ${shown(routeDay)}?`,
-      );
-      await offer.getByTestId("route-point-apply").click();
-    }
+    // Срок черновика ставит сервер (R29): предлагать нечего.
     await expect(point).toContainText(
       `Срок маршрута: ${shown(routeDay)}, 23:59. На день раньше срока точки (${shown(pointDay)})`,
     );
     await expect(point.getByTestId("route-point-later")).toHaveCount(0);
+    await expect(point.getByTestId("route-point-offer")).toHaveCount(0);
 
     const routes = await student.client.json<{ items: { id: string }[] }>(
       await student.client.get(`/api/v1/projects/${project}/signing-routes?profile_id=${PROFILE}`),
       200,
     );
     const routeId = routes.items[0]!.id;
-    await expect
-      .poll(async () => {
-        const route = (await routeOf(student.client, project, routeId)) as Route & { deadline: string | null };
-        return route.deadline ? Date.parse(route.deadline) : null;
-      })
-      .toBe(Date.parse(routeDeadline));
+    const route = (await routeOf(student.client, project, routeId)) as Route & {
+      deadline: string | null;
+      point_deadline: string | null;
+    };
+    expect(route.deadline && Date.parse(route.deadline)).toBe(Date.parse(routeDeadline));
+    expect(route.point_deadline && Date.parse(route.point_deadline)).toBe(Date.parse(pointDeadline));
     await shot(page, "ru", "dl-03-route-deadline");
     log("сроки: срок маршрута", { routeId, routeDeadline });
     await page.close();

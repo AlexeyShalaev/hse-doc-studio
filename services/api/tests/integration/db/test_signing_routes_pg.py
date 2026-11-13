@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, replace
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 import pytest
@@ -323,3 +324,36 @@ async def test__migration__sr_12_preset_version__existing_routes_null_and_round_
     assert await migrator.check_drift(pg_engine) == []
     await migrator.downgrade(pg_engine, "dl_01_project_deadlines")
     assert await _count(pg_engine, "signing_routes") == 2
+
+
+async def test__migration__dl_02_checkpoint_reminders__point_deadline_and_kind(pg_engine: AsyncEngine) -> None:
+    """dl_02_checkpoint_reminders: `point_deadline` nullable, у прежних маршрутов NULL, читается так же, как
+    записан; вид `checkpoint_due` проходит проверку `notifications.kind`; схема без дрейфа; откат убирает только вид
+    и колонку."""
+    await migrator.upgrade(pg_engine)
+    sessions = SessionProvider(create_sessionmaker(pg_engine))
+    project_id = await seed_project(sessions, owner_user_id=None)
+    user_id = await seed_user(sessions)
+    repo = SqlSigningRouteRepository(sessions)
+    point = datetime(2026, 11, 15, 20, 59, tzinfo=UTC)
+    old = await repo.add(make_route(project_id))
+    derived = await repo.add(replace(make_route(project_id, profile_id="final"), point_deadline=point))
+    insert = text(
+        "INSERT INTO notifications (id, user_id, kind, payload, created_at, dedupe_key) "
+        "VALUES (:id, :user_id, :kind, '{}'::jsonb, now(), :key)"
+    )
+    async with pg_engine.begin() as conn:
+        await conn.execute(insert, {"id": "ntf_due", "user_id": user_id, "kind": "checkpoint_due", "key": "k"})
+        await conn.execute(insert, {"id": "ntf_keep", "user_id": user_id, "kind": "signing_skipped", "key": None})
+
+    assert (await repo.get(project_id, old.id)).point_deadline is None  # type: ignore[union-attr]
+    assert (await repo.get(project_id, derived.id)).point_deadline == point  # type: ignore[union-attr]
+    assert await migrator.check_drift(pg_engine) == []
+    with pytest.raises(IntegrityError):
+        async with pg_engine.begin() as conn:
+            await conn.execute(insert, {"id": "ntf_bad", "user_id": user_id, "kind": "checkpoint_late", "key": None})
+    await migrator.downgrade(pg_engine, "sr_12_preset_version")
+    assert await _count(pg_engine, "signing_routes") == 2
+    assert await _count(pg_engine, "notifications") == 1
+    await migrator.upgrade(pg_engine)
+    assert await migrator.check_drift(pg_engine) == []

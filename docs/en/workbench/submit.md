@@ -55,7 +55,9 @@ Days are counted by the Moscow calendar: a deadline on 15.11 at 10:00 is “in 1
 
 **Project list.** A project shows a mark with its nearest deadline: “Topic application: in 3 days”, “…: today”, “…: overdue”. It shows the nearest deadline in the next 30 days, otherwise an overdue one no older than 7 days. A supervisor sees the same on the students' projects they are a member of.
 
-**Route deadline.** On the “Send for signing” screen the Studio suggests a route deadline one day before the checkpoint deadline, so that a day is left for the package after the last signature ([Deadline and message](send-for-signing.md#prepare)).
+**Reminder.** Three days before the checkpoint deadline the project owner and the authors (in a team project, every member with the author role) get a reminder in the Inbox and by email: “Due in 3 days: Course project topic application (SmartLMS)”. Supervisors do not get it: the signing route reminds them of the route deadline. If the checkpoint package is already built for the deadline, there is no reminder. It comes once per deadline; if you change the deadline, a reminder about the new deadline comes again, three days before it. After the deadline there are no reminders: “Overdue” shows on the checkpoint and in the project list. The email goes out only if mail is set up on the server and your address is confirmed. A local Studio does not send reminders.
+
+**Route deadline.** When you open “Send for signing”, the Studio sets the route deadline one day before the checkpoint deadline right away, so that a day is left for the package after the last signature ([Deadline and message](send-for-signing.md#prepare)).
 
 **Where the deadline is stored.** In the project file `.hse-studio/project.json`, so it travels with the project to a local Studio, through git and on export. It does not affect builds: changing it does not make documents outdated and does not show “There are changes” on documents out for signing. In a team project there is one deadline for all authors. A local Studio shows and edits the deadline.
 

@@ -39,6 +39,7 @@ NotificationKindName = Literal[
     "signing_new_version",
     "signing_skipped",
     "runner_disk_cleaned",
+    "checkpoint_due",
 ]
 NotificationOutcome = Literal[
     "accepted",
@@ -321,7 +322,7 @@ class NotificationPayloadModel(StrictModel):
     excerpt: str | None = None
     # Ревью: тред к месту в PDF документа, ссылка ведёт в превью этого документа.
     doc_id: str | None = None
-    # Маршрут подписания: точка сдачи и срок маршрута.
+    # Маршрут подписания: точка сдачи и срок маршрута; напоминание `checkpoint_due`: точка и её срок.
     profile_id: str | None = None
     deadline: datetime | None = None
     # Запрос раунда новой версии (12.6): «{автор} просит подписать новую версию»; у остальных false.

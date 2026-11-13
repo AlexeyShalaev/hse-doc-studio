@@ -103,10 +103,11 @@ If you are in the first step, sending counts as your approval.
 
 Both fields are optional. Signers see the deadline on the signing page, in the Inbox and in the email; a missed deadline is marked red, but the route is not cancelled. The message to signers shows on the signing page, for example “Please sign by Friday”.
 
-The route deadline is easiest to take from the checkpoint deadline ([Submission deadline](submit.md#deadline)). Under the “Deadline” field the Studio shows the checkpoint deadline and suggests a route deadline:
+The route deadline comes from the checkpoint deadline ([Submission deadline](submit.md#deadline)). If the checkpoint has a deadline, the Studio sets the route deadline itself when it creates the draft: one day before the checkpoint deadline, at the same time. After the last signature you have a day to build the package and upload it to the LMS. If less than two days are left before the checkpoint deadline, the route deadline equals it; if the checkpoint deadline has already passed, the route deadline is empty. Under the “Deadline” field the Studio shows where it comes from:
 
-- “Checkpoint deadline: 15.11, 23:59. Set the route deadline to 14.11, 23:59?” and a “Set” button. The route deadline is one day before the checkpoint deadline, at the same time: after the last signature you have a day to build the package and upload it to the LMS. If less than two days are left before the checkpoint deadline, the Studio suggests the checkpoint deadline itself.
-- After “Set”: “Route deadline: 14.11, 23:59. One day before the checkpoint deadline (15.11), so there is time to build the package”.
+- “Route deadline: 14.11, 23:59. One day before the checkpoint deadline (15.11), so there is time to build the package”.
+- If the checkpoint deadline changed after the draft was created: “The checkpoint deadline changed: 20.11, 23:59. Set the route deadline to 19.11, 23:59?” and a “Set” button. The route deadline itself does not change until you press “Set”.
+- If the route deadline is empty (the checkpoint deadline was set after the draft was created), the Studio suggests it with the same button: “Checkpoint deadline: 15.11, 23:59. Set the route deadline to 14.11, 23:59?”.
 - You can set any other route deadline in the “Deadline” field. If it is later than the checkpoint deadline, the Studio warns: “The route deadline is later than the submission deadline”.
 - If the checkpoint has no deadline, this is the same “No submission deadline” line as on the checkpoint page, with the field and a “Set deadline” button.
 
