@@ -3,7 +3,8 @@
 - `RouteInputError` (маршрут собран неверно) 400;
 - `RouteConflictError` 409, кроме `not_participant`: не участнику маршрут не раскрывается (404 `not_found`);
   `doc_changed` и `doc_on_route` несут `docs`, `route_blocked` несёт `blockers`, `participant_not_skippable`
-  несёт `reason` и `slots` (обязательные пары, которые мешают; пусто при других причинах);
+  несёт `reason` и `slots` (обязательные пары, которые мешают; пусто при других причинах), `resets_signatures`
+  несёт `resets` (`[{doc_id, slot_id, name}]`: ЭП, которые сбросит правка меток даты, 14.6);
 - `SigningKeyError` отказ подписи ключом Студии («Отправить и подписать», «Согласовать и подписать», «Подписать»,
   плашка из ключа): 400 (`passphrase_required`, `passphrase_invalid`, `sign_failed`), 409 (`key_not_found`) или 403
   (`server_keys_forbidden`, `forbidden` за чужой слот или другого подписанта на плашке). У `sign_failed` отправки
@@ -19,6 +20,7 @@ from fastapi.responses import JSONResponse
 
 from hse_doc_studio.core.signing_route.entities import (
     ParticipantNotSkippableError,
+    ResetsSignaturesError,
     RouteConflictError,
     RouteInputError,
 )
@@ -71,6 +73,8 @@ async def _conflict_handler(_request: Request, exc: Exception) -> JSONResponse:
     if isinstance(exc, ParticipantNotSkippableError):
         body["reason"] = exc.reason.value
         body["slots"] = [{"doc_id": pair.doc_id, "slot_id": pair.slot_id} for pair in exc.slots]
+    if isinstance(exc, ResetsSignaturesError):
+        body["resets"] = [{"doc_id": r.doc_id, "slot_id": r.slot_id, "name": r.name} for r in exc.resets]
     return JSONResponse(status_code=409, content=body)
 
 

@@ -231,7 +231,8 @@
       "reminded": "reminder",
       "invited": "invitation",
       "frozen": "documents finalized",
-      "skipped": "skipped a participant's signature"
+      "skipped": "skipped a participant's signature",
+      "marks_edited": "changed the date marks"
     },
     "reason": {
       "rebuilt": "document changed",

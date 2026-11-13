@@ -18,7 +18,8 @@ from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
-from hse_doc_studio.core.enums import DetachedFormat, DetachedOrigin, DetachedVerdict, SignMode
+from hse_doc_studio.core.enums import DateMarkFormat, DetachedFormat, DetachedOrigin, DetachedVerdict, SignMode
+from hse_doc_studio.core.signatures.dates import display_day
 from hse_doc_studio.core.signatures.plan import (
     CRYPTO_METHODS,
     DocFacts,
@@ -27,7 +28,17 @@ from hse_doc_studio.core.signatures.plan import (
     mark_of,
     method_of,
 )
-from hse_doc_studio.core.signing_route.effects import Effect, FillPlate, Freeze, Notify, Release, Skip, Unskip, Withhold
+from hse_doc_studio.core.signing_route.effects import (
+    Effect,
+    FillPlate,
+    Freeze,
+    Notify,
+    RecordSignedAt,
+    Release,
+    Skip,
+    Unskip,
+    Withhold,
+)
 from hse_doc_studio.core.signing_route.engine import Evaluation, RouteFacts, approved_docs, evaluate
 from hse_doc_studio.core.signing_route.entities import (
     DocSlot,
@@ -47,15 +58,18 @@ from hse_doc_studio.core.signing_route.transitions import (
 )
 from hse_doc_studio.core.signing_route.versions import version_changes
 from hse_doc_studio.core.value_objects import (
+    DateMark,
     DetachedSignature,
     EmbeddedSignature,
     FrozenPdf,
     SignaturePlacement,
     SignatureSlot,
     SignaturesState,
+    SignedAt,
     SignerInfo,
     SkippedSlot,
 )
+from hse_doc_studio.use_cases.signing_route.effects import record_signed_at
 
 DOC = "topic_application"
 DOC2 = "application"
@@ -90,6 +104,9 @@ class World:
     resets: int = 0
     optional: dict[str, set[str]] = field(default_factory=dict)  # необязательные слоты по документам на точке
     skipped: dict[str, dict[str, SkippedSlot]] = field(default_factory=dict)
+    # Метки даты и момент подписи по парам (14.3): у размещения пары `dates` и `signed_at`.
+    dates: dict[DocSlot, tuple[DateMark, ...]] = field(default_factory=dict)
+    signed_at: dict[DocSlot, SignedAt] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         for slot_id, mode in self.modes.items():
@@ -112,13 +129,40 @@ class World:
                 items.append(f"png:{slot_id}:{slot.png_path}")
             elif mark is VisibleMark.plate:
                 items.append(f"plate:{slot_id}:{slot.signer.owner if slot.signer else ''}")
+            items.extend(self._date_items(doc_id, slot_id))
         return sha("|".join(items))
+
+    def _date_items(self, doc_id: str, slot_id: str) -> list[str]:
+        """Метки даты рисуют день подписи по Москве, пока слот не придержан и не пропущен (14.3)."""
+        pair = DocSlot(doc_id, slot_id)
+        signed_at = self.signed_at.get(pair)
+        hidden = slot_id in self.withheld[doc_id] or slot_id in self.skipped.get(doc_id, {})
+        if not self.dates.get(pair) or signed_at is None or hidden:
+            return []
+        return [f"date:{slot_id}:{display_day(signed_at.at)}"]
+
+    def add_dates(self, pair: DocSlot, count: int = 1) -> None:
+        """Метки даты у пары: «день», «месяц словом», «год двумя цифрами» и далее по кругу."""
+        formats = (DateMarkFormat.day, DateMarkFormat.month_word, DateMarkFormat.year_short)
+        self.dates[pair] = tuple(
+            DateMark(f"d{n + 1}", 1, 10.0 + 20 * n, 250.0, 15.0, 5.0, formats[n % 3]) for n in range(count)
+        )
 
     def state(self) -> SignaturesState:
         placement = SignaturePlacement(enabled=True, page=1, x_mm=10, y_mm=10, width_mm=30)
         return SignaturesState(
             slots=dict(self.slots),
-            placements={doc_id: dict.fromkeys(self.slots, placement) for doc_id in self.docs},
+            placements={
+                doc_id: {
+                    slot_id: replace(
+                        placement,
+                        dates=self.dates.get(DocSlot(doc_id, slot_id), ()),
+                        signed_at=self.signed_at.get(DocSlot(doc_id, slot_id)),
+                    )
+                    for slot_id in self.slots
+                }
+                for doc_id in self.docs
+            },
             frozen=dict(self.frozen),
             detached={doc_id: dict(sigs) for doc_id, sigs in self.detached.items()},
             embedded={doc_id: dict(sigs) for doc_id, sigs in self.embedded.items()},
@@ -157,16 +201,28 @@ class World:
         for effect in effects:
             if isinstance(effect, Skip | Unskip):
                 self._skip(effect, route)
-            elif isinstance(effect, Withhold):
-                self.withheld[effect.doc_id].add(effect.slot_id)
-            elif isinstance(effect, Release):
-                self.withheld[effect.doc_id].discard(effect.slot_id)
+            elif isinstance(effect, Withhold | Release):
+                self._hold(effect)
+            elif isinstance(effect, RecordSignedAt):
+                self._record(effect)
             elif isinstance(effect, FillPlate):
                 self.slots[effect.slot_id] = replace(self.slots[effect.slot_id], signer=effect.signer)
             elif isinstance(effect, Freeze):
                 self.freeze(effect.doc_id)
             else:
                 self.notices.append(effect)
+
+    def _hold(self, effect: Withhold | Release) -> None:
+        if isinstance(effect, Withhold):
+            self.withheld[effect.doc_id].add(effect.slot_id)
+        else:
+            self.withheld[effect.doc_id].discard(effect.slot_id)
+
+    def _record(self, effect: RecordSignedAt) -> None:
+        """Момент согласия у размещения пары, как его пишет исполнитель эффектов (`record_signed_at`)."""
+        recorded = record_signed_at(self.state(), effect).placements[effect.doc_id][effect.slot_id].signed_at
+        assert recorded is not None
+        self.signed_at[DocSlot(effect.doc_id, effect.slot_id)] = recorded
 
     def _skip(self, effect: Skip | Unskip, route: SigningRoute | None) -> None:
         if isinstance(effect, Unskip):

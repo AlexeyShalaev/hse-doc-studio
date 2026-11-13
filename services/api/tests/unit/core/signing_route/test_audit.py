@@ -313,3 +313,31 @@ def test__audit_of_event__skipped__participant_pairs_kept_marks_and_refrozen() -
     assert (record.action, record.actor_id) == (RouteAuditAction.skip, author.user_id)
     assert record.details["participant_id"] == str(academic.id)
     assert (record.details["slots"], record.details["kept_marks"], record.details["refrozen"]) == (pairs, [DOC], [])
+
+
+def test__audit_of_event__marks_edited__document_slot_count_and_reset_signatures() -> None:
+    route = _route()
+    author = route.participants[0]
+    reset = [{"doc_id": DOC, "slot_id": "author"}]
+
+    record = audit_of_event(
+        route,
+        _event(
+            route,
+            EventKind.marks_edited,
+            actor_id=author.user_id,
+            details={"doc_id": DOC, "slot_id": "supervisor", "marks": 3, "reset": reset},
+        ),
+    )
+
+    assert record is not None
+    assert (record.action, record.actor_id) == (RouteAuditAction.marks_edit, author.user_id)
+    assert record.details == {
+        "route_id": str(route.id),
+        "profile_id": "topic-approval",
+        "round": 2,
+        "doc_id": DOC,
+        "slot_id": "supervisor",
+        "marks": 3,
+        "reset": reset,
+    }

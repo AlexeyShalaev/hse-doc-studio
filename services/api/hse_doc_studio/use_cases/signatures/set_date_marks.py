@@ -4,9 +4,10 @@
 ставит или снимает ручную дату подписи (`SignedAt.source` `manual`). Размещения слота может ещё не быть: оно
 создаётся выключенным на месте из пака, чтобы у подписи без видимой метки (PAdES) была дата.
 
-Срез R22 правит метки только мимо маршрута. Документ, который держит идущий или завершённый маршрут, правится его
-сценарием (R23): пока 409 `route_locked`. Ручная дата на паре участника маршрута 409 `date_from_route`: дату даёт
-его согласие (`RecordSignedAt`, R23).
+Документ, который держит идущий или завершённый маршрут, правит сценарий маршрута (`ISigningRouteGate.edit_dates`,
+14.6): он же дозаполняет дату согласия, перефиксирует документ и пишет событие; без права отправки маршрута 409
+`route_locked`, при ЭП над зафиксированным PDF без `confirm_reset` 409 `resets_signatures`. Ручная дата на паре
+участника маршрута 409 `date_from_route`: дату даёт его согласие (`RecordSignedAt`).
 """
 
 from __future__ import annotations
@@ -211,9 +212,9 @@ class SetDateMarksUC:
         project, version, doc, rslot = await self._load(inp)
         checked = _checked_shape(inp.dates)
         day = _manual_day(inp.signed_at) if inp.signed_at_given else None
-        await self._routes.require_dates_editable(project.id, inp.doc_id, inp.slot_id, manual=inp.signed_at_given)
-        async with project_lock(project):
-            state = self._signature_repo.get_state(project.folder)
+
+        async def write(state: SignaturesState) -> SignaturesState:
+            """Метки слота документа целиком и ручная дата; рамки проверяются по PDF источника подписи."""
             sizes = await self._page_sizes(project, version, doc, state)
             for n, (item, _, _) in enumerate(checked, start=1):
                 _check_frame(n, item, sizes)
@@ -236,22 +237,25 @@ class SetDateMarksUC:
             if inp.signed_at_given:
                 signed_at = SignedAt(at=day.isoformat(), source=SignedAtSource.manual) if day is not None else None
             placement = replace(base, dates=marks, signed_at=signed_at)
-            updated = state
-            if placement != existing:
-                doc_placements = {**state.placements.get(inp.doc_id, {}), inp.slot_id: placement}
-                updated = replace(state, placements={**state.placements, inp.doc_id: doc_placements})
-                self._signature_repo.save_state(project.folder, updated)
-        if placement != existing:
-            logger.info(
-                "signature date marks set",
-                project_id=str(inp.project_id),
-                doc_id=inp.doc_id,
-                slot=inp.slot_id,
-                marks=len(marks),
-                signed_at=signed_at.source.value if signed_at else None,
-            )
+            if placement == existing:
+                return state
+            doc_placements = {**state.placements.get(inp.doc_id, {}), inp.slot_id: placement}
+            return replace(state, placements={**state.placements, inp.doc_id: doc_placements})
+
+        updated = await self._routes.edit_dates(
+            project.id, inp.doc_id, inp.slot_id, write, manual=inp.signed_at_given, confirm_reset=inp.confirm_reset
+        )
+        if updated is None:
+            async with project_lock(project):
+                state = self._signature_repo.get_state(project.folder)
+                updated = await write(state)
+                if updated != state:
+                    self._signature_repo.save_state(project.folder, updated)
+                    _log_set(inp, updated)
+        # `write` создаёт размещение, если его не было: после правки оно есть всегда.
+        placement = updated.placements[inp.doc_id][inp.slot_id]
         lang = str(project.lang)
-        texts = tuple(date_mark_text(updated, inp.doc_id, inp.slot_id, mark, lang) for mark in marks)
+        texts = tuple(date_mark_text(updated, inp.doc_id, inp.slot_id, mark, lang) for mark in placement.dates)
         return SetDateMarksOutput(placement=placement, texts=texts)
 
     async def _load(self, inp: SetDateMarksInput) -> tuple[Project, TemplateVersion, Document, RuntimeSlot]:
@@ -299,6 +303,18 @@ class SetDateMarksUC:
         if source.path is None or not source.exists or source.path.suffix.lower() != ".pdf":
             return ()
         return await asyncio.to_thread(self._pages.page_sizes_mm, source.path)
+
+
+def _log_set(inp: SetDateMarksInput, state: SignaturesState) -> None:
+    placement = state.placements[inp.doc_id][inp.slot_id]
+    logger.info(
+        "signature date marks set",
+        project_id=str(inp.project_id),
+        doc_id=inp.doc_id,
+        slot=inp.slot_id,
+        marks=len(placement.dates),
+        signed_at=placement.signed_at.source.value if placement.signed_at else None,
+    )
 
 
 def _seeded(rslot: RuntimeSlot) -> SignaturePlacement:

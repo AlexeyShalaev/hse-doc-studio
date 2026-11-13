@@ -11,6 +11,8 @@
 - согласие действует по документам (раздел 12.6): картинка участника на документе открыта, пока совпадает
   отпечаток этого документа, а для хода шагов участник согласовал, только если совпали отпечатки всех его
   документов;
+- метки даты слота (раздел 14.4) тоже меняют видимый слой: дата появится при согласии, поэтому участник с метками
+  даты меняет видимый слой, пока не согласовал;
 - пока они есть, фаза `approval`: согласия строго по шагам, картинка встаёт при согласии;
 - когда их не осталось, видимый слой окончателен: фаза `signing`, документы с ЭП фиксируются, согласившие до
   фиксации подписывают параллельно, следующие шаги согласуют и подписывают по порядку одним действием.
@@ -22,7 +24,8 @@ from collections.abc import Collection, Iterable, Mapping
 from dataclasses import dataclass, field, replace
 from uuid import UUID
 
-from hse_doc_studio.core.enums import SignMode
+from hse_doc_studio.core.enums import SignedAtSource, SignMode
+from hse_doc_studio.core.signatures.dates import display_day
 from hse_doc_studio.core.signatures.plan import (
     CRYPTO_METHODS,
     DocFacts,
@@ -38,6 +41,7 @@ from hse_doc_studio.core.signing_route.effects import (
     FillPlate,
     Freeze,
     Notify,
+    RecordSignedAt,
     Release,
     Skip,
     Unskip,
@@ -235,6 +239,7 @@ class _Info:
     approved_docs: frozenset[str]  # его документы, чей отпечаток совпал с согласием этого раунда (12.6)
     approval_valid: bool  # согласие этого раунда на версии на подписи всех его документов
     skipped: bool = False  # автор пропустил его в этом раунде (13.3): пропущенные пары в остальных полях не учтены
+    dated: tuple[DocSlot, ...] = ()  # пары с метками даты (14.4): дата встанет при его согласии
 
     @property
     def approved(self) -> bool:
@@ -246,7 +251,8 @@ class _Info:
 
     @property
     def changer(self) -> bool:
-        return not self.skipped and not self.approved and bool(self.png or self.missing_plate)
+        """Ещё меняет видимый слой (4.2): картинка, плашка без данных или метки даты (14.4) встанут при согласии."""
+        return not self.skipped and not self.approved and bool(self.png or self.missing_plate or self.dated)
 
     @property
     def early(self) -> bool:
@@ -320,7 +326,8 @@ def _is_skipped(route: SigningRoute, p: Participant) -> bool:
 def _info(route: SigningRoute, p: Participant, facts: RouteFacts) -> _Info:
     # Пропущенные пары выпадают из расчёта явно: состояние подписей отвечает им `skipped`, но не `signed` (13.3).
     skipped = skipped_pairs(route, p)
-    png, plates, crypto = _classify(tuple(pair for pair in p.assignments if pair not in skipped), facts.state)
+    pairs = tuple(pair for pair in p.assignments if pair not in skipped)
+    png, plates, crypto = _classify(pairs, facts.state)
     approved = approved_docs(route, p, facts)
     return _Info(
         participant=p,
@@ -333,7 +340,14 @@ def _info(route: SigningRoute, p: Participant, facts: RouteFacts) -> _Info:
         approved_docs=approved,
         approval_valid=all(doc_id in approved for doc_id in p.doc_ids(route.docs)),
         skipped=_is_skipped(route, p),
+        dated=tuple(pair for pair in pairs if _dated(pair, facts.state)),
     )
+
+
+def _dated(pair: DocSlot, state: SignaturesState) -> bool:
+    """У размещения пары есть метки даты (14.3), включено оно или нет."""
+    placement = state.placements.get(pair.doc_id, {}).get(pair.slot_id)
+    return placement is not None and bool(placement.dates)
 
 
 def _classify(
@@ -679,7 +693,11 @@ def _effects(
     # Черновик ещё ничего не трогал, отменённый и снятый с контроля оставляют всё как есть (5.6).
     if route.status not in HOLDING_STATUSES:
         return ()
-    files: list[Effect] = [*_skip_effects(route, facts), *_image_effects(infos, facts)]
+    files: list[Effect] = [
+        *_skip_effects(route, facts),
+        *_image_effects(infos, facts),
+        *_signed_at_effects(infos, facts),
+    ]
     if status is RouteStatus.active and progress.phase is RoutePhase.signing:
         files += _freeze_effects(route, facts, infos, files)
     return (*files, *_notices(route, infos, views, status, stop))
@@ -700,6 +718,38 @@ def _image_effects(infos: tuple[_Info, ...], facts: RouteFacts) -> list[Withhold
     return effects
 
 
+def _signed_at_effects(infos: tuple[_Info, ...], facts: RouteFacts) -> list[RecordSignedAt]:
+    """Момент подписи пар с метками даты (14.4, 14.5): согласие участника, пока оно действует для документа.
+
+    Пишется, когда даты согласия у размещения нет или её отпечаток другой (документ изменился и согласован заново).
+    Новая версия с тем же отпечатком дату не меняет. Так же дозаполняется дата у того, кто согласовал до появления
+    меток: она берётся из `Approval.at`.
+    """
+    effects: list[RecordSignedAt] = []
+    for info in infos:
+        approval = info.participant.approval
+        if approval is None:
+            continue
+        for pair in info.dated:
+            token = approval.tokens.get(pair.doc_id)
+            if pair.doc_id not in info.approved_docs or token is None:
+                continue
+            current = facts.state.placements[pair.doc_id][pair.slot_id].signed_at
+            if current is not None and current.source is SignedAtSource.approval and current.token == token:
+                continue
+            effects.append(RecordSignedAt(pair.doc_id, pair.slot_id, approval.at, token))
+    return effects
+
+
+def _date_redrawn(effect: RecordSignedAt, facts: RouteFacts) -> bool:
+    """Запись даты меняет напечатанное: метки видны, а день по Москве другой (форматы зависят только от дня)."""
+    state = facts.state
+    if state.mark_hidden(effect.doc_id, effect.slot_id):
+        return False
+    current = state.placements[effect.doc_id][effect.slot_id].signed_at
+    return current is None or display_day(current.at) != display_day(effect.at)
+
+
 def _freeze_effects(
     route: SigningRoute, facts: RouteFacts, infos: tuple[_Info, ...], earlier: list[Effect]
 ) -> list[Effect]:
@@ -707,6 +757,8 @@ def _freeze_effects(
     fills = _plate_fills(infos, facts)
     filled = {fill.slot_id for fill in fills}
     touched = {e.doc_id for e in earlier if isinstance(e, Withhold | Release)}
+    # Дата согласия на метках даты (14.4) входит в видимый слой: документ с ней фиксируется заново (14.6).
+    touched |= {e.doc_id for e in earlier if isinstance(e, RecordSignedAt) and _date_redrawn(e, facts)}
     # Пропуск убирает метку из видимого слоя: документ, где она уже рисуется, зафиксируют заново (13.5).
     touched |= {
         e.doc_id

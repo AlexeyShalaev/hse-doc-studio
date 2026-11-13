@@ -119,6 +119,8 @@ export const RouteEventKindSchema = z.enum([
   "invited",
   "frozen",
   "skipped",
+  /** Автор изменил метки даты на документе под маршрутом (14.6): `who` автор. */
+  "marks_edited",
 ]);
 export type RouteEventKind = z.infer<typeof RouteEventKindSchema>;
 

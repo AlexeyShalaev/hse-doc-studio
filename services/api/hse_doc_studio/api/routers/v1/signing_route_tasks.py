@@ -59,6 +59,17 @@ def _other_slot(slot: TaskSlot) -> s.SigningTaskOtherSlot:
         height_mm=slot.height_mm,
         mark=slot.mark.value,
         status=slot.status.value,
+        dates=[
+            s.SigningTaskDateMark(
+                page=max(mark.page, 1),
+                x_mm=mark.x_mm,
+                y_mm=mark.y_mm,
+                width_mm=mark.width_mm,
+                height_mm=mark.height_mm,
+                text=mark.text,
+            )
+            for mark in slot.dates
+        ],
     )
 
 

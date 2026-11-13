@@ -119,6 +119,7 @@ async def test__task__participant_sees_own_slots_other_marks_and_route_progress(
             "height_mm": 16.0,
             "mark": "png",
             "status": "pending",
+            "dates": [],
             "reason": "awaiting_approval",
             "optional": False,
         }

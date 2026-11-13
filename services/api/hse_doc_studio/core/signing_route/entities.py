@@ -135,6 +135,7 @@ class EventKind(StrEnum):
     invited = "invited"
     frozen = "frozen"
     skipped = "skipped"  # автор пропустил участника (раздел 13)
+    marks_edited = "marks_edited"  # автор изменил метки даты на документе маршрута (раздел 14.6)
 
 
 class SkipBlocker(StrEnum):
@@ -158,7 +159,7 @@ class RouteConflictError(Exception):
     """Действие несовместимо с состоянием маршрута (ответ 409, `not_participant` это 404).
 
     Коды: `invalid_transition`, `not_participant`, `not_your_turn`, `image_required`, `plate_required`,
-    `route_locked`, `nothing_changed`, `participant_not_skippable`, `date_from_route`.
+    `route_locked`, `nothing_changed`, `participant_not_skippable`, `date_from_route`, `resets_signatures`.
     """
 
     def __init__(self, code: str, message: str) -> None:
@@ -177,6 +178,31 @@ class ParticipantNotSkippableError(RouteConflictError):
         )
         self.reason = reason
         self.slots = slots
+
+
+@dataclass(frozen=True)
+class ResetSignature:
+    """ЭП над зафиксированным PDF, которую сбросит правка меток даты (14.6): пара и имя подписанта для окна."""
+
+    doc_id: str
+    slot_id: str
+    name: str
+
+
+class ResetsSignaturesError(RouteConflictError):
+    """Правка меток даты на документе под маршрутом сбросит ЭП над B, а `confirm_reset` не передан (409
+    `resets_signatures`, 14.6): `resets` какие подписи. Ничего не записано."""
+
+    def __init__(self, resets: tuple[ResetSignature, ...]) -> None:
+        names = ", ".join(dict.fromkeys(r.name for r in resets))
+        super().__init__(
+            "resets_signatures",
+            localized_error(
+                f"Подписи будут сброшены: {names}. Подтвердите сохранение",
+                f"Signatures will be reset: {names}. Confirm the save",
+            ),
+        )
+        self.resets = resets
 
 
 def not_your_turn() -> RouteConflictError:

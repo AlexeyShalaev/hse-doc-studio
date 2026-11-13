@@ -76,10 +76,7 @@ def _edits(trio: Trio, who: Person, *, doc_id: str = APPLICATION, slot_id: str =
         "unfreeze": lambda: trio.call(who, "DELETE", f"{base}/docs/{doc_id}/frozen"),
         "detached signature removal": lambda: trio.call(who, "DELETE", f"{base}/docs/{doc_id}/detached/{slot_id}"),
         "withheld image shown": lambda: trio.call(who, "DELETE", f"{base}/signatures/withheld/{doc_id}/{slot_id}"),
-        # Метки даты под маршрутом правит его сценарий (signing-route.md, 14.6, срез R23); до него 409.
-        "date marks": lambda: trio.call(
-            who, "PUT", f"{base}/signatures/placements/{doc_id}/{slot_id}/dates", json={"dates": [DATE_MARK]}
-        ),
+        # Метки даты под маршрутом правит его сценарий (signing-route.md, 14.6): test_route_dates.py.
     }
 
 
@@ -211,26 +208,6 @@ async def test__route_not_going__signature_edits_allowed_again(stand: Stand, mon
 
     assert (returned.status_code, cancelled.status_code) == (200, 200)
     assert trio.state()["placements"][APPLICATION]["author"]["x_mm"] == 44
-
-
-async def test__date_marks__completed_route__still_holds_the_document__route_locked(stand: Stand) -> None:
-    """Завершённый маршрут держит документ: метки на нём правит сценарий маршрута (14.6, срез R23)."""
-    trio = await make_trio(stand, images=("author", "supervisor"), academic="none")
-    trio.sent()
-    trio.approved(trio.supervisor)
-    before = trio.state()
-
-    resp = trio.call(
-        trio.author,
-        "PUT",
-        f"{trio.project.base}/signatures/placements/{APPLICATION}/supervisor/dates",
-        json={"dates": [DATE_MARK]},
-    )
-    drain(stand)
-
-    assert trio.route()["status"] == "completed"
-    assert _code(resp) == (409, "route_locked")
-    assert trio.state() == before
 
 
 async def test__date_marks__returned_route__marks_open_but_manual_date_comes_from_the_route(stand: Stand) -> None:

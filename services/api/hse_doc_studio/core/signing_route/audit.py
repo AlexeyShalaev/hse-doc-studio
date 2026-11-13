@@ -44,6 +44,8 @@ class RouteAuditAction(StrEnum):
     signer_plate = "signing_route.signer_plate"
     signer_image = "signing_route.signer_image"
     skip = "signing_route.skip"
+    # Метки даты на документе под маршрутом (14.6): из события `marks_edited`.
+    marks_edit = "signing_route.marks_edit"
     # Перенос маршрута 0.20.0 (12.11): версия на подписи из сборки или архива сборок; актора нет.
     migrate = "signing_route.migrate"
 
@@ -61,6 +63,7 @@ EVENT_ACTIONS: Mapping[EventKind, RouteAuditAction] = {
     EventKind.reminded: RouteAuditAction.remind,
     EventKind.invited: RouteAuditAction.invite,
     EventKind.skipped: RouteAuditAction.skip,
+    EventKind.marks_edited: RouteAuditAction.marks_edit,
 }
 UNAUDITED_EVENTS = frozenset({EventKind.frozen, EventKind.resumed})
 
@@ -136,7 +139,7 @@ def audit_of_event(route: SigningRoute, event: RouteEvent) -> RouteAuditRecord |
     return RouteAuditRecord(action, event.actor_id, details)
 
 
-def _kind_details(  # noqa: PLR0911 — по ветке на вид события
+def _kind_details(  # noqa: C901, PLR0911 — по ветке на вид события
     route: SigningRoute, event: RouteEvent, participant: Participant | None
 ) -> dict[str, object]:
     """Что запись добавляет по виду события: состав отправленного, слоты согласия, ушедший участник."""
@@ -164,6 +167,10 @@ def _kind_details(  # noqa: PLR0911 — по ветке на вид событи
             "kept_marks": list(_strings(event.details.get("kept_marks"))),
             "refrozen": list(_strings(event.details.get("refrozen"))),
         }
+    if event.kind is EventKind.marks_edited:
+        # Сколько меток даты у слота документа и чьи ЭП сброшены перефиксацией (14.6).
+        marks = event.details.get("marks")
+        return {"marks": marks if isinstance(marks, int) else 0, "reset": _pairs(event.details.get("reset"))}
     if event.kind is EventKind.completed:
         return {"docs": list(route.docs)}
     if event.kind is EventKind.paused and event.details.get("reason") == StopReason.participant_left.value:

@@ -16,6 +16,7 @@ from uuid import UUID
 
 from hse_doc_studio.core.access.actions import Action
 from hse_doc_studio.core.access.checker import IProjectAccessChecker, ProjectForbiddenError
+from hse_doc_studio.core.access.context import current_actor
 from hse_doc_studio.core.access.entities import Actor, ActorKind
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.errors import NotFoundError
@@ -26,8 +27,12 @@ from hse_doc_studio.core.signing_route.audit import RouteAuditAction, record_of
 from hse_doc_studio.core.signing_route.effects import Notify
 from hse_doc_studio.core.signing_route.engine import Evaluation, evaluate
 from hse_doc_studio.core.signing_route.entities import (
+    DocSlot,
     EventKind,
+    NextAction,
+    Notice,
     Participant,
+    RequestOutcome,
     RouteEvent,
     RouteStatus,
     SigningRoute,
@@ -37,6 +42,7 @@ from hse_doc_studio.core.signing_route.ports import IRoutePeople, ISigningNotifi
 from hse_doc_studio.core.signing_route.repositories import ISigningRouteRepository
 from hse_doc_studio.core.signing_route.transitions import apply_evaluation, refresh_snapshot
 from hse_doc_studio.core.uow import IUnitOfWork
+from hse_doc_studio.core.value_objects import SignaturesState
 from hse_doc_studio.use_cases.orgs.access import user_id_of
 from hse_doc_studio.use_cases.signatures._studio_signer import project_lock
 from hse_doc_studio.use_cases.signing_route.audit import SigningRouteAudit
@@ -71,22 +77,68 @@ def actor_uuid(actor: Actor) -> UUID:
     return UUID(user_id_of(actor))
 
 
+def current_actor_uuid() -> UUID | None:
+    """Вошедший пользователь текущего запроса как UUID маршрута; None у сервера, токена без пользователя и прочих."""
+    actor = current_actor()
+    if actor is None or actor.kind is not ActorKind.user or not actor.id:
+        return None
+    try:
+        return actor_uuid(actor)
+    except ValueError:
+        return None
+
+
 def route_not_found() -> NotFoundError:
     return NotFoundError(localized_error("Маршрут подписания не найден", "Signing route not found"))
 
 
 @dataclass(frozen=True)
 class Settled:
-    """Маршрут после файловых эффектов и обновления снимка, факты и итоговый расчёт на них."""
+    """Маршрут после файловых эффектов и обновления снимка, факты и итоговый расчёт на них.
+
+    `frozen` документы, которые маршрут зафиксировал; `reset` пары, чьи ЭП эта фиксация сбросила (новый B).
+    """
 
     route: SigningRoute
     loaded: LoadedFacts
     evaluation: Evaluation
     frozen: tuple[str, ...] = ()
+    reset: tuple[DocSlot, ...] = ()
 
     @property
     def notices(self) -> tuple[Notify, ...]:
         return tuple(e for e in self.evaluation.effects if isinstance(e, Notify))
+
+
+def dropped_signatures(before: SignaturesState, after: SignaturesState, docs: Sequence[str]) -> tuple[DocSlot, ...]:
+    """ЭП документов `docs`, которых после фиксации больше нет: открепленные и встроенные над прежним B."""
+    dropped: list[DocSlot] = []
+    for doc_id in dict.fromkeys(docs):
+        had = {*before.detached.get(doc_id, {}), *before.embedded.get(doc_id, {})}
+        kept = {*after.detached.get(doc_id, {}), *after.embedded.get(doc_id, {})}
+        dropped += [DocSlot(doc_id, slot_id) for slot_id in sorted(had - kept)]
+    return tuple(dropped)
+
+
+def resign_requests(settled: Settled, notices: Sequence[Notify]) -> tuple[Notify, ...]:
+    """Повторный запрос «Подпишите итоговый PDF» владельцам сброшенных ЭП (14.6).
+
+    Запрос `sign` приходит раз за раунд (5.4), поэтому после перефиксации маршрут сам его не повторил бы. Владелец
+    подписи, которого расчёт снова ждёт (`sign`), получает запрос с отпечатком нового B в ключе повтора
+    (`Notify.again`); кому этот же проход уже шлёт запрос, второй не нужен.
+    """
+    route, evaluation = settled.route, settled.evaluation
+    asked = {pid for n in notices if n.notice is Notice.request for pid in n.participant_ids}
+    requests: dict[UUID, Notify] = {}
+    for pair in settled.reset:
+        owner = next((p for p in route.participants if pair in p.assignments), None)
+        frozen = settled.loaded.state.frozen.get(pair.doc_id)
+        if owner is None or frozen is None or owner.id in asked or owner.id in requests:
+            continue
+        if evaluation.participant(owner.id).next_action is not NextAction.sign:
+            continue
+        requests[owner.id] = Notify(Notice.request, (owner.id,), outcome=RequestOutcome.sign, again=frozen.sha256[:12])
+    return tuple(requests.values())
 
 
 def closing_events(settled: Settled, at: datetime) -> list[RouteEvent]:
@@ -207,6 +259,7 @@ class RouteScenario:
         if loaded is None:
             loaded = await self._s.facts.load(point, route)
             route = refresh_snapshot(route, loaded.facts)
+        before = loaded.state
         evaluation = evaluate(route, loaded.facts)
         frozen: list[str] = []
         for _ in range(_MAX_PASSES):
@@ -217,7 +270,8 @@ class RouteScenario:
             loaded = await self._s.facts.load(point, route)
             route = refresh_snapshot(route, loaded.facts)
             evaluation = evaluate(route, loaded.facts)
-        return Settled(route, loaded, evaluation, tuple(frozen))
+        reset = dropped_signatures(before, loaded.state, frozen)
+        return Settled(route, loaded, evaluation, tuple(frozen), reset)
 
     async def _migrate(self, point: RoutePoint, route: SigningRoute, at: datetime) -> bool:
         """Перенести маршрут 0.20.0 на версию на подписи (12.11) до чтения фактов; True, если перенос что-то изменил.
@@ -265,8 +319,10 @@ class RouteScenario:
     ) -> SigningRoute:
         """Статус по расчёту, отметки запросов, запись маршрута с событиями и уведомления в одной транзакции.
 
-        `extra` уведомления сценария сверх расчёта (новая версия, 12.6)."""
+        `extra` уведомления сценария сверх расчёта (новая версия, 12.6). Владельцы ЭП, которые сбросила
+        перефиксация, получают запрос подписи заново (`resign_requests`, 14.6)."""
         notices = (*settled.notices, *extra)
+        notices = (*notices, *resign_requests(settled, notices))
         route = mark_requests(apply_evaluation(settled.route, settled.evaluation, at=at), notices, at=at)
         saved = await self._s.routes.save(route, events=events)
         await self.notify(saved, notices, actor_id=actor_id, comment=comment)
