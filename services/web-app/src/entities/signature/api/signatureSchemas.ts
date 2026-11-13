@@ -90,6 +90,13 @@ export const PlacementSchema = z.object({
   dates: z.array(DateMarkSchema),
   /** Момент подписи слота в этом документе. */
   signed_at: SignedAtSchema.nullable(),
+  /**
+   * Откуда место (signing-route.md, 15.4 и 15.11): `pack` как в шаблоне, `seed` затравка из пака,
+   * `manual` изменено автором. Пока необязательно: интерфейс пометок и кнопок делает W15.
+   */
+  origin: z.enum(["pack", "seed", "manual"]).optional(),
+  /** В шаблоне есть место этого слота для документа («Вернуть место из шаблона», 15.6). */
+  preset_available: z.boolean().optional(),
 });
 
 /**

@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from uuid import UUID
 
 import structlog
 
-from hse_doc_studio.core.catalog import TemplateVersion
+from hse_doc_studio.core.catalog import SignatureDefaultDate, SignatureDefaultPlacement, TemplateVersion
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.repositories import (
@@ -19,6 +20,7 @@ from hse_doc_studio.core.signatures.stamps import stamps_digest_matches, stamps_
 from hse_doc_studio.core.signing_route.ports import HeldRoute, ISigningRouteGate
 from hse_doc_studio.core.value_objects import SignaturesState
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
+from hse_doc_studio.use_cases.signatures.pack_places import PackPlaces, PlaceInfo
 from hse_doc_studio.use_cases.signatures.signing_source import source_of
 
 logger = structlog.get_logger()
@@ -50,6 +52,10 @@ class RuntimeSlotItem:
     # Точки, чей маршрут включил слот в документ сверх точки (`extra_slots`): id инстанса документа → точки
     # (signing-route.md, 13.6). Там автор тоже может отметить подпись необязательной.
     extra_by: dict[str, list[ProfileRef]] = field(default_factory=dict)
+    # Место и метки даты из пака по экземплярам документов, к которым слот применим (signing-route.md, 15.11):
+    # `placements` документа, иначе `default_placement`; метки только у документов, где пак их задаёт.
+    default_placements: dict[str, SignatureDefaultPlacement] = field(default_factory=dict)
+    default_dates: dict[str, tuple[SignatureDefaultDate, ...]] = field(default_factory=dict)
 
 
 @dataclass
@@ -62,6 +68,8 @@ class GetSignaturesOutput:
     plate_outdated: set[str] = field(default_factory=set)
     # Язык документов проекта: на нём метки даты печатают месяц (signing-route.md, 14.3).
     lang: str = "ru"
+    # Происхождение каждого размещения и есть ли место в шаблоне (15.11): документ → слот → сведения.
+    places: dict[str, dict[str, PlaceInfo]] = field(default_factory=dict)
 
 
 class GetSignaturesUC:
@@ -91,6 +99,7 @@ class GetSignaturesUC:
         # по инстансам — фронтенд рендерит панели подписей по ним, а не по
         # каталогу пака, у которого applies_to ссылается на id определений.
         runtime_slots: list[RuntimeSlotItem] = []
+        places: dict[str, dict[str, PlaceInfo]] = {}
         version = self._template_repo.get_version(
             project.lock.pack_id,
             project.lock.template_id,
@@ -106,21 +115,20 @@ class GetSignaturesUC:
             }
             held = await self._routes.held_routes(project.id) if self._routes is not None else ()
             extra = _extra_by(held, required)
-            runtime_slots = [
-                RuntimeSlotItem(
-                    slot=slot,
-                    applies_to=[d.id for d in project.documents if self._slot_service.slot_applies_to_doc(slot, d)],
-                    required_by={
-                        doc_id: [ProfileRef(id=pid, name=profile_names.get(pid, {"ru": pid})) for pid in profile_ids]
-                        for doc_id, profile_ids in required.get(slot.id, {}).items()
-                    },
-                    extra_by={
-                        doc_id: [ProfileRef(id=pid, name=profile_names.get(pid, {"ru": pid})) for pid in profile_ids]
-                        for doc_id, profile_ids in extra.get(slot.id, {}).items()
-                    },
+            runtime_slots = []
+            for slot in self._slot_service.runtime_slots(project, version):
+                docs = [d for d in project.documents if self._slot_service.slot_applies_to_doc(slot, d)]
+                runtime_slots.append(
+                    RuntimeSlotItem(
+                        slot=slot,
+                        applies_to=[d.id for d in docs],
+                        required_by=_refs(required.get(slot.id, {}), profile_names),
+                        extra_by=_refs(extra.get(slot.id, {}), profile_names),
+                        default_placements={d.id: slot.slot_def.place_for(d.def_id) for d in docs},
+                        default_dates={d.id: marks for d in docs if (marks := slot.slot_def.dates_for(d.def_id))},
+                    )
                 )
-                for slot in self._slot_service.runtime_slots(project, version)
-            ]
+            places = PackPlaces.load(self._template_repo, project, version).infos(state.placements)
 
         stale, outdated = await self._frozen_flags(project, version, state)
 
@@ -130,6 +138,7 @@ class GetSignaturesUC:
             stale_frozen=stale,
             plate_outdated=outdated,
             lang=str(project.lang),
+            places=places,
         )
 
     async def _frozen_flags(  # noqa: C901
@@ -157,6 +166,14 @@ class GetSignaturesUC:
             if source.sha256 is not None and source.sha256 != frozen.source_sha256:
                 stale.add(doc_id)
         return stale, outdated
+
+
+def _refs(by_doc: Mapping[str, Iterable[str]], profile_names: dict[str, dict[str, str]]) -> dict[str, list[ProfileRef]]:
+    """Документ → точки с локализованными названиями."""
+    return {
+        doc_id: [ProfileRef(id=pid, name=profile_names.get(pid, {"ru": pid})) for pid in profile_ids]
+        for doc_id, profile_ids in by_doc.items()
+    }
 
 
 def _extra_by(

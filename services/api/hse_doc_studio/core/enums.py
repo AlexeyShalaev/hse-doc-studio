@@ -161,6 +161,14 @@ class MetaFieldAuto(StrEnum):
     academic_year = "academic_year"
 
 
+class PlacementOrigin(StrEnum):
+    """Откуда место подписи слота на документе (signing-route.md, 15.4 и 15.11)."""
+
+    pack = "pack"  # поставил пресет шаблона, и с тех пор место и метки даты не меняли (`from_pack`)
+    seed = "seed"  # затравка: выключенное место из пака без пометки, которое никто не трогал
+    manual = "manual"  # место поставил или изменил автор
+
+
 class PersonRole(StrEnum):
     university = "university"
     company = "company"

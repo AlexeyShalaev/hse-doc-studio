@@ -5,6 +5,7 @@ import os
 from collections.abc import Iterator
 
 import pytest
+from hse_doc_studio.core.i18n import set_interface_language
 from hse_doc_studio.infra.docker.cli import configure_docker_binary
 from hypothesis import given
 from hypothesis import strategies as st
@@ -58,6 +59,18 @@ def _reset_docker_binary() -> Iterator[None]:
     """
     yield
     configure_docker_binary(None)
+
+
+@pytest.fixture(autouse=True)
+def _reset_interface_language() -> Iterator[None]:
+    """Язык интерфейса живёт в contextvar, а синхронные тесты одного воркера делят контекст.
+
+    Тест, который ставит `en` и не возвращает, переводит на английский сообщения всех следующих тестов воркера:
+    какие тесты упадут, зависело от того, как xdist разложил их по воркерам.
+    """
+    set_interface_language(None)
+    yield
+    set_interface_language(None)
 
 
 # Без extra server (CI-задача test-no-server) серверные тесты не собираются: они импортируют sqlalchemy и boto3.

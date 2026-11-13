@@ -33,6 +33,7 @@ from hse_doc_studio.core.repositories import (
 )
 from hse_doc_studio.core.services import ProjectTemplateService, RuntimeSlot, SignatureSlotService
 from hse_doc_studio.core.signatures.dates import MAX_DATE_MARKS
+from hse_doc_studio.core.signatures.pack_places import clear_from_pack
 from hse_doc_studio.core.signatures.ports import IPdfPages
 from hse_doc_studio.core.signatures.stamps import date_mark_text
 from hse_doc_studio.core.signing_route.entities import RouteInputError
@@ -40,6 +41,7 @@ from hse_doc_studio.core.signing_route.ports import ISigningRouteGate
 from hse_doc_studio.core.value_objects import DateMark, SignaturePlacement, SignaturesState, SignedAt
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 from hse_doc_studio.use_cases.signatures._studio_signer import project_lock
+from hse_doc_studio.use_cases.signatures.pack_places import MANUAL, PackPlaces, PlaceInfo
 from hse_doc_studio.use_cases.signatures.signing_source import source_of
 
 logger = structlog.get_logger()
@@ -82,6 +84,8 @@ class SetDateMarksOutput:
     placement: SignaturePlacement
     # Что напечатает каждая метка сейчас, в порядке `placement.dates`; None у пустой.
     texts: tuple[str | None, ...]
+    # Происхождение места и есть ли место в шаблоне (signing-route.md, 15.11).
+    place: PlaceInfo = MANUAL
 
 
 def bad_date_mark(ru: str, en: str) -> RouteInputError:
@@ -219,7 +223,7 @@ class SetDateMarksUC:
             for n, (item, _, _) in enumerate(checked, start=1):
                 _check_frame(n, item, sizes)
             existing = state.placements.get(inp.doc_id, {}).get(inp.slot_id)
-            base = existing or _seeded(rslot)
+            base = existing or _seeded(rslot, doc)
             marks = tuple(
                 DateMark(
                     id=mark_id,
@@ -239,6 +243,8 @@ class SetDateMarksUC:
             placement = replace(base, dates=marks, signed_at=signed_at)
             if placement == existing:
                 return state
+            # Правка меток и ручной даты человеком делает место ручным (signing-route.md, 15.4).
+            placement = clear_from_pack(placement)
             doc_placements = {**state.placements.get(inp.doc_id, {}), inp.slot_id: placement}
             return replace(state, placements={**state.placements, inp.doc_id: doc_placements})
 
@@ -256,7 +262,8 @@ class SetDateMarksUC:
         placement = updated.placements[inp.doc_id][inp.slot_id]
         lang = str(project.lang)
         texts = tuple(date_mark_text(updated, inp.doc_id, inp.slot_id, mark, lang) for mark in placement.dates)
-        return SetDateMarksOutput(placement=placement, texts=texts)
+        place = PackPlaces.load(self._template_repo, project, version).info(inp.doc_id, inp.slot_id, placement)
+        return SetDateMarksOutput(placement=placement, texts=texts, place=place)
 
     async def _load(self, inp: SetDateMarksInput) -> tuple[Project, TemplateVersion, Document, RuntimeSlot]:
         project = (await self._get_uc.execute(GetProjectInput(project_id=inp.project_id))).project
@@ -317,9 +324,10 @@ def _log_set(inp: SetDateMarksInput, state: SignaturesState) -> None:
     )
 
 
-def _seeded(rslot: RuntimeSlot) -> SignaturePlacement:
-    """Выключенное размещение на месте из пака: метки даты есть и у подписи, которую не размещали (14.3)."""
-    default = rslot.slot_def.default_placement
+def _seeded(rslot: RuntimeSlot, doc: Document) -> SignaturePlacement:
+    """Выключенное размещение на месте из пака для документа (15.3): метки даты есть и у подписи, которую не
+    размещали (14.3)."""
+    default = rslot.slot_def.place_for(doc.def_id)
     return SignaturePlacement(
         enabled=False, page=default.page, x_mm=default.x_mm, y_mm=default.y_mm, width_mm=default.width_mm
     )

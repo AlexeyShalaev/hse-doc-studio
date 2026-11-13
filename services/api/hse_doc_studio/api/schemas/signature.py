@@ -12,6 +12,7 @@ from hse_doc_studio.core.enums import (
     DetachedFormat,
     DetachedOrigin,
     DetachedVerdict,
+    PlacementOrigin,
     SignedAtSource,
     SignMode,
 )
@@ -95,6 +96,32 @@ class PlacementResponse(StrictModel):
     # Метки даты подписания слота (signing-route.md, 14.7); правит их только `PUT .../dates`.
     dates: list[DateMarkResponse] = []
     signed_at: SignedAtResponse | None = None
+    # Откуда место (signing-route.md, 15.4 и 15.11): `pack` как в шаблоне, `seed` затравка из пака, которую никто не
+    # трогал, `manual` поставил или изменил автор.
+    origin: PlacementOrigin = PlacementOrigin.manual
+    # В шаблоне проекта есть место этого слота для документа: по нему «Вернуть место из шаблона» (15.6).
+    preset_available: bool = False
+
+
+class PackPlaceResponse(StrictModel):
+    """Место слота на документе из пака (signing-route.md, 15.3): `placements` документа, иначе `default_placement`."""
+
+    page: int
+    x_mm: float
+    y_mm: float
+    width_mm: float
+
+
+class PackDateMarkResponse(StrictModel):
+    """Метка даты слота на документе из пака (`default_dates`, 14.10): рамка и формат, без id и текста."""
+
+    page: int
+    x_mm: float
+    y_mm: float
+    width_mm: float
+    height_mm: float
+    format: DateMarkFormat
+    align: DateMarkAlign
 
 
 class ProfileRefResponse(BaseModel):
@@ -123,6 +150,11 @@ class RuntimeSlotResponse(BaseModel):
     required: bool = False
     # Точки, чей маршрут включил слот в документ сверх точки: id документа → точки (13.6).
     extra_by: dict[str, list[ProfileRefResponse]] = {}
+    # Место из пака по экземплярам документов из `applies_to` (signing-route.md, 15.11); `default_placement` остаётся
+    # общим местом слота для старых клиентов.
+    default_placements: dict[str, PackPlaceResponse] = {}
+    # Метки даты из пака по экземплярам документов; документа без меток в словаре нет.
+    default_dates: dict[str, list[PackDateMarkResponse]] = {}
 
 
 class FrozenPdfResponse(BaseModel):

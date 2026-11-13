@@ -33,6 +33,8 @@ from hse_doc_studio.core.catalog import (
     SignatureDefaultPlacement,
     SignaturesConfig,
     SignatureSlotDef,
+    SigningSlotPreset,
+    SlotCondition,
     SubmissionDocItem,
     SubmissionProfile,
     TemplateInfo,
@@ -48,11 +50,13 @@ from hse_doc_studio.core.enums import (
     FormFieldType,
     MetaFieldAuto,
     MetaFieldType,
+    PersonRole,
     RequiredAt,
     RequirementFormatKind,
     TemplateUpdateClass,
     TemplateVersionStatus,
 )
+from hse_doc_studio.core.meta_usage import PERSON_KEYS
 from hse_doc_studio.core.signatures.dates import MAX_DATE_MARKS, SHEET_HEIGHT_MM, SHEET_WIDTH_MM, frame_problem
 from hse_doc_studio.core.template_versions import MANIFEST_FORMAT
 from hse_doc_studio.core.value_objects import ChecksOverride, RequirementsFormat
@@ -586,7 +590,67 @@ def _parse_signature_slot(data: dict[str, Any]) -> SignatureSlotDef:
         per_author=bool(data.get("per_author", False)),
         required=bool(data.get("required", False)),
         default_dates=_tolerant_default_dates(data.get("default_dates"), slot_id),
+        placements=_tolerant_slot_placements(data.get("placements"), slot_id),
     )
+
+
+# Рамка места подписи из пака (signing-route.md, 15.8): ширина и вертикаль, в которые она обязана уложиться. Высота
+# рамки зависит от картинки подписи, поэтому снизу проверяется только верх рамки: до 287 мм, на 10 мм выше края листа.
+PLACE_MIN_WIDTH_MM = 10.0
+PLACE_MAX_WIDTH_MM = 200.0
+PLACE_MAX_Y_MM = 287.0
+
+
+def parse_slot_placement(item: Any, where: str) -> SignatureDefaultPlacement:
+    """Место слота на документе из `placements` (signing-route.md, 15.3): `{page, x_mm, y_mm, width_mm}`.
+
+    Страница с 1, ширина от 10 до 200 мм, рамка по ширине внутри листа A4, верх рамки от 0 до 287 мм. Ошибка
+    называет запись (`where`) по-английски, для журнала и линтера пака.
+    """
+    if not isinstance(item, dict):
+        raise TypeError(f"{where} must be a mapping with page, x_mm, y_mm, width_mm")
+    place = SignatureDefaultPlacement(
+        page=int(item.get("page", 1)),
+        x_mm=float(item["x_mm"]),
+        y_mm=float(item["y_mm"]),
+        width_mm=float(item["width_mm"]),
+    )
+    if place.page < 1:
+        raise ValueError(f"{where}: page {place.page} is before the first page")
+    if not PLACE_MIN_WIDTH_MM <= place.width_mm <= PLACE_MAX_WIDTH_MM:
+        raise ValueError(
+            f"{where}: width_mm {place.width_mm:g} is outside {PLACE_MIN_WIDTH_MM:g}..{PLACE_MAX_WIDTH_MM:g} mm"
+        )
+    if place.x_mm < 0 or place.x_mm + place.width_mm > SHEET_WIDTH_MM + 0.01:
+        raise ValueError(f"{where}: the box is past the left or right edge of the {SHEET_WIDTH_MM:g} mm wide page")
+    if not 0 <= place.y_mm <= PLACE_MAX_Y_MM:
+        raise ValueError(f"{where}: y_mm {place.y_mm:g} is outside 0..{PLACE_MAX_Y_MM:g} mm")
+    return place
+
+
+def slot_placement_entries(raw: Any) -> list[tuple[str, Any]]:
+    """Записи `placements` слота «id документа, сырое место»; не словарь это ошибка ключа целиком."""
+    if raw is None:
+        return []
+    if not isinstance(raw, dict):
+        raise TypeError("placements must be a mapping of document ids to places")
+    return [(str(doc_id), item) for doc_id, item in raw.items()]
+
+
+def _tolerant_slot_placements(raw: Any, slot_id: str) -> tuple[tuple[str, SignatureDefaultPlacement], ...]:
+    """`placements` слота: битая запись документа отбрасывается с предупреждением, остальные и слот остаются."""
+    try:
+        entries = slot_placement_entries(raw)
+    except TypeError as exc:
+        logger.warning("signature slot placements skipped", slot_id=slot_id, exc=str(exc))
+        return ()
+    result: list[tuple[str, SignatureDefaultPlacement]] = []
+    for doc_id, item in entries:
+        try:
+            result.append((doc_id, parse_slot_placement(item, f"placements.{doc_id}")))
+        except (TypeError, ValueError, KeyError) as exc:
+            logger.warning("signature slot placement skipped", slot_id=slot_id, doc_id=doc_id, exc=str(exc))
+    return tuple(result)
 
 
 def _tolerant_default_dates(raw: Any, slot_id: str) -> tuple[tuple[str, tuple[SignatureDefaultDate, ...]], ...]:
@@ -683,6 +747,7 @@ def _parse_submission_profile(data: dict[str, Any]) -> SubmissionProfile:
         items=items,
         extra_items=extra_items,
         signing_route=_profile_signing_route(data),
+        signing_slots=_profile_signing_slots(data),
     )
 
 
@@ -709,6 +774,76 @@ def parse_signing_route(raw: Any) -> tuple[tuple[str, ...], ...]:
         if slot_ids:
             steps.append(slot_ids)
     return tuple(steps)
+
+
+_CONDITION_KEYS = frozenset({"person", "role"})
+
+
+def parse_slot_condition(raw: Any, where: str) -> SlotCondition:
+    """Условие `when` записи пресета: `{person: <персона>}` или `{person: <персона>, role: university | company}`.
+
+    Незнакомый ключ, персона или роль это ошибка: запись с непонятым условием лоадер отбрасывает целиком, чтобы
+    старая Студия не включила подпись, которую новый пак включает только при условии (signing-route.md, 15.3).
+    """
+    if not isinstance(raw, dict):
+        raise TypeError(f"{where}.when must be a mapping")
+    unknown = sorted(str(key) for key in raw if key not in _CONDITION_KEYS)
+    if unknown:
+        raise ValueError(f"{where}.when: unknown condition {unknown}, expected {sorted(_CONDITION_KEYS)}")
+    person = raw.get("person")
+    if person not in PERSON_KEYS:
+        raise ValueError(f"{where}.when.person: {person!r} is not one of {list(PERSON_KEYS)}")
+    role = raw.get("role")
+    if role is None:
+        return SlotCondition(person=str(person))
+    try:
+        return SlotCondition(person=str(person), role=PersonRole(role))
+    except ValueError:
+        raise ValueError(f"{where}.when.role: {role!r} is not one of {[r.value for r in PersonRole]}") from None
+
+
+def parse_signing_slot(item: Any, where: str) -> SigningSlotPreset:
+    """Запись `signing_slots` профиля (signing-route.md, 15.3): `{doc_id, slot_id, when?, optional?}`.
+
+    Здесь только форма записи; связь с `items` профиля и каталогом слотов проверяет линтер пака.
+    """
+    if not isinstance(item, dict):
+        raise TypeError(f"{where} must be a mapping with doc_id and slot_id")
+    doc_id, slot_id = item.get("doc_id"), item.get("slot_id")
+    if not isinstance(doc_id, str) or not doc_id.strip() or not isinstance(slot_id, str) or not slot_id.strip():
+        raise ValueError(f"{where}: doc_id and slot_id must be non-empty strings")
+    if "--" in slot_id:
+        raise ValueError(f"{where}: slot_id {slot_id!r} is a runtime slot id, use a catalog slot id")
+    optional = item.get("optional", False)
+    if not isinstance(optional, bool):
+        raise TypeError(f"{where}.optional must be true or false, got {optional!r}")
+    when = parse_slot_condition(item["when"], where) if item.get("when") is not None else None
+    return SigningSlotPreset(doc_id=doc_id.strip(), slot_id=slot_id.strip(), when=when, optional=optional)
+
+
+def signing_slot_entries(raw: Any) -> list[Any]:
+    """Записи `signing_slots` профиля; не список это ошибка ключа целиком."""
+    if raw is None:
+        return []
+    if not isinstance(raw, list):
+        raise TypeError("signing_slots must be a list of {doc_id, slot_id, when, optional}")
+    return list(raw)
+
+
+def _profile_signing_slots(data: dict[str, Any]) -> tuple[SigningSlotPreset, ...]:
+    """Пресет точки: битая запись отбрасывается с предупреждением, остальные записи и профиль остаются."""
+    try:
+        entries = signing_slot_entries(data.get("signing_slots"))
+    except TypeError as exc:
+        logger.warning("profile signing_slots ignored", profile_id=data.get("id"), exc=str(exc))
+        return ()
+    result: list[SigningSlotPreset] = []
+    for i, item in enumerate(entries):
+        try:
+            result.append(parse_signing_slot(item, f"signing_slots[{i}]"))
+        except (TypeError, ValueError) as exc:
+            logger.warning("profile signing_slots entry skipped", profile_id=data.get("id"), exc=str(exc))
+    return tuple(result)
 
 
 def _profile_signing_route(data: dict[str, Any]) -> tuple[tuple[str, ...], ...]:

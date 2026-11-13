@@ -18,5 +18,7 @@
       "text": null
     }
   ],
-  "signed_at": null
+  "signed_at": null,
+  "origin": "manual",
+  "preset_available": true
 }
