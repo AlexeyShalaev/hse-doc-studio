@@ -32,6 +32,35 @@ A checkpoint is a package composition declared by the template: which documents,
 
 The checkpoints of each template are described in the [reference](../reference/checkpoints.md).
 
+## Submission deadline { #deadline }
+
+A checkpoint deadline is announced in the LMS and differs every year, so the template does not set it. You set it, for each checkpoint of your project. The template can only hint when it usually falls: the hint shows in grey under the deadline line, for example “Usually mid-November; the exact date is announced in SmartLMS”.
+
+**Set the deadline.** While a checkpoint has no deadline, its page shows “No submission deadline” under the title, the template hint (if any) and the fields “Date” and “Time, Moscow” (23:59 by default). Click “Set deadline”. “Not now” hides the line for this checkpoint in this browser and leaves a “Set deadline” button instead. The pencil next to the deadline (“Change deadline”) changes it, “Remove deadline” removes it.
+
+The project owner and editors set the deadline; everyone with access to the project sees it. A deadline in the past can be set too, for example to see “Overdue”.
+
+**What the deadline line says.**
+
+| State | Example | When |
+|---|---|---|
+| no deadline | “No submission deadline” | no deadline is set |
+| ahead | “Due: 15.11, 23:59” | more than 3 days left |
+| soon | “Due: 15.11, 23:59 (in 3 days)” | in 1 to 3 days |
+| today | “Due today by 23:59” | the deadline is today and has not passed yet |
+| package built | “Deadline passed 15.11: package built 14.11” | the deadline has passed and the checkpoint package was built in time |
+| overdue | “Overdue: package not built” | the deadline has passed and there is no checkpoint package built in time |
+
+Days are counted by the Moscow calendar: a deadline on 15.11 at 10:00 is “in 1 day” on the evening of 14.11, not “today”. Whether you uploaded the work to the LMS the Studio does not know. So “overdue” means exactly “the package was not built by the deadline”: what counts is this checkpoint's package built with “Package” within the 14 days before the deadline and no later than it.
+
+**Project list.** A project shows a mark with its nearest deadline: “Topic application: in 3 days”, “…: today”, “…: overdue”. It shows the nearest deadline in the next 30 days, otherwise an overdue one no older than 7 days. A supervisor sees the same on the students' projects they are a member of.
+
+**Route deadline.** On the “Send for signing” screen the Studio suggests a route deadline one day before the checkpoint deadline, so that a day is left for the package after the last signature ([Deadline and message](send-for-signing.md#prepare)).
+
+**Where the deadline is stored.** In the project file `.hse-studio/project.json`, so it travels with the project to a local Studio, through git and on export. It does not affect builds: changing it does not make documents outdated and does not show “There are changes” on documents out for signing. In a team project there is one deadline for all authors. A local Studio shows and edits the deadline.
+
+Over MCP, `list_submission_profiles` reads the deadline and `set_checkpoint_deadline` sets and removes it ([MCP](mcp.md)).
+
 ## Forms { #forms }
 
 Forms are declared by the template — for example, an AI usage declaration. The Studio renders the form, shows a live preview and produces the official PDF from your answers; the status is visible in Submission and in the “Now” block.
@@ -67,6 +96,18 @@ What is checked and what is not: file integrity and the signature itself (RSA, E
 - **“Token e-signature”** on a slot opens a signing window that uses the CryptoPro Browser plug-in. Pick a certificate: the Studio takes the plate data from its public part, freezes the PDF again if needed, the plug-in signs the file on the token (CryptoPro asks for the PIN) and the signature is checked like any other. The private key never leaves the token. You need CryptoPro CSP, the plug-in and the browser extension for Chrome or Edge. The `cadesplugin_api.js` script comes from the CryptoPro site; offline, put it into the data folder: `cadesplugin/cadesplugin_api.js`.
 - **“Complete the CA chain”** downloads the CA certificates linked from the signer's certificate. It is the only network request made while checking a signature, and only on your click. When the chain reaches a self-signed root the Studio shows its name and SHA-256: compare the fingerprint with an official source (e.g. e-trust.gosuslugi.ru) and click “Trust this root”. After that the chain counts as trusted.
 - If the signer's certificate carries a CryptoPro class policy (KC1 and up), the plate level is set to “enhanced qualified”. It is a hint and can be changed.
+
+## MSc SSE course project forms in 2026.1.4 { #forms-sse }
+
+In template version 2026.1.4 of the MSc SSE course project (`hse-cs-sse`) the forms take data from the project rather than from the template. A project on 2026.1.3 gets this by updating from the project overview card.
+
+- **City and year.** The “City, year” line of the application, the report title and the slides takes the city from the “City” field in the project settings (Moscow by default). English pages print Moscow, Saint Petersburg, Nizhny Novgorod and Perm in English and other cities as entered; another spelling goes into the “City in English” field.
+- **Year in the application and signature dates.** The topic application and the date lines under signatures print the current year by Moscow time at build. The “Year in the application and signature dates” field sets it by hand: for example, the document was signed last year and is built again. The report title and the slides use the academic year from the “Academic year” field.
+- **Application in the project language.** The topic application prints one page: Russian or English, by the project language. If you change the project language, the page changes on the next build.
+- **Conditional lines.** “Consultant (if any)” is printed only when the project has a consultant (a full name is filled in). “Consent of the academic supervisor” is printed only when the supervisor is not from HSE. No line means no signature is needed either.
+- **“HSE / Not HSE”.** The supervisor's switch in the project settings (the same in the creation wizard). “Not HSE” means a supervisor from a company or another university: then the application gets the academic supervisor consent line.
+
+**Updating to 2026.1.4 while a route is running.** If the application is already out for signing, the update does not stop the route: the signers sign the version sent earlier, and the document shows “There are changes”. The update plan warns about this with an “Out for signing: …” line. To have the corrected form signed, click “Send new version” on the Signing card. The update does not change the route composition: if the supervisor is from HSE but the academic supervisor is on the route, their signature can be marked optional and skipped ([Optional signatures and skipping](send-for-signing.md#optional)).
 
 ## Requirements { #requirements }
 

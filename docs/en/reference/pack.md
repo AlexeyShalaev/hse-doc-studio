@@ -53,6 +53,7 @@ How an update works:
 - **Conflicts.** If you and the template changed the same spot, choose: keep yours, take the template's, or merge with `<<<<<<<` markers to sort it out by hand. Yours is kept by default.
 - **Nothing is lost.** Before updating, the Studio saves a project snapshot in Versions. The update can be reverted; edits made after it stay.
 - **Compare with the template.** The same settings section shows which template files you edited. A file you rewrote entirely can be untracked so updates never touch it.
+- **Template signature places.** If the version sets signature places on the pages, the update moves the places you did not touch to the new version and says in the preview “Template signature places will be updated: N” and “Not updated: changed by you N, on a signing route N, signed N”. Places you set or moved yourself and documents under a signing route are left alone; undoing the update brings the places back. More: [Route from the template](../workbench/send-for-signing.md#preset).
 
 If a project is opened in an older Studio than the one that saved it last (or that Studio's pack lacks the project's template version), the project opens read-only and its data stays untouched.
 
@@ -69,6 +70,7 @@ A checkpoint's route preset is set in the template version's `version.yaml`. All
 | `default_dates` | slot | date marks per document: `{document_id: [{page, x_mm, y_mm, width_mm, height_mm, format, align}]}` |
 | `signing_slots` | submission profile | signatures beyond the checkpoint's items, when they appear, and whether they are optional on the checkpoint |
 | `required: true` | slot | this slot's signature cannot be marked optional on any checkpoint |
+| `deadline_hint` | submission profile | a hint on when the checkpoint deadline usually falls: `{ru, en}` text, without concrete dates |
 
 Coordinates are millimetres from the top left corner of the page, pages count from 1. A signature place is 10 to 200 mm wide, inside the width of an A4 sheet (210 mm), with its top between 0 and 287 mm; its height depends on the signature image.
 
@@ -103,6 +105,8 @@ A `signing_slots` entry:
 - if the pair is not in the item's `signatures`, it is a signature beyond the checkpoint: the route adds it by itself;
 - `when` only on a signature beyond the checkpoint: `{person: <role>}` the person is set in the project, `{person: <role>, role: university | company}` set and from HSE or from a company. Roles: `supervisor`, `co_supervisor`, `academic_supervisor`. Without `when` the signature is always added. The Studio skips an entry with any other condition entirely, so that it never adds a signature nobody needs;
 - `optional: true` the signature is optional on this checkpoint (both for a checkpoint pair and for a signature beyond it); not allowed on a slot with `required: true`.
+
+The deadline hint `deadline_hint` needs both locales, at most 200 characters and no concrete dates: “Usually mid-November; the exact date is announced in SmartLMS”. A date like “15.11”, a day with a month name or an ISO date is an error for the linter: deadlines change every year and a released version does not. The deadline itself is set by the student on the checkpoint page ([Submission deadline](../workbench/submit.md#deadline)).
 
 A preset does not set the signing method: the signer picks it from the methods the checkpoint item allows (`methods`). Nor does it set people: they are project data.
 

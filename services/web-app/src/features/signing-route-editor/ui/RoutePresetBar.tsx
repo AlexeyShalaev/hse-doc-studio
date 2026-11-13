@@ -16,7 +16,10 @@ export type RoutePresetBarProps = {
 /**
  * Шапка редактора маршрута (docs/design/signing-route.md, 15.7): «Маршрут из шаблона», если
  * порядок, подписи сверх точки и отметки «необязательна» как в шаблоне; иначе «Изменён вами» и
- * «Вернуть как в шаблоне» с подтверждением. Места подписей на страницах кнопка не трогает.
+ * «Вернуть как в шаблоне» с подтверждением. Если состав собран по пресету прежней версии шаблона
+ * (`base_version` не равна `version`), а пресет новой версии другой, вместо «Изменён вами» строка
+ * «В новой версии шаблона другой маршрут этой точки» и та же кнопка. Места подписей на страницах
+ * кнопка не трогает.
  */
 export const RoutePresetBar = ({
   preset,
@@ -27,6 +30,9 @@ export const RoutePresetBar = ({
   const { t } = useTranslation("signingRouteEditor");
   const [asking, setAsking] = useState(false);
   const changed = preset.differs.length > 0;
+  // Состав собран по пресету другой версии (обычно до обновления шаблона), а пресет новой версии
+  // другой: это не правка автора, а новый маршрут шаблона (15.7, `base_version`).
+  const newVersion = changed && preset.base_version !== preset.version;
   const what = preset.differs
     .map((diff) => t(`preset.diff.${diff}`))
     .join(", ");
@@ -41,21 +47,29 @@ export const RoutePresetBar = ({
       }}
       data-testid="route-preset"
       data-differs={preset.differs.join(" ")}
+      data-new-version={newVersion ? "" : undefined}
     >
       <span
         className={changed ? "chip subtle" : "chip accent"}
         title={
-          changed
-            ? t("preset.changedTitle", { what })
-            : t("preset.fromTemplateTitle", { version: preset.version })
+          newVersion
+            ? t("preset.newVersionTitle", { version: preset.version, what })
+            : changed
+              ? t("preset.changedTitle", { what })
+              : t("preset.fromTemplateTitle", { version: preset.version })
         }
+        data-testid="route-preset-mark"
       >
-        {changed ? (
+        {changed && !newVersion ? (
           <PencilLine size="0.6875rem" aria-hidden="true" />
         ) : (
           <LayoutTemplate size="0.6875rem" aria-hidden="true" />
         )}
-        {changed ? t("preset.changed") : t("preset.fromTemplate")}
+        {newVersion
+          ? t("preset.newVersion")
+          : changed
+            ? t("preset.changed")
+            : t("preset.fromTemplate")}
       </span>
       {changed && (
         <>

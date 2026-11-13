@@ -45,12 +45,19 @@ const PRESET: RoutePreset = {
 };
 
 /** Шапка: «Вернуть» делает маршрут как в шаблоне через полсекунды, как будто ответил сервер. */
-const PresetBar = ({ differs }: { differs: RoutePreset["differs"] }) => {
+const PresetBar = ({
+  differs,
+  baseVersion = PRESET.base_version,
+}: {
+  differs: RoutePreset["differs"];
+  baseVersion?: string | null;
+}) => {
   const [current, setCurrent] = useState(differs);
+  const [base, setBase] = useState(baseVersion);
   const [pending, setPending] = useState(false);
   return (
     <RoutePresetBar
-      preset={{ ...PRESET, differs: current }}
+      preset={{ ...PRESET, base_version: base, differs: current }}
       busy={pending}
       pending={pending}
       onRestore={() => {
@@ -59,6 +66,7 @@ const PresetBar = ({ differs }: { differs: RoutePreset["differs"] }) => {
           setTimeout(() => {
             setPending(false);
             setCurrent([]);
+            setBase(PRESET.version);
             resolve();
           }, 500);
         });
@@ -242,6 +250,12 @@ export const routePresetEntries = (): GalleryEntry[] => [
     "Шапка: изменён вами",
     () => <PresetBar differs={["order", "slots"]} />,
     "Что отличается, и «Вернуть как в шаблоне»: окно подтверждения, затем снова «Маршрут из шаблона».",
+  ),
+  editorEntry(
+    "route_preset_new_version",
+    "Шапка: в новой версии шаблона другой маршрут",
+    () => <PresetBar differs={["slots"]} baseVersion="2026.1.3" />,
+    "Черновик собран по шаблону 2026.1.3, проект обновлён до 2026.1.4, пресет новой версии другой: не «Изменён вами», а строка о новой версии и та же кнопка.",
   ),
   {
     id: "route_preset_confirm",

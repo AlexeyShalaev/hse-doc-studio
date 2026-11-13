@@ -14,7 +14,7 @@ help:
       shot: runbooks/signing-route/step-01
     - text: 'In **Checkpoint documents** every document should say “built”. Build the others with **Build**.'
     - text: 'In **Who signs and in what order** check the steps. Steps go in turn, people in one step sign in parallel. You can drag people and steps.'
-      hint: 'The person menu has **Same step as previous**, **Separate step** and **Remove**. If a person is not in the project, click **Invite**. If several people share a role, pick one in the list.'
+      hint: 'The person menu has **Same step as previous**, **Separate step** and **Remove**. If a person is not in the project, click **Invite**. If several people share a role, pick one in the list. If the template sets the checkpoint route, the top shows “From the template”: the order, the signatures and the places are already set.'
       shot: runbooks/signing-route/step-03
     - text: 'In **Where the signatures go**, for a signature marked “not placed” click **To page N** and drag the frame if needed.'
       hint: '**Go to placement** in **What blocks sending** leads here too. An optional signature is turned on with **Add signature: …**.'
@@ -22,15 +22,17 @@ help:
     - text: 'If you sign yourself, get your signature ready in **Your signature**: an image with **Upload or draw**, or a key for an electronic signature.'
       hint: 'If you are in the first step, sending counts as your approval.'
     - text: 'Optionally set a **Deadline** and a **Message to signers**. Signers see them on the signing page and in the Inbox.'
+      hint: 'If the checkpoint has a submission deadline, the Studio suggests a route deadline one day earlier: click **Set**. Then a day is left after the last signature to build the package.'
     - text: 'When **What blocks sending** is empty and you see **Ready to send.**, click **Send for signing**.'
       hint: 'The Studio keeps the built PDF of each document: this is the version for signing, and that is what gets signed. The first person in line gets a request in the Inbox and an email, if the server sends email. Follow the progress in the **Signing** card: [Signing progress](/help/en/runbooks/signing-progress/).'
       shot: runbooks/signing-route/step-07
 verified:
-  at: 2026-11-11
-  app_version: '0.20.1'
+  at: 2026-11-13
+  app_version: '0.25.0'
   sources:
     - services/web-app/src/features/signing-route-editor
     - services/web-app/src/entities/signing-route
+    - services/web-app/src/features/checkpoint-deadline
 ---
 
 import Steps from '~/components/Steps.astro'
@@ -62,5 +64,16 @@ on the **Signing** card.
   project owner or an editor can send.
 - The route is already sent and a document is fixed: nothing to change here. Click **Send new
   version** on the **Signing** card. To change the people or the order, cancel the route first.
+- **“Changed by you” at the top**: you changed the order, the extra signatures or the “optional”
+  marks compared with the template. You can keep it. **Reset to template** brings the route
+  composition back; people and the signature places on the pages stay.
+- **“The new template version has a different route for this checkpoint”**: the project template
+  was updated and sets another route for the checkpoint. To take it, click **Reset to template**.
+- **“Place changed” next to a box**: you moved the box or changed the date marks. **Reset place to
+  template** puts the place back as in the template. If the template knows only one common place
+  for all documents, there is no need to reset: the box already sits where you put it.
+- **“The route deadline is later than the submission deadline”**: the signers may not finish by
+  the checkpoint deadline. Set an earlier deadline or click **Set** next to the checkpoint
+  deadline.
 - **You need a date next to a signature**: press **Add date** on the signature in the **Where the
   signatures go** block ([Signing date](/help/en/runbooks/signing-dates/)).
