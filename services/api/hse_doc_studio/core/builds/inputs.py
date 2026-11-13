@@ -10,7 +10,8 @@
 Состояние подписей (`signatures.json`, картинки слотов, зафиксированные и подписанные PDF, файлы открепленных
 подписей), анкеты, журнал обновлений шаблона и прочие служебные файлы под `.hse-studio/` PDF не меняют: их запись
 не делает сборку устаревшей. В `project.json` не входами считаются поля состояния: статус и последняя сборка
-документа, время изменения, закрепление, архив, переопределения проверок, настройки истории и блок схемы.
+документа, время изменения, закрепление, архив, переопределения проверок, настройки истории, сроки точек и блок
+схемы.
 """
 
 from __future__ import annotations
@@ -25,7 +26,8 @@ PROJECT_FILE = ".hse-studio/project.json"
 RUNNER_EXCLUDED_DIRS = frozenset({".git", ".hse-studio", ".build", "submissions", "node_modules", "__pycache__"})
 
 # Поля project.json, которые сборка не читает: их меняют сами сборки (статус, `last_compile_id`) и интерфейс.
-_PROJECT_STATE_KEYS = frozenset({"updated_at", "pinned", "archived", "checks_override", "schema"})
+# Сроки точек (`deadlines`) PDF не меняют: правка срока не делает сборку и версию на подписи устаревшей.
+_PROJECT_STATE_KEYS = frozenset({"updated_at", "pinned", "archived", "checks_override", "schema", "deadlines"})
 _DOCUMENT_STATE_KEYS = frozenset({"status", "last_compile_id", "checks_override"})
 _META_STATE_KEYS = frozenset({"vcs"})
 

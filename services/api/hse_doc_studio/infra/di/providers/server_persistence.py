@@ -249,8 +249,10 @@ class ServerPersistenceProvider(Provider):
         return GcBlobsUC(registry, blobs, objects, live, min_age=timedelta(days=server_config.blob_gc_min_age_days))
 
     @provide
-    def get_project_catalog_mirror(self, sessions: SessionProvider) -> ProjectCatalogMirror:
-        return ProjectCatalogMirror(sessions)
+    def get_project_catalog_mirror(
+        self, sessions: SessionProvider, templates: ITemplateRepository
+    ) -> ProjectCatalogMirror:
+        return ProjectCatalogMirror(sessions, templates)
 
     @provide
     def get_acl_flags(self) -> AclFlagsCache:
@@ -483,9 +485,13 @@ class ServerPersistenceProvider(Provider):
 
     @provide
     def get_project_catalog_reconciler(
-        self, sessions: SessionProvider, volume: IProjectVolume, projects: MirroringProjectRepository
+        self,
+        sessions: SessionProvider,
+        volume: IProjectVolume,
+        projects: MirroringProjectRepository,
+        templates: ITemplateRepository,
     ) -> ProjectCatalogReconciler:
-        return ProjectCatalogReconciler(sessions, volume, projects)
+        return ProjectCatalogReconciler(sessions, volume, projects, templates)
 
     @provide
     def get_project_purger(

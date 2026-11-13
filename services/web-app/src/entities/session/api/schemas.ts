@@ -323,6 +323,14 @@ export type CreateApiTokenResponse = z.infer<
 
 // Страница списка сервера: {items, total, limit, offset} под теми же фильтрами.
 export const pageOf = listPageOf;
+// Ближайший срок контрольной точки проекта (signing-route.md, 16.6); пометку в списке рисует срез W16.
+export const NextDeadlineSchema = z.strictObject({
+  profile_id: z.string(),
+  name: z.record(z.string(), z.string()),
+  deadline: iso,
+  state: z.enum(["none", "upcoming", "soon", "today", "packaged", "overdue"]),
+});
+export type NextDeadline = z.infer<typeof NextDeadlineSchema>;
 export const ProjectSummarySchema = z.strictObject({
   id: z.string(),
   name: z.string(),
@@ -342,6 +350,8 @@ export const ProjectSummarySchema = z.strictObject({
   shared_enabled: z.boolean(),
   // links: роль держится на ссылке, а не на членстве (значок «По ссылке»).
   via_link: z.boolean().optional(),
+  // Ближайший срок контрольной точки; сервер до R28 поля не присылал.
+  next_deadline: NextDeadlineSchema.nullable().optional(),
 });
 // Серверный режим отдаёт список проектов страницей; локальный по-прежнему массивом.
 export const ProjectSummaryPageSchema = pageOf(ProjectSummarySchema);

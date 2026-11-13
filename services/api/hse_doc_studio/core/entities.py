@@ -91,6 +91,9 @@ class Project:
     # Per-project override of the requirements detection format. None → inherit
     # the pack template's RequirementsFormat (see TemplateVersion).
     requirements_format: RequirementsFormat | None = None
+    # Сроки контрольных точек: id профиля сдачи → момент срока с поясом (signing-route.md, раздел 16). Срок задаёт
+    # пользователь, пак дат не знает; срок точки, которой нет в версии шаблона, хранится, но не показывается.
+    deadlines: dict[str, datetime] = field(default_factory=dict)
     # Схема данных, в которой проект лежит на диске (core.project_schema). Её
     # выставляет репозиторий при чтении; при записи он сам решает, что писать.
     schema: ProjectSchema = LEGACY_PROJECT_SCHEMA

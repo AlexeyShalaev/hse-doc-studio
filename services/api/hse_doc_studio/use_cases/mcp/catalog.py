@@ -185,6 +185,9 @@ MCP_TOOL_RULES: tuple[McpToolRule, ...] = (
     _rule("git_sync", _G.history, _X, Action.HISTORY_REWRITE, dangerous=True, rate=GIT_SYNC, touches=_PROJECT),
     # Сдача и подписи
     _rule("list_submission_profiles", _G.submission, _R, Action.PROJECT_VIEW),
+    # Срок контрольной точки (signing-route.md, 16.8): настройка проекта, людей не уведомляет и легко исправляется,
+    # поэтому не опасный. Документы и сборку не меняет, поэтому без `touches`: пометка о маршруте ни к чему.
+    _rule("set_checkpoint_deadline", _G.submission, _W, Action.SUBMISSION_CREATE),
     _rule("list_submissions", _G.submission, _R, Action.SUBMISSION_READ),
     _rule("package_project", _G.submission, _X, Action.SUBMISSION_CREATE),
     _rule("list_signatures", _G.submission, _R, Action.OUTPUT_READ),
@@ -244,6 +247,7 @@ MCP_TOOL_CLASSES: tuple[type[McpTool], ...] = (
     git.GitFetchTool,
     git.GitSyncTool,
     submission.ListSubmissionProfilesTool,
+    submission.SetCheckpointDeadlineTool,
     submission.ListSubmissionsTool,
     submission.ListSignaturesTool,
     submission.GetSignaturePlanTool,

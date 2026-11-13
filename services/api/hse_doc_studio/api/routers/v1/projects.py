@@ -11,6 +11,7 @@ from fastapi.exceptions import RequestValidationError
 from hse_doc_studio.api.config import ServerConfig, settings
 from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.admin import PageParams, page_params, search_param, sort_param
+from hse_doc_studio.api.schemas.checkpoint_deadlines import NextDeadline
 from hse_doc_studio.api.schemas.common import AuthorSchema, LockResponse, PersonSchema
 from hse_doc_studio.api.schemas.project import (
     AuthorSuggestionResponse,
@@ -31,6 +32,7 @@ from hse_doc_studio.api.schemas.project import (
 )
 from hse_doc_studio.api.schemas.session import ProjectOwner, ProjectSummary, ProjectSummaryPage
 from hse_doc_studio.core.access.repositories import ProjectMembership
+from hse_doc_studio.core.checkpoint_deadlines import NextDeadline as NextDeadlineView
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.enums import CheckSeverity, EngineType, Lang, PersonRole, ProjectKind, ProjectStaffing
 from hse_doc_studio.core.errors import NotFoundError
@@ -77,6 +79,7 @@ from hse_doc_studio.use_cases.projects.update_team_set import (
     UpdateTeamSetInput,
     UpdateTeamSetUC,
 )
+from hse_doc_studio.use_cases.submission.next_deadlines import ProjectNextDeadlinesUC
 
 router = APIRouter(route_class=SafeDishkaRoute)
 
@@ -113,7 +116,9 @@ def _map_person(person: Person | None) -> PersonSchema | None:
     )
 
 
-def _map_project_list_item(project: Project, paths: PathMapping) -> ProjectListItemResponse:
+def _map_project_list_item(
+    project: Project, paths: PathMapping, next_deadline: NextDeadlineView | None = None
+) -> ProjectListItemResponse:
     return ProjectListItemResponse(
         id=str(project.id),
         name=project.name,
@@ -124,6 +129,7 @@ def _map_project_list_item(project: Project, paths: PathMapping) -> ProjectListI
         updated_at=project.updated_at,
         pinned=project.pinned,
         archived=project.archived,
+        next_deadline=NextDeadline.of(next_deadline),
     )
 
 
@@ -224,6 +230,7 @@ def _map_project_card(card: ProjectCard) -> ProjectSummary:
         archived=card.archived,
         shared_enabled=card.shared_enabled,
         via_link=card.via_link,
+        next_deadline=NextDeadline.of(card.next_deadline),
     )
 
 
@@ -250,7 +257,8 @@ async def list_projects(  # noqa: PLR0913 — фильтры списка при
     """
     if settings.mode is StudioMode.local:
         result = await uc.execute()
-        return [_map_project_list_item(p, paths) for p in result.projects]
+        deadlines = await (await request.state.dishka_container.get(ProjectNextDeadlinesUC)).execute(result.projects)
+        return [_map_project_list_item(p, paths, deadlines.get(p.id)) for p in result.projects]
     browse = await request.state.dishka_container.get(BrowseProjectsUC)
     query = ProjectBrowseQuery(
         q=q, archived=archived, owner=owner, org_slug=org, pinned=pinned, sort=sort, window=params.window

@@ -353,6 +353,9 @@ class SubmissionProfile:
     # внутри шага параллельно. Пусто: порядок версии `signatures.route`, а без него встроенный
     # (core/signatures/route_order.py, docs/design/signing-route.md, раздел 5.2).
     signing_route: tuple[tuple[str, ...], ...] = ()
+    # Подсказка срока точки текстом `{ru, en}` без дат (`deadline_hint`, signing-route.md, 16.4); дату указывает
+    # пользователь в проекте. None: пак подсказки не даёт.
+    deadline_hint: dict[str, str] | None = None
 
 
 @dataclass(frozen=True)

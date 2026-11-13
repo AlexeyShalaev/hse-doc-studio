@@ -13,6 +13,7 @@ from hse_doc_studio.api.schemas.catalog import (
     SubmissionExtraItemResponse,
     SubmissionProfileResponse,
 )
+from hse_doc_studio.api.schemas.checkpoint_deadlines import CheckpointDeadline, SetCheckpointDeadlineRequest
 from hse_doc_studio.api.schemas.signature_plan import PlanPinnedResponse
 from hse_doc_studio.api.schemas.submission import (
     CreateSubmissionRequest,
@@ -21,6 +22,8 @@ from hse_doc_studio.api.schemas.submission import (
     SubmissionWarningResponse,
 )
 from hse_doc_studio.core.catalog import ExtraSubmissionItem, SubmissionDocItem, SubmissionProfile
+from hse_doc_studio.core.checkpoint_deadlines import BadDeadlineError
+from hse_doc_studio.core.checkpoint_deadlines import CheckpointDeadline as CheckpointDeadlineView
 from hse_doc_studio.core.entities import PackSubmissionRecord
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.signatures.errors import StampingError
@@ -49,6 +52,10 @@ from hse_doc_studio.use_cases.submission.preview_custom_docs import (
     PreviewSubmissionCustomDocsInput,
     PreviewSubmissionCustomDocsUC,
 )
+from hse_doc_studio.use_cases.submission.set_checkpoint_deadline import (
+    SetCheckpointDeadlineInput,
+    SetCheckpointDeadlineUC,
+)
 
 router = APIRouter(route_class=SafeDishkaRoute)
 
@@ -64,7 +71,9 @@ def _map_custom_doc_preview(item: CustomDocPreviewItem) -> CustomDocPreviewItemR
     )
 
 
-def _map_profile(profile: SubmissionProfile) -> SubmissionProfileResponse:
+def _map_profile(
+    profile: SubmissionProfile, deadline: CheckpointDeadlineView | None = None
+) -> SubmissionProfileResponse:
     return SubmissionProfileResponse(
         id=profile.id,
         name=profile.name,
@@ -88,6 +97,10 @@ def _map_profile(profile: SubmissionProfile) -> SubmissionProfileResponse:
             )
             for extra in profile.extra_items
         ],
+        deadline=deadline.deadline if deadline else None,
+        deadline_state=deadline.state.value if deadline else "none",
+        deadline_hint=dict(profile.deadline_hint) if profile.deadline_hint else None,
+        packaged_at=deadline.packaged_at if deadline else None,
     )
 
 
@@ -145,7 +158,30 @@ async def get_submission_profiles(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return [_map_profile(p) for p in result.profiles]
+    return [_map_profile(p, result.deadlines.get(p.id)) for p in result.profiles]
+
+
+@router.put(
+    "/projects/{project_id}/submissions/profiles/{profile_id}/deadline",
+    response_model=CheckpointDeadline,
+)
+async def set_checkpoint_deadline(
+    project_id: UUID,
+    profile_id: str,
+    body: SetCheckpointDeadlineRequest,
+    uc: FromDishka[SetCheckpointDeadlineUC],
+) -> CheckpointDeadline:
+    """Срок контрольной точки (signing-route.md, 16.8): поставить или снять (`null`); 400 `bad_deadline`."""
+    try:
+        view = await uc.execute(
+            SetCheckpointDeadlineInput(project_id=project_id, profile_id=profile_id, deadline=body.deadline)
+        )
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except BadDeadlineError:
+        # Отказ с кодом: тело `{detail, code}` строит его обработчик (api/submission_errors.py).
+        raise
+    return CheckpointDeadline.of(view)
 
 
 @router.get(

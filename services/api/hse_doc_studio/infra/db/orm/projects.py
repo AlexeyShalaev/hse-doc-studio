@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, String, Text, Uuid, func, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from hse_doc_studio.infra.db.base import Base
@@ -41,6 +43,9 @@ class ProjectRow(Base):
     # Копия полей project.json для списка проектов (поиск, фильтры); обновляется сценариями правки.
     pinned: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
     supervisor_name: Mapped[str | None] = mapped_column(String(256))
+    # Сроки контрольных точек для списка проектов (signing-route.md, 16.3): `{profile_id: {deadline, name}}` только
+    # точек версии шаблона проекта. NULL, пока срок не задан; источник правды `project.json` (`deadlines`).
+    deadlines: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Строка есть, а папки на томе нет: отмечает сверка на старте, проект при этом не пропадает из каталога.
     volume_missing_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

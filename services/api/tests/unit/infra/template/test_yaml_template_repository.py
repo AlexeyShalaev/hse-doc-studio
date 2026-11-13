@@ -565,3 +565,51 @@ def test__parse_signature_slot__wrong_default_dates__dropped_and_the_slot_kept()
 
     assert slot.id == "supervisor"
     assert slot.default_dates == ()
+
+
+# ---------------------------------------------------------------------------
+# Подсказка срока точки: deadline_hint профиля (signing-route.md, 16.4)
+# ---------------------------------------------------------------------------
+
+
+def test__deadline_hint__both_locales__parsed(tmp_path: Path) -> None:
+    _write_route_version(
+        tmp_path,
+        "",
+        '      deadline_hint: {ru: "Обычно в середине ноября", en: "Usually mid-November"}\n',
+    )
+
+    version = YamlTemplateRepository(tmp_path).get_version("test-pack", "test-tmpl", "1.0")
+
+    assert version is not None
+    assert version.pack_submission.profiles[0].deadline_hint == {
+        "ru": "Обычно в середине ноября",
+        "en": "Usually mid-November",
+    }
+
+
+@pytest.mark.parametrize(
+    "hint",
+    [
+        '      deadline_hint: {ru: "Жёсткий дедлайн 15 ноября", en: "Hard deadline November 15"}\n',
+        '      deadline_hint: {ru: "Обычно в середине ноября"}\n',
+        '      deadline_hint: "Обычно в середине ноября"\n',
+    ],
+)
+def test__deadline_hint__broken__dropped_profile_still_loads(tmp_path: Path, hint: str) -> None:
+    _write_route_version(tmp_path, "", hint)
+
+    version = YamlTemplateRepository(tmp_path).get_version("test-pack", "test-tmpl", "1.0")
+
+    assert version is not None
+    assert [p.id for p in version.pack_submission.profiles] == ["topic"]
+    assert version.pack_submission.profiles[0].deadline_hint is None
+
+
+def test__deadline_hint__absent__none(tmp_path: Path) -> None:
+    _write_route_version(tmp_path, "")
+
+    version = YamlTemplateRepository(tmp_path).get_version("test-pack", "test-tmpl", "1.0")
+
+    assert version is not None
+    assert version.pack_submission.profiles[0].deadline_hint is None
