@@ -12,6 +12,6 @@
     "body": "The document is out for signing. Changes will not reach the version being signed.",
     "open": "Open editor"
   },
-  "planLine_one": "Out for signing: {{names}}. Changes will not reach the version being signed.",
-  "planLine_other": "Out for signing: {{names}}. Changes will not reach the versions being signed."
+  "planLine_one": "Out for signing: {{names}}. The update will not reach the version being signed: afterwards the route asks you to send a new version (“Send new version” on the Signing card).",
+  "planLine_other": "Out for signing: {{names}}. The update will not reach the versions being signed: afterwards the route asks you to send a new version (“Send new version” on the Signing card)."
 }
