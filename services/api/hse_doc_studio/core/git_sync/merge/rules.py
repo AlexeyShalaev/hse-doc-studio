@@ -8,7 +8,8 @@
                      `updated_at` — максимум, `created_at` — минимум; `pinned`, `archived`, `meta.vcs` и
                      `documents[].last_compile_id` остаются моими
     signatures.json  слоты и размещения по ключам, `signing_identity_id` и `sign_mode` мои, картинка
-                     слота следует за новейшей; подписанный PDF, подписи к нему и придержанные маршрутом
+                     слота следует за новейшей; размещение неделимо вместе с метками даты и моментом
+                     подписи (`dates`, `signed_at`); подписанный PDF, подписи к нему и придержанные маршрутом
                      слоты (`withheld`), версия на подписи (`pinned`), необязательные и пропущенные подписи
                      (`optional`, `skipped`) — неделимая группа документа
     forms/*.json     `completed` — «и» обеих сторон и сбрасывается, если ответы изменились после отметки
@@ -206,6 +207,8 @@ SIGNATURES_RULES = JsonRules(
     rules=(
         LocalOnly(("slots", "*", "signing_identity_id"), None),
         LocalOnly(("slots", "*", "sign_mode"), "image"),
+        # Размещение слота документа неделимо вместе с метками даты и моментом подписи (signing-route.md, 14.3):
+        # метки одной стороны с датой другой дали бы на странице день, которого никто не ставил.
         Atomic(("placements", "*", "*")),
     ),
     field_groups=(FieldGroup(("slots", "*"), ("png_path", "natural_width_px", "natural_height_px")),),

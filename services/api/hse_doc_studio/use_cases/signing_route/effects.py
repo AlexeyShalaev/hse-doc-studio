@@ -20,6 +20,7 @@ from pathlib import Path
 import structlog
 
 from hse_doc_studio.core.repositories import ISignatureRepository
+from hse_doc_studio.core.signatures.dates import to_display
 from hse_doc_studio.core.signatures.errors import GpgError, GpgUnavailableError
 from hse_doc_studio.core.signatures.plan import VisibleMark, mark_of
 from hse_doc_studio.core.signatures.ports import IOpenPgpKeyImporter
@@ -167,11 +168,14 @@ def _withheld(state: SignaturesState, doc_id: str, slot_id: str, *, held: bool) 
 
 
 def _set_date(state: SignaturesState, doc_id: str, slot_id: str, at: datetime | None) -> SignaturesState:
-    """Дата у размещения, где автор её включил: дата согласования картинки или фиксации плашки (раздел 6.2)."""
+    """Дата у размещения, где автор её включил: дата согласования картинки или фиксации плашки (раздел 6.2).
+
+    День по Москве, как у меток даты (14.4): согласие в 01:30 по Москве это уже этот день, а не предыдущий по UTC.
+    """
     placement = state.placements.get(doc_id, {}).get(slot_id)
     if placement is None or placement.sign_date is None or at is None:
         return state
-    date = at.astimezone(UTC).date().isoformat()
+    date = to_display(at).date().isoformat()
     if placement.sign_date == date:
         return state
     doc_placements = {**state.placements[doc_id], slot_id: replace(placement, sign_date=date)}

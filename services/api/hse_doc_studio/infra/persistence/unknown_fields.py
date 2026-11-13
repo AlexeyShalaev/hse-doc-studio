@@ -96,6 +96,10 @@ def _doc_key(doc: dict[str, Any]) -> Hashable | None:
     return doc.get("id")
 
 
+def _id_key(item: dict[str, Any]) -> Hashable | None:
+    return item.get("id")
+
+
 _CHECKS_OVERRIDE = Struct({"severity_override": MapOf()})
 
 PROJECT_SHAPE = Struct(
@@ -119,7 +123,8 @@ PROJECT_SHAPE = Struct(
 SIGNATURES_SHAPE = Struct(
     {
         "slots": MapOf(Struct({"signer": Struct()})),
-        "placements": MapOf(MapOf(Struct())),
+        # Метки даты по id и момент подписи (signing-route.md, 14.3): поля, которых писатель не знает, остаются.
+        "placements": MapOf(MapOf(Struct({"dates": ListOf(Struct(), key=_id_key), "signed_at": Struct()}))),
         "frozen": MapOf(Struct()),
         "detached": MapOf(MapOf(Struct())),
         "embedded": MapOf(MapOf(Struct())),

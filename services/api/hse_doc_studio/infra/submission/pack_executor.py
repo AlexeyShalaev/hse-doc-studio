@@ -128,6 +128,8 @@ def stamp_from_spec(spec: StampSpec, workspace: Path) -> Stamp:
         subtitle=spec.subtitle,
         date_label=spec.date_label,
         date_text=spec.date_text,
+        height_mm=spec.height_mm,
+        align=spec.align,
     )
 
 

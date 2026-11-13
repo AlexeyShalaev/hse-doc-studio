@@ -32,6 +32,10 @@ _PLATE_RADIUS_PT = 7.0
 _TEXT_SIZE_PT = 8.0
 _TEXT_LEADING = 1.25
 _TEXT_PAD_PT = 3.0
+# Метка даты (signing-route.md, 14.3): кегль по высоте рамки, не меньше 6 pt; строка занимает 1.2 кегля.
+DATE_MIN_SIZE_PT = 6.0
+_DATE_LINE = 1.2
+_DATE_SIZE_STEP_PT = 0.25
 
 
 def _ensure_text_font() -> str:
@@ -55,10 +59,21 @@ class PdfStamper:
 
     def mark_height_mm(self, stamp: Stamp) -> float:
         """Высота метки на странице (`IMarkMeasure`): картинка по своим пропорциям, плашка по вёрстке её строк."""
+        if stamp.is_date:
+            return stamp.height_mm
         if stamp.text is None:
             return stamp.width_mm * stamp.aspect_ratio
         caption, body = _mark_lines(stamp, _ensure_text_font(), stamp.width_mm * mm)
         return ((len(caption) + len(body)) * _TEXT_SIZE_PT * _TEXT_LEADING + 2 * _TEXT_PAD_PT) / mm
+
+    def page_sizes_mm(self, pdf: Path) -> tuple[tuple[float, float], ...]:
+        """Размер каждой страницы по MediaBox в мм (`IPdfPages`): той же системой координат ставятся метки."""
+        try:
+            reader = PdfReader(str(pdf))
+            return tuple((float(p.mediabox.width) / mm, float(p.mediabox.height) / mm) for p in reader.pages)
+        except Exception:  # noqa: BLE001 — нечитаемый PDF значит «размеры неизвестны», а не отказ правки
+            logger.warning("pdf_stamper: page sizes unreadable", pdf=str(pdf), exc_info=True)
+            return ()
 
     def stamp(
         self,
@@ -115,15 +130,7 @@ class PdfStamper:
         buf = io.BytesIO()
         c = canvas.Canvas(buf, pagesize=(page_width_pt, page_height_pt))
         for s in stamps:
-            if s.text is not None:
-                try:
-                    _draw_text_mark(c, s, page_height_pt)
-                except Exception as exc:
-                    logger.exception("pdf_stamper: text mark failed", page=s.page, slot_id=_slot_of(s))
-                    raise _text_mark_failed(s, exc) from exc
-                continue
-            if s.png_path is not None:
-                _draw_picture(c, s, s.png_path, page_height_pt)
+            _draw_stamp(c, s, page_height_pt)
         try:
             c.save()
         except Exception as exc:
@@ -131,6 +138,20 @@ class PdfStamper:
             logger.exception("pdf_stamper: overlay not rendered", page=page)
             raise _merge_failed(page, stamps, exc) from exc
         return buf.getvalue()
+
+
+def _draw_stamp(c: canvas.Canvas, s: Stamp, page_height_pt: float) -> None:
+    """Одна метка: дата (14.3), текстовая плашка или картинка; сбой текста становится `StampingError`."""
+    if s.text is not None:
+        draw = _draw_date_mark if s.is_date else _draw_text_mark
+        try:
+            draw(c, s, page_height_pt)
+        except Exception as exc:
+            logger.exception("pdf_stamper: text mark failed", page=s.page, slot_id=_slot_of(s), date=s.is_date)
+            raise _text_mark_failed(s, exc) from exc
+        return
+    if s.png_path is not None:
+        _draw_picture(c, s, s.png_path, page_height_pt)
 
 
 def _draw_picture(c: canvas.Canvas, s: Stamp, png_path: Path, page_height_pt: float) -> None:
@@ -319,4 +340,38 @@ def _draw_text_mark(c: canvas.Canvas, s: Stamp, page_height_pt: float) -> None:
         y -= line_h
 
 
-__all__ = ["PdfStamper", "Stamp", "format_sign_date", "text_mark_height_mm"]
+def date_font_size(text: str, width_mm: float, height_mm: float) -> float:
+    """Кегль метки даты: по высоте рамки, затем меньше, пока текст не влезет по ширине; не меньше 6 pt.
+
+    Если и в 6 pt текст шире рамки, он печатается 6 pt и выходит за рамку: панель редактора предупреждает
+    «Текст не помещается в рамку» (14.13).
+    """
+    font = _ensure_text_font()
+    size = max(DATE_MIN_SIZE_PT, height_mm * mm / _DATE_LINE)
+    width_pt = width_mm * mm
+    while size > DATE_MIN_SIZE_PT and pdfmetrics.stringWidth(text, font, size) > width_pt:
+        size = max(DATE_MIN_SIZE_PT, size - _DATE_SIZE_STEP_PT)
+    return size
+
+
+def _draw_date_mark(c: canvas.Canvas, s: Stamp, page_height_pt: float) -> None:
+    """Текст метки даты в её рамке без обводки: по `align` по горизонтали, по центру по вертикали."""
+    font = _ensure_text_font()
+    text = s.text or ""
+    size = date_font_size(text, s.width_mm, s.height_mm)
+    width_pt, height_pt = s.width_mm * mm, s.height_mm * mm
+    x_pt = s.x_mm * mm
+    bottom = page_height_pt - s.y_mm * mm - height_pt
+    ascent, descent = pdfmetrics.getAscentDescent(font, size)
+    baseline = bottom + height_pt / 2 - (ascent + descent) / 2
+    c.setFillColorRGB(0, 0, 0)
+    c.setFont(font, size)
+    if s.align == "left":
+        c.drawString(x_pt, baseline, text)
+    elif s.align == "right":
+        c.drawRightString(x_pt + width_pt, baseline, text)
+    else:
+        c.drawCentredString(x_pt + width_pt / 2, baseline, text)
+
+
+__all__ = ["PdfStamper", "Stamp", "date_font_size", "format_sign_date", "text_mark_height_mm"]

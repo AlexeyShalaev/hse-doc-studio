@@ -29,6 +29,8 @@ from hse_doc_studio.core.enums import (
     ChatMessageRole,
     CheckSeverity,
     CompileStatus,
+    DateMarkAlign,
+    DateMarkFormat,
     DetachedFormat,
     DetachedOrigin,
     DetachedVerdict,
@@ -39,6 +41,7 @@ from hse_doc_studio.core.enums import (
     ProjectKind,
     ProjectStaffing,
     RequirementFormatKind,
+    SignedAtSource,
     SignMode,
     ToolApprovalDecision,
 )
@@ -50,6 +53,7 @@ from hse_doc_studio.core.value_objects import (
     CheckResult,
     ChecksOverride,
     CustomFileOverride,
+    DateMark,
     DetachedSignature,
     EmbeddedSignature,
     FormState,
@@ -62,6 +66,7 @@ from hse_doc_studio.core.value_objects import (
     SignaturePlacement,
     SignatureSlot,
     SignaturesState,
+    SignedAt,
     SignerInfo,
     SkippedSlot,
 )
@@ -573,6 +578,10 @@ def serialize_signatures_state(state: SignaturesState) -> dict[str, Any]:
                     "y_mm": placement.y_mm,
                     "width_mm": placement.width_mm,
                     "sign_date": placement.sign_date,
+                    # Метки даты и момент подписи (signing-route.md, 14.3) пишутся всегда, даже пустыми: иначе
+                    # `preserve_unknown` вернул бы удалённые метки и снятую дату из старого файла.
+                    "dates": [_serialize_date_mark(mark) for mark in placement.dates],
+                    "signed_at": dataclasses.asdict(placement.signed_at) if placement.signed_at else None,
                 }
                 for slot_id, placement in slot_map.items()
             }
@@ -779,6 +788,8 @@ def deserialize_signatures_state(data: dict[str, Any]) -> SignaturesState:  # no
                 y_mm=float(placement_data.get("y_mm", 0.0)),
                 width_mm=float(placement_data.get("width_mm", 50.0)),
                 sign_date=str(sign_date) if sign_date else None,
+                dates=_deserialize_date_marks(placement_data.get("dates")),
+                signed_at=_deserialize_signed_at(placement_data.get("signed_at")),
             )
         placements[doc_id] = doc_placements
     return SignaturesState(
@@ -792,6 +803,53 @@ def deserialize_signatures_state(data: dict[str, Any]) -> SignaturesState:  # no
         optional=_deserialize_optional(data.get("optional")),
         skipped=_deserialize_skipped(data.get("skipped")),
     )
+
+
+def _serialize_date_mark(mark: DateMark) -> dict[str, Any]:
+    data = dataclasses.asdict(mark)
+    data["format"] = mark.format.value
+    data["align"] = mark.align.value
+    return data
+
+
+def _date_mark(item: Any) -> DateMark | None:
+    """Метка даты из файла; битая или незнакомого формата (данные более новой Студии) пропускается."""
+    if not isinstance(item, dict):
+        return None
+    try:
+        mark = DateMark(
+            id=str(item["id"]),
+            page=int(item["page"]),
+            x_mm=float(item["x_mm"]),
+            y_mm=float(item["y_mm"]),
+            width_mm=float(item["width_mm"]),
+            height_mm=float(item["height_mm"]),
+            format=DateMarkFormat(item["format"]),
+            align=_enum_or(DateMarkAlign, item.get("align"), DateMarkAlign.centered),
+        )
+    except (KeyError, TypeError, ValueError):
+        return None
+    return mark if mark.id and mark.width_mm > 0 and mark.height_mm > 0 else None
+
+
+def _deserialize_date_marks(raw: Any) -> tuple[DateMark, ...]:
+    if not isinstance(raw, list):
+        return ()
+    marks: dict[str, DateMark] = {}
+    for item in raw:
+        mark = _date_mark(item)
+        if mark is not None:
+            marks.setdefault(mark.id, mark)
+    return tuple(marks.values())
+
+
+def _deserialize_signed_at(raw: Any) -> SignedAt | None:
+    if not isinstance(raw, dict):
+        return None
+    try:
+        return SignedAt(at=str(raw["at"]), source=SignedAtSource(raw["source"]), token=str(raw.get("token") or ""))
+    except (KeyError, TypeError, ValueError):
+        return None
 
 
 def _slot_ids(raw: Any) -> frozenset[str]:

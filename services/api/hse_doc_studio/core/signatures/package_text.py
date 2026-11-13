@@ -6,10 +6,9 @@ import contextlib
 import re
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta, timezone, tzinfo
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from hse_doc_studio.core.enums import DetachedFormat
+from hse_doc_studio.core.signatures.dates import display_day, format_numeric
 
 
 @dataclass(frozen=True)
@@ -200,6 +199,10 @@ class GuideSignature:
     covers: str = ""  # PDF, к которому относится открепленная подпись
     # Пропущенная подпись, чья метка осталась в зафиксированном PDF с ЭП (`SkippedSlot.keep_mark`).
     kept_mark: bool = False
+    # Дата на странице (signing-route.md, 14.8): день подписи слота по Москве, если у слота есть метки даты.
+    page_date: str = ""
+    # Время самой ЭП по Москве («14.11.2026 10:05»), если оно в подписи есть.
+    signing_time: str = ""
 
 
 # Виды строк инструкции, у которых есть электронная подпись: ради них инструкция и кладётся в комплект.
@@ -220,32 +223,13 @@ class GuideDocument:
     version_sha256: str = ""
 
 
-def _display_zone() -> tzinfo:
-    """Пояс дат в текстах пакета: московское время, как у людей в интерфейсе (у установки своего пояса нет).
-
-    Без базы поясов (нет tzdata в образе) берётся постоянное смещение UTC+3: переходов на летнее время в Москве нет.
-    """
-    try:
-        return ZoneInfo("Europe/Moscow")
-    except ZoneInfoNotFoundError:
-        return timezone(timedelta(hours=3), "MSK")
-
-
-DISPLAY_ZONE = _display_zone()
-
-
 def version_date(pinned_at: str) -> str:
-    """Дата версии на подписи для текстов пакета: ISO «2026-11-10T21:32:00Z» → «11.11.2026» (по Москве).
+    """Дата версии на подписи для текстов пакета: ISO «2026-11-10T21:32:00Z» → «11.11.2026» (по Москве, `dates.py`).
 
     Время без пояса считается UTC: так его пишет `PinnedPdf.pinned_at`. Неразборчивое значение остаётся как есть.
     """
-    try:
-        moment = datetime.fromisoformat(pinned_at)
-    except ValueError:
-        return pinned_at
-    if moment.tzinfo is None:
-        moment = moment.replace(tzinfo=UTC)
-    return moment.astimezone(DISPLAY_ZONE).strftime("%d.%m.%Y")
+    day = display_day(pinned_at)
+    return format_numeric(day) if day is not None else pinned_at
 
 
 def signer_display_name(raw: str) -> str:
@@ -278,6 +262,8 @@ _GUIDE_RU = {
     "skipped": "не требуется (пропущено автором)",
     "optional_unsigned": "не поставлена (необязательна)",
     "kept_mark": "плашка на странице без файла подписи",
+    "page_date": "дата на странице",
+    "signing_time": "время подписи",
     "signer": "подписант",
     "file": "файл подписи",
     "covers": "относится к",
@@ -304,6 +290,8 @@ _GUIDE_EN = {
     "skipped": "not required (skipped by the author)",
     "optional_unsigned": "not signed (optional)",
     "kept_mark": "a plate on the page without a signature file",
+    "page_date": "date on the page",
+    "signing_time": "signing time",
     "signer": "signer",
     "file": "signature file",
     "covers": "covers",
@@ -320,6 +308,20 @@ _GUIDE_EN = {
 }
 
 
+def _signature_lines(t: dict[str, str], sig: GuideSignature) -> list[str]:
+    """Строка подписи документа и под ней дата на странице, время ЭП (signing-route.md, 14.8) и файл подписи."""
+    who = f", {t['signer']}: {sig.signer}" if sig.signer else ""
+    mark = f", {t['kept_mark']}" if sig.kept_mark else ""
+    lines = [f"  - {sig.label}: {t[sig.kind]}{who}{mark}"]
+    if sig.page_date:
+        lines.append(f"    {t['page_date']}: {sig.page_date}")
+    if sig.signing_time:
+        lines.append(f"    {t['signing_time']}: {sig.signing_time}")
+    if sig.file:
+        lines.append(f"    {t['file']}: {sig.file}, {t['covers']}: {sig.covers}")
+    return lines
+
+
 def _doc_lines(t: dict[str, str], doc: GuideDocument) -> list[str]:
     lines = [doc.pdf] + ([f"  {t['sha']}: {doc.sha256}"] if doc.sha256 else [])
     if doc.version_date:
@@ -328,11 +330,7 @@ def _doc_lines(t: dict[str, str], doc: GuideDocument) -> list[str]:
         lines.append(f"  {doc.base}")
         lines.append(f"  {t['sha']}: {doc.base_sha256}")
     for sig in doc.signatures:
-        who = f", {t['signer']}: {sig.signer}" if sig.signer else ""
-        mark = f", {t['kept_mark']}" if sig.kept_mark else ""
-        lines.append(f"  - {sig.label}: {t[sig.kind]}{who}{mark}")
-        if sig.file:
-            lines.append(f"    {t['file']}: {sig.file}, {t['covers']}: {sig.covers}")
+        lines += _signature_lines(t, sig)
     if doc.base:
         lines.append("  " + t["base"].format(base=doc.base, pdf=doc.pdf, size=doc.base_size))
         lines.append(f'    cmp -n {doc.base_size} "{doc.base}" "{doc.pdf}"')

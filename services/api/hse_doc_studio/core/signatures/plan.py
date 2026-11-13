@@ -14,7 +14,7 @@ from enum import StrEnum
 from hse_doc_studio.core.access.entities import Grant, Role
 from hse_doc_studio.core.catalog import TemplateVersion
 from hse_doc_studio.core.entities import Project
-from hse_doc_studio.core.enums import DetachedVerdict, ProjectStaffing, SignMode
+from hse_doc_studio.core.enums import DateMarkFormat, DetachedVerdict, ProjectStaffing, SignMode
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.invitations.entities import SUPERVISOR_PERSONAS
 from hse_doc_studio.core.team import split_instance_id
@@ -25,6 +25,7 @@ from hse_doc_studio.core.value_objects import (
     PinnedPdf,
     SignatureSlot,
     SignaturesState,
+    SignedAt,
     SkippedSlot,
 )
 
@@ -365,6 +366,15 @@ def signer_for(project: Project, slot_id: str) -> SignerRef:
 
 
 @dataclass(frozen=True)
+class PlanDate:
+    """Метка даты слота в плане (signing-route.md, 14.7): страница, формат и что напечатано сейчас (None: пусто)."""
+
+    page: int
+    format: DateMarkFormat
+    text: str | None
+
+
+@dataclass(frozen=True)
 class PlanSlot:
     doc_id: str
     slot_id: str
@@ -380,6 +390,9 @@ class PlanSlot:
     # Подпись необязательна на точке (signing-route.md, 13.3) и пропуск, если маршрут её пропустил.
     optional: bool = False
     skipped: SkippedSlot | None = None
+    # Метки даты подписания слота и момент подписи (14.3).
+    dates: tuple[PlanDate, ...] = ()
+    signed_at: SignedAt | None = None
 
     @property
     def status(self) -> SlotStatus:

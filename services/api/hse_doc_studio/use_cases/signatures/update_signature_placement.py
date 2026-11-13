@@ -14,6 +14,7 @@ from hse_doc_studio.core.repositories import (
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import SignatureSlotService
+from hse_doc_studio.core.signatures.stamps import date_mark_text
 from hse_doc_studio.core.value_objects import SignaturePlacement
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
@@ -37,6 +38,8 @@ class UpdateSignaturePlacementInput:
 @dataclass
 class UpdateSignaturePlacementOutput:
     placement: SignaturePlacement
+    # Что напечатает каждая метка даты слота сейчас (signing-route.md, 14.7), в порядке `placement.dates`.
+    texts: tuple[str | None, ...] = ()
 
 
 class UpdateSignaturePlacementUC:
@@ -120,6 +123,7 @@ class UpdateSignaturePlacementUC:
         kept_date = existing.sign_date if existing else None
         sign_date = kept_date if inp.sign_date is None else (inp.sign_date or None)
 
+        # Метки даты и момент подписи (signing-route.md, 14.3) правит только `PUT .../dates`: PATCH их не трогает.
         new_placement = SignaturePlacement(
             enabled=enabled,
             page=page,
@@ -127,6 +131,8 @@ class UpdateSignaturePlacementUC:
             y_mm=y_mm,
             width_mm=width_mm,
             sign_date=sign_date,
+            dates=existing.dates if existing else (),
+            signed_at=existing.signed_at if existing else None,
         )
         doc_placements[inp.slot_id] = new_placement
 
@@ -140,4 +146,6 @@ class UpdateSignaturePlacementUC:
             slot_id=inp.slot_id,
             enabled=enabled,
         )
-        return UpdateSignaturePlacementOutput(placement=new_placement)
+        lang = str(project.lang)
+        texts = tuple(date_mark_text(new_state, inp.doc_id, inp.slot_id, mark, lang) for mark in new_placement.dates)
+        return UpdateSignaturePlacementOutput(placement=new_placement, texts=texts)

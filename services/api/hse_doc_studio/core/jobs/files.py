@@ -3,9 +3,15 @@
 from __future__ import annotations
 
 import base64
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
+from types import MappingProxyType
 from typing import Protocol
+
+# Метаданные поля датакласса задачи: `codec.encode` не пишет поле, пока оно равно значению по умолчанию. Так новое
+# необязательное поле не ломает раннер прежней версии, который отвергает незнакомые поля, пока его не задали.
+WIRE_OMIT_DEFAULT_KEY = "wire_omit_default"
+WIRE_OMIT_DEFAULT = MappingProxyType({WIRE_OMIT_DEFAULT_KEY: True})
 
 # Потолок встроенного блоба. Применяет только невстроенный диспетчер; встроенный
 # его не проверяет, чтобы не менять поведение локального режима.
@@ -79,6 +85,10 @@ class StampSpec:
     subtitle: str = ""
     date_label: str = ""
     date_text: str | None = None
+    # Метка даты подписания (signing-route.md, 14.3). По проводу едут, только если заданы (`WIRE_OMIT_DEFAULT`):
+    # раннер прежней версии лишнее поле отверг бы, а пакет без меток даты должен собираться и на нём.
+    height_mm: float = field(default=0.0, metadata=WIRE_OMIT_DEFAULT)
+    align: str = field(default="", metadata=WIRE_OMIT_DEFAULT)
 
 
 class IProjectFileProbe(Protocol):

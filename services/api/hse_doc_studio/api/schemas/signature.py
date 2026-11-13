@@ -1,11 +1,20 @@
 from __future__ import annotations
 
+from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from hse_doc_studio.api.schemas.common import StrictModel
-from hse_doc_studio.core.enums import DetachedFormat, DetachedOrigin, DetachedVerdict, SignMode
+from hse_doc_studio.core.enums import (
+    DateMarkAlign,
+    DateMarkFormat,
+    DetachedFormat,
+    DetachedOrigin,
+    DetachedVerdict,
+    SignedAtSource,
+    SignMode,
+)
 
 
 class SignerInfoResponse(BaseModel):
@@ -53,7 +62,29 @@ class UpdateSlotConfigRequest(BaseModel):
     sign_reason: str = ""
 
 
-class PlacementResponse(BaseModel):
+class DateMarkResponse(StrictModel):
+    """Метка даты подписания слота (signing-route.md, 14.3 и 14.7): рамка, формат и что напечатано сейчас."""
+
+    id: str
+    page: int
+    x_mm: float
+    y_mm: float
+    width_mm: float
+    height_mm: float
+    format: DateMarkFormat
+    align: DateMarkAlign
+    # Что будет напечатано сейчас; null, если метка пустая (нет даты подписи, подпись придержана или пропущена).
+    text: str | None
+
+
+class SignedAtResponse(StrictModel):
+    """Момент подписи слота в документе (14.3): ISO 8601, у ручной даты только день («2026-11-13»)."""
+
+    at: str
+    source: SignedAtSource
+
+
+class PlacementResponse(StrictModel):
     enabled: bool
     page: int
     x_mm: float
@@ -61,6 +92,9 @@ class PlacementResponse(BaseModel):
     width_mm: float
     # ISO «2026-05-12»; печатается как «12.05.2026» рядом с подписью.
     sign_date: str | None = None
+    # Метки даты подписания слота (signing-route.md, 14.7); правит их только `PUT .../dates`.
+    dates: list[DateMarkResponse] = []
+    signed_at: SignedAtResponse | None = None
 
 
 class ProfileRefResponse(BaseModel):
@@ -214,3 +248,40 @@ class SlotOptional(StrictModel):
     skipped: bool
     # Отметку сняли у пропущенной пары, а маршрут держит документ: подписант вернётся при следующей отправке.
     returns_next_round: bool
+
+
+# Формат и выравнивание метки приходят строкой: незнакомое значение это 400 `bad_date_mark` сценария, а не 422 схемы.
+_FORMAT = Annotated[str, Field(json_schema_extra={"enum": [f.value for f in DateMarkFormat]})]
+_ALIGN = Annotated[str, Field(json_schema_extra={"enum": [a.value for a in DateMarkAlign]})]
+
+
+class DateMarkRequest(StrictModel):
+    """Метка даты в `PUT .../dates`: `id` null у новой (сервер выдаст `d1`, `d2`, ...)."""
+
+    id: str | None = None
+    page: int
+    x_mm: float
+    y_mm: float
+    width_mm: float
+    height_mm: float
+    format: _FORMAT
+    align: _ALIGN = DateMarkAlign.centered.value
+
+
+class ManualSignedAtRequest(StrictModel):
+    """Ручная дата подписи слота вне маршрута: день ISO «2026-11-13»."""
+
+    date: str
+
+
+class SetDateMarksRequest(StrictModel):
+    """PUT /signatures/placements/{doc_id}/{slot_id}/dates: метки даты слота документа целиком (14.7).
+
+    `signed_at` не передано: дата подписи не меняется; null: снять ручную дату; `{date}`: поставить её. Только вне
+    маршрута: на паре участника маршрута 409 `date_from_route`. `confirm_reset` подтверждение сброса подписей
+    сценарием маршрута (срез R23); вне маршрута не нужно.
+    """
+
+    dates: list[DateMarkRequest] = Field(max_length=64)
+    signed_at: ManualSignedAtRequest | None = None
+    confirm_reset: bool = False

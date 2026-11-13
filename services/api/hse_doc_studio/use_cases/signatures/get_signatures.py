@@ -60,6 +60,8 @@ class GetSignaturesOutput:
     stale_frozen: set[str] = field(default_factory=set)
     # Docs whose signature plates or positions changed after the PDF was frozen.
     plate_outdated: set[str] = field(default_factory=set)
+    # Язык документов проекта: на нём метки даты печатают месяц (signing-route.md, 14.3).
+    lang: str = "ru"
 
 
 class GetSignaturesUC:
@@ -123,7 +125,11 @@ class GetSignaturesUC:
         stale, outdated = await self._frozen_flags(project, version, state)
 
         return GetSignaturesOutput(
-            state=state, runtime_slots=runtime_slots, stale_frozen=stale, plate_outdated=outdated
+            state=state,
+            runtime_slots=runtime_slots,
+            stale_frozen=stale,
+            plate_outdated=outdated,
+            lang=str(project.lang),
         )
 
     async def _frozen_flags(  # noqa: C901

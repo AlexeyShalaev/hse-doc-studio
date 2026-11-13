@@ -275,6 +275,17 @@ class ISigningRouteGate(Protocol):
         """
         ...
 
+    async def require_dates_editable(self, project_id: UUID, doc_id: str, slot_id: str, *, manual: bool) -> None:
+        """Метки даты слота мимо маршрута (signing-route.md, 14.6 и 14.7, срез R22).
+
+        Документ, который держит маршрут `active` или `completed` (по расчёту), правится только сценарием маршрута
+        (срез R23): до него `RouteConflictError` с кодом `route_locked` (409). Остановленный, возвращённый и
+        отменённый маршрут правку не держит. `manual` запрос меняет ручную дату подписи: на паре участника маршрута,
+        который держит документ, это `date_from_route` (409), дату даёт его согласие. Только читает: под
+        `project_lock` вызывать можно.
+        """
+        ...
+
     async def require_not_held(self, project_id: UUID, doc_id: str) -> None:
         """«Подписывать текущую сборку» (раздел 12.4): `RouteConflictError` с кодом `route_locked` (409), если
         документ держит маршрут (`HOLDING_STATUSES`, в том числе остановленный и завершённый). Документ освобождают
@@ -321,6 +332,9 @@ class NoSigningRoutes:
     async def require_unlocked(
         self, project_id: UUID, *, doc_id: str | None = None, slot_id: str | None = None
     ) -> None:
+        return None
+
+    async def require_dates_editable(self, project_id: UUID, doc_id: str, slot_id: str, *, manual: bool) -> None:
         return None
 
     async def require_not_held(self, project_id: UUID, doc_id: str) -> None:

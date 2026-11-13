@@ -104,3 +104,42 @@ def test__version_date__moscow_day_not_utc_day() -> None:
     assert version_date("2026-11-10T20:30:00+00:00") == "10.11.2026"
     assert version_date("2026-11-10T21:30:00+00:00") == "11.11.2026"
     assert version_date("2026-11-10T21:30:00") == "11.11.2026"
+
+
+def test__verify_guide__date_on_the_page_and_signing_time_under_the_signature() -> None:
+    """Дата на странице это согласие, время подписи из самой ЭП: видно, что подпись поставлена позже (14.8)."""
+    doc = GuideDocument(
+        pdf="Описание.pdf",
+        sha256="f" * 64,
+        signatures=(
+            GuideSignature("image", "Научный руководитель", "Петров", page_date="13.11.2026"),
+            GuideSignature(
+                "detached",
+                "Автор",
+                "Иванов",
+                "Описание.Иванов.openpgp.asc",
+                DetachedFormat.openpgp,
+                "Описание.pdf",
+                page_date="13.11.2026",
+                signing_time="14.11.2026 10:05",
+            ),
+            GuideSignature("pades", "Академический руководитель", "Сидоров", signing_time="15.11.2026 09:00"),
+            GuideSignature("skipped", "Соруководитель", ""),
+        ),
+    )
+
+    ru = build_verify_guide("ru", [doc]).splitlines()
+    en = build_verify_guide("en", [doc]).splitlines()
+
+    at = ru.index("  - Автор: открепленная ЭП, подписант: Иванов")
+    assert ru[at + 1 : at + 4] == [
+        "    дата на странице: 13.11.2026",
+        "    время подписи: 14.11.2026 10:05",
+        "    файл подписи: Описание.Иванов.openpgp.asc, относится к: Описание.pdf",
+    ]
+    image = ru.index("  - Научный руководитель: графическая подпись (картинка, не ЭП), подписант: Петров")
+    assert ru[image + 1] == "    дата на странице: 13.11.2026"
+    skipped = ru.index("  - Соруководитель: не требуется (пропущено автором)")
+    assert not ru[skipped + 1].startswith("    дата")
+    assert "    date on the page: 13.11.2026" in en
+    assert "    signing time: 15.11.2026 09:00" in en

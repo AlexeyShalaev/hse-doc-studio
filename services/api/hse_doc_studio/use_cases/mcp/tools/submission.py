@@ -101,6 +101,11 @@ def _plan_json(plan: SignaturePlan) -> dict[str, object]:
                         "is_mine": s.is_mine,
                         "optional": s.optional,
                         "skipped": {"at": s.skipped.at, "route_id": s.skipped.route_id} if s.skipped else None,
+                        # Метки даты подписания (signing-route.md, 14.9): что напечатано сейчас, null у пустой.
+                        "dates": [{"page": d.page, "format": d.format.value, "text": d.text} for d in s.dates],
+                        "signed_at": {"at": s.signed_at.at, "source": s.signed_at.source.value}
+                        if s.signed_at
+                        else None,
                         "check": {
                             "format": s.state.check.format,
                             "verdict": s.state.check.verdict.value,
