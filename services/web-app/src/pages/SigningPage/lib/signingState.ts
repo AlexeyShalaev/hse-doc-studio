@@ -272,6 +272,31 @@ export const myFrames = (doc: SigningTaskDoc, label: string): PdfStamp[] =>
     highlight: true,
   }));
 
+/**
+ * Рамки меток даты своих слотов (docs/design/signing-route.md, 14.11): пунктир с подписью «Дата
+ * согласования». После согласия дата уже в PDF, рамка только показывает место. Чужие метки
+ * страница видит в самом PDF, как есть.
+ */
+export const myDateFrames = (doc: SigningTaskDoc, label: string): PdfStamp[] =>
+  doc.mine.flatMap((slot) =>
+    slot.status === "skipped"
+      ? []
+      : slot.dates.map((mark, i) => ({
+          page: mark.page,
+          src: null,
+          xMm: mark.x_mm,
+          yMm: mark.y_mm,
+          widthMm: mark.width_mm,
+          heightMm: mark.height_mm,
+          // «« 13 » ноября 2026 г.» это три рамки в строку: подпись одна, у первой на странице.
+          ...(slot.dates.findIndex((m) => m.page === mark.page) === i
+            ? { label }
+            : {}),
+          highlight: true,
+          date: true,
+        })),
+  );
+
 const PT_PER_MM = 72 / 25.4;
 
 export type PdfJumpTarget = {

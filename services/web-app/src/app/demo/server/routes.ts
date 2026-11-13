@@ -86,6 +86,7 @@ export const signingRouteDemo = createSigningRouteDemo({
   ],
   isPlaced: checkpointDemo.isPlaced,
   isOptional: checkpointDemo.isOptional,
+  datesOf: checkpointDemo.datesOf,
   mailEnabled: () => world.bootstrap.auth.smtp_enabled,
   keysOf: (user) =>
     signingIdentityDemo.keysOf(user.id).map((key) => ({
@@ -117,7 +118,130 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * Необязательные подписи (раздел 13), `student_signing_optional`: свой маршрут студента с
  * академруком сверх точки, его подпись отмечена необязательной; научрук согласовал, очередь
  * академрука, автор может его пропустить.
+ *
+ * Дата подписания (раздел 14), `student_signing_dates`: свой завершённый маршрут студента, научрук
+ * согласовал и подписал ЭП над B, академрук согласовал картинкой. У научрука «« 13 » ноября 2026 г.»
+ * тремя метками, у академрука дата на второй странице; правка меток сбросит ЭП научрука (окно
+ * подтверждения). В проекте без маршрута у подписей ручная дата и пустая метка. В чужом проекте
+ * у места научрука метки даты: страница подписи рисует их рамки «Дата согласования».
  */
+/** Метки даты сценария `student_signing_dates` (раздел 14.11). */
+const seedSigningDates = (signer: { id: string; name: string }): void => {
+  const own = "p_01hxa1c4de";
+  const doc = "topic_application";
+  const petrov = DEMO_SIGNING_MEMBERS[0];
+  for (const slot of ["supervisor", "academic_supervisor"])
+    checkpointDemo.place(own, doc, slot);
+  // «« 13 » ноября 2026 г.»: день в кавычках, месяц словом, год после готового «20».
+  checkpointDemo.setDates(own, doc, "supervisor", [
+    {
+      page: 1,
+      x_mm: 111.6,
+      y_mm: 150,
+      width_mm: 6.4,
+      height_mm: 5,
+      format: "day",
+      align: "center",
+    },
+    {
+      page: 1,
+      x_mm: 122,
+      y_mm: 150,
+      width_mm: 23,
+      height_mm: 5,
+      format: "month_word",
+      align: "center",
+    },
+    {
+      page: 1,
+      x_mm: 151.3,
+      y_mm: 150,
+      width_mm: 5,
+      height_mm: 5,
+      format: "year_short",
+      align: "left",
+    },
+  ]);
+  checkpointDemo.setDates(own, doc, "academic_supervisor", [
+    {
+      page: 2,
+      x_mm: 120,
+      y_mm: 250,
+      width_mm: 30,
+      height_mm: 6,
+      format: "date_long",
+      align: "right",
+    },
+  ]);
+  signingRouteDemo.seedDates({
+    projectId: own,
+    sender: signer,
+    signer: { id: petrov?.user_id ?? "", name: petrov?.name ?? "" },
+    academic: { id: "u_demo_sidorov", name: "Сидоров С. С." },
+  });
+  // Проект без маршрута: научрук с ручной датой, у академрука метка пока пустая.
+  const free = "p_01hxa4n7pq";
+  checkpointDemo.place(free, doc, "supervisor");
+  checkpointDemo.setDates(
+    free,
+    doc,
+    "supervisor",
+    [
+      {
+        page: 1,
+        x_mm: 110,
+        y_mm: 152,
+        width_mm: 40,
+        height_mm: 6,
+        format: "date_long",
+        align: "left",
+      },
+    ],
+    "2026-11-10",
+  );
+  checkpointDemo.setDates(free, doc, "academic_supervisor", [
+    {
+      page: 1,
+      x_mm: 110,
+      y_mm: 182,
+      width_mm: 26,
+      height_mm: 6,
+      format: "date_numeric",
+      align: "center",
+    },
+  ]);
+  // Чужой проект: студент научрук, у его места метки даты (страница подписи).
+  checkpointDemo.setDates("p_01hxa2f8gh", doc, "supervisor", [
+    {
+      page: 1,
+      x_mm: 111.6,
+      y_mm: 150,
+      width_mm: 6.4,
+      height_mm: 5,
+      format: "day",
+      align: "center",
+    },
+    {
+      page: 1,
+      x_mm: 122,
+      y_mm: 150,
+      width_mm: 23,
+      height_mm: 5,
+      format: "month_word",
+      align: "center",
+    },
+    {
+      page: 1,
+      x_mm: 151.3,
+      y_mm: 150,
+      width_mm: 5,
+      height_mm: 5,
+      format: "year_short",
+      align: "left",
+    },
+  ]);
+};
+
 const seedSigningTasks = (scenarioId: string): void => {
   if (world.bootstrap.user?.id !== DEMO_STUDENT.id) return;
   const signer = { id: DEMO_STUDENT.id, name: DEMO_STUDENT.name };
@@ -161,6 +285,7 @@ const seedSigningTasks = (scenarioId: string): void => {
       true,
     );
   }
+  if (scenarioId === "student_signing_dates") seedSigningDates(signer);
   if (versions || scenarioId === "student_signing_migration") {
     // Свой маршрут: место подписи научрука уже стоит, иначе новую версию не отправить.
     checkpointDemo.place("p_01hxa1c4de", "topic_application", "supervisor");

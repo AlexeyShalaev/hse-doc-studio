@@ -12,6 +12,7 @@ import { formatMoment } from "../lib/format";
 import {
   jumpToSlot,
   keptMark,
+  myDateFrames,
   myFrames,
   pendingMine,
   versionLine,
@@ -157,7 +158,10 @@ export const SigningDocs = ({ task, pdfUrlOf }: SigningDocsProps) => {
             url={pdfUrlOf(doc)}
             // Чужое согласие или фиксация меняют PDF по тому же адресу: перечитываем по событиям.
             refreshKey={`${String(task.route.round)}:${String(task.events.length)}`}
-            stamps={myFrames(doc, t("docs.yourSlot"))}
+            stamps={[
+              ...myFrames(doc, t("docs.yourSlot")),
+              ...myDateFrames(doc, t("docs.dateSlot")),
+            ]}
             jump={jump}
             storageKey={`sign:${task.route.project.id}:${doc.doc_id}`}
             // Подписанту важна вся ширина страницы: место подписи часто у правого края.

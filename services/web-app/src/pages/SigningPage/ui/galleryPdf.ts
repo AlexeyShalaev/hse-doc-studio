@@ -1,7 +1,8 @@
-// Образец PDF для галереи страницы подписанта: настоящий одностраничный A4, который pdf.js
+// Образец PDF для галереи страницы подписанта: настоящий двухстраничный A4, который pdf.js
 // читает без сервера. Строки подписей стоят там же, где слоты эталонов задачи
 // (научрук 110x130 мм, академрук 110x160 мм, студент 120x230 мм), чтобы рамки «Ваша
-// подпись» легли на свои места. Только для галереи разработчика.
+// подпись» легли на свои места. Под строкой научрука заготовка даты «"  "  ____ 20  » для меток
+// даты (14.11), на второй странице строка даты академрука. Только для галереи разработчика.
 
 const MM = 72 / 25.4;
 const PAGE_H = 842;
@@ -18,19 +19,32 @@ const content = [
   line(25, 76, 10, "Supervisor: Petrov P. P."),
   line(25, 132, 10, "Supervisor"),
   line(110, 145, 8, "______________________________"),
+  line(110, 154, 9, '"        "  ______________  20'),
   line(25, 162, 10, "Academic supervisor"),
   line(110, 175, 8, "______________________________"),
   line(25, 232, 10, "Student"),
   line(120, 245, 8, "______________________________"),
 ].join("\n");
 
+const second = [
+  line(25, 30, 12, "Appendix"),
+  line(25, 245, 10, "Academic supervisor: signature and date"),
+  line(120, 254, 8, "______________________________"),
+].join("\n");
+
 const buildPdf = (): string => {
+  const page = (contents: number) =>
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents ${String(contents)} 0 R >>`;
+  const stream = (text: string) =>
+    `<< /Length ${String(text.length)} >>\nstream\n${text}\nendstream`;
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
-    "<< /Type /Pages /Kids [4 0 R] /Count 1 >>",
+    "<< /Type /Pages /Kids [4 0 R 6 0 R] /Count 2 >>",
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>",
-    `<< /Length ${String(content.length)} >>\nstream\n${content}\nendstream`,
+    page(5),
+    stream(content),
+    page(7),
+    stream(second),
   ];
   let body = "%PDF-1.4\n";
   const offsets: number[] = [];

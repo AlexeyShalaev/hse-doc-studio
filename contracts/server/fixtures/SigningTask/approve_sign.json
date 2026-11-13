@@ -93,7 +93,8 @@
           "mark": "plate",
           "status": "pending",
           "reason": "no_signature_file",
-          "optional": false
+          "optional": false,
+          "dates": []
         }
       ],
       "others": [
@@ -109,7 +110,8 @@
           "width_mm": 30,
           "height_mm": 12,
           "mark": "png",
-          "status": "signed"
+          "status": "signed",
+          "dates": []
         }
       ],
       "sent_at": "2026-11-10T09:00:00Z",

@@ -9,6 +9,9 @@ import { z } from "zod";
 //
 // Необязательные подписи и пропуск (раздел 13.6): слот маршрута различает `extra` (добавлен сверх
 // точки) и `optional` (подпись необязательна); поля участника и задачи обязательны.
+//
+// Дата подписания (раздел 14.7): у слотов задачи метки даты `dates` (место рамки и текст), поле
+// обязательно (срез R23).
 
 const iso = z.string().min(1);
 const LocalizedSchema = z.record(z.string(), z.string());
@@ -589,6 +592,20 @@ export const SigningTaskMeSchema = z.strictObject({
 });
 export type SigningTaskMe = z.infer<typeof SigningTaskMeSchema>;
 
+/**
+ * Метка даты слота на документе задачи (14.7): место рамки и текст сейчас; null, пока у слота нет
+ * даты (не согласовал). Страница подписи рисует рамки своих меток «Дата согласования».
+ */
+export const SigningTaskDateMarkSchema = z.strictObject({
+  page: z.number().int().min(1),
+  x_mm: z.number(),
+  y_mm: z.number(),
+  width_mm: z.number(),
+  height_mm: z.number(),
+  text: z.string().nullable(),
+});
+export type SigningTaskDateMark = z.infer<typeof SigningTaskDateMarkSchema>;
+
 /** Чужой слот на документе: место и статус, без причины плана. */
 export const SigningTaskOtherSlotSchema = z.strictObject({
   slot_id: z.string(),
@@ -601,6 +618,8 @@ export const SigningTaskOtherSlotSchema = z.strictObject({
   height_mm: z.number().nullable(),
   mark: RouteVisibleMarkSchema,
   status: RouteSlotStatusSchema,
+  /** Метки даты слота на этом документе (14.7). */
+  dates: z.array(SigningTaskDateMarkSchema),
 });
 export type SigningTaskOtherSlot = z.infer<typeof SigningTaskOtherSlotSchema>;
 

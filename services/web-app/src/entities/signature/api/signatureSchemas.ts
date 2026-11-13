@@ -28,6 +28,57 @@ export const SlotInfoSchema = z.object({
   signer: SignerInfoSchema.nullish().default(null),
 });
 
+// Дата подписания (docs/design/signing-route.md, 14.3): у слота документа 0..8 меток даты в своих
+// рамках на любых страницах. Значение один момент подписи слота (`signed_at`): согласие участника
+// маршрута или день, который указал автор вне маршрута. Форматы это пресеты, язык месяца по языку
+// документа. Сервер отдаёт их с R22.
+export const DateMarkFormatSchema = z.enum([
+  "day",
+  "month_word",
+  "month_number",
+  "year",
+  "year_short",
+  "date_numeric",
+  "date_long",
+]);
+export type DateMarkFormat = z.infer<typeof DateMarkFormatSchema>;
+
+export const DateMarkAlignSchema = z.enum(["left", "center", "right"]);
+export type DateMarkAlign = z.infer<typeof DateMarkAlignSchema>;
+
+/** Наибольшее число меток даты у слота документа (400 `bad_date_mark` сверх него). */
+export const DATE_MARKS_MAX = 8;
+
+/** Место метки даты: рамка в мм от левого верхнего угла страницы, как у подписи. */
+const DateMarkPlaceShape = {
+  page: z.number().int().min(1),
+  x_mm: z.number(),
+  y_mm: z.number(),
+  width_mm: z.number(),
+  height_mm: z.number(),
+};
+
+/** Метка даты в ответе: `text` что будет напечатано сейчас; null, пока у слота нет даты. */
+export const DateMarkSchema = z.object({
+  /** d1, d2, …: уникален в пределах слота документа, выдаёт сервер. */
+  id: z.string(),
+  ...DateMarkPlaceShape,
+  format: DateMarkFormatSchema,
+  align: DateMarkAlignSchema,
+  text: z.string().nullable(),
+});
+export type DateMark = z.infer<typeof DateMarkSchema>;
+
+/**
+ * Момент подписи слота документа: `approval` согласие по маршруту (ISO 8601 с временем),
+ * `manual` день, который указал автор («2026-11-13»).
+ */
+export const SignedAtSchema = z.object({
+  at: z.string(),
+  source: z.enum(["approval", "manual"]),
+});
+export type SignedAt = z.infer<typeof SignedAtSchema>;
+
 export const PlacementSchema = z.object({
   enabled: z.boolean(),
   page: z.number(),
@@ -35,6 +86,45 @@ export const PlacementSchema = z.object({
   y_mm: z.number(),
   width_mm: z.number(),
   sign_date: z.string().nullable().optional().default(null),
+  /** Метки даты слота документа (14.3). */
+  dates: z.array(DateMarkSchema),
+  /** Момент подписи слота в этом документе. */
+  signed_at: SignedAtSchema.nullable(),
+});
+
+/**
+ * Метки даты слота документа целиком и ручная дата
+ * (`PUT /projects/{id}/signatures/placements/{doc_id}/{slot_id}/dates`, 14.7). Метка без `id`
+ * новая. `signed_at`: `{date}` ставит день, null убирает его, без поля дата не меняется; ручная
+ * дата только у слота вне маршрута (409 `date_from_route`). `confirm_reset`: согласие сбросить ЭП
+ * над зафиксированным B документа под маршрутом (409 `resets_signatures` без него).
+ */
+export const DateMarkInputSchema = z.strictObject({
+  id: z.string().nullable(),
+  ...DateMarkPlaceShape,
+  format: DateMarkFormatSchema,
+  align: DateMarkAlignSchema,
+});
+export type DateMarkInput = z.infer<typeof DateMarkInputSchema>;
+
+export const SetDateMarksRequestSchema = z.strictObject({
+  dates: z.array(DateMarkInputSchema).max(DATE_MARKS_MAX),
+  signed_at: z
+    .strictObject({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/) })
+    .nullable()
+    .optional(),
+  confirm_reset: z.boolean(),
+});
+export type SetDateMarksRequest = z.infer<typeof SetDateMarksRequestSchema>;
+
+/**
+ * Тело 409 `resets_signatures`: сохранение меток перефиксирует документ под маршрутом и сбросит эти
+ * ЭП над B (14.6). `name` имя подписанта.
+ */
+export const ResetsSignaturesSchema = z.object({
+  resets: z.array(
+    z.object({ doc_id: z.string(), slot_id: z.string(), name: z.string() }),
+  ),
 });
 
 // Контрольная точка, требующая подпись этого слота на конкретном документе.
@@ -228,6 +318,18 @@ export const PlanSlotSchema = z.object({
     .object({ at: z.string(), route_id: z.string() })
     .nullable()
     .default(null),
+  /** Метки даты слота документа: страница, формат и текст сейчас (14.7). */
+  dates: z
+    .array(
+      z.object({
+        page: z.number().int().min(1),
+        format: DateMarkFormatSchema,
+        text: z.string().nullable(),
+      }),
+    )
+    .default([]),
+  /** Момент подписи слота в документе. */
+  signed_at: SignedAtSchema.nullable().default(null),
 });
 
 // Маршрут подписания, который держит документы точки сдачи или документ: состояние

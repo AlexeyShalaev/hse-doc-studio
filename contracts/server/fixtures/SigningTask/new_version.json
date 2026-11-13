@@ -104,7 +104,8 @@
           "mark": "plate",
           "status": "pending",
           "reason": "awaiting_approval",
-          "optional": false
+          "optional": false,
+          "dates": []
         }
       ],
       "others": [
@@ -120,7 +121,8 @@
           "width_mm": 30,
           "height_mm": 12,
           "mark": "png",
-          "status": "signed"
+          "status": "signed",
+          "dates": []
         }
       ],
       "sent_at": "2026-11-12T10:30:00Z",
@@ -151,7 +153,8 @@
           "mark": "plate",
           "status": "signed",
           "reason": null,
-          "optional": false
+          "optional": false,
+          "dates": []
         }
       ],
       "others": [
@@ -167,7 +170,8 @@
           "width_mm": 40,
           "height_mm": 16,
           "mark": "png",
-          "status": "signed"
+          "status": "signed",
+          "dates": []
         }
       ],
       "sent_at": "2026-11-10T09:00:00Z",

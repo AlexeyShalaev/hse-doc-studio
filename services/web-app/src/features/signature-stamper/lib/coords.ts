@@ -29,3 +29,25 @@ export const aspectRatioFromPx = (
   }
   return naturalHeightPx / naturalWidthPx;
 };
+
+/** Пропорция плашки открепленной ЭП: надпись в рамке, а не картинка. */
+const CAPTION_ASPECT_RATIO = 0.55;
+
+/** Высота рамки подписи на странице, мм: по пропорции картинки или плашки. */
+export const signatureHeightMm = (
+  widthMm: number,
+  slotInfo:
+    | {
+        sign_mode?: string | null;
+        natural_width_px?: number | null;
+        natural_height_px?: number | null;
+      }
+    | undefined,
+): number =>
+  widthMm *
+  (slotInfo?.sign_mode === "detached_text"
+    ? CAPTION_ASPECT_RATIO
+    : aspectRatioFromPx(
+        slotInfo?.natural_width_px,
+        slotInfo?.natural_height_px,
+      ));

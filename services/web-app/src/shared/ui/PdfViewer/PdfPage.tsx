@@ -30,6 +30,8 @@ export type PdfStamp = {
    * top (the signer's page marks «Ваша подпись» this way). `src` is ignored.
    */
   highlight?: boolean;
+  /** With `highlight`: a date mark's frame (dashed, its own colour), not a signature's. */
+  date?: boolean;
 };
 
 /** Метка комментария, уже поставленная на страницу: прямоугольники в пунктах PDF. */
@@ -447,9 +449,13 @@ export const PdfPage = ({
               return (
                 <div
                   key={`hl#${String(i)}`}
-                  className="pdf-stamp-frame"
+                  className={
+                    s.date
+                      ? "pdf-stamp-frame pdf-stamp-date"
+                      : "pdf-stamp-frame"
+                  }
                   style={box}
-                  data-testid="pdf-stamp-frame"
+                  data-testid={s.date ? "pdf-stamp-date" : "pdf-stamp-frame"}
                 >
                   {s.label && <span>{s.label}</span>}
                 </div>
