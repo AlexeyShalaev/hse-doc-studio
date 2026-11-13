@@ -91,6 +91,8 @@ export const signingRouteDemo = createSigningRouteDemo({
   ],
   isPlaced: checkpointDemo.isPlaced,
   isOptional: checkpointDemo.isOptional,
+  // Срок маршрута нового черновика из срока точки (16.5), как на сервере после R29.
+  pointDeadlineOf: checkpointDemo.deadlineOf,
   datesOf: checkpointDemo.datesOf,
   presetFor: (_projectId, profile) =>
     hasPreset() ? (profile.preset ?? null) : null,
@@ -475,7 +477,8 @@ export const serverDemoRoutes: DemoRoute[] = [
   ...createSetupRoutes(() => world),
   // links: раньше маршрутов проектов, чтобы гость видел свой проект по ссылке.
   ...createShareLinkRoutes(() => world),
-  ...createProjectRoutes(() => world),
+  // Ближайший срок точки у проекта (signing-route.md, 16.6) считает демо точки сдачи.
+  ...createProjectRoutes(() => world, checkpointDemo.nextDeadlineOf),
   ...createProjectAccessRoutes(() => world),
   // Ревью-комментарии и комментарии из превью PDF.
   ...createReviewRoutes(() => world),

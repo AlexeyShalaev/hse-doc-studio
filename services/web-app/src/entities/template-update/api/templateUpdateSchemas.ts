@@ -60,6 +60,15 @@ export const UpdateWarningSchema = z.object({
   doc_ids: z.array(z.string()),
 });
 
+// Места подписей из шаблона на новой версии (signing-route.md, 15.9). reason ∈ manual | route | signed.
+// Необязательно: сервер до R26 пункта не отдаёт.
+export const SignaturePresetsSchema = z.object({
+  updated: z.array(z.object({ doc_id: z.string(), slot_id: z.string() })),
+  kept: z.array(
+    z.object({ doc_id: z.string(), slot_id: z.string(), reason: z.string() }),
+  ),
+});
+
 export const TemplateUpdatePlanSchema = z.object({
   from_version: z.string(),
   to_version: z.string(),
@@ -69,6 +78,7 @@ export const TemplateUpdatePlanSchema = z.object({
   counts: z.record(z.string(), z.number()),
   files: z.array(TemplateFileOpSchema),
   warnings: z.array(UpdateWarningSchema),
+  signature_presets: SignaturePresetsSchema.optional(),
 });
 
 export const ApplyTemplateUpdateResultSchema = z.object({
@@ -118,6 +128,7 @@ export type TemplateUpdateStatus = z.infer<typeof TemplateUpdateStatusSchema>;
 export type TemplateFileOp = z.infer<typeof TemplateFileOpSchema>;
 export type UpdateWarning = z.infer<typeof UpdateWarningSchema>;
 export type TemplateUpdatePlan = z.infer<typeof TemplateUpdatePlanSchema>;
+export type SignaturePresets = z.infer<typeof SignaturePresetsSchema>;
 export type ApplyTemplateUpdateResult = z.infer<
   typeof ApplyTemplateUpdateResultSchema
 >;
@@ -127,3 +138,25 @@ export type RevertTemplateUpdateResult = z.infer<
 export type TemplateDiff = z.infer<typeof TemplateDiffSchema>;
 export type TemplateFileState = z.infer<typeof TemplateFileStateSchema>;
 export type CompareWithTemplate = z.infer<typeof CompareWithTemplateSchema>;
+
+// Строгая форма для контракта сервера (contracts/server/fixtures/TemplateUpdatePlanResponse):
+// лишнее поле значит расхождение сторон. Экран разбирает план терпимой схемой выше.
+export const TemplateUpdatePlanContractSchema = z.strictObject({
+  ...TemplateUpdatePlanSchema.shape,
+  files: z.array(z.strictObject(TemplateFileOpSchema.shape)),
+  warnings: z.array(z.strictObject(UpdateWarningSchema.shape)),
+  signature_presets: z
+    .strictObject({
+      updated: z.array(
+        z.strictObject({ doc_id: z.string(), slot_id: z.string() }),
+      ),
+      kept: z.array(
+        z.strictObject({
+          doc_id: z.string(),
+          slot_id: z.string(),
+          reason: z.enum(["manual", "route", "signed"]),
+        }),
+      ),
+    })
+    .optional(),
+});

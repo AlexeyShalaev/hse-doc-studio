@@ -17,6 +17,13 @@ import {
   DEMO_SIGNING_PROFILE,
   type SigningRouteDemo,
 } from "@entities/signing-route/testing";
+import type { NextDeadline } from "@entities/session";
+import {
+  SetCheckpointDeadlineRequestSchema,
+  daysUntilDeadline,
+  toMoscowIso,
+  type DeadlineState,
+} from "@entities/submission";
 import { effectiveRole } from "./projectAccess";
 import type { ServerDemoWorld } from "./world";
 
@@ -38,6 +45,10 @@ import type { ServerDemoWorld } from "./world";
 // меток снимает пометку, «Вернуть место из шаблона» (`POST .../restore`) ставит место и метки из
 // пака с теми же кодами, что у меток даты. Метки даты пака есть только у проекта на версии
 // шаблона с пресетом (`hasPreset`).
+// Сроки контрольных точек (signing-route.md, 16): срок точки хранится здесь по проектам, состояние
+// считается при чтении правилами 16.6 (пакетов в демо нет, поэтому прошедший срок «просрочен»).
+// У «Bertie» срок через 3 дня, у чужого проекта рецензента сегодня, у проекта читателя прошёл
+// позавчера; у архивной «Практики» срока нет: на её точке видна строка «Срок сдачи не указан».
 
 type StoredMark = Omit<DateMarkInput, "id"> & { id: string };
 
@@ -215,6 +226,58 @@ const RUNTIME_SLOTS = (DOC?.slots ?? []).map((slot) => ({
   owner: null,
 }));
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+const MOSCOW_MS = 3 * 60 * 60 * 1000;
+
+/** Подсказка пака к точке (16.4): текстом, без дат. */
+const DEADLINE_HINT = {
+  ru: "Обычно в середине ноября, точную дату объявляют в SmartLMS",
+  en: "Usually mid-November; the exact date is announced in SmartLMS",
+};
+
+/** 23:59 по Москве через `days` календарных дней от `now`. */
+const endOfMoscowDay = (now: number, days: number): string => {
+  const day = Math.floor((now + MOSCOW_MS) / DAY_MS) + days;
+  return toMoscowIso((day + 1) * DAY_MS - MOSCOW_MS - 60_000);
+};
+
+const seedDeadlines = (now: number): Map<string, Record<string, string>> =>
+  new Map([
+    ["p_01hxa1c4de", { [DEMO_SIGNING_PROFILE.id]: endOfMoscowDay(now, 3) }],
+    ["p_01hxa2f8gh", { [DEMO_SIGNING_PROFILE.id]: endOfMoscowDay(now, 0) }],
+    ["p_01hxa3k2jm", { [DEMO_SIGNING_PROFILE.id]: endOfMoscowDay(now, -2) }],
+  ]);
+
+/** Состояние срока по таблице 16.6: дни по календарю Москвы, пакет к сроку из `packagedAt`. */
+export const demoDeadlineState = (
+  deadline: string | null,
+  packagedAt: string | null,
+  now: number,
+): DeadlineState => {
+  if (deadline === null) return "none";
+  const at = Date.parse(deadline);
+  if (at <= now) return packagedAt === null ? "overdue" : "packaged";
+  const days = daysUntilDeadline(deadline, now) ?? 0;
+  if (days === 0) return "today";
+  return days <= 3 ? "soon" : "upcoming";
+};
+
+/** Срок с поясом не раньше 2000 года, как требует сервер (`bad_deadline`, 16.8). */
+const ZONED = /T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/;
+const goodDeadline = (value: string): boolean => {
+  const at = Date.parse(value);
+  return (
+    ZONED.test(value) &&
+    !Number.isNaN(at) &&
+    new Date(at).getUTCFullYear() >= 2000
+  );
+};
+
+const PROFILE = {
+  id: DEMO_SIGNING_PROFILE.id,
+  name: DEMO_SIGNING_PROFILE.name,
+};
+
 const PROFILES = [
   {
     id: DEMO_SIGNING_PROFILE.id,
@@ -230,8 +293,14 @@ const PROFILES = [
         .map((slot) => slot.slot_id),
       skip_if_nda: false,
       supported_kinds: ["research", "project"],
+      methods: Object.fromEntries(
+        doc.slots
+          .filter((slot) => !slot.extra)
+          .map((slot) => [slot.slot_id, [slot.method]]),
+      ),
     })),
     extra_items: [],
+    deadline_hint: DEADLINE_HINT,
   },
 ];
 
@@ -283,6 +352,16 @@ export type CheckpointDemo = {
     slotId: string,
     signedAt: string | null,
   ) => SigningTaskDateMark[];
+  /** Срок точки проекта (16.3); null, если не указан. */
+  deadlineOf: (projectId: string, profileId: string) => string | null;
+  /** Поставить или снять срок заранее, как будто автор уже указал его. */
+  setDeadline: (
+    projectId: string,
+    profileId: string,
+    deadline: string | null,
+  ) => void;
+  /** Ближайший срок проекта для списка (16.6): `ProjectSummary.next_deadline`. */
+  nextDeadlineOf: (projectId: string) => NextDeadline | null;
   reset: () => void;
 };
 
@@ -295,6 +374,47 @@ export const createCheckpointDemo = (
   hasPreset: (projectId: string) => boolean = () => false,
 ): CheckpointDemo => {
   let placements = new Map<string, Record<string, Record<string, Placement>>>();
+  // Проект → точка → срок (ISO с поясом Москвы).
+  let deadlines = seedDeadlines(Date.now());
+  const deadlineOf = (projectId: string, profileId: string): string | null =>
+    deadlines.get(projectId)?.[profileId] ?? null;
+  const setDeadline = (
+    projectId: string,
+    profileId: string,
+    deadline: string | null,
+  ): void => {
+    const { [profileId]: _old, ...rest } = deadlines.get(projectId) ?? {};
+    deadlines.set(
+      projectId,
+      deadline === null ? rest : { ...rest, [profileId]: deadline },
+    );
+  };
+  /** Точка со сроком в ответе: пакетов в демо нет, `packaged_at` всегда null. */
+  const profilesOut = (projectId: string) =>
+    PROFILES.map((profile) => {
+      const deadline = deadlineOf(projectId, profile.id);
+      return {
+        ...profile,
+        deadline,
+        deadline_state: demoDeadlineState(deadline, null, Date.now()),
+        packaged_at: null,
+      };
+    });
+  const nextDeadlineOf = (projectId: string): NextDeadline | null => {
+    const now = Date.now();
+    const deadline = deadlineOf(projectId, PROFILE.id);
+    if (deadline === null) return null;
+    const state = demoDeadlineState(deadline, null, now);
+    const at = Date.parse(deadline);
+    // Ближайший будущий в 30 днях, иначе просрочка не старше 7 дней (16.6).
+    const shown =
+      state === "overdue"
+        ? now - at <= 7 * DAY_MS
+        : state !== "packaged" && at - now <= 30 * DAY_MS;
+    return shown
+      ? { profile_id: PROFILE.id, name: PROFILE.name, deadline, state }
+      : null;
+  };
   // Проект → документ → точка → необязательные слоты.
   let optional = new Map<string, OptionalMap>();
   const optionalOf = (projectId: string): OptionalMap => {
@@ -489,7 +609,35 @@ export const createCheckpointDemo = (
     {
       method: "GET",
       pattern: "/projects/:projectId/submissions/profiles",
-      handler: guarded(() => demoJson(PROFILES)),
+      handler: guarded((projectId) => demoJson(profilesOut(projectId))),
+    },
+    {
+      // Срок контрольной точки (16.8): права как у сборки пакета, коды как у сервера.
+      method: "PUT",
+      pattern: "/projects/:projectId/submissions/profiles/:profileId/deadline",
+      handler: guarded((projectId, req) => {
+        const role = roleIn(projectId);
+        if (role !== "owner" && role !== "editor")
+          return demoError(403, "forbidden", "Not allowed to submit");
+        const profileId = req.params.profileId ?? "";
+        if (!PROFILES.some((p) => p.id === profileId))
+          return demoError(404, "not_found", "Unknown checkpoint");
+        const parsed = SetCheckpointDeadlineRequestSchema.safeParse(req.body);
+        if (!parsed.success)
+          return demoError(422, "validation_error", "Invalid request");
+        const value = parsed.data.deadline;
+        if (value !== null && !goodDeadline(value))
+          return demoError(400, "bad_deadline", "Bad deadline");
+        // Ответ в поясе Москвы, как у сервера.
+        const deadline = value === null ? null : toMoscowIso(Date.parse(value));
+        setDeadline(projectId, profileId, deadline);
+        return demoJson({
+          profile_id: profileId,
+          deadline,
+          state: demoDeadlineState(deadline, null, Date.now()),
+          packaged_at: null,
+        });
+      }),
     },
     {
       method: "GET",
@@ -796,9 +944,13 @@ export const createCheckpointDemo = (
         }),
       );
     },
+    deadlineOf,
+    setDeadline,
+    nextDeadlineOf,
     reset: () => {
       placements = new Map();
       optional = new Map();
+      deadlines = seedDeadlines(Date.now());
     },
   };
 };

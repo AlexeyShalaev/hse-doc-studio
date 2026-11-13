@@ -1,0 +1,20 @@
+{
+  "id": "topic-approval",
+  "name": {
+    "ru": "Заявка на тему КП (SmartLMS)",
+    "en": "Topic application (SmartLMS)"
+  },
+  "description": {
+    "ru": "Заявление о выборе темы.",
+    "en": "Topic application."
+  },
+  "items": [],
+  "extra_items": [],
+  "deadline": "2026-11-15T23:59:00+03:00",
+  "deadline_state": "packaged",
+  "deadline_hint": {
+    "ru": "Обычно в середине ноября, точную дату объявляют в SmartLMS",
+    "en": "Usually mid-November; the exact date is announced in SmartLMS"
+  },
+  "packaged_at": "2026-11-14T18:05:00+03:00"
+}

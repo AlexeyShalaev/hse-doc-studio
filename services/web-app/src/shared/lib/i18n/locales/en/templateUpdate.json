@@ -49,6 +49,7 @@
     "loading": "Comparing your project with the new template version…",
     "notes": "What's new",
     "nothing": "The update changes no project files: only the new template version applies (checks, checkpoints).",
+    "placesOnly": "No files change. Template signature places will be updated: {{n}}",
     "files": "Files",
     "cancel": "Cancel",
     "apply": "Update",
@@ -63,6 +64,15 @@
       "recorded": "",
       "root": "The comparison base was reconstructed from the project history.",
       "approximate": "The project's creation history is missing: the base was reconstructed approximately, so there may be more conflicts than actual edits."
+    },
+    "presets": {
+      "updated": "Template signature places will be updated: {{n}}",
+      "kept": "Not updated: {{list}}",
+      "reason": {
+        "manual": "changed by you {{n}}",
+        "route": "on a signing route {{n}}",
+        "signed": "signed {{n}}"
+      }
     }
   },
   "count": {

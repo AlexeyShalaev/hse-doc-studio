@@ -8,6 +8,7 @@ import {
   type DemoResponse,
   type DemoRoute,
 } from "@shared/api/demo";
+import { routeDeadlineFromPoint } from "@entities/submission";
 import {
   ApproveSigningTaskRequestSchema,
   ReturnSigningTaskRequestSchema,
@@ -204,6 +205,11 @@ export type SigningRouteDemoOptions = {
   /** Пресет ставит места пар из шаблона, где места нет или оно как в шаблоне (15.5). */
   onPresetPlaces?: (projectId: string, pairs: RouteSlotRef[]) => void;
   now?: () => number;
+  /**
+   * Срок контрольной точки в проекте (16.3). С ним новый черновик получает срок маршрута на сутки
+   * раньше и `point_deadline`, как на сервере после R29; без функции срока у черновика нет.
+   */
+  pointDeadlineOf?: (projectId: string, profileId: string) => string | null;
 };
 
 /** Чужой маршрут, в котором вошедший подписант: чтобы в демо были задачи «На подпись». */
@@ -487,6 +493,8 @@ type Route = {
   /** Зафиксированный PDF (B) по документам; документа нет, пока он не зафиксирован. */
   frozen: Record<string, string>;
   events: RouteEvent[];
+  /** Срок точки, из которого посчитан срок черновика (16.5); нет у маршрутов из сидов. */
+  point_deadline?: string | null;
 };
 
 type Body = Record<string, unknown>;
@@ -1093,6 +1101,9 @@ export const createSigningRouteDemo = (
     candidates: candidatesOf(r),
     changed_docs: changedDocs(r),
     preset: presetView(r, viewer),
+    ...(r.point_deadline === undefined
+      ? {}
+      : { point_deadline: r.point_deadline }),
   });
 
   const waitingFor = (r: Route) =>
@@ -2121,6 +2132,12 @@ export const createSigningRouteDemo = (
           }
         }
         const r = draftFromPack(projectId, profile, user);
+        // Срок маршрута из срока точки (16.5, R29): на сутки раньше, ближе двух суток равен ему.
+        if (options.pointDeadlineOf) {
+          const point = options.pointDeadlineOf(projectId, profile.id);
+          r.point_deadline = point;
+          r.deadline = routeDeadlineFromPoint(point, clock());
+        }
         routes.push(r);
         return demoJson(toRoute(r, user), 201);
       }),

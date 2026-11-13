@@ -23,8 +23,8 @@ DOC, DOC2 = "application", "proposal"
 
 
 class _Templates:
-    def resolve_instance_source(self, project: Any, doc: Any, version: Any) -> tuple[None, str | None]:
-        return None, doc.output
+    def resolve_signing_output(self, project: Any, doc: Any, version: Any) -> str | None:
+        return doc.output
 
 
 def _point(folder: Path, *, unbuilt: tuple[str, ...] = ()) -> Any:

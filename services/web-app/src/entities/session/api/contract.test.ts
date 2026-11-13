@@ -16,7 +16,9 @@ import { BootstrapSchema, ServerSetupSettingsRequestSchema } from "./schemas";
 // файл next/<Схема>/<вариант>.json заменяет одноимённый из fixtures или добавляет вариант.
 // Эталоны fixtures, которые next заменил, остаются формой нынешнего сервера: фронтенд обязан
 // их разбирать, пока бэкенд не перешёл. Сейчас в `next` маршрут из шаблона (signing-route.md,
-// 15.11, срез W15): его переносит R25 и снимает совместимость `LEGACY_R25`.
+// 15.11, срез W15), его переносит R25 и снимает совместимость `LEGACY_R25`, и сроки контрольных
+// точек W16 (16.5 и 16.7): `SigningRoute/draft_point_deadline` и `Notification/checkpoint_due`, их
+// переносит R29.
 
 const REPO = join(import.meta.dirname, "..", "..", "..", "..", "..", "..");
 const CONTRACT = join(REPO, "contracts", "server");

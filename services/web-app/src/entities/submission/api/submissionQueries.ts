@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { CreateSubmissionRequest } from "@shared/api/types";
+import { projectKeys } from "@entities/project";
+import type { CheckpointDeadline } from "./submissionSchemas";
 import {
   submissionApi,
   type PreflightCustomFilesParams,
@@ -46,6 +48,42 @@ export const useCreateSubmission = () => {
       void queryClient.invalidateQueries({
         queryKey: submissionKeys.list(projectId),
       });
+    },
+  });
+};
+
+/**
+ * Поставить или снять срок контрольной точки (signing-route.md, 16.8). Ответ сразу кладётся в
+ * профиль точки; список проектов перечитывается, потому что у проекта ближайший срок.
+ */
+export const useSetCheckpointDeadline = (projectId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation<
+    CheckpointDeadline,
+    Error,
+    { profileId: string; deadline: string | null }
+  >({
+    mutationFn: ({ profileId, deadline }) =>
+      submissionApi.setDeadline(projectId, profileId, deadline),
+    onSuccess: (view) => {
+      queryClient.setQueryData<ProfileList>(
+        submissionKeys.profiles(projectId),
+        (profiles) =>
+          profiles?.map((profile) =>
+            profile.id === view.profile_id
+              ? {
+                  ...profile,
+                  deadline: view.deadline,
+                  deadline_state: view.state,
+                  packaged_at: view.packaged_at,
+                }
+              : profile,
+          ),
+      );
+      void queryClient.invalidateQueries({
+        queryKey: submissionKeys.profiles(projectId),
+      });
+      void queryClient.invalidateQueries({ queryKey: projectKeys.lists() });
     },
   });
 };

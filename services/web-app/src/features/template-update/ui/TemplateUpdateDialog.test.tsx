@@ -139,6 +139,64 @@ describe("TemplateUpdateDialog (list rendering)", () => {
     ).toBeInTheDocument();
   });
 
+  it("an empty file plan with template signature places is not «nothing to update»", () => {
+    plan = {
+      ...makePlan(),
+      counts: {},
+      files: [],
+      warnings: [],
+      signature_presets: {
+        updated: [
+          { doc_id: "report", slot_id: "supervisor" },
+          { doc_id: "report", slot_id: "author" },
+        ],
+        kept: [{ doc_id: "proposal", slot_id: "supervisor", reason: "route" }],
+      },
+    };
+    renderDialog();
+    expect(
+      screen.getByText(
+        "Файлы не меняются. Обновятся места подписей из шаблона: 2",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/не меняет ни одного файла/)).toBeNull();
+    expect(screen.getByTestId("update-signature-presets")).toHaveTextContent(
+      "Не обновятся: на подписании 1",
+    );
+  });
+
+  it("a file plan lists template signature places: updated and kept by reason", () => {
+    plan = {
+      ...makePlan(),
+      signature_presets: {
+        updated: [{ doc_id: "report", slot_id: "supervisor" }],
+        kept: [
+          { doc_id: "proposal", slot_id: "supervisor", reason: "manual" },
+          { doc_id: "application", slot_id: "author", reason: "route" },
+          { doc_id: "application", slot_id: "supervisor", reason: "route" },
+          { doc_id: "report", slot_id: "author", reason: "signed" },
+        ],
+      },
+    };
+    renderDialog();
+    const lines = screen.getByTestId("update-signature-presets");
+    expect(lines).toHaveTextContent("Места подписей из шаблона обновятся: 1");
+    expect(lines).toHaveTextContent(
+      "Не обновятся: изменены вами 1, на подписании 2, подписаны 1",
+    );
+  });
+
+  it("no template signature places: no lines", () => {
+    renderDialog();
+    expect(screen.queryByTestId("update-signature-presets")).toBeNull();
+  });
+
+  it("an empty file plan without signature places says the version still applies", () => {
+    plan = { ...makePlan(), counts: {}, files: [], warnings: [] };
+    renderDialog();
+    expect(screen.getByText(/не меняет ни одного файла/)).toBeInTheDocument();
+  });
+
   it("lists files with decisions first and a tag per action", () => {
     renderDialog();
     const rows = screen

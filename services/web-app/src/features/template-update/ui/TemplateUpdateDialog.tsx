@@ -82,6 +82,26 @@ export const TemplateUpdateDialog = ({
   const ops = useMemo(() => sortOps(plan.data?.files ?? []), [plan.data]);
   const selectedOp = ops.find((op) => op.path === selected) ?? null;
   const notes = update ? notesOf(update, i18n.language) : [];
+  const placesUpdated = plan.data?.signature_presets?.updated.length ?? 0;
+  // Места подписей, которые обновление не переведёт на новую версию, по причинам (15.9).
+  const placesKept = (["manual", "route", "signed"] as const)
+    .map((reason) => ({
+      reason,
+      n:
+        plan.data?.signature_presets?.kept.filter((k) => k.reason === reason)
+          .length ?? 0,
+    }))
+    .filter((item) => item.n > 0);
+  const placesKeptLine =
+    placesKept.length === 0
+      ? null
+      : t("dialog.presets.kept", {
+          list: placesKept
+            .map((item) =>
+              t(`dialog.presets.reason.${item.reason}`, { n: item.n }),
+            )
+            .join(", "),
+        });
   // Мягкое предупреждение (signing-route.md, 12.7): строка в плане вместо отдельного окна.
   const guardTarget = { paths: ops.map((op) => op.path) };
   const heldNames = ops.length > 0 ? routeGuard.heldNames(guardTarget) : [];
@@ -236,9 +256,26 @@ export const TemplateUpdateDialog = ({
               />
             ))}
 
+          {/* Места подписей из шаблона (15.9): что обновится и что останется как было. */}
+          {(placesKeptLine !== null ||
+            (ops.length > 0 && placesUpdated > 0)) && (
+            <div
+              className="flex flex-col dim"
+              style={{ gap: "0.125rem", fontSize: "0.75rem" }}
+              data-testid="update-signature-presets"
+            >
+              {ops.length > 0 && placesUpdated > 0 && (
+                <span>{t("dialog.presets.updated", { n: placesUpdated })}</span>
+              )}
+              {placesKeptLine !== null && <span>{placesKeptLine}</span>}
+            </div>
+          )}
           {ops.length === 0 ? (
             <p className="dim" style={{ margin: 0, fontSize: "0.75rem" }}>
-              {t("dialog.nothing")}
+              {/* Пустой файловый план с местами подписей из шаблона это не «нечего обновлять» (15.10). */}
+              {placesUpdated > 0
+                ? t("dialog.placesOnly", { n: placesUpdated })
+                : t("dialog.nothing")}
             </p>
           ) : (
             <>

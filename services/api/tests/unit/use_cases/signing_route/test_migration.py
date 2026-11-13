@@ -35,8 +35,8 @@ def _sha(content: bytes) -> str:
 
 
 class _Templates:
-    def resolve_instance_source(self, project: Any, doc: Any, version: Any) -> tuple[None, str | None]:
-        return None, f"out/{doc.id}.pdf"
+    def resolve_signing_output(self, project: Any, doc: Any, version: Any) -> str | None:
+        return f"out/{doc.id}.pdf"
 
 
 def _point(folder: Path) -> Any:

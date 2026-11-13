@@ -186,7 +186,7 @@ async def doc_facts(
     folder = project.folder
     compiled: Path | None = None
     try:
-        _, output_file = ts.resolve_instance_source(project, doc, version)
+        output_file = ts.resolve_signing_output(project, doc, version)
         compiled = folder / output_file if output_file else None
     except (NotFoundError, ValueError):
         compiled = None

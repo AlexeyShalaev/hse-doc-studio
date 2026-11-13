@@ -22,6 +22,7 @@ const item = (
   signatures,
   skip_if_nda: false,
   supported_kinds: ["research", "project"],
+  methods: {},
   ...gates,
 });
 
@@ -41,6 +42,10 @@ const profile = (
     format: "markdown",
     supported_kinds: ["research", "project"],
   })),
+  deadline: null,
+  deadline_state: "none",
+  deadline_hint: null,
+  packaged_at: null,
 });
 
 const doc = (

@@ -387,6 +387,11 @@ export const SigningRouteSchema = z.strictObject({
    * который можно править; иначе null. LEGACY_R25: по умолчанию null.
    */
   preset: RoutePresetSchema.nullable().default(null),
+  /**
+   * Срок точки, из которого сервер посчитал срок черновика (16.5, R29); только управляющему.
+   * Редактор по нему пишет «Срок точки изменился». Сервер до R29 поля не присылает.
+   */
+  point_deadline: iso.nullable().optional(),
 });
 export type SigningRoute = z.infer<typeof SigningRouteSchema>;
 

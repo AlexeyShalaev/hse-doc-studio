@@ -379,6 +379,52 @@
       "cancel": "Cancel"
     }
   },
+  "packPreset": {
+    "menuItem": "Copy as template preset",
+    "title": "Template preset",
+    "description": "Signature places and date marks of this project as a version.yaml fragment of the pack. For pack authors: move it into signatures.slots of a new template version.",
+    "close": "Close",
+    "fieldLabel": "Preset YAML",
+    "scope": {
+      "label": "Which documents",
+      "doc": "This document",
+      "all": "All project documents"
+    },
+    "includeDisabled": "Include disabled places",
+    "empty": "Nothing to copy: the document has no enabled signature places of pack slots.",
+    "copied": "Template preset copied",
+    "copyFailed": "Could not copy: select the text in the dialog and copy it by hand",
+    "loadFailed": "Could not load the signatures or the project template. Close the dialog and try again.",
+    "yaml": {
+      "header": "Signature place preset for pack {{pack}}, template {{template}}, taken on version {{version}}.",
+      "hint": "Move into signatures.slots of a new template version (slots with the same id). This is a patch change.",
+      "asInPack": "as in the template"
+    },
+    "warn": {
+      "customSlot": "Signature {{slot}} is not from the pack: skipped.",
+      "notApplicable": "Slot {{slot}} does not apply to document {{doc}} (applies_to): place skipped.",
+      "perAuthorShared": "Slot {{slot}} is signed by every author, and {{doc}} is a shared document of a team template: place skipped.",
+      "duplicate": "Slot {{slot}} on document {{doc}} has different places for different authors: took the place from {{kept}}, skipped {{skipped}}.",
+      "invalidPlace": "The pack would not accept the place of slot {{slot}} on document {{doc}} ({{problem}}): skipped.",
+      "invalidDate": "The pack would not accept date mark {{index}} of slot {{slot}} on document {{doc}} ({{problem}}): skipped.",
+      "tooManyDates": "Slot {{slot}} on document {{doc}} has more than eight date marks: the extra ones are skipped ({{dropped}}).",
+      "disabled_one": "{{count}} disabled place skipped.",
+      "disabled_other": "{{count}} disabled places skipped."
+    },
+    "problem": {
+      "place": {
+        "page": "page before the first",
+        "width": "width outside 10 to 200 mm",
+        "edge": "box past the page edge",
+        "top": "box top outside 0 to 287 mm"
+      },
+      "date": {
+        "page": "page before the first",
+        "size": "the box has no size",
+        "edge": "box past the page edge"
+      }
+    }
+  },
   "place": {
     "fromTemplate": "Place from the template",
     "fromTemplateTitle": "The place and the date marks are as in the template",

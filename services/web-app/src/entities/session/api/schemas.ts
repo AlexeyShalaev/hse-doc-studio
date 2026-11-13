@@ -323,7 +323,7 @@ export type CreateApiTokenResponse = z.infer<
 
 // Страница списка сервера: {items, total, limit, offset} под теми же фильтрами.
 export const pageOf = listPageOf;
-// Ближайший срок контрольной точки проекта (signing-route.md, 16.6); пометку в списке рисует срез W16.
+// Ближайший срок контрольной точки проекта (signing-route.md, 16.6): пометка на карточке проекта.
 export const NextDeadlineSchema = z.strictObject({
   profile_id: z.string(),
   name: z.record(z.string(), z.string()),

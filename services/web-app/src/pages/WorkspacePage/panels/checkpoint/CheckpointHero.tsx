@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { clsx } from "clsx";
 import { Check, ChevronDown } from "lucide-react";
@@ -17,6 +17,8 @@ export type CheckpointHeroProps = {
   isPacked: boolean;
   /** Идущий маршрут подписания: сколько согласовано рядом со счётом подписей; null без маршрута. */
   routeTally?: RouteTally | null;
+  /** Срок сдачи точки под названием (signing-route.md, 16.2). */
+  deadline?: ReactNode;
 };
 
 type StatProps = {
@@ -78,6 +80,7 @@ export const CheckpointHero = ({
   readiness,
   isPacked,
   routeTally = null,
+  deadline = null,
 }: CheckpointHeroProps) => {
   const { t } = useTranslation("workbench");
   const [isRestOpen, setIsRestOpen] = useState(false);
@@ -136,6 +139,8 @@ export const CheckpointHero = ({
       <h1 className="cp-title" style={{ marginTop: "0.75rem" }}>
         {name}
       </h1>
+
+      {deadline}
 
       {lead !== "" && <p className="cp-lead">{lead}</p>}
 

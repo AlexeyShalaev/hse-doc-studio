@@ -105,6 +105,8 @@ const SignatureSlotDefSchema = z.object({
     y_mm: z.number(),
     width_mm: z.number(),
   }),
+  // Team mode: слот размножается по авторам (рантайм-слоты "id--slug").
+  per_author: z.boolean().default(false),
 });
 
 const SubmissionProfileSchema = z.object({
