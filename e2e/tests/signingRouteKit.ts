@@ -604,3 +604,124 @@ export const buildDigest = (pdf: Buffer): string | null => {
 
 export const imageCount = (pdf: Buffer): number =>
   (pdf.toString("latin1").match(/\/Subtype\s*\/Image/g) ?? []).length;
+
+// ---------------------------------------------------------------- текст страницы PDF
+
+/** Байты потока PDF: без сжатия, Flate или ASCII85+Flate (ReportLab поддельной сборки). */
+const streamBytes = (body: string): Buffer => {
+  const data = Buffer.from(body, "latin1");
+  for (const decode of [() => inflateSync(ascii85(body)), () => inflateSync(data)]) {
+    try {
+      return decode();
+    } catch {
+      // не тот фильтр: пробуем следующий
+    }
+  }
+  return data;
+};
+
+/** Литеральная строка PDF `( … )` без скобок в байты: экранирование `\n`, `\(`, `\ddd`. */
+const literalBytes = (inner: string): number[] => {
+  const out: number[] = [];
+  for (let i = 0; i < inner.length; i += 1) {
+    const ch = inner[i]!;
+    if (ch !== "\\") {
+      out.push(ch.charCodeAt(0) & 0xff);
+      continue;
+    }
+    const next = inner[i + 1] ?? "";
+    const octal = /^[0-7]{1,3}/.exec(inner.slice(i + 1, i + 4));
+    if (octal) {
+      out.push(parseInt(octal[0], 8) & 0xff);
+      i += octal[0].length;
+      continue;
+    }
+    const escaped: Record<string, number> = { n: 10, r: 13, t: 9, b: 8, f: 12 };
+    i += 1;
+    if (next === "\r" || next === "\n") continue;
+    out.push(escaped[next] ?? next.charCodeAt(0));
+  }
+  return out;
+};
+
+/** ToUnicode шрифта: однобайтовый код в текст (`bfchar` и `bfrange`, как пишут ReportLab и TeX). */
+const toUnicode = (cmap: string): Map<number, string> => {
+  const map = new Map<number, string>();
+  const hexText = (hex: string): string => {
+    let text = "";
+    for (let i = 0; i + 4 <= hex.length; i += 4) text += String.fromCharCode(parseInt(hex.slice(i, i + 4), 16));
+    return text;
+  };
+  for (const block of cmap.matchAll(/beginbfchar([\s\S]*?)endbfchar/g))
+    for (const m of block[1]!.matchAll(/<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>/g))
+      map.set(parseInt(m[1]!, 16), hexText(m[2]!));
+  for (const block of cmap.matchAll(/beginbfrange([\s\S]*?)endbfrange/g))
+    for (const m of block[1]!.matchAll(/<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>/g)) {
+      const start = parseInt(m[3]!, 16);
+      for (let code = parseInt(m[1]!, 16); code <= parseInt(m[2]!, 16); code += 1)
+        map.set(code, String.fromCharCode(start + code - parseInt(m[1]!, 16)));
+    }
+  return map;
+};
+
+/**
+ * Текстовые строки страниц PDF: по строке на каждый показ текста (`Tj`, `TJ`), в порядке потоков. Хватает для
+ * PDF поддельной сборки и штампов Студии: объекты без потоков объектов, шрифты простые (однобайтовые коды).
+ * Код переводится в текст по ToUnicode выбранного шрифта (`/Имя кегль Tf`); у шрифта без ToUnicode (Helvetica
+ * поддельной сборки) байт и есть буква. Так читаются и метки даты: DejaVu Sans ReportLab кладёт кириллицу
+ * кодами 1, 2, 3… своего подмножества.
+ */
+export const pdfTexts = (pdf: Buffer): string[] => {
+  const raw = pdf.toString("latin1");
+  const objects = new Map<number, string>();
+  for (const m of raw.matchAll(/(\d+)\s+0\s+obj\b([\s\S]*?)endobj/g)) objects.set(Number(m[1]), m[2]!);
+  const streamOf = (body: string): string | null => {
+    const m = /stream\r?\n([\s\S]*?)\r?\nendstream/.exec(body);
+    return m ? streamBytes(m[1]!).toString("latin1") : null;
+  };
+  // Шрифты с ToUnicode по номеру объекта, затем имя ресурса (`/F2+0 9 0 R`) в его карту.
+  const cmaps = new Map<number, Map<number, string>>();
+  for (const [num, body] of objects) {
+    const ref = /\/ToUnicode\s+(\d+)\s+0\s+R/.exec(body);
+    if (!ref || !/\/Type\s*\/Font\b/.test(body)) continue;
+    const cmap = streamOf(objects.get(Number(ref[1])) ?? "");
+    if (cmap) cmaps.set(num, toUnicode(cmap));
+  }
+  const fonts = new Map<string, Map<number, string>>();
+  for (const body of objects.values())
+    for (const m of body.matchAll(/\/([^\s/<>[\]()]+)\s+(\d+)\s+0\s+R/g)) {
+      const cmap = cmaps.get(Number(m[2]));
+      if (cmap) fonts.set(m[1]!, cmap);
+    }
+  const decode = (bytes: number[], font: string | null): string => {
+    const cmap = font === null ? undefined : fonts.get(font);
+    return bytes.map((b) => cmap?.get(b) ?? String.fromCharCode(b)).join("");
+  };
+  const hexBytes = (hex: string): number[] => {
+    const clean = hex.replace(/\s+/g, "");
+    const out: number[] = [];
+    for (let i = 0; i < clean.length; i += 2) out.push(parseInt(clean.slice(i, i + 2).padEnd(2, "0"), 16));
+    return out;
+  };
+  const texts: string[] = [];
+  const string = String.raw`\((?:\\[\s\S]|[^\\)])*\)|<[0-9A-Fa-f\s]*>`;
+  const token = new RegExp(
+    String.raw`\/([^\s/<>[\]()]+)\s+[-\d.]+\s+Tf|(${string})\s*Tj|\[((?:${string}|[^\]])*)\]\s*TJ`,
+    "g",
+  );
+  const piece = new RegExp(string, "g");
+  const bytesOf = (s: string): number[] => (s.startsWith("(") ? literalBytes(s.slice(1, -1)) : hexBytes(s.slice(1, -1)));
+  for (const body of objects.values()) {
+    if (!/stream\r?\n/.test(body) || /\/(Length1|Subtype\s*\/Image|Type\s*\/XObject)\b/.test(body)) continue;
+    const content = streamOf(body);
+    if (content === null || !/\bBT\b/.test(content)) continue;
+    let font: string | null = null;
+    for (const m of content.matchAll(token)) {
+      if (m[1] !== undefined) font = m[1];
+      else if (m[2] !== undefined) texts.push(decode(bytesOf(m[2]), font));
+      else if (m[3] !== undefined)
+        texts.push([...m[3].matchAll(piece)].map((p) => decode(bytesOf(p[0]), font)).join(""));
+    }
+  }
+  return texts;
+};

@@ -12,6 +12,7 @@ import {
   PdfStampEditor,
   SlotDateMarks,
   signatureHeightMm,
+  type SlotDateRoute,
   useDateMarksSave,
 } from "@features/signature-stamper";
 import type { SignaturesStateResponse } from "@shared/api/types";
@@ -124,6 +125,19 @@ export const RoutePlacementsCard = ({
 
   const placementOf = (slotId: string) =>
     state?.placements[doc.doc_id]?.[slotId];
+  // Способ и число действий участника по предпросмотру (4.4): подсказка «Дата подписи добавляет
+  // действие подписанту ЭП» только тому, у кого метка даты и правда дала второе действие.
+  const slotDateRoute = (
+    participantId: string | undefined,
+    method: SlotDateRoute["method"],
+  ): SlotDateRoute => {
+    const shown = preview?.participants.find(
+      (p) => p.participant_id === participantId,
+    );
+    return shown
+      ? { method: shown.method ?? method, actions: shown.actions }
+      : { method };
+  };
 
   return (
     <div ref={rootRef} className="flex flex-col" style={{ gap: "0.75rem" }}>
@@ -362,7 +376,7 @@ export const RoutePlacementsCard = ({
                           ? (owner.name ?? personaLabel(owner.persona))
                           : pickLocalized(slot.label, lang, slot.slot_id)
                       }
-                      route={{ method: owner?.method ?? null }}
+                      route={slotDateRoute(owner?.id, owner?.method ?? null)}
                       editable={editable}
                       pending={dateMarks.isSaving(doc.doc_id, slot.slot_id)}
                       onSave={(body) => {

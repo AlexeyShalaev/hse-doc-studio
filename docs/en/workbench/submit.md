@@ -43,6 +43,7 @@ Forms are declared by the template — for example, an AI usage declaration. The
 
 - **The signature library** — one PNG per slot (author, supervisor…) for the whole project; a built-in editor: “Remove background”, eraser, crop, ink colour.
 - **Placement** — drag the signature to the right spot on the document page, with a date if needed.
+- **Date marks**: “Add date” on a signature prints the signing day in frames of its own, anywhere in the document and in the format you need, for example «« 13 » ноября 2026 г.» with three marks. For a signature outside a route you set the day in the “Signing date” field; for a signature in a route the approval gives it. More: [Signing date](send-for-signing.md#dates).
 - **Stamping** — when the PDF is frozen and packaged the PNG is stamped into it; there is a cryptographic layer too — a PAdES electronic signature with a certificate from Settings, appended to the frozen PDF.
 - **“With signatures”** — if the document is frozen and unchanged since, the button returns the final file byte for byte, with embedded PAdES signatures if there are any. Otherwise it is a PDF for printing with images and plates, without electronic signatures.
 
