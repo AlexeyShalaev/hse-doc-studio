@@ -1,6 +1,6 @@
 ---
 title: AI clients (MCP)
-description: Connect Claude, Cursor and other AI clients to the Studio over the Model Context Protocol, locally and in the cloud.
+description: Connect Claude, Codex, Cursor, Gemini CLI and other AI clients to the Studio over the Model Context Protocol, locally and in the cloud.
 tags:
   - Workbench
   - AI agent
@@ -8,7 +8,7 @@ tags:
 
 # AI clients (MCP)
 
-<p class="hds-lede">The Studio can act as a Model Context Protocol server. An external AI client (Claude Desktop, Claude Code, Cursor, VS Code, Zed) sees your projects and works in them with the Studio's tools: it reads and edits files, builds PDFs, goes through findings and saves snapshots. It acts on your behalf and can do no more than you can.</p>
+<p class="hds-lede">The Studio can act as a Model Context Protocol server. An external AI client (Claude Code, Claude Desktop, Codex, OpenCode, Gemini CLI, Cursor, VS Code, Windsurf, Zed, Cline, JetBrains) sees your projects and works in them with the Studio's tools: it reads and edits files, builds PDFs, goes through findings and saves snapshots. It acts on your behalf and can do no more than you can.</p>
 
 ## Turn it on
 
@@ -22,7 +22,30 @@ tags:
 
 ## Connect a client
 
-Ready-made configs with your address are in the Studio: **Settings → AI clients (MCP)**.
+Ready-made configs with your address are in the Studio: **Settings**, section **AI clients (MCP)**; pick the client from the list. Below are the same configs for the cloud with the address `https://studio.example.org/mcp`. For a local Studio the address is `http://127.0.0.1:17240/mcp`; drop the `Authorization` header, the token variable and `bearer_token_env_var`.
+
+### Token in an environment variable
+
+Where a client can substitute an environment variable, the config refers to `HSE_STUDIO_TOKEN`, so the token is not stored in the file as plain text. Set the variable before starting the client:
+
+=== "macOS, Linux"
+
+    ```bash
+    # in ~/.zshrc or ~/.bashrc
+    export HSE_STUDIO_TOKEN=hsd_pat_...
+    ```
+
+    An editor started from the Dock or a menu does not see shell variables: start it from a terminal (`cursor .`, `code .`).
+
+=== "Windows"
+
+    ```powershell
+    setx HSE_STUDIO_TOKEN hsd_pat_...
+    ```
+
+    `setx` applies to new windows and programs: restart the terminal and the editor.
+
+### Terminal agents
 
 === "Claude Code"
 
@@ -34,7 +57,179 @@ Ready-made configs with your address are in the Studio: **Settings → AI client
       --header "Authorization: Bearer hsd_pat_..."
     ```
 
-=== "Cursor, VS Code"
+    [Claude Code docs](https://code.claude.com/docs/en/mcp)
+
+=== "Codex"
+
+    The CLI, the IDE extension and the desktop app share `~/.codex/config.toml` (on Windows it is in the user folder, `%USERPROFILE%\.codex\config.toml`).
+
+    ```bash
+    codex mcp add hse-doc-studio --url https://studio.example.org/mcp \
+      --bearer-token-env-var HSE_STUDIO_TOKEN
+    ```
+
+    The same by hand in `config.toml`:
+
+    ```toml
+    [mcp_servers.hse-doc-studio]
+    url = "https://studio.example.org/mcp"
+    bearer_token_env_var = "HSE_STUDIO_TOKEN"
+    ```
+
+    Check: `codex mcp list`, or `/mcp` in a session. [Codex docs](https://developers.openai.com/codex/mcp), [`codex mcp add` flags](https://developers.openai.com/codex/cli/reference).
+
+=== "OpenCode"
+
+    The file is `opencode.json` at the project root, or `~/.config/opencode/opencode.json` for every project.
+
+    ```json
+    {
+      "$schema": "https://opencode.ai/config.json",
+      "mcp": {
+        "servers": {
+          "hse-doc-studio": {
+            "type": "remote",
+            "url": "https://studio.example.org/mcp",
+            "oauth": false,
+            "headers": { "Authorization": "Bearer {env:HSE_STUDIO_TOKEN}" }
+          }
+        }
+      }
+    }
+    ```
+
+    The command writes the same to the project config (`--global` for the shared one):
+
+    ```bash
+    opencode mcp add hse-doc-studio --url https://studio.example.org/mcp \
+      --header 'Authorization=Bearer {env:HSE_STUDIO_TOKEN}'
+    ```
+
+    `oauth: false` turns off the OAuth sign-in attempt: the Studio takes a token. In OpenCode 1.x the server sits directly under `mcp`, without `servers`. [OpenCode docs](https://opencode.ai/docs/mcp-servers/)
+
+=== "Gemini CLI"
+
+    ```bash
+    gemini mcp add --scope user --transport http \
+      --header 'Authorization: Bearer ${HSE_STUDIO_TOKEN}' \
+      hse-doc-studio https://studio.example.org/mcp
+    ```
+
+    Or by hand in `~/.gemini/settings.json` (for a project, `.gemini/settings.json`):
+
+    ```json
+    {
+      "mcpServers": {
+        "hse-doc-studio": {
+          "httpUrl": "https://studio.example.org/mcp",
+          "headers": { "Authorization": "Bearer ${HSE_STUDIO_TOKEN}" }
+        }
+      }
+    }
+    ```
+
+    It has to be `httpUrl`: in Gemini CLI the `url` field means the old SSE transport. Single quotes in the command keep the shell from writing the token into the file. [Gemini CLI docs](https://geminicli.com/docs/tools/mcp-server/)
+
+### Editors
+
+=== "Cursor"
+
+    The file is `~/.cursor/mcp.json` or `.cursor/mcp.json` in the project.
+
+    ```json
+    {
+      "mcpServers": {
+        "hse-doc-studio": {
+          "url": "https://studio.example.org/mcp",
+          "headers": { "Authorization": "Bearer ${env:HSE_STUDIO_TOKEN}" }
+        }
+      }
+    }
+    ```
+
+    [Cursor docs](https://cursor.com/docs/mcp)
+
+=== "VS Code"
+
+    Copilot reads `~/.copilot/mcp-config.json` or `.mcp.json` at the project root. The easiest way is the **MCP: Add Server** command.
+
+    ```json
+    {
+      "mcpServers": {
+        "hse-doc-studio": {
+          "type": "http",
+          "url": "https://studio.example.org/mcp",
+          "headers": { "Authorization": "Bearer ${HSE_STUDIO_TOKEN}" },
+          "tools": ["*"]
+        }
+      }
+    }
+    ```
+
+    VS Code still understands the old `.vscode/mcp.json` format with the `servers` key, but does not recommend it for new setups. [VS Code docs](https://code.visualstudio.com/docs/agents/reference/mcp-configuration)
+
+=== "Windsurf"
+
+    Windsurf is now called Devin Desktop. The file is `~/.config/devin/mcp_config.json`, on Windows `%APPDATA%\devin\mcp_config.json`; **Open MCP config file** in the MCP menu opens it. Older Windsurf versions use `~/.codeium/windsurf/mcp_config.json`.
+
+    ```json
+    {
+      "mcpServers": {
+        "hse-doc-studio": {
+          "serverUrl": "https://studio.example.org/mcp",
+          "headers": { "Authorization": "Bearer ${env:HSE_STUDIO_TOKEN}" }
+        }
+      }
+    }
+    ```
+
+    After editing, refresh the server list. [Windsurf docs](https://docs.devin.ai/windsurf/plugins/cascade/mcp)
+
+=== "Zed"
+
+    The settings file is `~/.config/zed/settings.json`, on Windows `%APPDATA%\Zed\settings.json`. You can also enter it in **Settings | AI | MCP Servers**, **Add Remote Server**.
+
+    ```json
+    {
+      "context_servers": {
+        "hse-doc-studio": {
+          "url": "https://studio.example.org/mcp",
+          "headers": { "Authorization": "Bearer hsd_pat_..." }
+        }
+      }
+    }
+    ```
+
+    The Zed docs do not describe variables in `headers`, so the token goes into the file. [Zed docs](https://zed.dev/docs/ai/mcp)
+
+=== "Cline"
+
+    In the extension: the **Configure** tab, the **Configure MCP Servers** button. Cline CLI uses `~/.cline/data/settings/cline_mcp_settings.json`.
+
+    ```json
+    {
+      "mcpServers": {
+        "hse-doc-studio": {
+          "type": "streamableHttp",
+          "url": "https://studio.example.org/mcp",
+          "headers": { "Authorization": "Bearer hsd_pat_..." }
+        }
+      }
+    }
+    ```
+
+    Without `"type": "streamableHttp"` Cline falls back to the old SSE, which the Studio does not serve. From a terminal:
+
+    ```bash
+    cline mcp add hse-doc-studio https://studio.example.org/mcp --transport http \
+      --header "Authorization: Bearer hsd_pat_..." --yes
+    ```
+
+    The Cline docs do not describe variables in `headers`. [Cline docs](https://docs.cline.bot/mcp/adding-and-configuring-servers)
+
+=== "JetBrains"
+
+    **Junie** (plugin and CLI) reads `~/.junie/mcp/mcp.json` or `.junie/mcp/mcp.json` in the project:
 
     ```json
     {
@@ -47,25 +242,34 @@ Ready-made configs with your address are in the Studio: **Settings → AI client
     }
     ```
 
-    VS Code uses the top-level key `servers` and `"type": "http"`. A local Studio needs no `headers`.
+    **AI Assistant**: **Settings | Tools | AI Assistant | Model Context Protocol (MCP)**, the **Add** button. For a remote server its docs describe only `url`, with no headers. That is enough for a local Studio (`{"mcpServers": {"hse-doc-studio": {"url": "http://127.0.0.1:17240/mcp"}}}`); for the cloud use the stdio bridge below. [Junie docs](https://junie.jetbrains.com/docs/junie-cli-mcp-configuration.html), [AI Assistant docs](https://www.jetbrains.com/help/ai-assistant/configure-an-mcp-server.html)
 
-=== "Claude Desktop and others (stdio)"
+### Clients that launch a process (stdio)
 
-    Clients that launch the server as a process use the `hse-doc-studio mcp` bridge, which forwards requests to a running Studio.
+Claude Desktop and clients that launch the server as a process use the `hse-doc-studio mcp` bridge, which forwards requests to a running Studio.
 
-    ```json
-    {
-      "mcpServers": {
-        "hse-doc-studio": {
-          "command": "hse-doc-studio",
-          "args": ["mcp", "--url", "https://studio.example.org"],
-          "env": { "HSE_STUDIO_TOKEN": "hsd_pat_..." }
-        }
-      }
+```json
+{
+  "mcpServers": {
+    "hse-doc-studio": {
+      "command": "hse-doc-studio",
+      "args": ["mcp", "--url", "https://studio.example.org"],
+      "env": { "HSE_STUDIO_TOKEN": "hsd_pat_..." }
     }
-    ```
+  }
+}
+```
 
-    Without `--url` the bridge connects to the local Studio, which must be running.
+Without `--url` the bridge connects to the local Studio, which must be running. If the `hse-doc-studio` command is not installed, [`mcp-remote`](https://github.com/geelen/mcp-remote) does the same (needs Node.js): `"command": "npx"`, `"args": ["-y", "mcp-remote", "https://studio.example.org/mcp", "--header", "Authorization:${AUTH_HEADER}"]`, `"env": { "AUTH_HEADER": "Bearer hsd_pat_..." }`.
+
+### Clients that need OAuth
+
+ChatGPT (apps and connectors), Claude on the web and on phones (connectors) and other cloud clients reach the server from their own servers and sign in only with OAuth or with no authentication. The Studio accepts only a token in a header for now, so these clients cannot connect, and a local Studio is not visible to them at all.
+
+What you can do instead:
+
+- **ChatGPT**: connect the Studio to Codex. Its `~/.codex/config.toml` is shared by the CLI, the IDE extension and the ChatGPT desktop app.
+- **Claude**: Claude Desktop works through the stdio bridge, Claude Code connects directly.
 
 ## What is available
 
