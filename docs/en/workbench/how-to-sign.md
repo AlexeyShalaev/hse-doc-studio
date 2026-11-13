@@ -121,6 +121,14 @@ You can keep the certificate in your signer profile (settings, “Signing certif
 
 If the server does not store private keys, the page says so: you cannot create or import a key; sign with CryptoPro or upload a ready signature. The “E-signature in the PDF” method works only with a Studio key, so on such a server you cannot choose it: pick another method or return the documents to the author.
 
+## Approval date { #date }
+
+If the author added date marks to your signature, the signing page labels their frames “Approval date”. You do not need to do anything with them: when you click “Approve” or “Approve and sign”, the Studio fills in the day of your approval in Moscow time, for example «« 13 » ноября 2026 г.» in a Russian document.
+
+- The date comes from the approval, not from the time of the electronic signature. If you sign with an electronic signature, the page shows the approval day, and the time of the signature itself is in the package guide (`HOW_TO_VERIFY.txt`, `КАК_ПРОВЕРИТЬ.txt` in a Russian project).
+- With a date mark an electronic signature sometimes takes a second action: if someone after you still adds a visible signature, click “Approve” first, and on the “Sign the final PDF” request click “Sign”.
+- If the author added a date mark after you had signed the final PDF with an electronic signature, the PDF changes and a new “Sign the final PDF” request arrives. You do not need to approve again, only sign the new file. The date on the page stays the day of your approval.
+
 ## Return for revision { #return }
 
 If something in the document needs fixing, click “Return for revision”, write what exactly in “What to fix” (required, up to 2000 characters) and click “Return”. The author gets your comment and the route stops. When the author fixes it and sends it again, you get a notification.

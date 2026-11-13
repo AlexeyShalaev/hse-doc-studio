@@ -1,0 +1,57 @@
+---
+title: 'Signing date'
+description: 'Date marks on a signature: where to put them, the formats, «« 13 » ноября 2026 г.» with three marks, where the date comes from and what happens to electronic signatures.'
+sidebar:
+  order: 12
+access: user
+help:
+  routes:
+    - '/projects/:projectId/documents/:docId'
+    - '/projects/:projectId/submit/cp/:profileId/route'
+  summary: 'The Studio can fill in the day a person signed. Put date marks on the signature where the template has a date line, and pick a format for each.'
+  steps:
+    - text: 'Open the document, the **Signatures** tab, and press **Add date** on the signature. A dashed date frame appears under the signature frame: drag it into place and pull its corner.'
+      hint: 'The same is in the route editor, in the **Where the signatures go** block. The frame can sit on any page of the document: **Here** moves it to the open page, **Remove date** deletes it. A signature has up to 8 marks.'
+      shot: runbooks/signing-dates/step-01
+    - text: 'Pick the **Format** of each mark. For a Russian line «« 13 » ноября 2026 г.» put three marks: **Day** between the quotes, **Month in words** on the line and **Two-digit year** right after “20”.'
+      hint: 'The list shows today as an example next to each format, and the month follows the document language. **Alignment** puts the text at an edge or the center of the frame. If the text does not fit, the panel warns “The text does not fit the frame”.'
+      shot: runbooks/signing-dates/step-02
+    - text: 'For a signature in the route the approval gives the date: the marks fill in by themselves with the day the person approves, in Moscow time.'
+      hint: 'Until they approve the panel says “The date appears when … signs”. If they approved before the marks appeared, the date is taken from their approval. For an e-signature signer a date mark can add a step: they approve before the final PDF is frozen.'
+      shot: runbooks/signing-dates/step-03
+    - text: 'For a signature outside a route (you uploaded the image yourself) set the day in the **Signing date** field.'
+      hint: 'While the field is empty the marks stay empty, and the document is submitted without a date.'
+      shot: runbooks/signing-dates/step-04
+    - text: 'If electronic signatures are already over the final PDF, a new mark changes it. The Studio names whose signatures are reset: press **Save** or **Cancel**.'
+      hint: 'After **Save** the document is frozen again, the owners of the reset signatures get the “Sign the final PDF” request, and a completed route runs again. Without electronic signatures marks are added with no question, and the route does not stop.'
+      shot: runbooks/signing-dates/step-05
+verified:
+  at: 2026-11-13
+  app_version: '0.24.0'
+  sources:
+    - services/web-app/src/features/signature-stamper
+    - services/web-app/src/features/signing-route-editor
+---
+
+import Steps from '~/components/Steps.astro'
+
+Templates often have a date line next to a signature, for example “« ___ » ________ 20__”. Instead
+of writing the date by hand or printing the document, put date marks on the signature: the
+Studio fills in the signing day.
+
+<Steps />
+
+## If something goes wrong
+
+- **The marks are empty**: the signature in the route is not approved yet, or the signature
+  outside a route has no **Signing date**.
+- **No “Signing date” field**: the signature is in the route, its date comes from the approval
+  (“The date comes from the approval in the signing route”). You cannot set it by hand.
+- **The date differs from the time of the electronic signature**: that is expected. The page shows
+  the approval day, the time of the signature itself is in the package guide (`HOW_TO_VERIFY.txt`, `КАК_ПРОВЕРИТЬ.txt` in a Russian project).
+- **“The document has no page N: the date will not reach the PDF”**: the document got shorter,
+  for example after a template update. Move the mark to the open page with **Here**.
+- **An e-signature signer now has 2 actions**: the date mark needs their approval before the
+  final PDF is frozen. Put them last among the people who add visible signatures, and they
+  approve and sign with one click again.
+- **Adding marks over MCP**: not possible, the agent only reads them.
