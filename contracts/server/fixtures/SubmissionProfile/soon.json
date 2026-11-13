@@ -1,0 +1,30 @@
+{
+  "id": "topic-approval",
+  "name": {
+    "ru": "Заявка на тему КП (SmartLMS)",
+    "en": "Topic application (SmartLMS)"
+  },
+  "description": {
+    "ru": "Заявление о выборе темы с подписями студента и научного руководителя.",
+    "en": "Topic application signed by the student and the supervisor."
+  },
+  "items": [
+    {
+      "doc_id": "topic_application",
+      "signatures": ["author", "supervisor"],
+      "skip_if_nda": false,
+      "supported_kinds": ["research", "project"],
+      "methods": {
+        "supervisor": ["detached"]
+      }
+    }
+  ],
+  "extra_items": [],
+  "deadline": "2026-11-15T23:59:00+03:00",
+  "deadline_state": "soon",
+  "deadline_hint": {
+    "ru": "Обычно в середине ноября, точную дату объявляют в SmartLMS",
+    "en": "Usually mid-November; the exact date is announced in SmartLMS"
+  },
+  "packaged_at": null
+}

@@ -1,0 +1,32 @@
+{
+  "id": "extended-proposal",
+  "name": {
+    "ru": "Расширенный план КП",
+    "en": "Extended project proposal"
+  },
+  "description": {
+    "ru": "Расширенный план курсового проекта.",
+    "en": "Extended course project proposal."
+  },
+  "items": [
+    {
+      "doc_id": "extended_proposal",
+      "signatures": [],
+      "skip_if_nda": false,
+      "supported_kinds": ["project"],
+      "methods": {}
+    }
+  ],
+  "extra_items": [
+    {
+      "source": "forms/ai_declaration",
+      "output_name": "Декларация ИИ.pdf",
+      "format": null,
+      "supported_kinds": ["research", "project"]
+    }
+  ],
+  "deadline": null,
+  "deadline_state": "none",
+  "deadline_hint": null,
+  "packaged_at": null
+}

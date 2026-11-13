@@ -2,6 +2,7 @@ import {
   ArrowRightLeft,
   AtSign,
   BellRing,
+  CalendarClock,
   CircleCheck,
   CirclePause,
   CircleX,
@@ -47,6 +48,7 @@ const ICONS: Record<NotificationKind, LucideIcon> = {
   signing_new_version: FilePen,
   signing_skipped: SkipForward,
   runner_disk_cleaned: HardDrive,
+  checkpoint_due: CalendarClock,
 };
 
 /** Значок типа уведомления; чисто декоративный, смысл несёт текст. */

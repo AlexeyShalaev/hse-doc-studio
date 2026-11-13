@@ -1,0 +1,144 @@
+{
+  "id": "sr_01hy2b7k9q",
+  "project_id": "p_01hxa1c4de",
+  "profile": {
+    "id": "topic-approval",
+    "name": {
+      "ru": "Заявка на тему КП",
+      "en": "Course project topic application"
+    }
+  },
+  "status": "draft",
+  "phase": null,
+  "round": 0,
+  "current_step": null,
+  "deadline": "2026-11-14T23:59:00+03:00",
+  "message": null,
+  "stop_reason": null,
+  "sent_by": null,
+  "sent_at": null,
+  "completed_at": null,
+  "created_at": "2026-11-10T08:40:00Z",
+  "updated_at": "2026-11-10T09:00:00Z",
+  "docs": [
+    {
+      "doc_id": "topic_application",
+      "name": {
+        "ru": "Заявление о выборе темы",
+        "en": "Topic selection application"
+      },
+      "frozen": false,
+      "slots": [
+        {
+          "slot_id": "author",
+          "label": {
+            "ru": "Студент",
+            "en": "Student"
+          },
+          "participant_id": "srp_author",
+          "extra": false,
+          "optional": false,
+          "status": "pending"
+        },
+        {
+          "slot_id": "academic_supervisor",
+          "label": {
+            "ru": "Академический руководитель",
+            "en": "Academic supervisor"
+          },
+          "participant_id": "srp_academic",
+          "extra": true,
+          "optional": false,
+          "status": "pending"
+        }
+      ],
+      "sent": null,
+      "changed": false
+    }
+  ],
+  "steps": [
+    [
+      {
+        "id": "srp_author",
+        "persona": "author",
+        "user_id": "u_01hx7k5ivan",
+        "invitation_id": null,
+        "name": "Иванов И. И.",
+        "membership": "member",
+        "card_name": "Иванов И. И.",
+        "assignments": [
+          {
+            "doc_id": "topic_application",
+            "slot_id": "author"
+          }
+        ],
+        "method": "image",
+        "state": "waiting",
+        "next_action": "wait",
+        "changes_visible": false,
+        "approved_at": null,
+        "notified_at": null,
+        "reminded_at": null,
+        "reminders": 0,
+        "skipped_at": null,
+        "skip": null
+      }
+    ],
+    [
+      {
+        "id": "srp_academic",
+        "persona": "academic_supervisor",
+        "user_id": null,
+        "invitation_id": null,
+        "name": null,
+        "membership": "missing",
+        "card_name": null,
+        "assignments": [
+          {
+            "doc_id": "topic_application",
+            "slot_id": "academic_supervisor"
+          }
+        ],
+        "method": "image",
+        "state": "waiting",
+        "next_action": "wait",
+        "changes_visible": false,
+        "approved_at": null,
+        "notified_at": null,
+        "reminded_at": null,
+        "reminders": 0,
+        "skipped_at": null,
+        "skip": null
+      }
+    ]
+  ],
+  "events": [],
+  "candidates": [
+    {
+      "persona": "author",
+      "people": [
+        {
+          "kind": "member",
+          "id": "u_01hx7k5ivan",
+          "name": "Иванов И. И."
+        }
+      ]
+    },
+    {
+      "persona": "academic_supervisor",
+      "people": []
+    },
+    {
+      "persona": "supervisor",
+      "people": [
+        {
+          "kind": "member",
+          "id": "u_01hx7k5petr",
+          "name": "Петров П. П."
+        }
+      ]
+    }
+  ],
+  "changed_docs": [],
+  "point_deadline": "2026-11-15T23:59:00+03:00"
+}

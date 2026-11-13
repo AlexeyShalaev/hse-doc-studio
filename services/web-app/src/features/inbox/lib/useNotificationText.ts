@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { formatBytes } from "@shared/lib";
+import { daysUntilDeadline } from "@entities/submission";
 import { useProjectRoleLabel } from "@entities/project";
 import type { Notification } from "@entities/invitation";
 import { isSigningKind, showsDeadline } from "./notificationTarget";
@@ -11,7 +12,13 @@ import { formatDeadline } from "./signingTasks";
  * «просит подписать новую версию»; очистка диска раннера, которой нечего было освободить,
  * говорит «освобождать было нечего» (storage-cleanup.md, 8.2); остальные по виду уведомления.
  */
-const textKind = (n: Notification): string => {
+const textKind = (n: Notification, now: number): string => {
+  // Срок точки (16.7): «через N дней» считается при показе, а не на момент письма.
+  if (n.kind === "checkpoint_due") {
+    const days = checkpointDays(n, now);
+    if (days === null || days > 0) return "checkpoint_due";
+    return days === 0 ? "checkpoint_due_today" : "checkpoint_due_past";
+  }
   if (n.kind === "signing_request" && n.payload.new_version) {
     return "signing_request_new_version";
   }
@@ -25,6 +32,12 @@ const textKind = (n: Notification): string => {
   return n.kind;
 };
 
+/** Сколько календарных дней по Москве до срока точки у `checkpoint_due` (16.6); null без срока. */
+const checkpointDays = (n: Notification, now: number): number | null =>
+  n.kind === "checkpoint_due" && n.payload.deadline
+    ? daysUntilDeadline(n.payload.deadline, now)
+    : null;
+
 /** Освобождено очисткой диска раннера, как в окне «Диск»: ноль пишется числом. */
 const freedSize = (n: Notification): string => {
   if (n.kind !== "runner_disk_cleaned") return "";
@@ -36,8 +49,9 @@ const freedSize = (n: Notification): string => {
 export const useNotificationText = () => {
   const { t } = useTranslation("inbox");
   const roleLabel = useProjectRoleLabel();
+  const [now] = useState(() => Date.now());
   return (n: Notification): string =>
-    t(`kind.${textKind(n)}`, {
+    t(`kind.${textKind(n, now)}`, {
       actor:
         n.payload.actor_name ??
         (isSigningKind(n.kind) ? t("signing.someone") : ""),
@@ -54,6 +68,9 @@ export const useNotificationText = () => {
       // Очистка диска раннера: `excerpt` это имя раннера.
       name: n.payload.excerpt ?? "",
       size: freedSize(n),
+      ...(textKind(n, now) === "checkpoint_due"
+        ? { count: checkpointDays(n, now) ?? 0 }
+        : {}),
       ...(n.payload.outcome ? { context: n.payload.outcome } : {}),
     });
 };
@@ -72,6 +89,18 @@ export const useNotificationDetails = () => {
       return n.payload.actor_name
         ? t("runnerDisk.actor", { name: n.payload.actor_name })
         : null;
+    }
+    // Срок точки (16.7): проект и дата срока; название точки уже в тексте.
+    if (n.kind === "checkpoint_due") {
+      const parts = [
+        n.payload.project_name,
+        n.payload.deadline
+          ? t("signing.deadline", {
+              date: formatDeadline(n.payload.deadline, now),
+            })
+          : null,
+      ].filter((part): part is string => part !== null && part !== "");
+      return parts.length > 0 ? parts.join(" · ") : null;
     }
     if (!isSigningKind(n.kind)) return null;
     const parts: string[] = [];

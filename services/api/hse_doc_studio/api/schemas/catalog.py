@@ -5,6 +5,9 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from hse_doc_studio.api.schemas.checkpoint_deadlines import DeadlineStateName
+from hse_doc_studio.api.schemas.common import StrictModel
+
 
 class DocumentVariantResponse(BaseModel):
     id: str
@@ -127,7 +130,9 @@ class SubmissionExtraItemResponse(BaseModel):
     supported_kinds: list[str] = ["research", "project"]
 
 
-class SubmissionProfileResponse(BaseModel):
+class SubmissionProfileResponse(StrictModel):
+    """Профиль сдачи проекта; в контракте сервера (`SubmissionProfile`, signing-route.md, 16.8)."""
+
     id: str
     name: dict[str, str]
     description: dict[str, str]
@@ -136,7 +141,7 @@ class SubmissionProfileResponse(BaseModel):
     # Срок точки в проекте и его состояние (signing-route.md, 16.6 и 16.8): `none|upcoming|soon|today|packaged|
     # overdue`; подсказка пака текстом без дат; последняя сборка пакета точки к сроку.
     deadline: datetime | None = None
-    deadline_state: str = "none"
+    deadline_state: DeadlineStateName = "none"
     deadline_hint: dict[str, str] | None = None
     packaged_at: datetime | None = None
 

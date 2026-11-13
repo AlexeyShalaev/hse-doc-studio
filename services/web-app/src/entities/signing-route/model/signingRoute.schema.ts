@@ -320,6 +320,11 @@ export const SigningRouteSchema = z.strictObject({
   candidates: z.array(RoutePersonaCandidatesSchema),
   /** Документы с `changed`, по порядку `docs`: есть что отправить новой версией (12.6). */
   changed_docs: z.array(z.string()),
+  /**
+   * Срок точки, из которого сервер посчитал срок черновика (16.5, R29); только управляющему.
+   * Редактор по нему пишет «Срок точки изменился». Сервер до R29 поля не присылает.
+   */
+  point_deadline: iso.nullable().optional(),
 });
 export type SigningRoute = z.infer<typeof SigningRouteSchema>;
 

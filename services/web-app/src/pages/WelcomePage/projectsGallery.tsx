@@ -12,6 +12,11 @@ type Item = z.infer<typeof ProjectResponseSchema>;
 
 const noop = () => undefined;
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+/** Срок через `days` дней от показа галереи: «через N дней» на карточке не плывёт. */
+const deadlineIn = (days: number): string =>
+  new Date(Date.now() + days * DAY_MS).toISOString();
+
 const item = (overrides: Partial<Item>): Item => ({
   id: "p_gallery",
   name: "Bertie: курсовой проект",
@@ -90,6 +95,38 @@ export const getProjectsGallery = (): GalleryGroup[] => [
           staffing: "solo",
           owner: { ...ANNA, id: "u_pavel", name: "Павел Орлов" },
           my_role: "reader",
+        }),
+      ),
+      card(
+        "card_deadline_soon",
+        "Ближайший срок точки",
+        "Пометка «Заявка на тему: через 3 дня» (signing-route.md, 16.6); в демо срок от «сейчас».",
+        item({
+          owner: ANNA,
+          my_role: "owner",
+          next_deadline: {
+            profile_id: "topic-approval",
+            name: { ru: "Заявка на тему", en: "Topic application" },
+            deadline: deadlineIn(3),
+            state: "soon",
+          },
+        }),
+      ),
+      card(
+        "card_deadline_overdue",
+        "Срок прошёл, пакета нет",
+        "Руководитель видит то же у проекта студента.",
+        item({
+          name: "ВКР: анализ требований",
+          staffing: "solo",
+          owner: ANNA,
+          my_role: "reviewer",
+          next_deadline: {
+            profile_id: "topic-approval",
+            name: { ru: "Заявка на тему", en: "Topic application" },
+            deadline: deadlineIn(-2),
+            state: "overdue",
+          },
         }),
       ),
       card(
