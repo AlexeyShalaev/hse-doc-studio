@@ -34,7 +34,17 @@ import { DATE_MARK_COLOR } from "./DateMarkOverlay";
  * (docs/design/signing-route.md, 14.4), ручной даты у него нет. `method` способ участника: метки
  * даты добавляют подписанту ЭП согласование до фиксации.
  */
-export type SlotDateRoute = { method: "image" | "detached" | "pades" | null };
+export type SlotDateRoute = {
+  method: "image" | "detached" | "pades" | null;
+  /**
+   * Сколько действий ждут от участника по предпросмотру маршрута (`actions`, он же
+   * `remaining_actions` расчёта, 4.4). Подписанту ЭП метка даты добавляет согласование до
+   * фиксации (2), если после него видимый слой меняет кто-то ещё; последний меняющий совмещает
+   * «Согласовать и подписать» (1), ему подсказка не нужна. Без предпросмотра (вкладка «Подписи»
+   * документа) подсказка по одному способу.
+   */
+  actions?: number;
+};
 
 export type SlotDateMarksProps = {
   slotId: string;
@@ -119,6 +129,8 @@ export const SlotDateMarks = ({
   const manualDate = signedAt?.source === "manual" ? signedAt.at : "";
   const disabled = !editable || pending;
   const crypto = route?.method === "detached" || route?.method === "pades";
+  const extraStep =
+    crypto && (route.actions === undefined || route.actions === 2);
 
   const save = (next: DateMarksSave) => {
     if (!disabled) onSave(next);
@@ -390,7 +402,11 @@ export const SlotDateMarks = ({
               ? t("dates.waits", { persona: signerName })
               : t("dates.fromRoute")}
           </span>
-          {crypto && <span style={hintStyle}>{t("dates.esign")}</span>}
+          {extraStep && (
+            <span style={hintStyle} data-testid={`slot-date-esign-${slotId}`}>
+              {t("dates.esign")}
+            </span>
+          )}
         </div>
       )}
     </div>

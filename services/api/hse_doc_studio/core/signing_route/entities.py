@@ -194,7 +194,8 @@ class ResetsSignaturesError(RouteConflictError):
     `resets_signatures`, 14.6): `resets` какие подписи. Ничего не записано."""
 
     def __init__(self, resets: tuple[ResetSignature, ...]) -> None:
-        names = ", ".join(dict.fromkeys(r.name for r in resets))
+        # Имя с инициалами кончается точкой («Петров П. П.»): вторую точку перед «. Подтвердите» не ставим.
+        names = ", ".join(dict.fromkeys(r.name for r in resets)).rstrip(".")
         super().__init__(
             "resets_signatures",
             localized_error(

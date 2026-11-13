@@ -220,6 +220,20 @@ describe("метки даты слота", () => {
     expect(screen.queryByText(/добавляет действие подписанту ЭП/)).toBeNull();
   });
 
+  it("подсказка о лишнем действии подписанта ЭП по числу действий из предпросмотра", () => {
+    mount({ route: { method: "detached", actions: 2 } });
+    expect(
+      screen.getByTestId("slot-date-esign-supervisor"),
+    ).toBeInTheDocument();
+    cleanup();
+    // Последний меняющий видимый слой совмещает «Согласовать и подписать»: действие одно.
+    mount({ route: { method: "pades", actions: 1 } });
+    expect(screen.queryByTestId("slot-date-esign-supervisor")).toBeNull();
+    cleanup();
+    mount({ route: { method: "image", actions: 2 } });
+    expect(screen.queryByTestId("slot-date-esign-supervisor")).toBeNull();
+  });
+
   it("предупреждения: текст не помещается, страницы нет в документе", () => {
     mount({
       placement: placement([

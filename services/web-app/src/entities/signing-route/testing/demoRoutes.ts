@@ -251,6 +251,11 @@ export type SigningRouteDemo = {
    */
   refreeze: (projectId: string, docId: string) => void;
   /**
+   * Правка меток даты на документе под маршрутом (14.6) записана: событие `marks_edited` от автора
+   * перед перефиксацией и завершением. Документ маршрут не держит: ничего.
+   */
+  marksEdited: (projectId: string, docId: string, who: string | null) => void;
+  /**
    * Свой завершённый маршрут автора для дат (14.11): научрук `signer` согласовал и подписал ЭП над
    * B, академрук `academic` (сверх точки) согласовал картинкой. Возвращает id маршрута.
    */
@@ -2500,6 +2505,10 @@ export const createSigningRouteDemo = (
           : [],
       );
     },
+    marksEdited: (projectId, docId, who) => {
+      const r = dateHolder(projectId, docId);
+      if (r) event(r, "marks_edited", who);
+    },
     refreeze: (projectId, docId) => {
       const r = dateHolder(projectId, docId);
       if (!r) return;
@@ -2519,6 +2528,9 @@ export const createSigningRouteDemo = (
       const id = api.seedOptional({ projectId, sender, signer, academic });
       const r = routes.find((item) => item.id === id);
       if (!r) return null;
+      // Метки даты научрука автор поставил на идущем маршруте, когда тот уже согласовал (14.5):
+      // дату дало его согласие, в истории это «изменил метки даты».
+      event(r, "marks_edited", sender.name);
       const acad = participants(r).find(
         (q) => q.persona === "academic_supervisor",
       );
