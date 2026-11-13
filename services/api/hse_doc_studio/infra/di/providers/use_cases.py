@@ -433,6 +433,7 @@ from hse_doc_studio.use_cases.signatures.get_signature_plan import GetSignatureP
 from hse_doc_studio.use_cases.signatures.get_signatures import GetSignaturesUC
 from hse_doc_studio.use_cases.signatures.get_signed_doc_pdf import GetSignedDocPdfUC
 from hse_doc_studio.use_cases.signatures.release_withheld import ReleaseWithheldUC
+from hse_doc_studio.use_cases.signatures.set_date_marks import SetDateMarksUC
 from hse_doc_studio.use_cases.signatures.set_slot_optional import SetSlotOptionalUC
 from hse_doc_studio.use_cases.signatures.sign_in_studio import SignInStudioUC
 from hse_doc_studio.use_cases.signatures.sign_submission import SignSubmissionUC
@@ -2966,6 +2967,27 @@ class UseCaseProvider(Provider):
             project_index_repo=project_index_repo,
             signature_repo=signature_repo,
             template_repo=template_repo,
+        )
+
+    @provide
+    def get_set_date_marks_uc(  # noqa: PLR0913 — порты сценария
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        signature_repo: ISignatureRepository,
+        template_repo: ITemplateRepository,
+        template_service: ProjectTemplateService,
+        routes: ISigningRouteGate,
+        pdf_stamper: PdfStamper,
+    ) -> SetDateMarksUC:
+        return SetDateMarksUC(
+            project_repo=project_repo,
+            project_index_repo=project_index_repo,
+            signature_repo=signature_repo,
+            template_repo=template_repo,
+            template_service=template_service,
+            routes=routes,
+            pages=pdf_stamper,
         )
 
     @provide

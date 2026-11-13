@@ -72,13 +72,8 @@ class DeleteSignaturePngUC:
             for sid, placement in slots.items():
                 if sid == inp.slot_id and placement.enabled:
                     disabled_in.append(doc_id)
-                    new_doc_placements[sid] = SignaturePlacement(
-                        enabled=False,
-                        page=placement.page,
-                        x_mm=placement.x_mm,
-                        y_mm=placement.y_mm,
-                        width_mm=placement.width_mm,
-                    )
+                    # Остальное (дата в рамке, метки даты и момент подписи) остаётся: снимается только место.
+                    new_doc_placements[sid] = replace(placement, enabled=False)
                 else:
                     new_doc_placements[sid] = placement
             new_placements[doc_id] = new_doc_placements

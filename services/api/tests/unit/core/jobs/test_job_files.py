@@ -3,6 +3,7 @@ from __future__ import annotations
 import dataclasses
 
 import pytest
+from hse_doc_studio.core.jobs.codec import decode, encode
 from hse_doc_studio.core.jobs.files import ArtifactRef, InlineBlob, ManifestFile, StampSpec
 from hse_doc_studio.core.signatures.stamps import Stamp
 
@@ -54,3 +55,20 @@ def test__stamp_spec__mirrors_stamp_field_for_field_with_png_instead_of_png_path
     }
     spec_defaults = {f.name: f.default for f in dataclasses.fields(StampSpec) if f.default is not dataclasses.MISSING}
     assert stamp_defaults == spec_defaults
+
+
+def test__stamp_spec__date_fields_go_on_the_wire_only_when_set() -> None:
+    # Раннер прежней версии отвергает незнакомые поля: пакет без меток даты должен идти к нему как раньше.
+    plain = StampSpec(page=1, x_mm=1, y_mm=2, width_mm=3, png=None, aspect_ratio=0.4, text="Подписано")
+    dated = StampSpec(
+        page=2, x_mm=1, y_mm=2, width_mm=8, png=None, aspect_ratio=0.6, text="13", height_mm=5, align="left"
+    )
+
+    plain_wire, dated_wire = encode(plain), encode(dated)
+
+    assert isinstance(plain_wire, dict)
+    assert isinstance(dated_wire, dict)
+    assert {"height_mm", "align"} & set(plain_wire) == set()
+    assert (dated_wire["height_mm"], dated_wire["align"]) == (5, "left")
+    assert decode(StampSpec, plain_wire) == plain
+    assert decode(StampSpec, dated_wire) == dated

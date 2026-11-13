@@ -158,7 +158,7 @@ class RouteConflictError(Exception):
     """Действие несовместимо с состоянием маршрута (ответ 409, `not_participant` это 404).
 
     Коды: `invalid_transition`, `not_participant`, `not_your_turn`, `image_required`, `plate_required`,
-    `route_locked`, `nothing_changed`, `participant_not_skippable`.
+    `route_locked`, `nothing_changed`, `participant_not_skippable`, `date_from_route`.
     """
 
     def __init__(self, code: str, message: str) -> None:
@@ -193,6 +193,18 @@ def route_locked() -> RouteConflictError:
         localized_error(
             "Документ на подписании: отмените маршрут, чтобы изменить подписи",
             "The document is out for signing: cancel the signing route to change its signatures",
+        ),
+    )
+
+
+def date_from_route() -> RouteConflictError:
+    """Ручная дата подписи на паре участника маршрута (409 `date_from_route`, signing-route.md, 14.6): дату даёт его
+    согласие."""
+    return RouteConflictError(
+        "date_from_route",
+        localized_error(
+            "Дату этой подписи даёт согласование по маршруту: указать её вручную нельзя",
+            "The date of this signature comes from the approval in the signing route: it cannot be set by hand",
         ),
     )
 

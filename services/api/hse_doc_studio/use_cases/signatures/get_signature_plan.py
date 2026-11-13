@@ -28,6 +28,7 @@ from hse_doc_studio.core.services import (
 from hse_doc_studio.core.signatures.plan import (
     DocFacts,
     DocPlan,
+    PlanDate,
     PlanSlot,
     SignaturePlan,
     frozen_is_current,
@@ -36,7 +37,12 @@ from hse_doc_studio.core.signatures.plan import (
     slot_state,
 )
 from hse_doc_studio.core.signatures.ports import ISignerScope
-from hse_doc_studio.core.signatures.stamps import legacy_stamps_digest, stamps_digest, stamps_for_doc
+from hse_doc_studio.core.signatures.stamps import (
+    date_mark_text,
+    legacy_stamps_digest,
+    stamps_digest,
+    stamps_for_doc,
+)
 from hse_doc_studio.core.team import is_doc_active
 from hse_doc_studio.core.value_objects import SignaturesState
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
@@ -195,6 +201,17 @@ async def doc_facts(
     )
 
 
+def plan_dates(state: SignaturesState, doc_id: str, slot_id: str, lang: str) -> tuple[PlanDate, ...]:
+    """Метки даты слота документа для плана (signing-route.md, 14.7): что каждая напечатает сейчас."""
+    placement = state.placements.get(doc_id, {}).get(slot_id)
+    if placement is None:
+        return ()
+    return tuple(
+        PlanDate(page=mark.page, format=mark.format, text=date_mark_text(state, doc_id, slot_id, mark, lang))
+        for mark in placement.dates
+    )
+
+
 def pair_optional(
     state: SignaturesState, doc_id: str, slot_id: str, profile_id: str | None, required_by: Iterable[str]
 ) -> bool:
@@ -246,6 +263,10 @@ async def build_plan(  # noqa: PLR0913 — входы расчёта
                 pinned=pinned is not None,
                 optional=pair_optional(state, doc_id, p.slot_id, profile_id, p.required_by),
                 skipped=state.skip_of(doc_id, p.slot_id, profile_id),
+                dates=plan_dates(state, doc_id, p.slot_id, str(project.lang)),
+                signed_at=placement.signed_at
+                if (placement := state.placements.get(doc_id, {}).get(p.slot_id)) is not None
+                else None,
             )
             for p in pairs
         )

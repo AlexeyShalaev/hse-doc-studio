@@ -3,11 +3,20 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from hse_doc_studio.core.enums import CheckSeverity, MetaFieldAuto, RequiredAt, TemplateUpdateClass
+from hse_doc_studio.core.enums import (
+    CheckSeverity,
+    DateMarkAlign,
+    DateMarkFormat,
+    MetaFieldAuto,
+    RequiredAt,
+    TemplateUpdateClass,
+)
 from hse_doc_studio.infra.template.releases import freeze
 from hse_doc_studio.infra.template.yaml_template_repository import (
     YamlTemplateRepository,
+    _parse_signature_slot,
     _parse_submission_profile,
+    parse_default_dates,
     parse_signing_route,
 )
 
@@ -521,3 +530,38 @@ def test__parse_signing_route__shapes(raw: object, expected: tuple[tuple[str, ..
 def test__parse_signing_route__malformed__rejected(raw: object) -> None:
     with pytest.raises((TypeError, ValueError)):
         parse_signing_route(raw)
+
+
+# --- метки даты по умолчанию (signing-route.md, 14.10) -----------------------------------------------------------
+
+
+def test__parse_default_dates__marks_by_document_with_format_and_alignment() -> None:
+    parsed = parse_default_dates(
+        {
+            "project_proposal": [
+                {"page": 2, "x_mm": 120, "y_mm": 250, "width_mm": 8, "height_mm": 5, "format": "day"},
+                {"page": 2, "x_mm": 132, "y_mm": 250, "width_mm": 22, "height_mm": 5, "format": "month_word",
+                 "align": "right"},
+            ]
+        }
+    )  # fmt: skip
+
+    ((doc_id, (day, month)),) = parsed
+    assert doc_id == "project_proposal"
+    assert (day.page, day.x_mm, day.format, day.align) == (2, 120.0, DateMarkFormat.day, DateMarkAlign.centered)
+    assert (month.width_mm, month.format, month.align) == (22.0, DateMarkFormat.month_word, DateMarkAlign.right)
+    assert parse_default_dates(None) == ()
+
+
+def test__parse_signature_slot__wrong_default_dates__dropped_and_the_slot_kept() -> None:
+    slot = _parse_signature_slot(
+        {
+            "id": "supervisor",
+            "applies_to": ["project_proposal"],
+            "default_dates": {"project_proposal": [{"x_mm": 300, "y_mm": 1, "width_mm": 8, "height_mm": 5,
+                                                    "format": "day"}]},
+        }
+    )  # fmt: skip
+
+    assert slot.id == "supervisor"
+    assert slot.default_dates == ()

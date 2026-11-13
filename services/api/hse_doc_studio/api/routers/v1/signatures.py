@@ -12,6 +12,7 @@ from starlette.background import BackgroundTask
 from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.signature import (
     AttachDetachedSignatureResponse,
+    DateMarkResponse,
     DetachedSignatureResponse,
     EmbeddedSignatureResponse,
     FreezePdfResponse,
@@ -21,8 +22,10 @@ from hse_doc_studio.api.schemas.signature import (
     PlacementResponse,
     ProfileRefResponse,
     RuntimeSlotResponse,
+    SetDateMarksRequest,
     SetSlotOptionalRequest,
     SignaturesStateResponse,
+    SignedAtResponse,
     SignerInfoResponse,
     SignInStudioRequest,
     SkippedSlotResponse,
@@ -33,7 +36,9 @@ from hse_doc_studio.api.schemas.signature import (
     UploadSignatureResponse,
 )
 from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.signatures.stamps import date_mark_text
 from hse_doc_studio.core.signing_route.audit import signing_route_scope
+from hse_doc_studio.core.signing_route.entities import RouteInputError
 from hse_doc_studio.core.signing_route.ports import ISigningRouteGate
 from hse_doc_studio.core.value_objects import (
     DetachedSignature,
@@ -85,6 +90,7 @@ from hse_doc_studio.use_cases.signatures.get_signed_doc_pdf import (
     GetSignedDocPdfUC,
 )
 from hse_doc_studio.use_cases.signatures.release_withheld import ReleaseWithheldInput, ReleaseWithheldUC
+from hse_doc_studio.use_cases.signatures.set_date_marks import DateMarkInput, SetDateMarksInput, SetDateMarksUC
 from hse_doc_studio.use_cases.signatures.set_slot_optional import SetSlotOptionalInput, SetSlotOptionalUC
 from hse_doc_studio.use_cases.signatures.sign_in_studio import SignInStudioInput, SignInStudioUC
 from hse_doc_studio.use_cases.signatures.unpin_pdf import UnpinPdfInput, UnpinPdfUC
@@ -117,7 +123,8 @@ def _map_slot(slot: SignatureSlot) -> SlotInfoResponse:
     )
 
 
-def _map_placement(placement: SignaturePlacement) -> PlacementResponse:
+def _map_placement(placement: SignaturePlacement, texts: tuple[str | None, ...] = ()) -> PlacementResponse:
+    """Размещение для ответа; `texts` что напечатает каждая метка даты сейчас (signing-route.md, 14.7)."""
     return PlacementResponse(
         enabled=placement.enabled,
         page=placement.page,
@@ -125,6 +132,30 @@ def _map_placement(placement: SignaturePlacement) -> PlacementResponse:
         y_mm=placement.y_mm,
         width_mm=placement.width_mm,
         sign_date=placement.sign_date,
+        dates=[
+            DateMarkResponse(
+                id=mark.id,
+                page=mark.page,
+                x_mm=mark.x_mm,
+                y_mm=mark.y_mm,
+                width_mm=mark.width_mm,
+                height_mm=mark.height_mm,
+                format=mark.format,
+                align=mark.align,
+                text=texts[i] if i < len(texts) else None,
+            )
+            for i, mark in enumerate(placement.dates)
+        ],
+        signed_at=SignedAtResponse(at=placement.signed_at.at, source=placement.signed_at.source)
+        if placement.signed_at is not None
+        else None,
+    )
+
+
+def _state_placement(state: SignaturesState, doc_id: str, slot_id: str, lang: str) -> PlacementResponse:
+    placement = state.placements[doc_id][slot_id]
+    return _map_placement(
+        placement, tuple(date_mark_text(state, doc_id, slot_id, mark, lang) for mark in placement.dates)
     )
 
 
@@ -190,6 +221,7 @@ def _map_state(
     runtime_slots: list[RuntimeSlotItem],
     stale_frozen: set[str] | None = None,
     plate_outdated: set[str] | None = None,
+    lang: str = "ru",
 ) -> SignaturesStateResponse:
     stale_frozen = stale_frozen or set()
     plate_outdated = plate_outdated or set()
@@ -207,7 +239,7 @@ def _map_state(
         },
         slots={sid: _map_slot(slot) for sid, slot in state.slots.items()},
         placements={
-            doc_id: {sid: _map_placement(p) for sid, p in slot_map.items()}
+            doc_id: {sid: _state_placement(state, doc_id, sid, lang) for sid in slot_map}
             for doc_id, slot_map in state.placements.items()
         },
         runtime_slots=[_map_runtime_slot(item) for item in runtime_slots],
@@ -246,7 +278,7 @@ async def get_signatures(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return _map_state(result.state, result.runtime_slots, result.stale_frozen, result.plate_outdated)
+    return _map_state(result.state, result.runtime_slots, result.stale_frozen, result.plate_outdated, result.lang)
 
 
 @router.patch(
@@ -280,7 +312,56 @@ async def update_placement(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return _map_placement(result.placement)
+    return _map_placement(result.placement, result.texts)
+
+
+@router.put(
+    "/projects/{project_id}/signatures/placements/{doc_id}/{slot_id}/dates",
+    response_model=PlacementResponse,
+)
+async def set_date_marks(
+    project_id: UUID,
+    doc_id: str,
+    slot_id: str,
+    body: SetDateMarksRequest,
+    uc: FromDishka[SetDateMarksUC],
+) -> PlacementResponse:
+    """Метки даты подписания слота документа целиком и ручная дата подписи (signing-route.md, 14.7).
+
+    Отказы: 400 `bad_date_mark` и `bad_date` с `{detail, code}`; 409 `route_locked` (документ держит идущий или
+    завершённый маршрут, правку проведёт его сценарий) и `date_from_route` (ручная дата на паре участника маршрута).
+    """
+    try:
+        result = await uc.execute(
+            SetDateMarksInput(
+                project_id=project_id,
+                doc_id=doc_id,
+                slot_id=slot_id,
+                dates=[
+                    DateMarkInput(
+                        id=mark.id,
+                        page=mark.page,
+                        x_mm=mark.x_mm,
+                        y_mm=mark.y_mm,
+                        width_mm=mark.width_mm,
+                        height_mm=mark.height_mm,
+                        format=mark.format,
+                        align=mark.align,
+                    )
+                    for mark in body.dates
+                ],
+                signed_at_given="signed_at" in body.model_fields_set,
+                signed_at=body.signed_at.date if body.signed_at is not None else None,
+                confirm_reset=body.confirm_reset,
+            )
+        )
+    except NotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except RouteInputError:
+        raise
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return _map_placement(result.placement, result.texts)
 
 
 @router.delete(

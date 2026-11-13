@@ -86,6 +86,14 @@ class IMarkMeasure(Protocol):
         ...
 
 
+class IPdfPages(Protocol):
+    """Страницы PDF: где можно поставить метку даты (signing-route.md, 14.7)."""
+
+    def page_sizes_mm(self, pdf: Path) -> tuple[tuple[float, float], ...]:
+        """Ширина и высота каждой страницы в мм по MediaBox, как их видит штамповщик; пусто, если не прочитать."""
+        ...
+
+
 class ISignatureAudit(Protocol):
     """Аудит действий с подписями: сервер пишет в журнал аудита, локально строка лога.
 

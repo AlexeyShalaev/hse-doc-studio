@@ -4,15 +4,18 @@ from __future__ import annotations
 
 import base64
 import io
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
 from hse_doc_studio.core.i18n import set_interface_language
 from hse_doc_studio.core.signatures.errors import StampImageError, StampingError, StampPageMissingError
 from hse_doc_studio.core.signatures.stamps import Stamp, stamps_digest
-from hse_doc_studio.infra.signatures.pdf_stamper import PdfStamper
+from hse_doc_studio.infra.signatures.pdf_stamper import DATE_MIN_SIZE_PT, PdfStamper, date_font_size
 from pypdf import PageObject, PdfReader
 from pytest_mock import MockerFixture
+from reportlab.lib.units import mm
+from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfgen import canvas
 
 _PNG_1PX = base64.b64decode(
@@ -163,3 +166,70 @@ def test_slot_id_stays_out_of_the_visible_layer_fingerprint(tmp_path: Path) -> N
     assert with_slot == without_slot
     assert repr(with_slot) == repr(without_slot)
     assert stamps_digest([with_slot], tmp_path) == stamps_digest([without_slot], tmp_path)
+
+
+# --- метки даты подписания (signing-route.md, 14.3) ------------------------------------------------------------------
+
+
+def _date(text: str, *, width_mm: float = 22, height_mm: float = 5, align: str = "center") -> Stamp:
+    return Stamp(
+        page=1,
+        x_mm=100,
+        y_mm=200,
+        width_mm=width_mm,
+        png_path=None,
+        aspect_ratio=height_mm / width_mm,
+        text=text,
+        slot_id="supervisor",
+        height_mm=height_mm,
+        align=align,
+    )
+
+
+@pytest.mark.parametrize("align", ["left", "center", "right"])
+def test_date_marks__text_on_the_page_without_a_frame(tmp_path: Path, align: str) -> None:
+    out = tmp_path / "out.pdf"
+
+    PdfStamper().stamp(_pdf(tmp_path / "in.pdf"), out, [_date("13", width_mm=8), _date("ноября", align=align)])
+
+    text = PdfReader(io.BytesIO(out.read_bytes())).pages[0].extract_text()
+    assert "13" in text
+    assert "ноября" in text
+    # Без обводки: метка ложится на готовые кавычки и черту шаблона.
+    overlay = PdfStamper._build_overlay_page(595.0, 842.0, [_date("13")])
+    contents = PdfReader(io.BytesIO(overlay)).pages[0].get_contents()
+    assert contents is not None
+    assert b" re\n" not in contents.get_data()
+
+
+def test_date_font__fits_the_box_and_never_below_6pt() -> None:
+    tall = date_font_size("13", 8, 5)
+    narrow = date_font_size("13 ноября 2026 г.", 30, 6)
+    tiny = date_font_size("13 ноября 2026 г.", 5, 2)
+
+    assert tall == pytest.approx(5 * mm / 1.2)
+    assert DATE_MIN_SIZE_PT <= narrow < 6 * mm / 1.2
+    assert pdfmetrics.stringWidth("13 ноября 2026 г.", "DejaVuSans", narrow) <= 30 * mm
+    assert tiny == DATE_MIN_SIZE_PT
+
+
+def test_date_mark__height_is_its_box_and_page_sizes_in_mm(tmp_path: Path) -> None:
+    stamper = PdfStamper()
+    pdf = _pdf(tmp_path / "in.pdf", pages=2)
+
+    assert stamper.mark_height_mm(_date("13", height_mm=7)) == 7
+    sizes = stamper.page_sizes_mm(pdf)
+    assert len(sizes) == 2
+    assert sizes[0] == pytest.approx((210.0, 297.0), abs=0.5)
+    assert stamper.page_sizes_mm(tmp_path / "missing.pdf") == ()
+
+
+def test_date_mark__on_a_missing_page__page_missing_error(tmp_path: Path) -> None:
+    out = tmp_path / "out.pdf"
+    stamp = replace(_date("13"), page=3)
+
+    with pytest.raises(StampPageMissingError) as err:
+        PdfStamper().stamp(_pdf(tmp_path / "in.pdf"), out, [stamp])
+
+    assert err.value.slot_id == "supervisor"
+    assert not out.exists()

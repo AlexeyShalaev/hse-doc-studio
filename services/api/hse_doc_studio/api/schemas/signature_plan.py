@@ -6,7 +6,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-from hse_doc_studio.core.enums import DetachedVerdict, SignMode
+from hse_doc_studio.api.schemas.common import StrictModel
+from hse_doc_studio.core.enums import DateMarkFormat, DetachedVerdict, SignedAtSource, SignMode
 from hse_doc_studio.core.signatures.plan import (
     DocPlan,
     PlanReason,
@@ -21,7 +22,7 @@ from hse_doc_studio.core.signing_route.ports import PlanRoute, PlanRoutes
 from hse_doc_studio.use_cases.signatures.sign_submission import SignSubmissionOutput, SignSubmissionPreview
 
 
-class SlotCheckResponse(BaseModel):
+class SlotCheckResponse(StrictModel):
     format: str
     verdict: DetachedVerdict
     signer: str
@@ -30,19 +31,34 @@ class SlotCheckResponse(BaseModel):
     notes: list[str] = []
 
 
-class PlanSignerResponse(BaseModel):
+class PlanSignerResponse(StrictModel):
     persona: str
     name: str
 
 
-class PlanSkippedResponse(BaseModel):
+class PlanSkippedResponse(StrictModel):
     """Пропуск подписи маршрутом (signing-route.md, 13.3): когда и каким маршрутом."""
 
     at: str
     route_id: str
 
 
-class PlanSlotResponse(BaseModel):
+class PlanDateResponse(StrictModel):
+    """Метка даты слота в плане (signing-route.md, 14.7): страница, формат и что напечатано сейчас (null: пусто)."""
+
+    page: int
+    format: DateMarkFormat
+    text: str | None
+
+
+class PlanSignedAtResponse(StrictModel):
+    """Момент подписи слота (14.3): ISO 8601, у ручной даты только день."""
+
+    at: str
+    source: SignedAtSource
+
+
+class PlanSlotResponse(StrictModel):
     slot_id: str
     label: dict[str, str]
     signer: PlanSignerResponse
@@ -63,9 +79,12 @@ class PlanSlotResponse(BaseModel):
     # Подпись необязательна на точке (13.3); пропуск маршрутом, иначе null (тогда и статус `skipped`).
     optional: bool = False
     skipped: PlanSkippedResponse | None = None
+    # Метки даты подписания слота и момент подписи (14.7); без меток пустой список.
+    dates: list[PlanDateResponse] = []
+    signed_at: PlanSignedAtResponse | None = None
 
 
-class PlanFrozenResponse(BaseModel):
+class PlanFrozenResponse(StrictModel):
     sha256: str
     source_sha256: str
     frozen_at: str
@@ -74,7 +93,7 @@ class PlanFrozenResponse(BaseModel):
     outdated: PlanReason | None = None
 
 
-class PlanPinnedResponse(BaseModel):
+class PlanPinnedResponse(StrictModel):
     """Версия на подписи документа (signing-route.md, 12.3): что подписывают вместо текущей сборки."""
 
     sha256: str
@@ -84,7 +103,7 @@ class PlanPinnedResponse(BaseModel):
     round: int
 
 
-class DocPlanResponse(BaseModel):
+class DocPlanResponse(StrictModel):
     doc_id: str
     # Есть источник подписи: версия на подписи или собранный PDF.
     built: bool
@@ -98,7 +117,7 @@ class DocPlanResponse(BaseModel):
     working_differs: bool = False
 
 
-class PlanRouteResponse(BaseModel):
+class PlanRouteResponse(StrictModel):
     """Маршрут подписания точки сдачи или документа: состояние по расчёту на текущих файлах (signing-route.md, 6.1)."""
 
     id: UUID
@@ -114,7 +133,7 @@ class PlanRouteResponse(BaseModel):
     changed_docs: list[str] = Field(default_factory=list)
 
 
-class SignaturePlanResponse(BaseModel):
+class SignaturePlanResponse(StrictModel):
     profile_id: str | None = None
     total: int
     signed: int
@@ -171,6 +190,8 @@ def _map_slot(slot: PlanSlot, routes: PlanRoutes) -> PlanSlotResponse:
         route_state=routes.slot_states.get(DocSlot(slot.doc_id, slot.slot_id)),
         optional=slot.optional,
         skipped=PlanSkippedResponse(at=skip.at, route_id=skip.route_id) if (skip := slot.skipped) is not None else None,
+        dates=[PlanDateResponse(page=d.page, format=d.format, text=d.text) for d in slot.dates],
+        signed_at=PlanSignedAtResponse(at=at.at, source=at.source) if (at := slot.signed_at) is not None else None,
     )
 
 

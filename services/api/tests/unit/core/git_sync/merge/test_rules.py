@@ -526,6 +526,29 @@ def test__signatures__placement_changed_by_both__is_one_conflict_for_the_record(
     assert [f.pointer for f in decision.fields] == ["/placements/a/author--anna"]
 
 
+def test__signatures__date_marks_of_one_side_and_a_move_of_the_other__one_conflict_for_the_placement(
+    signatures_json: Json,
+) -> None:
+    """Метки даты и момент подписи неделимы с размещением (signing-route.md, 14.3): день одной стороны с метками
+    другой дал бы на странице дату, которой никто не ставил."""
+    mark = {"id": "d1", "page": 1, "x_mm": 1.0, "y_mm": 2.0, "width_mm": 8.0, "height_mm": 5.0, "format": "day"}
+
+    def dated(data: Json) -> None:
+        data["placements"]["a"]["author--anna"].update(
+            dates=[{**mark, "align": "center"}], signed_at={"at": "2026-11-13", "source": "manual", "token": ""}
+        )
+
+    def moved(data: Json) -> None:
+        data["placements"]["a"]["author--anna"].update(x_mm=11.0)
+
+    both = _merge(_SIGNATURES, signatures_json, _edited(signatures_json, dated), _edited(signatures_json, moved))
+    only_mine = _merge(_SIGNATURES, signatures_json, _edited(signatures_json, dated), signatures_json)
+
+    assert [f.pointer for f in both.fields] == ["/placements/a/author--anna"]
+    assert not only_mine.conflict
+    assert _load(only_mine.content)["placements"]["a"]["author--anna"]["dates"][0]["format"] == "day"
+
+
 def _refrozen(sha: str, signed: bool) -> Callable[[Json], None]:
     def change(data: Json) -> None:
         data["frozen"]["a"].update(sha256=sha)

@@ -334,6 +334,8 @@ def _height(  # noqa: PLR0913 — входы одной метки
     shown = replace(state, withheld={}, placements={pair.doc_id: {pair.slot_id: replace(placement, enabled=True)}})
     project = point.project
     stamps = stamps_for_doc(shown, pair.doc_id, project.folder, str(project.lang), png_exists=lambda _path: True)
-    if stamps:
-        return round(measure.mark_height_mm(stamps[0]), 2)
+    # Метки даты слота (14.3) идут после его метки и высоту места подписи не задают.
+    marks = [stamp for stamp in stamps if not stamp.is_date]
+    if marks:
+        return round(measure.mark_height_mm(marks[0]), 2)
     return round(placement.width_mm * _IMAGE_ASPECT, 2)

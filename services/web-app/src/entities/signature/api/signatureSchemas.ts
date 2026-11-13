@@ -31,8 +31,7 @@ export const SlotInfoSchema = z.object({
 // Дата подписания (docs/design/signing-route.md, 14.3): у слота документа 0..8 меток даты в своих
 // рамках на любых страницах. Значение один момент подписи слота (`signed_at`): согласие участника
 // маршрута или день, который указал автор вне маршрута. Форматы это пресеты, язык месяца по языку
-// документа. Метки появились раньше на фронте (срез W14), чем на сервере (R22): у размещения
-// нынешнего сервера их нет, поэтому поля по умолчанию пусты (LEGACY_R22).
+// документа. Сервер отдаёт их с R22.
 export const DateMarkFormatSchema = z.enum([
   "day",
   "month_word",
@@ -87,10 +86,10 @@ export const PlacementSchema = z.object({
   y_mm: z.number(),
   width_mm: z.number(),
   sign_date: z.string().nullable().optional().default(null),
-  /** Метки даты слота документа (14.3). LEGACY_R22: по умолчанию пусто. */
-  dates: z.array(DateMarkSchema).default([]),
-  /** Момент подписи слота в этом документе. LEGACY_R22: по умолчанию null. */
-  signed_at: SignedAtSchema.nullable().default(null),
+  /** Метки даты слота документа (14.3). */
+  dates: z.array(DateMarkSchema),
+  /** Момент подписи слота в этом документе. */
+  signed_at: SignedAtSchema.nullable(),
 });
 
 /**
@@ -319,7 +318,7 @@ export const PlanSlotSchema = z.object({
     .object({ at: z.string(), route_id: z.string() })
     .nullable()
     .default(null),
-  /** Метки даты слота документа: страница, формат и текст сейчас (14.7). LEGACY_R22: пусто. */
+  /** Метки даты слота документа: страница, формат и текст сейчас (14.7). */
   dates: z
     .array(
       z.object({
@@ -329,7 +328,7 @@ export const PlanSlotSchema = z.object({
       }),
     )
     .default([]),
-  /** Момент подписи слота в документе. LEGACY_R22: null. */
+  /** Момент подписи слота в документе. */
   signed_at: SignedAtSchema.nullable().default(null),
 });
 

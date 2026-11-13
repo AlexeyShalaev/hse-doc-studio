@@ -24,6 +24,7 @@ from hse_doc_studio.core.catalog import (
 )
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.enums import (
+    DateMarkFormat,
     DetachedFormat,
     DetachedOrigin,
     DetachedVerdict,
@@ -31,6 +32,7 @@ from hse_doc_studio.core.enums import (
     Lang,
     ProjectKind,
     ProjectStaffing,
+    SignedAtSource,
     SignMode,
     TemplateVersionStatus,
 )
@@ -44,6 +46,7 @@ from hse_doc_studio.core.submission_errors import PackError, PackErrorCode
 from hse_doc_studio.core.value_objects import (
     Author,
     ChecksOverride,
+    DateMark,
     DetachedSignature,
     FrozenPdf,
     PinnedPdf,
@@ -51,6 +54,7 @@ from hse_doc_studio.core.value_objects import (
     SignaturePlacement,
     SignatureSlot,
     SignaturesState,
+    SignedAt,
     SignerInfo,
     SkippedSlot,
 )
@@ -1139,3 +1143,70 @@ def test__pack_planner__images_only_with_skipped_and_optional__no_guide_skipped_
     assert entry.kind is PackEntryKind.stamp_pdf
     assert [s.png for s in entry.stamps] == [ManifestFile(".hse-studio/signatures/author.png")]
     assert [n.code for n in plan.notices] == [NOTICE_OPTIONAL_UNSIGNED]
+
+
+# --- Метки даты подписания (signing-route.md, 14.8) -----------------------------------------------------------------
+
+_DAY_MARK = DateMark(id="d1", page=2, x_mm=120, y_mm=250, width_mm=8, height_mm=5, format=DateMarkFormat.day)
+
+
+def _dated(state: SignaturesState, doc_id: str, slot_id: str, at: str) -> SignaturesState:
+    placement = replace(
+        state.placements[doc_id][slot_id],
+        dates=(_DAY_MARK,),
+        signed_at=SignedAt(at=at, source=SignedAtSource.approval, token="build:x"),
+    )
+    return replace(state, placements={**state.placements, doc_id: {**state.placements[doc_id], slot_id: placement}})
+
+
+def test__pack_planner__image_with_date_mark__date_stamp_goes_to_the_runner_and_back() -> None:
+    state, slot_def = _stamped_state()
+    # 21:30 UTC это уже 13 ноября по Москве.
+    state = _dated(state, "tz", "author", "2026-11-12T21:30:00+00:00")
+    version = _version((_def("tz", "ТЗ.pdf"),), slots=(slot_def,))
+    project = make_project(documents=[make_document("tz")])
+    probe = MemoryProbe({"tz/tz.pdf": _PDF, ".hse-studio/signatures/author.png": b"png"})
+
+    plan = _plan(project, version, probe, docs=_items("tz", signatures=("author",)), state=state)
+
+    [entry] = plan.payload.entries
+    picture, date_mark = entry.stamps
+    assert (picture.height_mm, picture.align) == (0.0, "")
+    assert (date_mark.page, date_mark.text, date_mark.height_mm, date_mark.align, date_mark.png) == (
+        2,
+        "13",
+        5,
+        "center",
+        None,
+    )
+    assert decode(PackSubmissionPayload, encode(plan.payload)) == plan.payload
+
+
+def test__pack_planner__detached_with_date_marks__date_on_the_page_and_signing_time_in_the_guide() -> None:
+    project, version, state, probe = _detached_setup()
+    state = _dated(state, "tz", "advisor", "2026-11-12T21:30:00+00:00")
+    signature = replace(state.detached["tz"]["advisor"], signed_at="2026-11-14T07:05:00Z")
+    state = replace(state, detached={"tz": {"advisor": signature}})
+
+    ru = _plan(project, version, probe, docs=_items("tz", signatures=("advisor",)), state=state)
+    en = _plan(project, version, probe, docs=_items("tz", signatures=("advisor",)), state=state, lang=Lang.en)
+
+    guide = next(e for e in ru.payload.entries if e.arcname == "КАК_ПРОВЕРИТЬ.txt")
+    guide_en = next(e for e in en.payload.entries if e.arcname == "HOW_TO_VERIFY.txt")
+    assert guide.text is not None
+    assert guide_en.text is not None
+    assert "    дата на странице: 13.11.2026\n    время подписи: 14.11.2026 10:05\n" in guide.text
+    assert "    date on the page: 13.11.2026\n    signing time: 14.11.2026 10:05\n" in guide_en.text
+
+
+def test__pack_planner__detached_without_date_marks__no_date_line_but_signing_time() -> None:
+    project, version, state, probe = _detached_setup()
+    signature = replace(state.detached["tz"]["advisor"], signed_at="2026-11-14T07:05:00Z")
+    state = replace(state, detached={"tz": {"advisor": signature}})
+
+    plan = _plan(project, version, probe, docs=_items("tz", signatures=("advisor",)), state=state)
+
+    guide = next(e for e in plan.payload.entries if e.arcname == "КАК_ПРОВЕРИТЬ.txt")
+    assert guide.text is not None
+    assert "дата на странице" not in guide.text
+    assert "    время подписи: 14.11.2026 10:05\n" in guide.text

@@ -5,12 +5,15 @@ from typing import Any
 
 from hse_doc_studio.core.enums import (
     CheckSeverity,
+    DateMarkAlign,
+    DateMarkFormat,
     DetachedFormat,
     DetachedOrigin,
     DetachedVerdict,
     EngineType,
     PersonRole,
     RequirementFormatKind,
+    SignedAtSource,
     SignMode,
 )
 
@@ -114,6 +117,37 @@ class SignatureSlot:
 
 
 @dataclass(frozen=True)
+class DateMark:
+    """Метка даты подписания слота на странице документа (docs/design/signing-route.md, 14.3).
+
+    Своя рамка в миллиметрах от левого верхнего угла страницы, как у размещения; печатается часть дня подписи
+    (`SignaturePlacement.signed_at`) в формате `format`. `id` уникален в пределах слота документа (`d1`, `d2`, ...).
+    """
+
+    id: str
+    page: int
+    x_mm: float
+    y_mm: float
+    width_mm: float
+    height_mm: float
+    format: DateMarkFormat
+    align: DateMarkAlign = DateMarkAlign.centered
+
+
+@dataclass(frozen=True)
+class SignedAt:
+    """Момент подписи слота в документе (14.3): из согласия участника маршрута или день, который указал автор.
+
+    `at` ISO 8601: у согласия момент с поясом, у ручной даты только день («2026-11-13»). `token` отпечаток согласия
+    `build:<sha>` (только у `approval`): по нему маршрут видит, что документ согласован заново и дату пора обновить.
+    """
+
+    at: str
+    source: SignedAtSource
+    token: str = ""
+
+
+@dataclass(frozen=True)
 class SignaturePlacement:
     """Per-(doc, slot) placement on the compiled PDF.
 
@@ -131,6 +165,10 @@ class SignaturePlacement:
     # Дата подписания этой подписи в этом документе (ISO «2026-05-12»).
     # Штампуется текстом «12.05.2026» рядом с подписью; None — без даты.
     sign_date: str | None = None
+    # Метки даты подписания слота (signing-route.md, 14.3): где угодно в документе, рисуются и при `enabled: false`.
+    dates: tuple[DateMark, ...] = ()
+    # Момент подписи этого слота в этом документе: из него печатаются метки даты.
+    signed_at: SignedAt | None = None
 
 
 @dataclass(frozen=True)

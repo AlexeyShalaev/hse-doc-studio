@@ -1,0 +1,47 @@
+{
+  "enabled": true,
+  "page": 2,
+  "x_mm": 60.0,
+  "y_mm": 240.0,
+  "width_mm": 40.0,
+  "sign_date": null,
+  "dates": [
+    {
+      "id": "d1",
+      "page": 2,
+      "x_mm": 120.0,
+      "y_mm": 250.0,
+      "width_mm": 8.0,
+      "height_mm": 5.0,
+      "format": "day",
+      "align": "center",
+      "text": "13"
+    },
+    {
+      "id": "d2",
+      "page": 2,
+      "x_mm": 132.0,
+      "y_mm": 250.0,
+      "width_mm": 22.0,
+      "height_mm": 5.0,
+      "format": "month_word",
+      "align": "left",
+      "text": "ноября"
+    },
+    {
+      "id": "d3",
+      "page": 2,
+      "x_mm": 160.0,
+      "y_mm": 250.0,
+      "width_mm": 6.0,
+      "height_mm": 5.0,
+      "format": "year_short",
+      "align": "center",
+      "text": "26"
+    }
+  ],
+  "signed_at": {
+    "at": "2026-11-12T23:30:00+00:00",
+    "source": "approval"
+  }
+}

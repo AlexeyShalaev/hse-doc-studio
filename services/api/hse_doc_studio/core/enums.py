@@ -260,6 +260,32 @@ class SignMode(StrEnum):
     detached_text = "detached_text"
 
 
+class DateMarkFormat(StrEnum):
+    """Формат метки даты подписания (docs/design/signing-route.md, 14.3): что из дня подписи печатается в рамке."""
+
+    day = "day"  # 3, 13: без ведущего нуля
+    month_word = "month_word"  # ноября (ru, родительный падеж), November (en)
+    month_number = "month_number"  # 03, 11
+    year = "year"  # 2026
+    year_short = "year_short"  # 26
+    date_numeric = "date_numeric"  # 13.11.2026
+    date_long = "date_long"  # 13 ноября 2026 г. (ru), 13 November 2026 (en)
+
+
+class DateMarkAlign(StrEnum):
+    left = "left"
+    # Имя не `center`: так называется метод `str`, а значение по дизайну «center».
+    centered = "center"
+    right = "right"
+
+
+class SignedAtSource(StrEnum):
+    """Откуда момент подписи слота (14.3): согласие участника маршрута или день, который указал автор."""
+
+    approval = "approval"
+    manual = "manual"
+
+
 class DetachedFormat(StrEnum):
     openpgp = "openpgp"  # .asc / .sig, checked with gpg
     cms = "cms"  # .sig / .p7s: CAdES / CMS, RSA, ECDSA or GOST

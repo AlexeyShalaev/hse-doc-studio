@@ -18,7 +18,9 @@ r"""Линтер пака (bundle-раскладка v2): превращает �
   * шапка каждого checks/*.yaml: `label` и `ref` на ru+en — подпись группы правил
     в UI берётся из пака, приложение названий стандартов и ОП не знает;
   * порядок маршрута подписания (`signatures.route`, `signing_route` профиля):
-    разбирается и называет только объявленные слоты, каждый один раз.
+    разбирается и называет только объявленные слоты, каждый один раз;
+  * метки даты по умолчанию слота (`default_dates`): разбираются, рамка внутри
+    листа A4, документ из `applies_to` слота.
 
 Запуск: `python -m hse_doc_studio.infra.template.pack_lint <version_dir>…`
 (exit code 1 при ошибках). Roster ↔ doc.yaml проверяется fail-fast самим
@@ -42,7 +44,7 @@ from hse_doc_studio.infra.project_init.template_renderer import (
     _split_lang_qualifier,
     collect_sources_suffixed,
 )
-from hse_doc_studio.infra.template.yaml_template_repository import parse_signing_route
+from hse_doc_studio.infra.template.yaml_template_repository import parse_default_dates, parse_signing_route
 
 _TEXT_SUFFIXES = {".tex", ".md", ".html", ".txt", ".cls", ".sty", ".bib", ".j2"}
 _INPUT_RE = re.compile(r"\\(?:input|include)\{([^}]+)\}")
@@ -196,6 +198,31 @@ def _lint_signing_routes(manifest: dict[str, Any]) -> list[str]:
     return [error for where, raw in routes if raw is not None for error in _route_errors(where, raw, slots)]
 
 
+def _lint_default_dates(manifest: dict[str, Any]) -> list[str]:
+    """Метки даты по умолчанию слотов (`default_dates`, signing-route.md, 14.10): разбор, рамка в листе A4, документ
+    из `applies_to` слота. Лоадер битый ключ отбрасывает молча (с записью в журнал), линтер делает это ошибкой."""
+    signatures = manifest.get("signatures")
+    signatures = signatures if isinstance(signatures, dict) else {}
+    errors: list[str] = []
+    for slot in signatures.get("slots", []) or []:
+        if not isinstance(slot, dict) or slot.get("default_dates") is None:
+            continue
+        where = f"signatures.slots[{slot.get('id', '?')}]"
+        try:
+            by_doc = parse_default_dates(slot["default_dates"])
+        except (TypeError, ValueError, KeyError) as exc:
+            errors.append(f"{where}: {exc}")
+            continue
+        applies = slot.get("applies_to", [])
+        applies = set(applies) if isinstance(applies, list) else {applies}
+        errors.extend(
+            f"{where}: default_dates.{doc_id}: документ не входит в applies_to слота"
+            for doc_id, _ in by_doc
+            if doc_id not in applies
+        )
+    return errors
+
+
 def _route_errors(where: str, raw: Any, slots: set[str]) -> list[str]:
     try:
         steps = parse_signing_route(raw)
@@ -279,6 +306,7 @@ def lint_version_dir(version_dir: Path) -> LintReport:  # noqa: C901, PLR0912, P
     report.errors.extend(_lint_check_sources(version_dir))
     report.errors.extend(_lint_changes(manifest))
     report.errors.extend(_lint_signing_routes(manifest))
+    report.errors.extend(_lint_default_dates(manifest))
 
     if not langs:
         report.warnings.append("v1-раскладка (нет `langs:`): проверены только Jinja-шаблоны")

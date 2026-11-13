@@ -35,6 +35,7 @@ from hse_doc_studio.core.signing_route.entities import (
     RouteConflictError,
     RouteStatus,
     SigningRoute,
+    date_from_route,
     not_your_turn,
     route_holds_doc,
     route_locked,
@@ -120,6 +121,19 @@ class SigningRouteGate(RouteRecalculation):
             calc = await self._going(route)
             if calc is not None and _slot_on_route(route, calc[0], slot_id):
                 raise route_locked()
+
+    async def require_dates_editable(self, project_id: UUID, doc_id: str, slot_id: str, *, manual: bool) -> None:
+        route = await self._s.routes.holding(project_id, doc_id)
+        if route is None:
+            return
+        if route.status in WATCHING_STATUSES:
+            calc = await self._evaluated(route)
+            # Идущий или завершённый по расчёту маршрут держит правку меток: её проведёт его сценарий (R23).
+            status = calc[1].status if calc is not None else route.status
+            if status in WATCHING_STATUSES:
+                raise route_locked()
+        if manual and DocSlot(doc_id, slot_id) in route.pairs:
+            raise date_from_route()
 
     async def require_not_held(self, project_id: UUID, doc_id: str) -> None:
         if await self._s.routes.holding(project_id, doc_id) is not None:

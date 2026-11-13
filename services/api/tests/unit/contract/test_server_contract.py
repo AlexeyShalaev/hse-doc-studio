@@ -34,6 +34,7 @@ from hse_doc_studio.api.schemas import server_update as upd
 from hse_doc_studio.api.schemas import session as s
 from hse_doc_studio.api.schemas import sharing as sh
 from hse_doc_studio.api.schemas import signature as sig
+from hse_doc_studio.api.schemas import signature_plan as sp
 from hse_doc_studio.api.schemas import signing_route as sr
 from hse_doc_studio.api.schemas import signing_tasks as st
 from pydantic import TypeAdapter, ValidationError
@@ -327,6 +328,10 @@ _SCHEMAS: dict[str, Any] = {
     # «Подпись необязательна» на точке (signing-route.md, 13.6): эталоны в pending до среза W12.
     "SetSlotOptionalRequest": sig.SetSlotOptionalRequest,
     "SlotOptional": sig.SlotOptional,
+    # Метки даты подписания (signing-route.md, 14.7): эталоны в pending до среза W14.
+    "SetDateMarksRequest": sig.SetDateMarksRequest,
+    "Placement": sig.PlacementResponse,
+    "SignaturePlan": sp.SignaturePlanResponse,
 }
 
 
