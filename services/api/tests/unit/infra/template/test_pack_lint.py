@@ -203,3 +203,48 @@ def test__lint_version_dir__signing_route_malformed__reports_error(tmp_path: Pat
     _write_version(tmp_path, _manifest_with_route(route))
 
     assert any(e.startswith("signatures.route:") for e in lint_version_dir(tmp_path).errors)
+
+
+# ── метки даты по умолчанию (`default_dates`, signing-route.md, 14.10) ──
+
+
+def _manifest_with_dates(default_dates: object) -> dict:
+    manifest = _manifest(required_for_pack=True)
+    manifest["signatures"] = {
+        "slots": [{"id": "supervisor", "applies_to": ["project_proposal"], "default_dates": default_dates}]
+    }
+    return manifest
+
+
+def test__lint_version_dir__default_dates_inside_a4__no_error(tmp_path: Path) -> None:
+    marks = [
+        {"page": 2, "x_mm": 120, "y_mm": 250, "width_mm": 8, "height_mm": 5, "format": "day"},
+        {"page": 2, "x_mm": 132, "y_mm": 250, "width_mm": 22, "height_mm": 5, "format": "month_word", "align": "left"},
+    ]
+    _write_version(tmp_path, _manifest_with_dates({"project_proposal": marks}))
+
+    assert lint_version_dir(tmp_path).errors == []
+
+
+@pytest.mark.parametrize(
+    ("dates", "fragment"),
+    [
+        ({"project_proposal": [{"page": 1, "x_mm": 205, "y_mm": 10, "width_mm": 8, "height_mm": 5, "format": "day"}]},
+         "past the edge of the 210 x 297 mm page"),
+        ({"project_proposal": [{"page": 0, "x_mm": 5, "y_mm": 10, "width_mm": 8, "height_mm": 5, "format": "day"}]},
+         "before the first page"),
+        ({"project_proposal": [{"page": 1, "x_mm": 5, "y_mm": 10, "width_mm": 8, "height_mm": 5, "format": "era"}]},
+         "era"),
+        ({"project_proposal": [{"page": 1, "x_mm": 5, "y_mm": 1, "width_mm": 8, "height_mm": 5, "format": "day"}] * 9},
+         "more than 8"),
+        ({"thesis": [{"page": 1, "x_mm": 5, "y_mm": 10, "width_mm": 8, "height_mm": 5, "format": "day"}]},
+         "applies_to"),
+        (["day"], "mapping"),
+    ],
+)  # fmt: skip
+def test__lint_version_dir__default_dates_wrong__reports_error(tmp_path: Path, dates: object, fragment: str) -> None:
+    _write_version(tmp_path, _manifest_with_dates(dates))
+
+    errors = lint_version_dir(tmp_path).errors
+
+    assert any(e.startswith("signatures.slots[supervisor]") and fragment in e for e in errors), errors

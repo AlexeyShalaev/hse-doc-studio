@@ -1,0 +1,114 @@
+{
+  "profile_id": "project-proposal",
+  "total": 2,
+  "signed": 2,
+  "crypto_total": 0,
+  "crypto_signed": 0,
+  "waiting_for_me": 0,
+  "optional_pending": 0,
+  "docs": [
+    {
+      "doc_id": "project_proposal",
+      "built": true,
+      "frozen": null,
+      "slots": [
+        {
+          "slot_id": "author",
+          "label": {
+            "ru": "Автор",
+            "en": "Author"
+          },
+          "signer": {
+            "persona": "author",
+            "name": "Иванов Иван Иванович"
+          },
+          "mode": "image",
+          "method": "image",
+          "crypto": false,
+          "mark": "png",
+          "status": "signed",
+          "reason": null,
+          "hint": "",
+          "allowed_methods": [],
+          "required_by": [
+            "project-proposal"
+          ],
+          "is_mine": true,
+          "check": null,
+          "route_state": "done",
+          "optional": false,
+          "skipped": null,
+          "dates": [],
+          "signed_at": null
+        },
+        {
+          "slot_id": "supervisor",
+          "label": {
+            "ru": "Научный руководитель",
+            "en": "Supervisor"
+          },
+          "signer": {
+            "persona": "supervisor",
+            "name": "Петров Пётр Петрович"
+          },
+          "mode": "image",
+          "method": "image",
+          "crypto": false,
+          "mark": "png",
+          "status": "signed",
+          "reason": null,
+          "hint": "",
+          "allowed_methods": [],
+          "required_by": [
+            "project-proposal"
+          ],
+          "is_mine": false,
+          "check": null,
+          "route_state": "done",
+          "optional": false,
+          "skipped": null,
+          "dates": [
+            {
+              "page": 2,
+              "format": "day",
+              "text": "13"
+            },
+            {
+              "page": 2,
+              "format": "month_word",
+              "text": "ноября"
+            },
+            {
+              "page": 2,
+              "format": "year_short",
+              "text": "26"
+            }
+          ],
+          "signed_at": {
+            "at": "2026-11-12T23:30:00+00:00",
+            "source": "approval"
+          }
+        }
+      ],
+      "held_by_route": false,
+      "pinned": {
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "pinned_at": "2026-11-12T20:00:00+00:00",
+        "route_id": "0b9d6f5e-3c1a-4c8e-9a51-6f2f1a7d2c10",
+        "round": 1
+      },
+      "working_differs": false
+    }
+  ],
+  "route": {
+    "id": "0b9d6f5e-3c1a-4c8e-9a51-6f2f1a7d2c10",
+    "profile_id": "project-proposal",
+    "status": "completed",
+    "phase": "done",
+    "round": 1,
+    "current_step": null,
+    "steps_total": 2,
+    "stop_reason": null,
+    "changed_docs": []
+  }
+}

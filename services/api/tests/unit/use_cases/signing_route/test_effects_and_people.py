@@ -17,6 +17,7 @@ from hse_doc_studio.use_cases.signing_route.views import Membership, People, eve
 
 from tests.factories.signing_routes import make_route
 
+# 21:30 UTC это 00:30 по Москве следующего дня: дата подписи берётся по Москве (signing-route.md, 14.4).
 T0 = datetime(2026, 11, 12, 21, 30, tzinfo=UTC)
 PETROV = UUID(int=2)
 SIGNER = SignerInfo(kind="openpgp", owner="Петров П. П.", cert_id="1A2B", signer_id="ABCD")
@@ -57,7 +58,7 @@ def test__withhold_then_release__slot_held_and_back_with_approval_date() -> None
     assert held.withheld == {"doc": frozenset({"supervisor"})}
     assert again is held
     assert released.withheld == {}
-    assert released.placements["doc"]["supervisor"].sign_date == "2026-11-12"
+    assert released.placements["doc"]["supervisor"].sign_date == "2026-11-13"
     assert released.placements["doc"]["plate"].sign_date == "2026-01-01"
 
 
@@ -85,7 +86,7 @@ def test__fill_plate__only_empty_plate_is_filled() -> None:
 def test__freeze_date__only_plates_get_the_freeze_date() -> None:
     dated = _date_plates(_state(), "doc", T0)
 
-    assert dated.placements["doc"]["plate"].sign_date == "2026-11-12"
+    assert dated.placements["doc"]["plate"].sign_date == "2026-11-13"
     assert dated.placements["doc"]["supervisor"].sign_date == "2026-01-01"
 
 

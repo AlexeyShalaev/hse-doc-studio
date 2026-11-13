@@ -21,7 +21,7 @@ from hse_doc_studio.core.enums import Lang
 from hse_doc_studio.core.jobs.entities import JobResult, JobSpec
 from hse_doc_studio.core.jobs.enums import JobKind, JobStatus
 from hse_doc_studio.core.jobs.errors import JobError
-from hse_doc_studio.core.jobs.files import ManifestFile
+from hse_doc_studio.core.jobs.files import WIRE_OMIT_DEFAULT_KEY, ManifestFile
 from hse_doc_studio.core.jobs.registry import job_kind_spec
 from hse_doc_studio.core.jobs.wire import JobEnvelope, PollResponse
 
@@ -44,8 +44,17 @@ def encode(value: object) -> object:
     if isinstance(value, tuple | list | frozenset | set | dict):
         return _encode_container(value)
     if dataclasses.is_dataclass(value) and not isinstance(value, type):
-        return {f.name: encode(getattr(value, f.name)) for f in dataclasses.fields(value) if f.init}
+        return {
+            f.name: encode(getattr(value, f.name))
+            for f in dataclasses.fields(value)
+            if f.init and not _omitted(f, getattr(value, f.name))
+        }
     raise TypeError(f"{type(value).__name__} cannot be sent in a job")
+
+
+def _omitted(f: dataclasses.Field[Any], value: object) -> bool:
+    """Поле с `WIRE_OMIT_DEFAULT` не пишется, пока равно значению по умолчанию (`files.WIRE_OMIT_DEFAULT`)."""
+    return bool(f.metadata.get(WIRE_OMIT_DEFAULT_KEY)) and value == f.default
 
 
 def _encode_container(

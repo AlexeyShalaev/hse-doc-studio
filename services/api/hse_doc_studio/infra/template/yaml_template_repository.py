@@ -29,6 +29,7 @@ from hse_doc_studio.core.catalog import (
     NdaConfig,
     PackInfo,
     PackSubmissionConfig,
+    SignatureDefaultDate,
     SignatureDefaultPlacement,
     SignaturesConfig,
     SignatureSlotDef,
@@ -41,6 +42,8 @@ from hse_doc_studio.core.catalog import (
 from hse_doc_studio.core.enums import (
     CheckEngine,
     CheckSeverity,
+    DateMarkAlign,
+    DateMarkFormat,
     EngineType,
     FormFieldType,
     MetaFieldAuto,
@@ -50,6 +53,7 @@ from hse_doc_studio.core.enums import (
     TemplateUpdateClass,
     TemplateVersionStatus,
 )
+from hse_doc_studio.core.signatures.dates import MAX_DATE_MARKS, SHEET_HEIGHT_MM, SHEET_WIDTH_MM, frame_problem
 from hse_doc_studio.core.template_versions import MANIFEST_FORMAT
 from hse_doc_studio.core.value_objects import ChecksOverride, RequirementsFormat
 from hse_doc_studio.infra.template.releases import ReleaseEntry, load_releases, version_digest
@@ -581,7 +585,58 @@ def _parse_signature_slot(data: dict[str, Any]) -> SignatureSlotDef:
         default_placement=placement,
         per_author=bool(data.get("per_author", False)),
         required=bool(data.get("required", False)),
+        default_dates=_tolerant_default_dates(data.get("default_dates"), slot_id),
     )
+
+
+def _tolerant_default_dates(raw: Any, slot_id: str) -> tuple[tuple[str, tuple[SignatureDefaultDate, ...]], ...]:
+    """`default_dates` слота; неверный ключ отбрасывается целиком с предупреждением, а сам слот остаётся."""
+    try:
+        return parse_default_dates(raw)
+    except (TypeError, ValueError, KeyError) as exc:
+        logger.warning("signature slot default_dates skipped", slot_id=slot_id, exc=str(exc))
+        return ()
+
+
+def parse_default_dates(raw: Any) -> tuple[tuple[str, tuple[SignatureDefaultDate, ...]], ...]:
+    """Метки даты по умолчанию слота (signing-route.md, 14.10): `{doc_def_id: [{page, x_mm, y_mm, ...}]}`.
+
+    Проверяется при загрузке пака: страница с 1, рамка внутри листа A4, известный формат и выравнивание, не больше
+    восьми меток на документ. Ошибка `ValueError` называет документ и метку. Первая версия метки не применяет.
+    """
+    if raw is None:
+        return ()
+    if not isinstance(raw, dict):
+        raise TypeError("default_dates must be a mapping of document ids to lists of date marks")
+    result: list[tuple[str, tuple[SignatureDefaultDate, ...]]] = []
+    for doc_id, items in raw.items():
+        if not isinstance(items, list):
+            raise TypeError(f"default_dates.{doc_id} must be a list")
+        if len(items) > MAX_DATE_MARKS:
+            raise ValueError(f"default_dates.{doc_id}: more than {MAX_DATE_MARKS} date marks")
+        marks = tuple(_default_date(item, f"default_dates.{doc_id}[{i}]") for i, item in enumerate(items))
+        result.append((str(doc_id), marks))
+    return tuple(result)
+
+
+def _default_date(item: Any, where: str) -> SignatureDefaultDate:
+    if not isinstance(item, dict):
+        raise TypeError(f"{where} must be a mapping")
+    mark = SignatureDefaultDate(
+        page=int(item.get("page", 1)),
+        x_mm=float(item["x_mm"]),
+        y_mm=float(item["y_mm"]),
+        width_mm=float(item["width_mm"]),
+        height_mm=float(item["height_mm"]),
+        format=DateMarkFormat(item["format"]),
+        align=DateMarkAlign(item.get("align", DateMarkAlign.centered.value)),
+    )
+    problem = frame_problem(
+        mark.page, mark.x_mm, mark.y_mm, mark.width_mm, mark.height_mm, (SHEET_WIDTH_MM, SHEET_HEIGHT_MM)
+    )
+    if problem is not None:
+        raise ValueError(f"{where}: {problem}")
+    return mark
 
 
 _SIGN_METHODS = ("image", "detached", "pades")

@@ -45,6 +45,7 @@ from tests.integration.api.signing_routes.watch_stand import drain, notification
 pytestmark = [pytest.mark.pg, pytest.mark.timeout(240)]
 
 LOCKED = "Документ на подписании: отмените маршрут, чтобы изменить подписи"
+DATE_MARK = {"page": 1, "x_mm": 120.0, "y_mm": 250.0, "width_mm": 8.0, "height_mm": 5.0, "format": "day"}
 ON_ROUTE = "Документ на подписании по маршруту"
 
 
@@ -75,6 +76,10 @@ def _edits(trio: Trio, who: Person, *, doc_id: str = APPLICATION, slot_id: str =
         "unfreeze": lambda: trio.call(who, "DELETE", f"{base}/docs/{doc_id}/frozen"),
         "detached signature removal": lambda: trio.call(who, "DELETE", f"{base}/docs/{doc_id}/detached/{slot_id}"),
         "withheld image shown": lambda: trio.call(who, "DELETE", f"{base}/signatures/withheld/{doc_id}/{slot_id}"),
+        # Метки даты под маршрутом правит его сценарий (signing-route.md, 14.6, срез R23); до него 409.
+        "date marks": lambda: trio.call(
+            who, "PUT", f"{base}/signatures/placements/{doc_id}/{slot_id}/dates", json={"dates": [DATE_MARK]}
+        ),
     }
 
 
@@ -206,6 +211,51 @@ async def test__route_not_going__signature_edits_allowed_again(stand: Stand, mon
 
     assert (returned.status_code, cancelled.status_code) == (200, 200)
     assert trio.state()["placements"][APPLICATION]["author"]["x_mm"] == 44
+
+
+async def test__date_marks__completed_route__still_holds_the_document__route_locked(stand: Stand) -> None:
+    """Завершённый маршрут держит документ: метки на нём правит сценарий маршрута (14.6, срез R23)."""
+    trio = await make_trio(stand, images=("author", "supervisor"), academic="none")
+    trio.sent()
+    trio.approved(trio.supervisor)
+    before = trio.state()
+
+    resp = trio.call(
+        trio.author,
+        "PUT",
+        f"{trio.project.base}/signatures/placements/{APPLICATION}/supervisor/dates",
+        json={"dates": [DATE_MARK]},
+    )
+    drain(stand)
+
+    assert trio.route()["status"] == "completed"
+    assert _code(resp) == (409, "route_locked")
+    assert trio.state() == before
+
+
+async def test__date_marks__returned_route__marks_open_but_manual_date_comes_from_the_route(stand: Stand) -> None:
+    """Возвращённый маршрут правку меток не держит, но ручную дату паре участника не поставить; после отмены можно.
+    Чужой слот подписант не правит."""
+    trio = await make_trio(stand, images=("author", "supervisor"), academic="none")
+    base = f"{trio.project.base}/signatures/placements/{APPLICATION}"
+    manual = {"dates": [DATE_MARK], "signed_at": {"date": "2026-11-13"}}
+    trio.sent()
+    assert trio.give_back(trio.supervisor).status_code == 200
+
+    marks = trio.call(trio.author, "PUT", f"{base}/supervisor/dates", json={"dates": [DATE_MARK]})
+    manual_on_route = trio.call(trio.author, "PUT", f"{base}/supervisor/dates", json=manual)
+    by_reviewer = trio.call(trio.supervisor, "PUT", f"{base}/author/dates", json={"dates": []})
+    assert trio.call(trio.author, "POST", f"{trio.url}/cancel", json={}).status_code == 200
+    manual_after_cancel = trio.call(trio.author, "PUT", f"{base}/supervisor/dates", json=manual)
+    drain(stand)
+
+    assert marks.status_code == 200, marks.text
+    assert marks.json()["dates"][0]["text"] is None
+    assert _code(manual_on_route) == (409, "date_from_route")
+    assert by_reviewer.status_code == 403
+    assert manual_after_cancel.status_code == 200, manual_after_cancel.text
+    assert manual_after_cancel.json()["signed_at"] == {"at": "2026-11-13", "source": "manual"}
+    assert [m["format"] for m in trio.state()["placements"][APPLICATION]["supervisor"]["dates"]] == ["day"]
 
 
 async def test__route_stopped_by_calculation__edits_allowed_before_the_stop_is_recorded(stand: Stand) -> None:

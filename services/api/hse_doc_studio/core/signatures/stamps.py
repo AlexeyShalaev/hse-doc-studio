@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Callable, Iterable, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from dataclasses import asdict, dataclass, field, replace
 from datetime import date
 from pathlib import Path, PurePath
@@ -13,8 +13,9 @@ import structlog
 
 from hse_doc_studio.core.enums import SignMode
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.signatures.dates import format_date_mark
 from hse_doc_studio.core.signatures.errors import StampImageError
-from hse_doc_studio.core.value_objects import SignaturesState, SignerInfo
+from hse_doc_studio.core.value_objects import DateMark, SignaturePlacement, SignaturesState, SignerInfo
 
 logger = structlog.get_logger()
 
@@ -86,6 +87,16 @@ class Stamp:
     # Slot the mark belongs to, for error messages only: not part of the visible layer, so it stays out of
     # equality, `repr` and the fingerprints (`stamps_digest`, `legacy_stamps_digest`).
     slot_id: str | None = field(default=None, repr=False, compare=False)
+    # Date mark (signing-route.md, 14.3): `text` fitted into its own box `width_mm` x `height_mm`, no frame, aligned
+    # by `align` and centred vertically. Zero for every other mark. Out of `repr` and left out of the fingerprint
+    # when unset (`_digest_row`): the fingerprints of PDFs frozen before date marks must not change.
+    height_mm: float = field(default=0.0, repr=False)
+    align: str = field(default="", repr=False)
+
+    @property
+    def is_date(self) -> bool:
+        """Метка даты подписания, а не подпись: текст в своей рамке."""
+        return self.height_mm > 0
 
 
 # What the memo «КП и ВКР на СПИ» asks to print in the signature field when the
@@ -173,9 +184,16 @@ def _project_relative(path: PurePath | None, root: PurePath) -> str | None:
     return (path.relative_to(root) if path.is_relative_to(root) else path).as_posix()
 
 
+# Поля метки даты: в отпечаток входят, только если заданы, иначе отпечатки прежних фиксаций устарели бы.
+_DATE_FIELDS = ("height_mm", "align")
+
+
 def _digest_row(stamp: Stamp, root: PurePath) -> dict[str, object]:
     row = {**asdict(stamp), "png_path": _project_relative(stamp.png_path, root)}
     del row["slot_id"]
+    if not stamp.is_date:
+        for name in _DATE_FIELDS:
+            del row[name]
     return row
 
 
@@ -210,7 +228,40 @@ def stamps_digest_matches(stored: str, stamps: Sequence[Stamp], root: PurePath) 
     return stored in (stamps_digest(stamps, root), legacy_stamps_digest(stamps))
 
 
-def stamps_for_doc(
+def date_mark_text(state: SignaturesState, doc_id: str, slot_id: str, mark: DateMark, lang: str) -> str | None:
+    """Что напечатает метка даты сейчас (signing-route.md, 14.3); None, если метка пустая.
+
+    Пустая, если метка слота не рисуется (придержана маршрутом до согласия или пропущена, `mark_hidden`) или у слота
+    нет момента подписи (`signed_at`). Иначе часть дня подписи по Москве в формате метки, месяц на языке документа.
+    """
+    placement = state.placements.get(doc_id, {}).get(slot_id)
+    if placement is None or placement.signed_at is None or state.mark_hidden(doc_id, slot_id):
+        return None
+    return format_date_mark(placement.signed_at.at, mark.format, lang)
+
+
+def _date_stamps(
+    state: SignaturesState, doc_id: str, slot_id: str, placement: SignaturePlacement, lang: str
+) -> Iterator[Stamp]:
+    for mark in placement.dates:
+        text = date_mark_text(state, doc_id, slot_id, mark, lang)
+        if text is None:
+            continue
+        yield Stamp(
+            page=mark.page,
+            x_mm=mark.x_mm,
+            y_mm=mark.y_mm,
+            width_mm=mark.width_mm,
+            png_path=None,
+            aspect_ratio=mark.height_mm / mark.width_mm if mark.width_mm > 0 else 0.0,
+            text=text,
+            slot_id=slot_id,
+            height_mm=mark.height_mm,
+            align=mark.align.value,
+        )
+
+
+def stamps_for_doc(  # noqa: PLR0913 — состояние, документ и необязательные фильтры
     state: SignaturesState,
     doc_id: str,
     project_folder: Path,
@@ -228,55 +279,70 @@ def stamps_for_doc(
     13.3) is left out the same way, unless its mark stays in a frozen PDF that already
     carries e-signatures (`keep_mark`). `png_exists` replaces the disk check (the planner
     looks at the project through its own probe).
+
+    Date marks of a slot (`placement.dates`, 14.3) follow the slot's own mark: they are drawn
+    after it, even when the signature itself is not placed (`enabled: false`), only while the
+    slot has a signing moment (`signed_at`) and its mark is not hidden (withheld or skipped).
     """
     exists = png_exists or Path.exists
     wanted = set(slot_ids) if slot_ids is not None else None
     result: list[Stamp] = []
     for slot_id, placement in state.placements.get(doc_id, {}).items():
-        skipped = not placement.enabled or (wanted is not None and slot_id not in wanted)
-        if skipped or state.mark_hidden(doc_id, slot_id):
+        if (wanted is not None and slot_id not in wanted) or state.mark_hidden(doc_id, slot_id):
             continue
-        slot = state.slots.get(slot_id)
-        if slot is not None and slot.sign_mode is SignMode.detached_text:
-            result.append(
-                Stamp(
-                    page=placement.page,
-                    x_mm=placement.x_mm,
-                    y_mm=placement.y_mm,
-                    width_mm=placement.width_mm,
-                    png_path=None,
-                    aspect_ratio=_DEFAULT_ASPECT,
-                    text=detached_caption(lang),
-                    details=signer_details(slot.signer, lang),
-                    subtitle=level_subtitle(slot.signer, lang),
-                    date_label=date_row_label(lang),
-                    date_text=format_sign_date(placement.sign_date),
-                    slot_id=slot_id,
-                )
-            )
-            continue
-        if slot is None or slot.png_path is None:
-            continue
-        png_path = project_folder / slot.png_path
-        if not exists(png_path):
-            logger.warning("stamps: PNG missing for slot", doc_id=doc_id, slot_id=slot_id, path=str(png_path))
-            continue
-        aspect = _DEFAULT_ASPECT
-        if slot.natural_width_px and slot.natural_height_px and slot.natural_width_px > 0:
-            aspect = slot.natural_height_px / slot.natural_width_px
-        result.append(
-            Stamp(
-                page=placement.page,
-                x_mm=placement.x_mm,
-                y_mm=placement.y_mm,
-                width_mm=placement.width_mm,
-                png_path=png_path,
-                aspect_ratio=aspect,
-                date_text=format_sign_date(placement.sign_date),
-                slot_id=slot_id,
-            )
-        )
+        if placement.enabled:
+            mark = _slot_mark(state, slot_id, placement, project_folder, lang, exists, doc_id)
+            if mark is not None:
+                result.append(mark)
+        result.extend(_date_stamps(state, doc_id, slot_id, placement, lang))
     return result
+
+
+def _slot_mark(  # noqa: PLR0913 — метка одного слота
+    state: SignaturesState,
+    slot_id: str,
+    placement: SignaturePlacement,
+    project_folder: Path,
+    lang: str,
+    exists: Callable[[Path], bool],
+    doc_id: str,
+) -> Stamp | None:
+    """Картинка или плашка слота на его месте; None, если рисовать нечего."""
+    slot = state.slots.get(slot_id)
+    if slot is not None and slot.sign_mode is SignMode.detached_text:
+        return Stamp(
+            page=placement.page,
+            x_mm=placement.x_mm,
+            y_mm=placement.y_mm,
+            width_mm=placement.width_mm,
+            png_path=None,
+            aspect_ratio=_DEFAULT_ASPECT,
+            text=detached_caption(lang),
+            details=signer_details(slot.signer, lang),
+            subtitle=level_subtitle(slot.signer, lang),
+            date_label=date_row_label(lang),
+            date_text=format_sign_date(placement.sign_date),
+            slot_id=slot_id,
+        )
+    if slot is None or slot.png_path is None:
+        return None
+    png_path = project_folder / slot.png_path
+    if not exists(png_path):
+        logger.warning("stamps: PNG missing for slot", doc_id=doc_id, slot_id=slot_id, path=str(png_path))
+        return None
+    aspect = _DEFAULT_ASPECT
+    if slot.natural_width_px and slot.natural_height_px and slot.natural_width_px > 0:
+        aspect = slot.natural_height_px / slot.natural_width_px
+    return Stamp(
+        page=placement.page,
+        x_mm=placement.x_mm,
+        y_mm=placement.y_mm,
+        width_mm=placement.width_mm,
+        png_path=png_path,
+        aspect_ratio=aspect,
+        date_text=format_sign_date(placement.sign_date),
+        slot_id=slot_id,
+    )
 
 
 def slots_with_missing_png(state: SignaturesState, doc_id: str, folder: Path) -> list[str]:

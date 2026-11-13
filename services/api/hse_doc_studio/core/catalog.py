@@ -7,6 +7,8 @@ from typing import Any, Literal
 from hse_doc_studio.core.enums import (
     CheckEngine,
     CheckSeverity,
+    DateMarkAlign,
+    DateMarkFormat,
     EngineType,
     FormFieldType,
     MetaFieldAuto,
@@ -35,6 +37,22 @@ class SignatureDefaultPlacement:
 
 
 @dataclass(frozen=True)
+class SignatureDefaultDate:
+    """Метка даты по умолчанию из пака (signing-route.md, 14.10): рамка на странице документа и формат.
+
+    Первая версия только разбирает и проверяет `default_dates` слота, но размещению их не применяет.
+    """
+
+    page: int
+    x_mm: float
+    y_mm: float
+    width_mm: float
+    height_mm: float
+    format: DateMarkFormat
+    align: DateMarkAlign = DateMarkAlign.centered
+
+
+@dataclass(frozen=True)
 class SignatureSlotDef:
     id: str
     label: dict[str, str]
@@ -48,6 +66,8 @@ class SignatureSlotDef:
     # Пак запрещает отмечать подпись необязательной на любой точке (`required: true`, signing-route.md, 13.3).
     # Это не обязательность на точке (её задают профили сдачи, см. ниже), а запрет её снимать.
     required: bool = False
+    # Метки даты по умолчанию (14.10): пары «id определения документа, метки». Пока не применяются.
+    default_dates: tuple[tuple[str, tuple[SignatureDefaultDate, ...]], ...] = ()
 
     # Поля `required_for` здесь СОЗНАТЕЛЬНО НЕТ. Обязательность подписи — это
     # свойство пары «документ + контрольная точка», а не документа: одно и то же

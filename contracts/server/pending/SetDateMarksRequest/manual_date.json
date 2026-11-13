@@ -1,0 +1,38 @@
+{
+  "dates": [
+    {
+      "id": "d1",
+      "page": 2,
+      "x_mm": 120.0,
+      "y_mm": 250.0,
+      "width_mm": 8.0,
+      "height_mm": 5.0,
+      "format": "day",
+      "align": "center"
+    },
+    {
+      "id": null,
+      "page": 2,
+      "x_mm": 132.0,
+      "y_mm": 250.0,
+      "width_mm": 22.0,
+      "height_mm": 5.0,
+      "format": "month_word",
+      "align": "left"
+    },
+    {
+      "id": null,
+      "page": 2,
+      "x_mm": 160.0,
+      "y_mm": 250.0,
+      "width_mm": 6.0,
+      "height_mm": 5.0,
+      "format": "year_short",
+      "align": "center"
+    }
+  ],
+  "signed_at": {
+    "date": "2026-11-13"
+  },
+  "confirm_reset": false
+}

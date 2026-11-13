@@ -51,6 +51,7 @@ from hse_doc_studio.core.jobs.pack import (
 )
 from hse_doc_studio.core.office import CONVERTIBLE_OFFICE_EXTS, resolve_custom_doc_decision, sibling_pdf_path
 from hse_doc_studio.core.services import ProjectTemplateService, SignatureSlotService
+from hse_doc_studio.core.signatures.dates import display_day, format_moment, format_numeric
 from hse_doc_studio.core.signatures.package_text import (
     BASE_SUFFIX,
     CRYPTO_GUIDE_KINDS,
@@ -212,6 +213,11 @@ def _embedded_for_item(
     ]
 
 
+def _signing_time(signed_at: str | None) -> str:
+    """Время самой ЭП для КАК_ПРОВЕРИТЬ.txt (signing-route.md, 14.8): «14.11.2026 10:05» по Москве, если оно есть."""
+    return (format_moment(signed_at) or "") if signed_at else ""
+
+
 def _stamp_spec(stamp: Stamp) -> StampSpec:
     return StampSpec(
         page=stamp.page,
@@ -225,6 +231,8 @@ def _stamp_spec(stamp: Stamp) -> StampSpec:
         subtitle=stamp.subtitle,
         date_label=stamp.date_label,
         date_text=stamp.date_text,
+        height_mm=stamp.height_mm,
+        align=stamp.align,
     )
 
 
@@ -436,10 +444,26 @@ class _Run:
 
     def _image_signatures(self, item: SubmissionDocItem) -> tuple[GuideSignature, ...]:
         return tuple(
-            GuideSignature("image", self._slot_label(slot_id), signer_for(self.project, slot_id).name)
+            GuideSignature(
+                "image",
+                self._slot_label(slot_id),
+                signer_for(self.project, slot_id).name,
+                page_date=self._page_date(item.doc_id, slot_id),
+            )
             for slot_id in item.signatures
             if _method(self.sig_state, slot_id) is SignMethod.image
         )
+
+    def _page_date(self, doc_id: str, slot_id: str) -> str:
+        """«13.11.2026»: день подписи слота по Москве, если у слота есть метки даты и они видны (14.8); иначе пусто."""
+        state = self.sig_state
+        placement = state.placements.get(doc_id, {}).get(slot_id)
+        if placement is None or not placement.dates or placement.signed_at is None:
+            return ""
+        if state.mark_hidden(doc_id, slot_id):
+            return ""
+        day = display_day(placement.signed_at.at)
+        return format_numeric(day) if day is not None else ""
 
     def _unsigned_signatures(self, item: SubmissionDocItem) -> tuple[GuideSignature, ...]:
         """Строки инструкции без подписи (13.11): пропущенные маршрутом на этой точке, в том числе слоты сверх точки
@@ -564,13 +588,24 @@ class _Run:
             )
             sigs.append(PackageSignature(label, sig_name, sig.format, signer, sig.signer_id))
             guide_sigs.append(
-                GuideSignature("detached", label, signer, str(parent / sig_name), sig.format, str(parent / base_name))
+                GuideSignature(
+                    "detached",
+                    label,
+                    signer,
+                    str(parent / sig_name),
+                    sig.format,
+                    str(parent / base_name),
+                    page_date=self._page_date(item.doc_id, slot_id),
+                    signing_time=_signing_time(sig.signed_at),
+                )
             )
         guide_sigs += [
             GuideSignature(
                 "pades",
                 self._slot_label(slot_id),
                 signer_display_name(emb.signer) or signer_for(self.project, slot_id).name,
+                page_date=self._page_date(item.doc_id, slot_id),
+                signing_time=_signing_time(emb.signed_at),
             )
             for slot_id, emb in embedded
         ]
