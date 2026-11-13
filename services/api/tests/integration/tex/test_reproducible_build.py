@@ -144,3 +144,21 @@ def test__build__fixed_pdf_date_and_real_year_in_text(first: _Built, tmp_path: P
     assert info is not None
     assert str(info["/CreationDate"]).startswith("D:19800101000000")
     assert any(f"YEAR{year}" in text for year in first.years), text
+
+
+async def test__build__without_hyperref__creator_without_the_build_minute(tmp_path: Path) -> None:
+    # TeX пишет в заголовок XDV дату и минуту сборки, xdvipdfmx кладёт их в `/Creator`, если документ не задал свой
+    # (hyperref задаёт). Постоянный комментарий: документ без hyperref, собранный в другую минуту, даёт тот же PDF.
+    project = tmp_path / "plain"
+    (project / "tz").mkdir(parents=True)
+    (project / "tz" / "main.tex").write_text(
+        "\\documentclass{article}\n\\begin{document}\nЗаявление\n\\end{document}\n", encoding="utf-8"
+    )
+
+    pdf = await _build(_executor(_runner_limits()), project)
+
+    path = tmp_path / "main.pdf"
+    path.write_bytes(pdf)
+    info = PdfReader(path).metadata
+    assert info is not None
+    assert info["/Creator"] == "hse-doc-studio"

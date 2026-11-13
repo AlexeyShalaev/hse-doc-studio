@@ -15,6 +15,7 @@ from hse_doc_studio.core.jobs.artifacts import IArtifactStore, PublishPdfRequest
 from hse_doc_studio.infra.compile.host_path_resolver import HostPathResolver
 from hse_doc_studio.infra.compile.latexmk import ENGINE_FLAG as _ENGINE_FLAG
 from hse_doc_studio.infra.compile.latexmk import NONROOT_TEX_ENV as _NONROOT_TEX_ENV
+from hse_doc_studio.infra.compile.latexmk import REPRODUCIBLE_LATEXMK_OPTIONS as _REPRODUCIBLE_LATEXMK_OPTIONS
 from hse_doc_studio.infra.compile.latexmk import REPRODUCIBLE_TEX_ENV as _REPRODUCIBLE_TEX_ENV
 from hse_doc_studio.infra.compile.latexmk import SENTINEL_DONE as _SENTINEL_DONE
 from hse_doc_studio.infra.compile.latexmk import SENTINEL_FAILED as _SENTINEL_FAILED
@@ -271,6 +272,8 @@ class DockerCompileExecutor:
             "-file-line-error",
             "-synctex=1",
             f"-output-directory={build_subdir}",
+            # Постоянный комментарий XDV вместо минуты сборки (`/Creator` PDF, см. latexmk.py).
+            *_REPRODUCIBLE_LATEXMK_OPTIONS,
             "-e",
             f"$max_repeat={max_iterations};",
             src_basename,

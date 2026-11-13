@@ -1,0 +1,31 @@
+% Якоря мест подписей и дат (docs/design/signing-route.md, 15.17.3). Эталон файла пака `common/anchors.tex`:
+% пак кладёт его копию байт в байт и подключает `\input{../common/anchors}` после `common/meta`.
+%
+% \hseSignAnchor[<ширина линии>]{<слот>}       перед линией подписи, на её базовой линии
+% \hseDateAnchor[<ширина линии>]{<слот>}{<часть>} перед частью строки даты (day, month_word, year, ...)
+%
+% На PDF ничего не печатает. При выводе страницы пишет позицию в `<jobname>.hsepos` каталога сборки:
+%   hsepos 1 <ширина бумаги> <высота бумаги>
+%   sign <слот> - <страница> <x> <y> <ширина>
+%   date <слот> <часть> <страница> <x> <y> <ширина>
+% числа в sp от левого нижнего угла страницы. Имя и часть: [a-z][a-z0-9_]{0,39}.
+\makeatletter
+\ExplSyntaxOn
+\cs_new_eq:NN \hse@savepos  \tex_savepos:D    % pdfTeX и XeTeX: \pdfsavepos; LuaTeX: \savepos
+\cs_new_eq:NN \hse@lastxpos \tex_lastxpos:D
+\cs_new_eq:NN \hse@lastypos \tex_lastypos:D
+\ExplSyntaxOff
+\newwrite\hse@posfile
+\newcount\hse@page
+\AddToHook{shipout/before}{\global\advance\hse@page\@ne}
+\AtBeginDocument{\immediate\openout\hse@posfile=\jobname.hsepos\relax
+  \immediate\write\hse@posfile{hsepos 1 \number\paperwidth\space\number\paperheight}}
+% #1 sign|date, #2 имя, #3 часть (у подписи «-»), #4 ширина линии
+\newcommand\hse@anchor[4]{%
+  \leavevmode\hse@savepos
+  \edef\hse@tmp{\write\hse@posfile{#1 #2 #3 \noexpand\the\hse@page\space
+    \noexpand\the\hse@lastxpos\space\noexpand\the\hse@lastypos\space\number\dimexpr#4\relax}}%
+  \hse@tmp}
+\newcommand\hseSignAnchor[2][0pt]{\hse@anchor{sign}{#2}{-}{#1}}
+\newcommand\hseDateAnchor[3][0pt]{\hse@anchor{date}{#2}{#3}{#1}}
+\makeatother

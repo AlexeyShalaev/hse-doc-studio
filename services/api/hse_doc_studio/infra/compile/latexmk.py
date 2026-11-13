@@ -64,6 +64,12 @@ REPRODUCIBLE_TEX_ENV = (
     ("SOURCE_DATE_EPOCH", str(SOURCE_DATE_EPOCH)),
     ("FORCE_SOURCE_DATE", "0"),
 )
+# Комментарий в заголовке DVI/XDV: TeX пишет туда настоящие дату и минуту сборки («XeTeX output 2026.11.13:2231»,
+# FORCE_SOURCE_DATE=0 их не трогает), а xdvipdfmx кладёт его в `/Creator` PDF, если документ не задал свой (hyperref
+# задаёт). Без постоянного комментария документ без hyperref, собранный в другую минуту, давал другой PDF. Для
+# pdfTeX и LuaTeX в режиме PDF опция ничего не меняет.
+OUTPUT_COMMENT = "hse-doc-studio"
+REPRODUCIBLE_LATEXMK_OPTIONS = (f"-latexoption=-output-comment={OUTPUT_COMMENT}",)
 
 # Под не-root формат движка собирается заранее вне `-output-directory`, см. DockerCompileExecutor._tex_launcher.
 NONROOT_FORMAT_PREPARE = 'cd /tmp && fmtutil-user --byfmt "$0" >&2; cd "$OLDPWD" && exec "$@"'
@@ -109,6 +115,7 @@ def latexmk_argv(engine_flag: str, max_iterations: int, src: TexSource) -> list[
         "-file-line-error",
         "-synctex=1",
         f"-output-directory={src.build_subdir}",
+        *REPRODUCIBLE_LATEXMK_OPTIONS,
         "-e",
         f"$max_repeat={max_iterations};",
         src.basename,

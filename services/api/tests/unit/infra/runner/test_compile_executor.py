@@ -133,6 +133,8 @@ async def test__execute__any_profile__fixed_pdf_date_and_real_date_in_text(tmp_p
     latexmk = next(call for call in recorded_calls(docker_log) if "latexmk" in call)
     env = {latexmk[i + 1] for i, arg in enumerate(latexmk[:-1]) if arg == "-e"}
     assert {"SOURCE_DATE_EPOCH=315532800", "FORCE_SOURCE_DATE=0"} <= env
+    # Комментарий XDV без минуты сборки: иначе он попадает в `/Creator` PDF документа без hyperref.
+    assert "-latexoption=-output-comment=hse-doc-studio" in latexmk
 
 
 async def test__execute__latexmk_fails__failed_result_without_outputs(
