@@ -17,6 +17,7 @@ import {
   signingPagePath,
   signingRouteKeys,
   useCreateSigningRoute,
+  useRestoreSigningRoutePreset,
   useSendSigningRoute,
   useSigningRoute,
   useSigningRoutePreview,
@@ -38,6 +39,7 @@ import {
   type DraftSteps,
 } from "../model/routeDraft";
 import { RouteDocsCard } from "./RouteDocsCard";
+import { RoutePresetBar } from "./RoutePresetBar";
 import { RoutePlacementsCard } from "./RoutePlacementsCard";
 import { RouteSendCard } from "./RouteSendCard";
 import { RouteStepsCard } from "./RouteStepsCard";
@@ -152,6 +154,7 @@ export const SigningRouteEditor = ({
   });
   const update = useUpdateSigningRoute(project.id, routeId);
   const send = useSendSigningRoute(project.id, routeId);
+  const restorePreset = useRestoreSigningRoutePreset(project.id, routeId);
   const signatures = useSignaturesState(project.id);
   const setOptional = useSetSlotOptional();
   const documents = useDocuments(project.id);
@@ -335,7 +338,7 @@ export const SigningRouteEditor = ({
       ? undefined
       : route.steps[myStepIndex]?.find((p) => p.user_id === meId);
   const present = new Set(people.map((p) => p.persona));
-  const busy = update.isPending || send.isPending;
+  const busy = update.isPending || send.isPending || restorePreset.isPending;
 
   const steps = (
     <RouteStepsCard
@@ -366,6 +369,24 @@ export const SigningRouteEditor = ({
         }}
         isCreating={isCreating}
       />
+      {/* Маршрут из шаблона (15.7): `preset` есть только у маршрута, который можно править. */}
+      {editable && route.preset !== null && (
+        <RoutePresetBar
+          preset={route.preset}
+          busy={busy}
+          pending={restorePreset.isPending}
+          onRestore={() =>
+            restorePreset.mutateAsync().then(
+              () => {
+                toast.success(t("preset.restored"));
+              },
+              (error: unknown) => {
+                toast.error(`${t("preset.failed")}: ${errorText(error)}`);
+              },
+            )
+          }
+        />
+      )}
       {route.status === "active" && me && isActionable(me.next_action) && (
         <div style={{ marginTop: "0.75rem" }} data-testid="route-my-turn">
           <Notice
@@ -470,6 +491,7 @@ export const SigningRouteEditor = ({
               <RoutePlacementsCard
                 projectId={project.id}
                 route={route}
+                preset={route.preset}
                 preview={preview.data}
                 editable
                 busy={busy}

@@ -122,6 +122,10 @@
         "title": "Signing: dates",
         "hint": "Signing dates: the supervisor's “13 November 2026” as three marks on a completed route (editing asks about resetting their e-signature), the academic supervisor's date on page two, a manual date in a project without a route. In another project the signing page shows “Approval date” frames."
       },
+      "student_signing_presets": {
+        "title": "Signing: route from the template",
+        "hint": "Template 2026.1.4 with a ready route. In “Bertie” the checkpoint draft is not created yet: “Prepare and send” gives the author and the supervisor at once, the template signature places are on, the supervisor has date marks, the academic supervisor is not added (the supervisor is from HSE). In another project the draft is changed: you added the academic supervisor and moved the supervisor place, so “Reset to template” and “Reset place to template” are there."
+      },
       "student_signing_migration": {
         "title": "Signing: 0.20.0 migration",
         "hint": "The student's route was sent before versions on signature and its version cannot be restored: the route is stopped and needs a new version."

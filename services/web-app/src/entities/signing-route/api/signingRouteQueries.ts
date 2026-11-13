@@ -209,6 +209,18 @@ export const useSkipSigningParticipant = (
   });
 };
 
+/** «Вернуть как в шаблоне» (15.6): отметки «необязательна» живут в состоянии подписей, оно тоже перечитывается. */
+export const useRestoreSigningRoutePreset = (
+  projectId: string,
+  routeId: string,
+) => {
+  const after = useAfterRouteChange(projectId);
+  return useMutation({
+    mutationFn: () => signingRouteApi.restorePreset(projectId, routeId),
+    onSettled: (route) => after(route, routeId),
+  });
+};
+
 export const useArchiveSigningRoute = (projectId: string, routeId: string) => {
   const after = useAfterRouteChange(projectId);
   return useMutation({

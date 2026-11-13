@@ -106,7 +106,11 @@
     "optionalHint": "The route author will be able to skip this signer. The signature place will stay empty",
     "optionalRequired": "The template requires this signature: it cannot be made optional",
     "optionalSigned": "Already signed",
-    "optionalFailed": "Could not change the mark"
+    "optionalFailed": "Could not change the mark",
+    "addedByPack": "added by the template",
+    "addedByPackWhy": "added by the template: {{condition}}",
+    "presetOptional": "as in the template",
+    "conditionHint": "The template adds this signature only if {{condition}}"
   },
   "mine": {
     "title": "Your signature",
@@ -171,5 +175,38 @@
     "rate_limited": "Too often. Retry in {{seconds}} s.",
     "network": "The server is unreachable. Check the connection.",
     "generic": "Something went wrong. Retry."
+  },
+  "preset": {
+    "fromTemplate": "From the template",
+    "fromTemplateTitle": "The order, the extra signatures and the “optional” marks are as in template {{version}}",
+    "changed": "Changed by you",
+    "changedTitle": "Differs from the template: {{what}}",
+    "changedWhat": "differs: {{what}}",
+    "diff": {
+      "order": "order",
+      "slots": "extra signatures",
+      "optional": "“optional” marks"
+    },
+    "reset": "Reset to template",
+    "confirm": {
+      "title": "Reset to the template?",
+      "text": "The order, the extra signatures and the “optional” marks will be as in the template. People stay if their role is in the template. Signature places on the pages will not change",
+      "reset": "Reset",
+      "cancel": "Cancel"
+    },
+    "restored": "The route is as in the template",
+    "failed": "Could not reset the route to the template"
+  },
+  "condition": {
+    "supervisor": "a supervisor is set",
+    "supervisor_university": "the supervisor is from HSE",
+    "supervisor_company": "the supervisor is not from HSE",
+    "co_supervisor": "a consultant is set",
+    "co_supervisor_university": "the consultant is from HSE",
+    "co_supervisor_company": "the consultant is not from HSE",
+    "academic_supervisor": "an academic supervisor is set",
+    "academic_supervisor_university": "the academic supervisor is from HSE",
+    "academic_supervisor_company": "the academic supervisor is not from HSE",
+    "other": "the template condition is met"
   }
 }

@@ -12,6 +12,9 @@ import { z } from "zod";
 //
 // Дата подписания (раздел 14.7): у слотов задачи метки даты `dates` (место рамки и текст), поле
 // обязательно (срез R23).
+//
+// Маршрут из шаблона (раздел 15.11): `preset` маршрута, `added_by` и `preset_optional` слотов
+// обязательны (срез R25 снял совместимость `LEGACY_R25` W15).
 
 const iso = z.string().min(1);
 const LocalizedSchema = z.record(z.string(), z.string());
@@ -231,6 +234,10 @@ export const RouteParticipantSchema = z.strictObject({
 });
 export type RouteParticipant = z.infer<typeof RouteParticipantSchema>;
 
+/** Кто добавил слот сверх точки (15.11): шаблон по своему условию или автор маршрута. */
+export const RouteSlotAddedBySchema = z.enum(["pack", "author"]);
+export type RouteSlotAddedBy = z.infer<typeof RouteSlotAddedBySchema>;
+
 export const RouteDocSlotSchema = z.strictObject({
   slot_id: z.string(),
   label: LocalizedSchema,
@@ -241,12 +248,12 @@ export const RouteDocSlotSchema = z.strictObject({
   optional: z.boolean(),
   status: RouteSlotStatusSchema,
   /**
-   * Кто добавил слот сверх точки (15.11): `pack` шаблон, `author` автор; null у пары точки.
-   * Пока необязательно: пометки по нему делает W15.
+   * У слота сверх точки (`extra`): добавил шаблон (`signing_slots` пака) или автор; null у пары
+   * точки.
    */
-  added_by: z.enum(["pack", "author"]).nullable().optional(),
-  /** Пресет точки отмечает подпись необязательной: галочка «по шаблону» (15.7). */
-  preset_optional: z.boolean().optional(),
+  added_by: RouteSlotAddedBySchema.nullable(),
+  /** Шаблон отмечает подпись необязательной на точке (15.3). */
+  preset_optional: z.boolean(),
 });
 
 export type RouteDocSlot = z.infer<typeof RouteDocSlotSchema>;
@@ -299,23 +306,43 @@ export type RoutePersonaCandidates = z.infer<
   typeof RoutePersonaCandidatesSchema
 >;
 
-/** Условие слота сверх точки из шаблона (`when`, 15.3): человек указан и, если задана роль, с ней. */
-export const RoutePresetConditionSchema = z.strictObject({
-  person: z.enum(["supervisor", "co_supervisor", "academic_supervisor"]),
+/**
+ * Условие слота сверх точки в шаблоне (`when`, 15.3): человек персоны указан в проекте, а с `role`
+ * ещё и с такой ролью (`university` из ВШЭ, `company` не из ВШЭ).
+ */
+export const PresetConditionSchema = z.strictObject({
+  person: z.string(),
   role: z.enum(["university", "company"]).nullable(),
 });
+export type PresetCondition = z.infer<typeof PresetConditionSchema>;
 
-export const RoutePresetSlotSchema = z.strictObject({
+/** Слот сверх точки в шаблоне: пара и её условие; null: включается всегда. */
+export const PresetExtraSlotSchema = z.strictObject({
   doc_id: z.string(),
   slot_id: z.string(),
-  when: RoutePresetConditionSchema.nullable(),
+  when: PresetConditionSchema.nullable(),
 });
+export type PresetExtraSlot = z.infer<typeof PresetExtraSlotSchema>;
+
+/** Слот сверх точки, который шаблон не добавил: его условие на людях проекта не выполнено. */
+export const PresetSkippedSlotSchema = z.strictObject({
+  doc_id: z.string(),
+  slot_id: z.string(),
+  when: PresetConditionSchema,
+});
+export type PresetSkippedSlot = z.infer<typeof PresetSkippedSlotSchema>;
+
+/** Чем состав маршрута отличается от шаблона: порядок, слоты сверх точки, отметки «необязательна». */
+export const PresetDiffSchema = z.enum(["order", "slots", "optional"]);
+export type PresetDiff = z.infer<typeof PresetDiffSchema>;
 
 /**
- * Пресет точки для проекта сейчас (15.11): шаги персонами, слоты сверх точки, отметки «необязательна»,
- * слоты, которые шаблон не добавил по условию, и чем маршрут отличается (`differs`, пусто: как в шаблоне).
+ * Маршрут точки по шаблону для этого проекта сейчас (15.11): шаги персон, слоты сверх точки с
+ * условиями (только выполненные), необязательные пары, слоты, не добавленные по условию, и чем
+ * маршрут от него отличается. `differs` пуст: маршрут как в шаблоне.
  */
 export const RoutePresetSchema = z.strictObject({
+  /** Версия шаблона проекта. */
   version: z.string(),
   /**
    * Версия шаблона, по пресету которой собран состав маршрута; null: не по пресету. Отличается от
@@ -323,16 +350,10 @@ export const RoutePresetSchema = z.strictObject({
    */
   base_version: z.string().nullable(),
   steps: z.array(z.array(z.string())),
-  extra_slots: z.array(RoutePresetSlotSchema),
+  extra_slots: z.array(PresetExtraSlotSchema),
   optional: z.array(RouteSlotRefSchema),
-  skipped_by_condition: z.array(
-    z.strictObject({
-      doc_id: z.string(),
-      slot_id: z.string(),
-      when: RoutePresetConditionSchema,
-    }),
-  ),
-  differs: z.array(z.enum(["order", "slots", "optional"])),
+  skipped_by_condition: z.array(PresetSkippedSlotSchema),
+  differs: z.array(PresetDiffSchema),
 });
 export type RoutePreset = z.infer<typeof RoutePresetSchema>;
 
@@ -365,10 +386,10 @@ export const SigningRouteSchema = z.strictObject({
   /** Документы с `changed`, по порядку `docs`: есть что отправить новой версией (12.6). */
   changed_docs: z.array(z.string()),
   /**
-   * Пресет точки (15.11): только тому, кто управляет маршрутом, у маршрута, который можно править,
-   * если шаблон его задаёт; иначе null. Пока необязательно: интерфейс делает W15.
+   * Маршрут точки по шаблону (15.11): только тому, кто управляет маршрутом, и только у маршрута,
+   * который можно править; иначе null.
    */
-  preset: RoutePresetSchema.nullable().optional(),
+  preset: RoutePresetSchema.nullable(),
   /**
    * Срок точки, из которого сервер посчитал срок черновика (16.5, R29); только управляющему.
    * Редактор по нему пишет «Срок точки изменился». Сервер до R29 поля не присылает.

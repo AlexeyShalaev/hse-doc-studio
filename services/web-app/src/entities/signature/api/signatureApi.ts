@@ -12,6 +12,7 @@ import {
   SlotInfoSchema,
   SlotOptionalSchema,
   UploadSignatureResponseSchema,
+  type RestorePlacementRequest,
   type SetDateMarksRequest,
 } from "./signatureSchemas";
 
@@ -86,6 +87,24 @@ export const signatureApi = {
     apiClient
       .put(
         `/projects/${projectId}/signatures/placements/${encodeURIComponent(docId)}/${encodeURIComponent(slotId)}/dates`,
+        body,
+      )
+      .then(parseResp(PlacementSchema)),
+
+  /**
+   * «Вернуть место из шаблона» (signing-route.md, 15.6, 15.11): место и метки даты слота
+   * документа как в шаблоне, `enabled` не меняется. 409 `resets_signatures` (с `resets`) и
+   * `route_locked` разбирает тот, кто вызвал (409 общий тост клиента не показывает).
+   */
+  restorePlacement: (
+    projectId: string,
+    docId: string,
+    slotId: string,
+    body: RestorePlacementRequest,
+  ) =>
+    apiClient
+      .post(
+        `/projects/${projectId}/signatures/placements/${encodeURIComponent(docId)}/${encodeURIComponent(slotId)}/restore`,
         body,
       )
       .then(parseResp(PlacementSchema)),

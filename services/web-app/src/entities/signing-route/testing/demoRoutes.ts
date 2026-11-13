@@ -18,12 +18,15 @@ import {
   UpdateSigningRouteRequestSchema,
   type ParticipantMembership,
   type ParticipantState,
+  type PresetCondition,
+  type PresetDiff,
   type RouteDocChange,
   type RouteDocVersion,
   type RouteEvent,
   type RouteEventKind,
   type RouteParticipant,
   type RoutePersonaCandidates,
+  type RoutePreset,
   type RouteSignMethod,
   type RouteSlotRef,
   type SigningKeyInfo,
@@ -68,7 +71,12 @@ import {
 //   подписей (`isOptional`), пропустить можно участника в очереди, у которого все оставшиеся пары
 //   необязательны (`POST .../participants/{pid}/skip`, коды 13.6); пропущенный проходит шаг, его
 //   метка уходит из видимого слоя, а B без ЭП над ним фиксируется заново; новый раунд переносит
-//   пропуск, пока пары необязательны, иначе участник возвращается в маршрут.
+//   пропуск, пока пары необязательны, иначе участник возвращается в маршрут;
+// - маршрут из шаблона (раздел 15): у профиля пресет пака (`preset`: слоты сверх точки с условием
+//   на людях проекта, необязательные пары); первый черновик точки берёт из него слоты сверх точки,
+//   отметки «необязательна» (`onPresetOptional`) и места пар (`onPresetPlaces`); маршрут отдаёт
+//   `preset` управляющему, `added_by` и `preset_optional` у слотов; «Вернуть как в шаблоне»
+//   (`POST .../restore-preset`) только у маршрута, который можно править (409 `invalid_transition`).
 
 type Localized = Record<string, string>;
 
@@ -109,13 +117,30 @@ export type SigningDemoDoc = {
   slots: SigningDemoSlot[];
 };
 
+/** Пресет точки в паке (раздел 15.3): то, что пак задаёт сверх порядка шагов. */
+export type SigningDemoPreset = {
+  /** Версия шаблона проекта, из которой пресет. */
+  version: string;
+  /** Слоты сверх точки (`signing_slots` профиля); `when` null: включается всегда. */
+  extra: (RouteSlotRef & { when: PresetCondition | null })[];
+  /** Пары, которые пак отмечает необязательными на точке. */
+  optional: RouteSlotRef[];
+};
+
 export type SigningDemoProfile = {
   id: string;
   name: Localized;
   docs: SigningDemoDoc[];
   /** Порядок по умолчанию из пака: шаги персон, внутри шага параллельно. */
   order: string[][];
+  /** Пресет пака (раздел 15); без него только порядок шагов. */
+  preset?: SigningDemoPreset;
 };
+
+/** Люди проекта для условий пресета: персона указана, с ролью или без неё (null). */
+export type SigningDemoPeople = Partial<
+  Record<string, "university" | "company" | null>
+>;
 
 export type SigningRouteDemoOptions = {
   /** Кто сейчас вошёл; null: 401. */
@@ -160,6 +185,25 @@ export type SigningRouteDemoOptions = {
     docId: string,
     slotId: string,
   ) => boolean;
+  /**
+   * Пресет точки для проекта (раздел 15): версия шаблона проекта с пресетом или null (версия без
+   * него: только порядок шагов, места пар не ставятся). Без функции пресет профиля.
+   */
+  presetFor?: (
+    projectId: string,
+    profile: SigningDemoProfile,
+  ) => SigningDemoPreset | null;
+  /** Люди проекта для условий пресета; без функции указан только научрук из ВШЭ. */
+  peopleOf?: (projectId: string) => SigningDemoPeople;
+  /** Пресет ставит или снимает отметку «необязательна» у пары (состояние подписей проекта). */
+  onPresetOptional?: (
+    projectId: string,
+    profileId: string,
+    pair: RouteSlotRef,
+    optional: boolean,
+  ) => void;
+  /** Пресет ставит места пар из шаблона, где места нет или оно как в шаблоне (15.5). */
+  onPresetPlaces?: (projectId: string, pairs: RouteSlotRef[]) => void;
   now?: () => number;
   /**
    * Срок контрольной точки в проекте (16.3). С ним новый черновик получает срок маршрута на сутки
@@ -271,6 +315,15 @@ export type SigningRouteDemo = {
     signer: SigningDemoUser;
     academic: SigningDemoUser;
   }) => string | null;
+  /**
+   * Черновик точки автора, как при первом заходе (с пресетом), и правки состава поверх него:
+   * `extra` слоты сверх точки, которые автор добавил сам. Возвращает id маршрута.
+   */
+  seedDraft: (input: {
+    projectId: string;
+    author: SigningDemoUser;
+    extra?: RouteSlotRef[];
+  }) => string | null;
 };
 
 type ProfileRef = { id: string; name: Localized };
@@ -343,6 +396,25 @@ export const DEMO_SIGNING_PROFILE: SigningDemoProfile = {
     },
   ],
   order: [["author"], ["supervisor", "co_supervisor"], ["academic_supervisor"]],
+  // Согласие академрука нужно только при научруке не из ВШЭ (раздел 15.10).
+  preset: {
+    version: "2026.1.4",
+    extra: [
+      {
+        doc_id: "topic_application",
+        slot_id: "academic_supervisor",
+        when: { person: "supervisor", role: "company" },
+      },
+    ],
+    optional: [],
+  },
+};
+
+/** Версия шаблона без пресета: только порядок шагов. */
+const NO_PRESET: SigningDemoPreset = {
+  version: "2026.1.3",
+  extra: [],
+  optional: [],
 };
 
 export const DEMO_SIGNING_MEMBERS: SigningDemoMember[] = [
@@ -427,6 +499,14 @@ type Route = {
 
 type Body = Record<string, unknown>;
 
+/** Маршрут можно править (`EDITABLE_STATUSES`): правка, «Вернуть как в шаблоне», `preset`. */
+const EDITABLE: SigningRouteStatus[] = [
+  "draft",
+  "paused",
+  "returned",
+  "cancelled",
+];
+
 const notFound = () => demoError(404, "not_found", "Not Found");
 const conflict = (code: string, detail: string, extra: Body = {}) =>
   demoError(409, code, detail, extra);
@@ -462,6 +542,15 @@ export const createSigningRouteDemo = (
   const mailEnabled = options.mailEnabled ?? (() => false);
   const isOptionalOption = options.isOptional ?? (() => false);
   const datesOf = options.datesOf ?? (() => []);
+  const presetFor =
+    options.presetFor ??
+    ((_projectId: string, profile: SigningDemoProfile) =>
+      profile.preset ?? null);
+  const peopleOf =
+    options.peopleOf ??
+    ((): SigningDemoPeople => ({ supervisor: "university" }));
+  const onPresetOptional = options.onPresetOptional ?? (() => undefined);
+  const onPresetPlaces = options.onPresetPlaces ?? (() => undefined);
 
   let routes: Route[] = [];
   let seq = 0;
@@ -806,6 +895,105 @@ export const createSigningRouteDemo = (
     user !== null &&
     (authors.get(r.id)?.id === user.id || r.sent_by?.id === user.id);
 
+  // Пресет пака (раздел 15)
+
+  const samePair = (a: RouteSlotRef, b: RouteSlotRef): boolean =>
+    a.doc_id === b.doc_id && a.slot_id === b.slot_id;
+  const presetOf = (r: Route): SigningDemoPreset =>
+    presetFor(r.project_id, r.profile) ?? NO_PRESET;
+  /** Условие слота сверх точки на людях проекта: персона указана, с ролью, если она задана. */
+  const conditionMet = (
+    projectId: string,
+    when: PresetCondition | null,
+  ): boolean => {
+    if (when === null) return true;
+    const people = peopleOf(projectId);
+    if (!(when.person in people)) return false;
+    return when.role === null || people[when.person] === when.role;
+  };
+  /** Слоты сверх точки, которые пресет включает в этом проекте сейчас. */
+  const presetExtras = (r: Route): RouteSlotRef[] =>
+    presetOf(r)
+      .extra.filter((slot) => conditionMet(r.project_id, slot.when))
+      .map((slot) => ({ doc_id: slot.doc_id, slot_id: slot.slot_id }));
+  const presetOptional = (r: Route, pair: RouteSlotRef): boolean =>
+    presetOf(r).optional.some((ref) => samePair(ref, pair));
+  /** Шаги по порядку пака для персон пар; персона без места в порядке идёт последним шагом. */
+  const stepsFor = (profile: SigningDemoProfile, personas: Set<string>) => {
+    const ordered = profile.order
+      .map((step) => step.filter((persona) => personas.has(persona)))
+      .filter((step) => step.length > 0);
+    const rest = [...personas].filter(
+      (persona) => !profile.order.some((step) => step.includes(persona)),
+    );
+    if (rest.length > 0) ordered.push(rest);
+    return ordered;
+  };
+  /** Пары точки и слоты сверх точки из списка `extra`. */
+  const pairsWith = (r: Route, extra: RouteSlotRef[]) =>
+    pairsOf({ ...r, extra });
+  const presetSteps = (r: Route): string[][] =>
+    stepsFor(
+      r.profile,
+      new Set(pairsWith(r, presetExtras(r)).map((pair) => pair.persona)),
+    );
+  const sameSteps = (a: string[][], b: string[][]): boolean =>
+    JSON.stringify(a.map((step) => [...step].sort())) ===
+    JSON.stringify(b.map((step) => [...step].sort()));
+  /** Чем состав маршрута отличается от пресета (15.11). */
+  const presetDiffers = (r: Route): PresetDiff[] => {
+    const out: PresetDiff[] = [];
+    const steps = r.steps.map((step) => step.map((p) => p.persona));
+    if (!sameSteps(steps, presetSteps(r))) out.push("order");
+    const extras = presetExtras(r);
+    if (
+      extras.length !== r.extra.length ||
+      !extras.every((ref) => r.extra.some((e) => samePair(e, ref)))
+    )
+      out.push("slots");
+    if (
+      pairsOf(r).some(
+        (pair) => pairOptional(r, pair) !== presetOptional(r, pair),
+      )
+    )
+      out.push("optional");
+    return out;
+  };
+  /** `preset` маршрута: управляющему и только у маршрута, который можно править. */
+  const presetView = (
+    r: Route,
+    viewer: SigningDemoUser | null,
+  ): RoutePreset | null => {
+    if (!EDITABLE.includes(r.status) || !manages(r, viewer)) return null;
+    const preset = presetOf(r);
+    return {
+      version: preset.version,
+      base_version: preset.version,
+      steps: presetSteps(r),
+      extra_slots: preset.extra.filter((slot) =>
+        conditionMet(r.project_id, slot.when),
+      ),
+      optional: preset.optional,
+      skipped_by_condition: preset.extra.flatMap((slot) =>
+        slot.when !== null && !conditionMet(r.project_id, slot.when)
+          ? [{ doc_id: slot.doc_id, slot_id: slot.slot_id, when: slot.when }]
+          : [],
+      ),
+      differs: presetDiffers(r),
+    };
+  };
+  /**
+   * Отметки «необязательна» пар маршрута по пресету: `strict` ставит и снимает («Вернуть как в
+   * шаблоне»), иначе только ставит (черновик не трогает отметки, уже стоящие у пар).
+   */
+  const applyPresetOptional = (r: Route, strict: boolean): void => {
+    for (const pair of pairsOf(r)) {
+      const want = presetOptional(r, pair);
+      if (want === pairOptional(r, pair) || (!want && !strict)) continue;
+      onPresetOptional(r.project_id, r.profile.id, pair, want);
+    }
+  };
+
   const toParticipant = (
     r: Route,
     p: Participant,
@@ -901,12 +1089,19 @@ export const createSigningRouteDemo = (
           extra: pair.extra,
           optional: pairOptional(r, pair),
           status: slotStatus(r, pair),
+          added_by: pair.extra
+            ? presetExtras(r).some((ref) => samePair(ref, pair))
+              ? ("pack" as const)
+              : ("author" as const)
+            : null,
+          preset_optional: presetOptional(r, pair),
         })),
     })),
     steps: r.steps.map((step) => step.map((p) => toParticipant(r, p, viewer))),
     events: [...r.events],
     candidates: candidatesOf(r),
     changed_docs: changedDocs(r),
+    preset: presetView(r, viewer),
     ...(r.point_deadline === undefined
       ? {}
       : { point_deadline: r.point_deadline }),
@@ -1451,21 +1646,61 @@ export const createSigningRouteDemo = (
       events: [],
     };
     authors.set(r.id, author);
-    const personas = new Set(pairsOf(r).map((pair) => pair.persona));
-    const ordered = profile.order
-      .map((step) => step.filter((persona) => personas.has(persona)))
-      .filter((step) => step.length > 0);
-    // Слот, которого нет в порядке пака, идёт отдельным последним шагом.
-    const rest = [...personas].filter(
-      (persona) => !profile.order.some((step) => step.includes(persona)),
+    // Первый черновик точки берёт из пресета слоты сверх точки с выполненными условиями (15.5).
+    const first = !routes.some(
+      (item) => item.project_id === projectId && item.profile.id === profile.id,
     );
-    if (rest.length > 0) ordered.push(rest);
-    r.steps = ordered.map((step) =>
+    const preset = presetFor(projectId, profile);
+    if (first && preset) r.extra = presetExtras(r);
+    // Слот, которого нет в порядке пака, идёт отдельным последним шагом.
+    r.steps = stepsFor(
+      profile,
+      new Set(pairsOf(r).map((pair) => pair.persona)),
+    ).map((step) =>
       step.map((persona) =>
         makeParticipant(r, persona, byPersona(persona, author)),
       ),
     );
+    if (first && preset) {
+      applyPresetOptional(r, false);
+      onPresetPlaces(projectId, pairsOf(r));
+    }
     return r;
+  };
+
+  /**
+   * «Вернуть как в шаблоне» (15.6): шаги по пресету, люди остаются по персоне (тот же участник со
+   * своим согласием), недостающих подбирает по персоне, лишних убирает; слоты сверх точки и
+   * отметки «необязательна» по пресету; места только у новых пар.
+   */
+  const restorePreset = (r: Route): void => {
+    const author = authors.get(r.id) ?? { id: "", name: "" };
+    const before = pairsOf(r);
+    r.extra = presetExtras(r);
+    const kept = new Map<string, Participant>();
+    for (const p of participants(r))
+      if (!kept.has(p.persona)) kept.set(p.persona, p);
+    r.steps = presetSteps(r).map((step) =>
+      step.map(
+        (persona) =>
+          kept.get(persona) ??
+          makeParticipant(r, persona, byPersona(persona, author)),
+      ),
+    );
+    for (const p of participants(r)) {
+      if (assignmentsOf(r, p).length > 0 && p.method === null)
+        p.method = defaultMethod(r, p.persona);
+    }
+    applyPresetOptional(r, true);
+    const fresh = pairsOf(r).filter(
+      (pair) => !before.some((old) => samePair(old, pair)),
+    );
+    if (fresh.length > 0)
+      onPresetPlaces(
+        r.project_id,
+        fresh.map((pair) => ({ doc_id: pair.doc_id, slot_id: pair.slot_id })),
+      );
+    r.updated_at = now();
   };
 
   /** Задачи «На подпись»: идущие маршруты, где сейчас ждут действия человека. */
@@ -1917,7 +2152,7 @@ export const createSigningRouteDemo = (
       method: "PUT",
       pattern: "/projects/:projectId/signing-routes/:routeId",
       handler: withRoute((req, r, { user }) => {
-        if (!["draft", "paused", "returned", "cancelled"].includes(r.status))
+        if (!EDITABLE.includes(r.status))
           return conflict(
             "invalid_transition",
             "Cancel the signing route to change it",
@@ -1967,6 +2202,20 @@ export const createSigningRouteDemo = (
           if (assignmentsOf(r, p).length > 0 && p.method === null)
             p.method = defaultMethod(r, p.persona);
         }
+        return demoJson(toRoute(r, user));
+      }),
+    },
+    {
+      // «Вернуть как в шаблоне» (15.6, 15.11): только у маршрута, который можно править.
+      method: "POST",
+      pattern: "/projects/:projectId/signing-routes/:routeId/restore-preset",
+      handler: withRoute((_req, r, { user }) => {
+        if (!EDITABLE.includes(r.status))
+          return conflict(
+            "invalid_transition",
+            "Cancel the signing route to change it",
+          );
+        if (presetDiffers(r).length > 0) restorePreset(r);
         return demoJson(toRoute(r, user));
       }),
     },
@@ -2569,6 +2818,23 @@ export const createSigningRouteDemo = (
         event(r, "signed", sup.name, { participant_id: sup.id });
       }
       settle(r);
+      return r.id;
+    },
+    seedDraft: ({ projectId, author, extra = [] }) => {
+      const profile = profiles[0];
+      if (!profile) return null;
+      const r = draftFromPack(projectId, profile, author);
+      routes.push(r);
+      // Автор сам добавил подписи сверх точки: каждая идёт отдельным последним шагом (как R5).
+      for (const ref of extra) {
+        if (r.extra.some((e) => samePair(e, ref))) continue;
+        r.extra.push(ref);
+        const pair = pairsOf(r).find((q) => samePair(q, ref));
+        if (pair && !participants(r).some((p) => p.persona === pair.persona))
+          r.steps.push([
+            makeParticipant(r, pair.persona, byPersona(pair.persona, author)),
+          ]);
+      }
       return r.id;
     },
     seedOptional: ({ projectId, sender, signer, academic }) => {

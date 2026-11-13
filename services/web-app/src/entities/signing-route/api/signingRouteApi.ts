@@ -139,6 +139,15 @@ export const signingRouteApi = {
    * Пропустить участника (раздел 13.6): все его оставшиеся подписи на точке необязательны. Без
    * тела; 409 `participant_not_skippable` с `reason`, если нельзя.
    */
+  /**
+   * «Вернуть как в шаблоне» (раздел 15.6): порядок, слоты сверх точки и отметки «необязательна»
+   * по шаблону; люди остаются по персоне, места подписей на страницах не меняются. Только у
+   * маршрута, который можно править (иначе 409 `invalid_transition`).
+   */
+  restorePreset: (projectId: string, routeId: string): Promise<SigningRoute> =>
+    apiClient
+      .post(`${route(projectId, routeId)}/restore-preset`, {}, quiet)
+      .then(parseResp(SigningRouteSchema)),
   skip: (
     projectId: string,
     routeId: string,

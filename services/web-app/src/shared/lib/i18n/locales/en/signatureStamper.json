@@ -424,5 +424,19 @@
         "edge": "box past the page edge"
       }
     }
+  },
+  "place": {
+    "fromTemplate": "Place from the template",
+    "fromTemplateTitle": "The place and the date marks are as in the template",
+    "changed": "Place changed",
+    "changedTitle": "The place or the date marks differ from the template",
+    "restore": "Reset place to template",
+    "restoreTitle": "The place and the date marks will be as in the template. Whether the signature is enabled stays the same",
+    "failed": "Could not reset the place: {{reason}}",
+    "confirm": {
+      "title": "Reset the place to the template?",
+      "text": "These signatures will be reset: {{names}}. The document will be frozen again and they will sign the final PDF once more. Reset?",
+      "save": "Reset"
+    }
   }
 }

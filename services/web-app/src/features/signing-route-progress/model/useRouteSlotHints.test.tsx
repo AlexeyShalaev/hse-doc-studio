@@ -81,6 +81,8 @@ const ROUTE = makeSigningRoute({
           extra: false,
           optional: false,
           status: "stale",
+          added_by: null,
+          preset_optional: false,
         },
         {
           slot_id: "supervisor",
@@ -89,6 +91,8 @@ const ROUTE = makeSigningRoute({
           extra: false,
           optional: false,
           status: "pending",
+          added_by: null,
+          preset_optional: false,
         },
       ],
       sent: null,

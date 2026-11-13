@@ -418,6 +418,143 @@ describe("серверное демо: версия на подписи", () => 
     expect(task.docs[0]?.mine[0]?.dates[0]?.text).toBeNull();
   });
 
+  it("маршрут из шаблона: черновик по пресету, «Вернуть как в шаблоне», «Вернуть место»", async () => {
+    activateServerScenario("student_signing_presets");
+    // Первый заход на точку: черновик по пресету, академрук не добавлен по условию.
+    const created = await call(
+      "POST",
+      "/projects/p_01hxa1c4de/signing-routes",
+      {
+        profile_id: "topic-approval",
+      },
+    );
+    expect(created.status).toBe(201);
+    const fresh = SigningRouteSchema.parse(created.data);
+    expect(fresh.steps.map((step) => step.map((p) => p.persona))).toEqual([
+      ["author"],
+      ["supervisor"],
+    ]);
+    expect(fresh.preset).toMatchObject({
+      version: "2026.1.4",
+      steps: [["author"], ["supervisor"]],
+      extra_slots: [],
+      skipped_by_condition: [
+        {
+          doc_id: "topic_application",
+          slot_id: "academic_supervisor",
+          when: { person: "supervisor", role: "company" },
+        },
+      ],
+      differs: [],
+    });
+    // Места пар из шаблона включены, у научрука метки даты пака; академрук остался затравкой.
+    const state = SignaturesStateSchema.parse(
+      (await call("GET", "/projects/p_01hxa1c4de/signatures")).data,
+    );
+    const placed = state.placements.topic_application;
+    expect(placed?.supervisor).toMatchObject({
+      enabled: true,
+      origin: "pack",
+      preset_available: true,
+    });
+    expect(placed?.supervisor?.dates).toHaveLength(3);
+    expect(placed?.author?.origin).toBe("pack");
+    expect(placed?.academic_supervisor).toMatchObject({
+      enabled: false,
+      origin: "seed",
+    });
+    expect(
+      state.runtime_slots.find((s) => s.id === "supervisor")?.default_dates
+        .topic_application,
+    ).toHaveLength(3);
+    // Без изменений «Вернуть как в шаблоне» ничего не меняет.
+    const same = await call(
+      "POST",
+      `/projects/p_01hxa1c4de/signing-routes/${fresh.id}/restore-preset`,
+      {},
+    );
+    expect(SigningRouteSchema.parse(same.data).steps).toHaveLength(2);
+
+    // Изменённый черновик: академрук добавлен автором, место научрука сдвинуто.
+    const changed = await routeOf("p_01hxa4n7pq");
+    expect(changed.preset?.differs).toEqual(["order", "slots"]);
+    expect(
+      changed.docs[0]?.slots.find((s) => s.slot_id === "academic_supervisor"),
+    ).toMatchObject({
+      extra: true,
+      added_by: "author",
+      preset_optional: false,
+    });
+    const placePath =
+      "/projects/p_01hxa4n7pq/signatures/placements/topic_application/supervisor";
+    const moved = SignaturesStateSchema.parse(
+      (await call("GET", "/projects/p_01hxa4n7pq/signatures")).data,
+    ).placements.topic_application?.supervisor;
+    expect(moved?.origin).toBe("manual");
+    const restored = PlacementSchema.parse(
+      (await call("POST", `${placePath}/restore`, {})).data,
+    );
+    expect(restored).toMatchObject({
+      origin: "pack",
+      x_mm: 110,
+      y_mm: 130,
+      enabled: true,
+    });
+    expect(restored.dates).toHaveLength(3);
+    // Правка руками снова делает место ручным.
+    const patched = await call("PATCH", placePath, { x_mm: 111 });
+    expect(PlacementSchema.parse(patched.data).origin).toBe("manual");
+
+    const back = SigningRouteSchema.parse(
+      (
+        await call(
+          "POST",
+          `/projects/p_01hxa4n7pq/signing-routes/${changed.id}/restore-preset`,
+          {},
+        )
+      ).data,
+    );
+    expect(back.preset?.differs).toEqual([]);
+    expect(back.steps.map((step) => step.map((p) => p.persona))).toEqual([
+      ["author"],
+      ["supervisor"],
+    ]);
+    // Люди остаются по персоне: тот же участник автора.
+    expect(back.steps[0]?.[0]?.id).toBe(changed.steps[0]?.[0]?.id);
+  });
+
+  it("«Вернуть место из шаблона» под маршрутом с ЭП над B: только с подтверждением", async () => {
+    activateServerScenario("student_signing_dates");
+    const path =
+      "/projects/p_01hxa1c4de/signatures/placements/topic_application/supervisor/restore";
+    const refused = await call("POST", path, {});
+    expect(refused.status).toBe(409);
+    expect(refused.data).toMatchObject({ code: "resets_signatures" });
+    const confirmed = await call("POST", path, { confirm_reset: true });
+    expect(PlacementSchema.parse(confirmed.data).origin).toBe("pack");
+    expect((await routeOf("p_01hxa1c4de")).status).toBe("active");
+    const unknown = await call(
+      "POST",
+      "/projects/p_01hxa1c4de/signatures/placements/topic_application/nobody/restore",
+      {},
+    );
+    expect(unknown.status).toBe(400);
+  });
+
+  it("«Вернуть как в шаблоне» у идущего маршрута: 409 invalid_transition", async () => {
+    activateServerScenario("student_signing_optional");
+    const own = await routeOf("p_01hxa1c4de");
+    // Идущему маршруту `preset` не отдаётся.
+    expect(own.preset).toBeNull();
+    const refused = await call(
+      "POST",
+      `/projects/p_01hxa1c4de/signing-routes/${own.id}/restore-preset`,
+      {},
+    );
+    expect(refused.status).toBe(409);
+    expect(refused.data).toMatchObject({ code: "invalid_transition" });
+  });
+
   it("у обычного студента своего маршрута нет", async () => {
     activateServerScenario("student_ready");
     const list = await call("GET", "/projects/p_01hxa1c4de/signing-routes");

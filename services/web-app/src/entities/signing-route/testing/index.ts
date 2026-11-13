@@ -6,6 +6,8 @@ export {
   type SigningDemoDoc,
   type SigningDemoInvitation,
   type SigningDemoMember,
+  type SigningDemoPeople,
+  type SigningDemoPreset,
   type SigningDemoProfile,
   type SigningDemoSeed,
   type SigningDemoSlot,

@@ -29,6 +29,7 @@ import * as sh from "@entities/share-link/model/shareLink.schema";
 import * as srt from "@entities/signing-route/model/signingRoute.schema";
 import * as sig from "@entities/signature/api/signatureSchemas";
 import * as sub from "@entities/submission/api/submissionSchemas";
+import { TemplateUpdatePlanContractSchema } from "@entities/template-update/api/templateUpdateSchemas";
 
 // Каталог эталонов contracts/server/fixtures -> схема zod. Каталог без схемы считается ошибкой.
 export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
@@ -315,6 +316,10 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   // перенёс в fixtures срез R23.
   SetDateMarksRequest: sig.SetDateMarksRequestSchema,
   Placement: z.strictObject(sig.PlacementSchema.shape),
+  // «Вернуть место из шаблона» (signing-route.md, 15.11): тело `{confirm_reset}`, перенёс R25.
+  RestorePlacementRequest: sig.RestorePlacementRequestSchema,
+  // План обновления шаблона с местами подписей из шаблона (signing-route.md, 15.9, R26).
+  TemplateUpdatePlanResponse: TemplateUpdatePlanContractSchema,
   SignaturePlan: z.strictObject(sig.SignaturePlanSchema.shape),
   // Сроки контрольных точек (signing-route.md, 16.8, срез W16): ответ и тело `PUT .../deadline`,
   // профиль сдачи со сроком, состоянием и подсказкой пака.
