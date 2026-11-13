@@ -121,3 +121,18 @@ def test__notices_in__keeps_only_notifications() -> None:
     notify = Notify(Notice.paused, sender=True)
 
     assert notices_in((Freeze("doc"), notify)) == (notify,)
+
+
+def test__skipped__to_the_skipped_with_letter_never_to_the_one_who_skipped_himself() -> None:
+    route = _route()
+    author, _, academic = route.participants
+    skipped = Notify(Notice.skipped, (academic.id,))
+    who = Recipient(academic.user_id, academic.id)  # type: ignore[arg-type]
+
+    by_author = recipients(route, skipped, actor_id=author.user_id)
+    by_himself = recipients(route, skipped, actor_id=academic.user_id)
+
+    assert [r.user_id for r in by_author] == [academic.user_id]
+    assert by_himself == ()
+    assert mails(skipped, who) is True
+    assert dedupe_key(route, skipped, who) == f"signing:{route.id.hex}:2:{academic.id.hex}:signing_skipped"

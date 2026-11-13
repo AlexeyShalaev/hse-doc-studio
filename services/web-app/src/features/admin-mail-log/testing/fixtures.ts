@@ -377,6 +377,16 @@ const COPY: Record<
       action: "Open the signing page",
     },
   },
+  signing_skipped: {
+    ru: {
+      lead: "Автор маршрута пропустил ваш шаг по документам «{profile}» в проекте «{project}»: ваши подписи на этой точке необязательны. Подписывать ничего не нужно.",
+      action: "Открыть страницу подписи",
+    },
+    en: {
+      lead: "The route author skipped your step for the documents “{profile}” in the project “{project}”: your signatures at this checkpoint are optional. There is nothing to sign.",
+      action: "Open the signing page",
+    },
+  },
   signing_returned: {
     ru: {
       lead: "Документы проекта «{project}» возвращены на доработку ({actor}). Маршрут подписания остановлен.",
@@ -795,6 +805,21 @@ export const MAIL_DEFAULT_DRAFTS: readonly MailDraft[] = [
     link_path: SIGN_PATH,
     note_len: 212,
     values: { actor: P.petr.name, project: PR.bertie.name },
+  },
+  {
+    ago: DAY + 4 * HOUR,
+    template: "signing_skipped",
+    to: P.anna,
+    subject: "Ваша подпись не требуется: Заявка на тему КП",
+    status: "sent",
+    cause: "user",
+    actor: P.maria,
+    origin: "notification",
+    project: PR.bertie,
+    ref: { kind: "signing_route", id: SIGN_ROUTE },
+    link: "page",
+    link_path: SIGN_PATH,
+    values: { actor: P.maria.name, project: PR.bertie.name, profile: TOPIC },
   },
   {
     ago: DAY + 6 * HOUR,

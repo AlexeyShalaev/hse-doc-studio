@@ -184,7 +184,7 @@ class RouteScenario:
         details = build_details(point, route, loaded.facts, evaluation, people, events, show_comments=show)
         if not manages:
             return details
-        return replace(details, candidates=await self._candidates(point, route))
+        return replace(details, candidates=await self._candidates(point, route), manages=True)
 
     async def _candidates(self, point: RoutePoint, route: SigningRoute) -> tuple[PersonaCandidates, ...]:
         """Персоны участников, слотов точки и необязательных слотов её документов, с людьми проекта на каждую."""

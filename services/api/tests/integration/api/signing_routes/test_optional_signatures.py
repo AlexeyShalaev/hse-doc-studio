@@ -11,6 +11,7 @@ import json
 from typing import Any
 
 import pytest
+from sqlalchemy import text
 
 from tests.integration.api.signing_routes.signer_stand import APPLICATION, PROPOSAL, Trio, make_trio
 from tests.integration.api.signing_routes.stand import TOPIC, Person, Stand
@@ -30,8 +31,27 @@ def _mark(trio: Trio, who: Person, doc_id: str, slot_id: str, *, optional: bool 
     return trio.call(who, "PUT", path, json={"profile_id": TOPIC, "optional": optional})
 
 
+async def _skip(trio: Trio, doc_id: str, slot_id: str) -> None:
+    """Пропуск, как его записывает маршрут (R20): участник в базе и запись в `signatures.json`."""
+    skipped = {
+        "round": 1,
+        "at": "2026-11-13T10:00:00+00:00",
+        "by": trio.author.id,
+        "pairs": [{"doc_id": doc_id, "slot_id": slot_id}],
+        "kept_marks": [],
+        "refrozen": [],
+    }
+    async with trio.stand.sessions.use() as db:
+        await db.execute(
+            text("UPDATE signing_route_participants SET skipped = CAST(:skipped AS jsonb) WHERE persona = :persona"),
+            {"skipped": json.dumps(skipped), "persona": slot_id},
+        )
+    # Файлы после базы: сверка маршрута между ними убрала бы запись, у которой нет пропуска участника (`Unskip`).
+    _skip_in_files(trio, doc_id, slot_id)
+
+
 def _skip_in_files(trio: Trio, doc_id: str, slot_id: str) -> None:
-    """Пропуск, как его записал бы маршрут (R20): запись в `signatures.json`."""
+    """Запись пропуска в `signatures.json`."""
     path = trio.project.folder / ".hse-studio" / "signatures.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     data.setdefault("skipped", {}).setdefault(doc_id, {})[slot_id] = {
@@ -120,7 +140,7 @@ async def test__optional_flag__removed_after_skip__skip_kept_while_held_and_drop
     trio = await make_trio(stand, images=("author", "supervisor"))
     trio.sent()
     assert _mark(trio, trio.author, APPLICATION, ACADEMIC).status_code == 200
-    _skip_in_files(trio, APPLICATION, ACADEMIC)
+    await _skip(trio, APPLICATION, ACADEMIC)
 
     held = _mark(trio, trio.author, APPLICATION, ACADEMIC, optional=False)
     after_held = trio.state()
@@ -129,7 +149,7 @@ async def test__optional_flag__removed_after_skip__skip_kept_while_held_and_drop
     assert _mark(trio, trio.author, APPLICATION, ACADEMIC, optional=False).status_code == 200
     assert trio.call(trio.author, "POST", f"{trio.url}/cancel", json={}).status_code == 200
     marked = _mark(trio, trio.author, APPLICATION, ACADEMIC)
-    _skip_in_files(trio, APPLICATION, ACADEMIC)
+    _skip_in_files(trio, APPLICATION, ACADEMIC)  # отменённый маршрут держит только запись в файлах
     freed = _mark(trio, trio.author, APPLICATION, ACADEMIC, optional=False)
     drain(stand)
 

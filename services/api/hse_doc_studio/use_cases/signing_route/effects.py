@@ -25,9 +25,9 @@ from hse_doc_studio.core.signatures.plan import VisibleMark, mark_of
 from hse_doc_studio.core.signatures.ports import IOpenPgpKeyImporter
 from hse_doc_studio.core.signatures.signer_profile import ISignerProfileRepository, PublicKeyKind
 from hse_doc_studio.core.signing_route.audit import signing_route_scope
-from hse_doc_studio.core.signing_route.effects import Effect, FillPlate, Freeze, Release, Withhold
-from hse_doc_studio.core.signing_route.entities import SigningRoute
-from hse_doc_studio.core.value_objects import SignaturesState
+from hse_doc_studio.core.signing_route.effects import Effect, FillPlate, Freeze, Release, Skip, Unskip, Withhold
+from hse_doc_studio.core.signing_route.entities import DocSlot, SigningRoute
+from hse_doc_studio.core.value_objects import SignaturesState, SkippedSlot
 from hse_doc_studio.use_cases.signatures.freeze_pdf import FreezePdfInput, FreezePdfUC
 from hse_doc_studio.use_cases.signing_route.point import RoutePoint
 
@@ -103,6 +103,14 @@ class RouteFileEffects:
 
 
 def _apply(state: SignaturesState, route: SigningRoute, effect: Effect) -> SignaturesState:
+    if isinstance(effect, Skip):
+        return _skipped(state, route, effect)
+    if isinstance(effect, Unskip):
+        return _unskipped(state, effect.doc_id, effect.slot_id)
+    return _apply_marks(state, route, effect)
+
+
+def _apply_marks(state: SignaturesState, route: SigningRoute, effect: Effect) -> SignaturesState:
     if isinstance(effect, Withhold):
         return _withheld(state, effect.doc_id, effect.slot_id, held=True)
     if isinstance(effect, Release):
@@ -115,6 +123,36 @@ def _apply(state: SignaturesState, route: SigningRoute, effect: Effect) -> Signa
             return state
         return replace(state, slots={**state.slots, effect.slot_id: replace(slot, signer=effect.signer)})
     return state
+
+
+def _skipped(state: SignaturesState, route: SigningRoute, effect: Skip) -> SignaturesState:
+    """Пропуск пары в состоянии подписей (13.3): раунд и время берутся у участника, чей это пропуск."""
+    pair = DocSlot(effect.doc_id, effect.slot_id)
+    skip = next((p.skipped for p in route.participants if p.skipped is not None and pair in p.skipped.pairs), None)
+    if skip is None:
+        return state
+    record = SkippedSlot(
+        profile_id=route.profile_id,
+        route_id=str(route.id),
+        round=skip.round,
+        at=skip.at.astimezone(UTC).isoformat(timespec="seconds"),
+        keep_mark=effect.keep_mark,
+    )
+    if state.skipped.get(effect.doc_id, {}).get(effect.slot_id) == record:
+        return state
+    doc_skips = {**state.skipped.get(effect.doc_id, {}), effect.slot_id: record}
+    return replace(state, skipped={**state.skipped, effect.doc_id: doc_skips})
+
+
+def _unskipped(state: SignaturesState, doc_id: str, slot_id: str) -> SignaturesState:
+    doc_skips = state.skipped.get(doc_id, {})
+    if slot_id not in doc_skips:
+        return state
+    rest = {k: v for k, v in doc_skips.items() if k != slot_id}
+    skipped = {k: v for k, v in state.skipped.items() if k != doc_id}
+    if rest:
+        skipped[doc_id] = rest
+    return replace(state, skipped=skipped)
 
 
 def _withheld(state: SignaturesState, doc_id: str, slot_id: str, *, held: bool) -> SignaturesState:

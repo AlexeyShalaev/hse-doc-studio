@@ -80,6 +80,22 @@ def _change(route: SigningRoute, candidate: RouteFacts, doc_id: str) -> DocChang
     return DocChange.changed
 
 
+def returning(route: SigningRoute, candidate: RouteFacts) -> tuple[UUID, ...]:
+    """Пропущенные участники, которых отправка вернёт в маршрут: с их пропущенной пары снята отметку «необязательна»
+    (раздел 13.3). Отправка с ними считается изменением: без изменений документов `nothing_changed` не отвечает."""
+    return tuple(p.id for p in route.participants if p.skipped is not None and not still_optional(p, candidate))
+
+
+def still_optional(p: Participant, candidate: RouteFacts) -> bool:
+    """У пропущенного участника все пропущенные пары по-прежнему необязательны: пропуск переносится в новый раунд."""
+    return p.skipped is not None and all(candidate.is_optional(pair) for pair in p.skipped.pairs)
+
+
+def has_news(route: SigningRoute, candidate: RouteFacts) -> bool:
+    """Есть что отправлять: документ изменился или в маршрут вернётся пропущенный участник."""
+    return version_changes(route, candidate).any or bool(returning(route, candidate))
+
+
 def keeps_approval(route: SigningRoute, candidate: RouteFacts, p: Participant) -> bool:
     """Согласие участника переносится по всем его документам (`SigningRoutePreview.participants[].keeps_approval`).
 

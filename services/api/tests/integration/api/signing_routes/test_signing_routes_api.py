@@ -121,7 +121,7 @@ async def test__create__owner__draft_from_pack_with_people_by_persona(stand: Sta
     assert route["profile"]["id"] == TOPIC
     assert _people(route) == [[("author", author.id, "member")], [("supervisor", supervisor.id, "member")]]
     assert [p["name"] for step in route["steps"] for p in step] == ["Иванов Иван Иванович", "Петров Пётр Петрович"]
-    by_doc = {d["doc_id"]: [(s["slot_id"], s["optional"]) for s in d["slots"]] for d in route["docs"]}
+    by_doc = {d["doc_id"]: [(s["slot_id"], s["extra"]) for s in d["slots"]] for d in route["docs"]}
     assert by_doc == {
         "project_proposal": [("supervisor", False)],
         "topic_application": [("author", False), ("supervisor", False)],
@@ -231,7 +231,8 @@ async def test__update__extra_slot_deadline_message__participant_added_for_optio
     assert academic["membership"] == "missing"
     assert academic["assignments"] == [{"doc_id": "topic_application", "slot_id": "academic_supervisor"}]
     slots = {s["slot_id"]: s for d in updated["docs"] for s in d["slots"] if d["doc_id"] == "topic_application"}
-    assert slots["academic_supervisor"]["optional"] is True
+    # Слот сверх точки: `extra`; подпись на нём обязательна, пока автор не отметит иначе (13.3).
+    assert (slots["academic_supervisor"]["extra"], slots["academic_supervisor"]["optional"]) == (True, False)
     assert slots["academic_supervisor"]["participant_id"] == academic["id"]
     assert [p["id"] for step in updated["steps"][:2] for p in step] == [
         p["id"] for step in route["steps"] for p in step

@@ -33,9 +33,19 @@ from hse_doc_studio.core.signatures.plan import (
     method_of,
     slot_state,
 )
-from hse_doc_studio.core.signing_route.effects import Effect, FillPlate, Freeze, Notify, Release, Withhold
+from hse_doc_studio.core.signing_route.effects import (
+    Effect,
+    FillPlate,
+    Freeze,
+    Notify,
+    Release,
+    Skip,
+    Unskip,
+    Withhold,
+)
 from hse_doc_studio.core.signing_route.entities import (
     HOLDING_STATUSES,
+    TURN_STATES,
     WATCHING_STATUSES,
     DocSlot,
     DocSnapshot,
@@ -47,9 +57,10 @@ from hse_doc_studio.core.signing_route.entities import (
     RoutePhase,
     RouteStatus,
     SigningRoute,
+    SkipBlocker,
     StopReason,
 )
-from hse_doc_studio.core.value_objects import SignaturesState, SignerInfo
+from hse_doc_studio.core.value_objects import SignaturesState, SignerInfo, SkippedSlot
 
 _UNBUILT = DocFacts(compiled_sha256=None, marks_digest="")
 
@@ -74,7 +85,11 @@ class RouteFacts:
     - `withheld`: придержанные слоты по документам (`SignaturesState.withheld`, раздел 6.1);
     - `plates`: известные данные плашки по пользователям: открытая часть ключа по умолчанию или сертификат из
       профиля (раздел 6.5); закрытых ключей здесь нет;
-    - `personas`: персоны участников проекта по пользователям, чтобы заметить ушедшего; None: не проверять.
+    - `personas`: персоны участников проекта по пользователям, чтобы заметить ушедшего; None: не проверять;
+    - `optional`: необязательные подписи по документам на точке маршрута (`SignaturesState.optional[doc][профиль]`,
+      раздел 13.3): их можно пропустить;
+    - `skipped`: пропущенные подписи (`SignaturesState.skipped`, раздел 13.3), отдельным полем, как `withheld`:
+      расчёт сверяет с ними пропуски участников и даёт эффекты `Skip` и `Unskip`.
     """
 
     docs: Mapping[str, DocFacts]
@@ -82,6 +97,8 @@ class RouteFacts:
     withheld: Mapping[str, Collection[str]] = field(default_factory=dict)
     plates: Mapping[UUID, SignerInfo] = field(default_factory=dict)
     personas: Mapping[UUID, Collection[str]] | None = None
+    optional: Mapping[str, Collection[str]] = field(default_factory=dict)
+    skipped: Mapping[str, Mapping[str, SkippedSlot]] = field(default_factory=dict)
 
     def doc(self, doc_id: str) -> DocFacts:
         """Факты документа; документ без фактов считается несобранным."""
@@ -107,6 +124,12 @@ class RouteFacts:
     def is_withheld(self, pair: DocSlot) -> bool:
         return pair.slot_id in self.withheld.get(pair.doc_id, ())
 
+    def is_optional(self, pair: DocSlot) -> bool:
+        return pair.slot_id in self.optional.get(pair.doc_id, ())
+
+    def skip_record(self, pair: DocSlot) -> SkippedSlot | None:
+        return self.skipped.get(pair.doc_id, {}).get(pair.slot_id)
+
     def tokens(self, doc_ids: Iterable[str]) -> dict[str, str]:
         """Отпечатки согласия по документам (`approval_token`)."""
         return {doc_id: approval_token(self.doc(doc_id)) for doc_id in doc_ids}
@@ -121,6 +144,23 @@ class RouteFacts:
             )
             for doc_id in doc_ids
         }
+
+
+@dataclass(frozen=True)
+class SkipOption:
+    """Можно ли пропустить участника сейчас и что это даст (раздел 13.6, `RouteParticipant.skip`).
+
+    `pairs` оставшиеся неподписанные пары, которые пропуск снимет; `required` среди них обязательные (мешают,
+    `blocker` `required_slots`). `keeps_marks` документы, где метка пропущенного останется в зафиксированном PDF с
+    ЭП; `refreezes` документы, которые маршрут зафиксирует заново без метки (13.5).
+    """
+
+    available: bool
+    blocker: SkipBlocker | None = None
+    pairs: tuple[DocSlot, ...] = ()
+    required: tuple[DocSlot, ...] = ()
+    keeps_marks: tuple[str, ...] = ()
+    refreezes: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -145,6 +185,7 @@ class ParticipantView:
     needs_plate: bool = False
     approved: bool = False
     approved_docs: frozenset[str] = frozenset()
+    skip: SkipOption = field(default_factory=lambda: SkipOption(False))
 
 
 @dataclass(frozen=True)
@@ -193,6 +234,7 @@ class _Info:
     missing_image: tuple[str, ...]  # слоты картинок без загруженной картинки
     approved_docs: frozenset[str]  # его документы, чей отпечаток совпал с согласием этого раунда (12.6)
     approval_valid: bool  # согласие этого раунда на версии на подписи всех его документов
+    skipped: bool = False  # автор пропустил его в этом раунде (13.3): пропущенные пары в остальных полях не учтены
 
     @property
     def approved(self) -> bool:
@@ -200,11 +242,11 @@ class _Info:
 
     @property
     def done(self) -> bool:
-        return self.approved and not self.unsigned
+        return self.skipped or (self.approved and not self.unsigned)
 
     @property
     def changer(self) -> bool:
-        return not self.approved and bool(self.png or self.missing_plate)
+        return not self.skipped and not self.approved and bool(self.png or self.missing_plate)
 
     @property
     def early(self) -> bool:
@@ -230,7 +272,7 @@ def evaluate(route: SigningRoute, facts: RouteFacts) -> Evaluation:
     stop, stopped_by = _stop(route, facts)
     status = _target_status(route, infos, stop)
     progress = _progress(route, infos)
-    views = tuple(_view(route, info, status, progress) for info in infos)
+    views = tuple(_view(route, info, status, progress, facts) for info in infos)
     return Evaluation(
         status=status,
         phase=_phase(status, progress),
@@ -265,8 +307,20 @@ def notice_for(route: SigningRoute, notice: Notice) -> Notify:
 # --- участник ---------------------------------------------------------------------------------------------------
 
 
+def skipped_pairs(route: SigningRoute, p: Participant) -> frozenset[DocSlot]:
+    """Пары, которые автор пропустил у участника в этом раунде (13.3); пусто, если его не пропускали."""
+    skip = p.skipped
+    return frozenset(skip.pairs) if skip is not None and skip.round == route.round else frozenset()
+
+
+def _is_skipped(route: SigningRoute, p: Participant) -> bool:
+    return p.skipped is not None and p.skipped.round == route.round
+
+
 def _info(route: SigningRoute, p: Participant, facts: RouteFacts) -> _Info:
-    png, plates, crypto = _classify(p.assignments, facts.state)
+    # Пропущенные пары выпадают из расчёта явно: состояние подписей отвечает им `skipped`, но не `signed` (13.3).
+    skipped = skipped_pairs(route, p)
+    png, plates, crypto = _classify(tuple(pair for pair in p.assignments if pair not in skipped), facts.state)
     approved = approved_docs(route, p, facts)
     return _Info(
         participant=p,
@@ -278,6 +332,7 @@ def _info(route: SigningRoute, p: Participant, facts: RouteFacts) -> _Info:
         missing_image=tuple(dict.fromkeys(pair.slot_id for pair in png if not _image_ready(pair, facts))),
         approved_docs=approved,
         approval_valid=all(doc_id in approved for doc_id in p.doc_ids(route.docs)),
+        skipped=_is_skipped(route, p),
     )
 
 
@@ -368,6 +423,8 @@ def _left(route: SigningRoute, facts: RouteFacts) -> UUID | None:
     if facts.personas is None or route.status is not RouteStatus.active:
         return None
     for p in route.participants:
+        if _is_skipped(route, p):
+            continue  # пропущенному от проекта ничего не нужно
         if p.user_id is not None and p.persona not in facts.personas.get(p.user_id, ()):
             return p.id
     return None
@@ -418,13 +475,19 @@ def _progress(route: SigningRoute, infos: tuple[_Info, ...]) -> _Progress:
 
 
 def _settled(info: _Info, phase: RoutePhase) -> bool:
-    """Участник сделал всё, что было возможно: до фиксации согласовал, после фиксации согласовал и подписал."""
+    """Участник сделал всё, что было возможно: до фиксации согласовал, после фиксации согласовал и подписал.
+
+    Пропущенный автором прошёл шаг (13.3)."""
+    if info.skipped:
+        return True
     if not info.approved:
         return False
     return phase is RoutePhase.approval or info.early or not info.unsigned
 
 
-def _view(route: SigningRoute, info: _Info, status: RouteStatus, progress: _Progress) -> ParticipantView:
+def _view(
+    route: SigningRoute, info: _Info, status: RouteStatus, progress: _Progress, facts: RouteFacts
+) -> ParticipantView:
     state = _state(route, info, status, progress)
     return ParticipantView(
         participant_id=info.participant.id,
@@ -437,6 +500,7 @@ def _view(route: SigningRoute, info: _Info, status: RouteStatus, progress: _Prog
         needs_plate=bool(info.missing_plate),
         approved=info.approval_valid,
         approved_docs=info.approved_docs,
+        skip=_skip_option(route, info, state, progress, facts),
     )
 
 
@@ -444,6 +508,8 @@ def _state(route: SigningRoute, info: _Info, status: RouteStatus, progress: _Pro
     p = info.participant
     if status is RouteStatus.returned and route.stopped_by == p.id:
         return ParticipantState.returned
+    if info.skipped:
+        return ParticipantState.skipped
     if p.user_id is None:
         return ParticipantState.invited
     if info.done:
@@ -472,6 +538,7 @@ _ACTIONS = {
     ParticipantState.to_approve_sign: NextAction.approve_and_sign,
     ParticipantState.to_sign: NextAction.sign,
     ParticipantState.done: NextAction.done,
+    ParticipantState.skipped: NextAction.done,
 }
 
 
@@ -493,6 +560,110 @@ def _remaining(info: _Info, progress: _Progress) -> int:
     return 2
 
 
+# --- пропуск (раздел 13) -------------------------------------------------------------------------------------------
+
+
+def _unfinished(route: SigningRoute, pair: DocSlot, facts: RouteFacts) -> bool:
+    """Пара ещё ждёт подписи: не подписана и не пропущена (на точке маршрута)."""
+    status = slot_state(
+        facts.state, pair.doc_id, pair.slot_id, facts.doc(pair.doc_id), profile_id=route.profile_id
+    ).status
+    return status not in (SlotStatus.signed, SlotStatus.skipped)
+
+
+def _mark_drawn(pair: DocSlot, facts: RouteFacts) -> bool:
+    """Метка слота сейчас рисуется на документе: размещение включено, картинка или плашка есть, слот не придержан
+    и не пропущен (кроме `keep_mark`)."""
+    state = facts.state
+    placement = state.placements.get(pair.doc_id, {}).get(pair.slot_id)
+    slot = state.slots.get(pair.slot_id)
+    mark = mark_of(slot)
+    if placement is None or not placement.enabled or mark is VisibleMark.none or state.mark_hidden(*pair):
+        return False
+    if mark is VisibleMark.png:
+        return slot is not None and slot.png_path is not None and facts.doc(pair.doc_id).png_exists(slot.png_path)
+    return True
+
+
+def _signed_over_frozen(doc_id: str, facts: RouteFacts) -> bool:
+    """Над зафиксированным PDF документа уже есть ЭП: перефиксация сбросила бы их (инвариант 3 раздела 2)."""
+    if doc_id not in facts.state.frozen:
+        return False
+    return bool(facts.state.detached.get(doc_id) or facts.state.embedded.get(doc_id))
+
+
+def _other_crypto(route: SigningRoute, p: Participant, doc_id: str, facts: RouteFacts) -> bool:
+    """На документе есть ЭП-пара другого участника, которую не пропустили: документ маршрут зафиксирует."""
+    for other in route.participants:
+        if other.id == p.id:
+            continue
+        skipped = skipped_pairs(route, other)
+        for pair in other.assignments:
+            if pair.doc_id != doc_id or pair in skipped:
+                continue
+            slot = facts.state.slots.get(pair.slot_id)
+            if method_of(slot.sign_mode if slot is not None else SignMode.image) in CRYPTO_METHODS:
+                return True
+    return False
+
+
+def _skip_option(
+    route: SigningRoute, info: _Info, state: ParticipantState, progress: _Progress, facts: RouteFacts
+) -> SkipOption:
+    """Можно ли пропустить участника: очередь дошла до него, а все оставшиеся подписи необязательны (13.3).
+
+    Очередь это `to_approve`, `to_approve_sign`, `to_sign` или приглашённый на текущем шаге. Подписанные пары не
+    пропускаются, остаются подписанными.
+    """
+    p = info.participant
+    if state in (ParticipantState.done, ParticipantState.skipped):
+        return SkipOption(False, SkipBlocker.done)
+    in_queue = state in TURN_STATES or (state is ParticipantState.invited and p.step == progress.current_step)
+    if route.status is not RouteStatus.active or not in_queue:
+        return SkipOption(False, SkipBlocker.not_turn)
+    if not p.assignments:
+        return SkipOption(False, SkipBlocker.no_slots)
+    remaining = tuple(pair for pair in p.assignments if _unfinished(route, pair, facts))
+    if not remaining:
+        return SkipOption(False, SkipBlocker.done)
+    required = tuple(pair for pair in remaining if not facts.is_optional(pair))
+    if required:
+        return SkipOption(False, SkipBlocker.required_slots, pairs=remaining, required=required)
+    drawn = tuple(dict.fromkeys(pair.doc_id for pair in remaining if _mark_drawn(pair, facts)))
+    keeps = tuple(doc_id for doc_id in drawn if _signed_over_frozen(doc_id, facts))
+    refreezes = tuple(
+        doc_id
+        for doc_id in drawn
+        if doc_id not in keeps and doc_id in facts.state.frozen and _other_crypto(route, p, doc_id, facts)
+    )
+    return SkipOption(True, pairs=remaining, keeps_marks=keeps, refreezes=refreezes)
+
+
+def _skip_effects(route: SigningRoute, facts: RouteFacts) -> list[Skip | Unskip]:
+    """Разница между пропусками участников и `SignaturesState.skipped` (13.3): записать недостающее, убрать лишнее.
+
+    Лишняя запись это пропуск пары маршрута, которого у участника уже нет (новый раунд снял его, пара стала
+    обязательной). Чужие пары и записи не трогаются.
+    """
+    want: dict[DocSlot, tuple[int, bool]] = {}
+    for p in route.participants:
+        skip = p.skipped
+        if skip is not None and skip.round == route.round:
+            want.update({pair: (skip.round, pair.doc_id in skip.kept_marks) for pair in skip.pairs})
+    effects: list[Skip | Unskip] = []
+    for pair, (round_, keep) in want.items():
+        record = facts.skip_record(pair)
+        current = (record.route_id, record.profile_id, record.round, record.keep_mark) if record is not None else None
+        if current != (str(route.id), route.profile_id, round_, keep):
+            effects.append(Skip(pair.doc_id, pair.slot_id, keep))
+    effects.extend(
+        Unskip(pair.doc_id, pair.slot_id)
+        for pair in dict.fromkeys(route.pairs)
+        if pair not in want and facts.skip_record(pair) is not None
+    )
+    return effects
+
+
 # --- эффекты ----------------------------------------------------------------------------------------------------------
 
 
@@ -508,7 +679,7 @@ def _effects(
     # Черновик ещё ничего не трогал, отменённый и снятый с контроля оставляют всё как есть (5.6).
     if route.status not in HOLDING_STATUSES:
         return ()
-    files: list[Effect] = list(_image_effects(infos, facts))
+    files: list[Effect] = [*_skip_effects(route, facts), *_image_effects(infos, facts)]
     if status is RouteStatus.active and progress.phase is RoutePhase.signing:
         files += _freeze_effects(route, facts, infos, files)
     return (*files, *_notices(route, infos, views, status, stop))
@@ -536,6 +707,12 @@ def _freeze_effects(
     fills = _plate_fills(infos, facts)
     filled = {fill.slot_id for fill in fills}
     touched = {e.doc_id for e in earlier if isinstance(e, Withhold | Release)}
+    # Пропуск убирает метку из видимого слоя: документ, где она уже рисуется, зафиксируют заново (13.5).
+    touched |= {
+        e.doc_id
+        for e in earlier
+        if isinstance(e, Skip) and not e.keep_mark and _mark_drawn(DocSlot(e.doc_id, e.slot_id), facts)
+    }
     touched |= {pair.doc_id for info in infos for pair in info.plates if pair.slot_id in filled}
     crypto_docs = {doc_id for info in infos for doc_id in info.crypto_docs}
     freezes = [

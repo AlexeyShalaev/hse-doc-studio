@@ -65,7 +65,8 @@
     "keys": {
       "server_keys_allowed": false,
       "default_key": null
-    }
+    },
+    "optional": false
   },
   "docs": [
     {
@@ -91,7 +92,8 @@
           "height_mm": 22,
           "mark": "plate",
           "status": "pending",
-          "reason": "no_signature_file"
+          "reason": "no_signature_file",
+          "optional": false
         }
       ],
       "others": [

@@ -76,7 +76,8 @@
     "keys": {
       "server_keys_allowed": false,
       "default_key": null
-    }
+    },
+    "optional": false
   },
   "docs": [
     {
@@ -102,7 +103,8 @@
           "height_mm": 22,
           "mark": "plate",
           "status": "pending",
-          "reason": "awaiting_approval"
+          "reason": "awaiting_approval",
+          "optional": false
         }
       ],
       "others": [
@@ -148,7 +150,8 @@
           "height_mm": 22,
           "mark": "plate",
           "status": "signed",
-          "reason": null
+          "reason": null,
+          "optional": false
         }
       ],
       "others": [

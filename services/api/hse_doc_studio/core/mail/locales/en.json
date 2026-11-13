@@ -393,6 +393,30 @@
         "The signing page opens only after you sign in to your account: a forwarded email does not let anyone sign for you."
       ]
     },
+    "signing_skipped": {
+      "subject": "Your signature is not required: {profile}",
+      "preheader": "The route author skipped your step, there is nothing to sign.",
+      "title": "Your signature is not required",
+      "lead": "The route author skipped your step for the documents “{profile}” in the project “{project}”: your signatures at this checkpoint are optional. There is nothing to sign.",
+      "action": "Open the signing page",
+      "details": [
+        [
+          "Project",
+          "{project}"
+        ],
+        [
+          "Checkpoint",
+          "{profile}"
+        ],
+        [
+          "Skipped by",
+          "{actor}"
+        ]
+      ],
+      "context": [
+        "You are on the signing route of a project on the server {server}. This email was sent to {email}."
+      ]
+    },
     "signing_returned": {
       "subject": "{actor} returned the documents for revision",
       "preheader": "The signing route is stopped: read the comment and send the documents again.",

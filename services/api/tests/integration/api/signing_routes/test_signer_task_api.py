@@ -120,6 +120,7 @@ async def test__task__participant_sees_own_slots_other_marks_and_route_progress(
             "mark": "png",
             "status": "pending",
             "reason": "awaiting_approval",
+            "optional": False,
         }
     ]
     # Чужие слоты с местом, но без причины плана.

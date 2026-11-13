@@ -70,6 +70,7 @@ _SAMPLES: dict[MailTemplate, _Sample] = {
         _SIGN_PATH, values=(*_SIGNING, "changed"), note=_CHANGES, token=False
     ),
     MailTemplate.signing_reminder: _Sample(_SIGN_PATH, values=_SIGNING, token=False),
+    MailTemplate.signing_skipped: _Sample(_SIGN_PATH, values=("actor", "project", "profile"), token=False),
     MailTemplate.signing_returned: _Sample(_CHECKPOINT_PATH, values=("actor", "project"), note=_COMMENTS, token=False),
     MailTemplate.signing_completed: _Sample(_CHECKPOINT_PATH, values=("project", "profile"), token=False),
     MailTemplate.smtp_test: _Sample(),

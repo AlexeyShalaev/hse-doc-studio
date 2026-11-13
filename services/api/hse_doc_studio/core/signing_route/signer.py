@@ -221,7 +221,9 @@ def unsigned_crypto(p: Participant, facts: RouteFacts) -> tuple[DocSlot, ...]:
     for pair in p.assignments:
         if method_of(_mode(facts.state, pair.slot_id)) not in CRYPTO_METHODS:
             continue
-        if slot_state(facts.state, pair.doc_id, pair.slot_id, facts.doc(pair.doc_id)).status is not SlotStatus.signed:
+        status = slot_state(facts.state, pair.doc_id, pair.slot_id, facts.doc(pair.doc_id)).status
+        # Пропущенная пара (13.3) подписи уже не ждёт.
+        if status not in (SlotStatus.signed, SlotStatus.skipped):
             pairs.append(pair)
     return tuple(pairs)
 

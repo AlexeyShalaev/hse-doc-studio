@@ -72,6 +72,7 @@ from hse_doc_studio.core.signing_route.transitions import archive, cancel, send
 from hse_doc_studio.core.signing_route.versions import (
     DocChange,
     VersionChanges,
+    has_news,
     keeps_approval,
     losing_approval,
     version_changes,
@@ -535,7 +536,7 @@ class SigningRouteSending(RouteScenario):
         loaded = await self._s.facts.load(point, route)
         candidate = loaded.facts.candidate()
         changes = version_changes(route, candidate)
-        if route.status in NEW_VERSION_STATUSES and not changes.any:
+        if route.status in NEW_VERSION_STATUSES and not has_news(route, candidate):
             raise nothing_changed()
         people = await self._people(point.project_id, route, loaded)
         readiness = await self._readiness(point, route, candidate, people, actor_id, at)
@@ -613,7 +614,7 @@ class SigningRouteSending(RouteScenario):
         ]
         if route.status not in SENDABLE_STATUSES or not route.participants:
             return _Readiness(tuple(blockers), evaluate(route, candidate), route)
-        if route.status in NEW_VERSION_STATUSES and not version_changes(route, candidate).any:
+        if route.status in NEW_VERSION_STATUSES and not has_news(route, candidate):
             # Новая версия без изменений: кнопку отправки не показывают, а не ловят 409 (12.9).
             blockers.append(Blocker(BlockerCode.nothing_changed))
             return _Readiness(tuple(blockers), evaluate(route, candidate), route)

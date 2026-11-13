@@ -84,6 +84,7 @@ from hse_doc_studio.use_cases.signing_route.reconcile import RouteReconciler
 from hse_doc_studio.use_cases.signing_route.reminders import SigningReminderSweeper, SigningRouteReminding
 from hse_doc_studio.use_cases.signing_route.scenario import RouteServices
 from hse_doc_studio.use_cases.signing_route.signer import SignerTools, SigningTaskScenario
+from hse_doc_studio.use_cases.signing_route.skipping import SigningRouteSkipping
 from hse_doc_studio.use_cases.signing_route.tasks import ListSigningTasksUC
 from hse_doc_studio.use_cases.signing_route.watch import RouteWatch, WatchedSignatureRepository
 
@@ -274,6 +275,10 @@ class ServerSigningRoutesProvider(Provider):
     @provide(scope=Scope.REQUEST)
     def get_route_control(self, services: RouteServices) -> SigningRouteControl:
         return SigningRouteControl(services)
+
+    @provide(scope=Scope.REQUEST)
+    def get_route_skipping(self, services: RouteServices) -> SigningRouteSkipping:
+        return SigningRouteSkipping(services)
 
     @provide(scope=Scope.REQUEST)
     def get_route_reminding(

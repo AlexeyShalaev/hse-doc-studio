@@ -59,7 +59,8 @@
     "keys": {
       "server_keys_allowed": false,
       "default_key": null
-    }
+    },
+    "optional": false
   },
   "docs": [
     {

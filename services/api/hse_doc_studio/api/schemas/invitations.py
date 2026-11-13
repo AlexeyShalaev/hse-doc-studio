@@ -37,6 +37,7 @@ NotificationKindName = Literal[
     "signing_completed",
     "signing_cancelled",
     "signing_new_version",
+    "signing_skipped",
     "runner_disk_cleaned",
 ]
 NotificationOutcome = Literal[

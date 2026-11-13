@@ -7,11 +7,8 @@ import { z } from "zod";
 // api/schemas/signing_route.py: лишнее поле значит расхождение сторон.
 // Все поля приходят явно, пустое значение это null.
 //
-// Необязательные подписи и пропуск (раздел 13.6) фронтенд знает раньше сервера (срез W12 до R21):
-// эталоны новой формы лежат в contracts/server/next. Пока сервер отдаёт прежнюю форму, новые поля
-// получают значения по умолчанию, а слот маршрута без `extra` читается по-старому (`optional`
-// значил «добавлен сверх точки»). Совместимость помечена `LEGACY_R21`; R21 её убирает вместе с
-// переносом эталонов из next в fixtures.
+// Необязательные подписи и пропуск (раздел 13.6): слот маршрута различает `extra` (добавлен сверх
+// точки) и `optional` (подпись необязательна); поля участника и задачи обязательны.
 
 const iso = z.string().min(1);
 const LocalizedSchema = z.record(z.string(), z.string());
@@ -219,17 +216,17 @@ export const RouteParticipantSchema = z.strictObject({
   notified_at: iso.nullable(),
   reminded_at: iso.nullable(),
   reminders: z.number().int().min(0),
-  /** Когда пропущен в этом раунде; null, если не пропущен. LEGACY_R21: по умолчанию null. */
-  skipped_at: iso.nullable().default(null),
+  /** Когда пропущен в этом раунде; null, если не пропущен. */
+  skipped_at: iso.nullable(),
   /**
    * Пропуск (13.6): только тому, кто управляет маршрутом, и только у идущего маршрута; иначе
-   * null. LEGACY_R21: по умолчанию null.
+   * null.
    */
-  skip: RouteSkipSchema.nullable().default(null),
+  skip: RouteSkipSchema.nullable(),
 });
 export type RouteParticipant = z.infer<typeof RouteParticipantSchema>;
 
-const RouteDocSlotShape = z.strictObject({
+export const RouteDocSlotSchema = z.strictObject({
   slot_id: z.string(),
   label: LocalizedSchema,
   participant_id: z.string().nullable(),
@@ -240,22 +237,7 @@ const RouteDocSlotShape = z.strictObject({
   status: RouteSlotStatusSchema,
 });
 
-/**
- * LEGACY_R21: сервер до R21 отдаёт слот без `extra`, а `optional` у него значит «добавлен сверх
- * точки». Такой слот читается как `extra = optional`, подпись обязательна.
- */
-const legacyDocSlot = (value: unknown): unknown => {
-  if (typeof value !== "object" || value === null || "extra" in value)
-    return value;
-  const slot = value as Record<string, unknown>;
-  return { ...slot, extra: slot.optional, optional: false };
-};
-
-export const RouteDocSlotSchema = z.preprocess(
-  legacyDocSlot,
-  RouteDocSlotShape,
-);
-export type RouteDocSlot = z.infer<typeof RouteDocSlotShape>;
+export type RouteDocSlot = z.infer<typeof RouteDocSlotSchema>;
 
 /**
  * Версия на подписи документа (раздел 12.3): копия собранного PDF, снятая при отправке. Её видят
@@ -600,9 +582,8 @@ export const SigningTaskMeSchema = z.strictObject({
   }),
   /**
    * Все оставшиеся пары участника необязательны на точке: автор может его пропустить (13.6).
-   * LEGACY_R21: по умолчанию false.
    */
-  optional: z.boolean().default(false),
+  optional: z.boolean(),
 });
 export type SigningTaskMe = z.infer<typeof SigningTaskMeSchema>;
 
@@ -626,8 +607,8 @@ export const SigningTaskSlotSchema = z.strictObject({
   ...SigningTaskOtherSlotSchema.shape,
   /** Причина плана (`PlanReason`, в том числе `awaiting_approval`); null у подписанного. */
   reason: z.string().nullable(),
-  /** Подпись необязательна на точке: пометка «необязательна» (13.9). LEGACY_R21: по умолчанию false. */
-  optional: z.boolean().default(false),
+  /** Подпись необязательна на точке: пометка «необязательна» (13.9). */
+  optional: z.boolean(),
 });
 export type SigningTaskSlot = z.infer<typeof SigningTaskSlotSchema>;
 

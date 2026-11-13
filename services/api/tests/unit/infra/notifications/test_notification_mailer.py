@@ -462,3 +462,21 @@ async def test__journal__invitation_without_smtp_is_not_sent_and_answers_false()
     assert ok is False
     assert (entry.status, entry.reason, entry.origin) == (MailStatus.not_sent, "smtp_off", "project_invite")
     assert entry.ref_kind is None
+
+
+async def test__signing_skipped__letter_with_link_to_the_signing_page_in_both_languages() -> None:
+    mailer = _mailer(_Sender(), SERVER)
+    payload = _signing(outcome=None, actor_name="Пётр Петров")
+
+    ru = mailer.render_notification("p@x.org", NotificationKind.signing_skipped, payload, locale="ru")
+    en = mailer.render_notification("p@x.org", NotificationKind.signing_skipped, payload, locale="en")
+    request = mailer.notification_request("p@x.org", NotificationKind.signing_skipped, payload, locale="ru")
+
+    assert ru is not None
+    assert en is not None
+    assert ru.subject == "Ваша подпись не требуется: Заявка на тему КП"
+    assert en.subject == "Your signature is not required: Заявка на тему КП"
+    assert "Пётр Петров" in ru.text
+    assert f"{SERVER}/sign/{PROJECT}/{ROUTE}" in ru.text
+    assert request is not None
+    assert (request.link_kind.value, request.ref_kind.value if request.ref_kind else None) == ("page", "signing_route")

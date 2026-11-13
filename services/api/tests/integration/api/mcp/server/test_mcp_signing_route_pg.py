@@ -81,6 +81,7 @@ async def test__tools_list__no_tool_approves_signs_a_task_or_returns_a_route(sta
     route_tools = {name for name in tools if "signing" in name}
     assert route_tools == {*_READ_TOOLS, _SEND}
     assert not [name for name in tools if "approve" in name or "return" in name or "task" in name.split("_")]
+    assert not [name for name in tools if "skip" in name]
     assert tools[_SEND]["annotations"]["destructiveHint"] is True
     assert tools["get_signing_route"]["annotations"]["readOnlyHint"] is True
     assert tools[_SEND]["inputSchema"]["required"] == ["project_id", "profile_id"]
@@ -484,3 +485,41 @@ async def test__get_signing_route__rebuilt_after_sending__changed_and_who_sends_
     )
     day = route["changed_hint"].split("от ", 1)[1][:10]
     assert note.startswith(f"Документ на подписании ({PROPOSAL}): изменения не попадут в подписываемую версию от {day}")
+
+
+async def test__get_signing_route__optional_skip_fields_and_the_hint_for_the_author(stand: Stand) -> None:
+    _enable(stand)
+    trio = await make_trio(stand, images=("author", "supervisor"))
+    trio.sent()
+    flag = trio.call(
+        trio.author,
+        "PUT",
+        f"{trio.project.base}/signatures/optional/{APPLICATION}/academic_supervisor",
+        json={"profile_id": TOPIC, "optional": True},
+    )
+    assert flag.status_code == 200, flag.text
+    headers = _mcp(stand, trio.author)
+    args = {"project_id": trio.project.id, "profile_id": TOPIC}
+    trio.approved(trio.supervisor)
+
+    turn = _body(_call(stand, headers, "get_signing_route", args))["route"]
+    academic_id = next(
+        p["participant_id"] for step in turn["steps"] for p in step if p["persona"] == "academic_supervisor"
+    )
+    skipped = trio.call(trio.author, "POST", f"{trio.url}/participants/{academic_id}/skip", json={})
+    assert skipped.status_code == 200, skipped.text
+    after = _body(_call(stand, headers, "get_signing_route", args))["route"]
+
+    people = {p["persona"]: p for step in turn["steps"] for p in step}
+    assert (people["academic_supervisor"]["skippable"], people["academic_supervisor"]["skipped_at"]) == (True, None)
+    assert people["supervisor"]["skippable"] is False
+    assert "необязательны" in turn["skip_hint"]
+    assert "Иванов" not in turn["skip_hint"]
+    slots = {s["slot_id"]: s for d in turn["docs"] for s in d["slots"] if d["doc_id"] == APPLICATION}
+    assert (slots["academic_supervisor"]["extra"], slots["academic_supervisor"]["optional"]) == (True, True)
+    assert (slots["supervisor"]["extra"], slots["supervisor"]["optional"]) == (False, False)
+    gone = {p["persona"]: p for step in after["steps"] for p in step}["academic_supervisor"]
+    assert (gone["state"], gone["skippable"], gone["skipped_at"] is not None) == ("skipped", False, True)
+    assert after["skip_hint"] is None
+    after_slots = {s["slot_id"]: s for d in after["docs"] for s in d["slots"] if d["doc_id"] == APPLICATION}
+    assert after_slots["academic_supervisor"]["status"] == "skipped"

@@ -29,6 +29,7 @@ from hse_doc_studio.core.signing_route.entities import (
     EventKind,
     Notified,
     Participant,
+    ParticipantSkip,
     RequestOutcome,
     RouteEvent,
     RoutePhase,
@@ -141,6 +142,32 @@ def _notified(raw: Any) -> Notified | None:
     )
 
 
+def _skipped_json(skip: ParticipantSkip | None) -> dict[str, Any] | None:
+    if skip is None:
+        return None
+    return {
+        "round": skip.round,
+        "at": skip.at.isoformat(),
+        "by": skip.by.hex,
+        "pairs": [{"doc_id": pair.doc_id, "slot_id": pair.slot_id} for pair in skip.pairs],
+        "kept_marks": list(skip.kept_marks),
+        "refrozen": list(skip.refrozen),
+    }
+
+
+def _skipped(raw: Any) -> ParticipantSkip | None:
+    if not raw:
+        return None
+    return ParticipantSkip(
+        round=int(raw["round"]),
+        at=datetime.fromisoformat(raw["at"]),
+        by=UUID(raw["by"]),
+        pairs=tuple(DocSlot(str(item["doc_id"]), str(item["slot_id"])) for item in raw.get("pairs", ())),
+        kept_marks=tuple(str(doc_id) for doc_id in raw.get("kept_marks", ())),
+        refrozen=tuple(str(doc_id) for doc_id in raw.get("refrozen", ())),
+    )
+
+
 # --- строки и сущности ---
 
 
@@ -177,6 +204,7 @@ def _participant_values(route_id: UUID, position: int, p: Participant) -> dict[s
         "notified": _notified_json(p.notified),
         "reminded_at": p.reminded_at,
         "reminders": p.reminders,
+        "skipped": _skipped_json(p.skipped),
     }
 
 
@@ -204,6 +232,7 @@ def _participant(row: SigningRouteParticipantRow) -> Participant:
         notified=_notified(row.notified),
         reminded_at=row.reminded_at,
         reminders=row.reminders,
+        skipped=_skipped(row.skipped),
     )
 
 

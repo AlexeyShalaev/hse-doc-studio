@@ -87,6 +87,13 @@ async def route_facts(  # noqa: PLR0913 — входы одного расчёт
         withheld=dict(state.withheld),
         plates=await known_plates(route, state, plate_data),
         personas=personas,
+        # Необязательные подписи точки маршрута и пропущенные (13.3): расчёт сверяет с ними пропуски участников.
+        optional={
+            doc_id: frozenset(slot_ids)
+            for doc_id, by_profile in state.optional.items()
+            if (slot_ids := by_profile.get(route.profile_id))
+        },
+        skipped={doc_id: dict(slots) for doc_id, slots in state.skipped.items()},
     )
 
 

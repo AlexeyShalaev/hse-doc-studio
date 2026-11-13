@@ -23,7 +23,10 @@ SigningRoutePhaseName = Literal["approval", "signing", "done"]
 SigningStopReasonName = Literal[
     "rebuilt", "sent_changed", "marks_changed", "frozen_changed", "participant_left", "returned"
 ]
-ParticipantStateName = Literal["invited", "waiting", "to_approve", "to_approve_sign", "to_sign", "done", "returned"]
+# `skipped`: автор пропустил участника (signing-route.md, 13.3).
+ParticipantStateName = Literal[
+    "invited", "waiting", "to_approve", "to_approve_sign", "to_sign", "done", "returned", "skipped"
+]
 SigningNextActionName = Literal["wait", "approve", "approve_and_sign", "sign", "done"]
 ParticipantMembershipName = Literal["member", "invited", "missing"]
 RouteSignMethodName = Literal["image", "detached", "pades"]
@@ -43,6 +46,7 @@ RouteEventKindName = Literal[
     "reminded",
     "invited",
     "frozen",
+    "skipped",
 ]
 
 
@@ -75,6 +79,20 @@ class RouteEvent(StrictModel):
     changed_docs: list[str] | None
 
 
+SkipBlockerName = Literal["not_turn", "required_slots", "no_slots", "done"]
+
+
+class RouteSkip(StrictModel):
+    """Пропуск участника (13.6): `blocker` одна причина по старшинству `done`, `no_slots`, `not_turn`,
+    `required_slots`; `keeps_marks` документы, где метка останется в зафиксированном PDF с ЭП, `refreezes` документы,
+    которые маршрут зафиксирует заново без метки."""
+
+    available: bool
+    blocker: SkipBlockerName | None
+    keeps_marks: list[str]
+    refreezes: list[str]
+
+
 class RouteParticipant(StrictModel):
     id: str
     persona: str
@@ -94,12 +112,19 @@ class RouteParticipant(StrictModel):
     notified_at: datetime | None
     reminded_at: datetime | None
     reminders: int = Field(ge=0)
+    # Когда пропущен в этом раунде (13.3); null, если не пропущен.
+    skipped_at: datetime | None
+    # Можно ли пропустить (13.6): только тому, кто управляет маршрутом, и только у идущего маршрута, иначе null.
+    skip: RouteSkip | None
 
 
 class RouteDocSlot(StrictModel):
     slot_id: str
     label: dict[str, str]
     participant_id: str | None
+    # Слот добавлен к маршруту сверх точки: точка его не требует, автор включил сам (6.5).
+    extra: bool
+    # Подпись необязательна на точке маршрута: автора можно пропустить (13.3).
     optional: bool
     status: RouteSlotStatusName
 
@@ -390,6 +415,8 @@ class SigningTaskMe(StrictModel):
     image_url: str | None
     plate: SigningPlate | None
     keys: SigningTaskKeys
+    # Все оставшиеся пары участника необязательны на точке: автор может его пропустить (13.3).
+    optional: bool
 
 
 class SigningTaskOtherSlot(StrictModel):
@@ -411,6 +438,8 @@ class SigningTaskSlot(SigningTaskOtherSlot):
     """Свой слот: ещё и причина плана (`PlanReason`), почему он не подписан; null у подписанного."""
 
     reason: str | None
+    # Подпись необязательна на точке: пометка «необязательна» (13.9).
+    optional: bool
 
 
 class SigningTaskDoc(StrictModel):

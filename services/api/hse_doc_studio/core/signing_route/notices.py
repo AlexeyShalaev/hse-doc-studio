@@ -27,11 +27,13 @@ from hse_doc_studio.core.signing_route.effects import Effect, Notify
 from hse_doc_studio.core.signing_route.entities import Notice, RequestOutcome, SigningRoute
 from hse_doc_studio.core.signing_route.transitions import mark_notified
 
-# Письмо по виду уведомления: запрос и напоминание подписанту, возврат и завершение только автору (6.6).
-_MAILED_TO_ANYONE = frozenset({Notice.request, Notice.reminder})
+# Письмо по виду уведомления: запрос и напоминание подписанту, возврат и завершение только автору (6.6);
+# пропущенному письмо идёт в любом случае (13.7).
+_MAILED_TO_ANYONE = frozenset({Notice.request, Notice.reminder, Notice.skipped})
 _MAILED_TO_SENDER = frozenset({Notice.returned, Notice.completed})
-# О своём же действии человек не уведомляется: вернувший на доработку, отменивший маршрут, отправивший новую версию.
-_SKIP_ACTOR = frozenset({Notice.returned, Notice.cancelled, Notice.new_version})
+# О своём же действии человек не уведомляется: вернувший на доработку, отменивший маршрут, отправивший новую
+# версию, пропустивший себя.
+_SKIP_ACTOR = frozenset({Notice.returned, Notice.cancelled, Notice.new_version, Notice.skipped})
 
 
 @dataclass(frozen=True)

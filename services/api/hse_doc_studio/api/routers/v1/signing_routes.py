@@ -26,7 +26,13 @@ from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.signatures.errors import StampingError
 from hse_doc_studio.core.signatures.key_policy import SigningKeyStorageDeniedError
 from hse_doc_studio.core.signing_route.drafting import PersonDraft
-from hse_doc_studio.core.signing_route.entities import DocSlot, RouteConflictError, RouteInputError
+from hse_doc_studio.core.signing_route.entities import (
+    DocSlot,
+    ParticipantState,
+    RouteConflictError,
+    RouteInputError,
+    RouteStatus,
+)
 from hse_doc_studio.use_cases.signatures._studio_signer import KeyPassphraseRequiredError
 from hse_doc_studio.use_cases.signing_route.author import (
     RoutePreview,
@@ -45,6 +51,7 @@ from hse_doc_studio.use_cases.signing_route.key_signer import (
     KeyRequest,
 )
 from hse_doc_studio.use_cases.signing_route.reminders import SigningRouteReminding
+from hse_doc_studio.use_cases.signing_route.skipping import SigningRouteSkipping
 from hse_doc_studio.use_cases.signing_route.views import EventView, PersonView, RouteDetails, SentVersion
 
 router = APIRouter(route_class=SafeDishkaRoute, dependencies=[Depends(require_server_mode)])
@@ -123,6 +130,7 @@ def route_response(details: RouteDetails) -> s.SigningRouteResponse:
                         slot_id=slot.slot_id,
                         label=slot.label,
                         participant_id=str(slot.participant_id) if slot.participant_id is not None else None,
+                        extra=slot.extra,
                         optional=slot.optional,
                         status=slot.status.value,
                     )
@@ -191,6 +199,21 @@ def _participant(details: RouteDetails, person: PersonView) -> s.RouteParticipan
         notified_at=p.notified.at if p.notified is not None else None,
         reminded_at=p.reminded_at,
         reminders=p.reminders,
+        skipped_at=p.skipped.at if person.view.state is ParticipantState.skipped and p.skipped is not None else None,
+        skip=_skip(details, person),
+    )
+
+
+def _skip(details: RouteDetails, person: PersonView) -> s.RouteSkip | None:
+    """`skip` только тому, кто управляет маршрутом, и только у идущего маршрута (13.6)."""
+    if not details.manages or details.status is not RouteStatus.active:
+        return None
+    option = person.view.skip
+    return s.RouteSkip(
+        available=option.available,
+        blocker=option.blocker.value if option.blocker is not None else None,
+        keeps_marks=list(option.keeps_marks),
+        refreezes=list(option.refreezes),
     )
 
 
@@ -404,6 +427,22 @@ async def archive_signing_route(
     project_id: UUID, route_id: UUID, uc: FromDishka[SigningRouteControl], body: s.EmptyRequest | None = None
 ) -> s.SigningRouteResponse:
     return route_response(await uc.archive(people_views.require_user(), project_id, route_id))
+
+
+@router.post(_BASE + "/{route_id}/participants/{participant_id}/skip", response_model=s.SigningRouteResponse)
+async def skip_signing_participant(
+    project_id: UUID,
+    route_id: UUID,
+    participant_id: str,
+    uc: FromDishka[SigningRouteSkipping],
+    body: s.EmptyRequest | None = None,
+) -> s.SigningRouteResponse:
+    """Пропустить участника, все оставшиеся подписи которого необязательны; только когда его очередь (13.6)."""
+    try:
+        participant = UUID(participant_id)
+    except ValueError:
+        raise _not_found() from None
+    return route_response(await uc.skip(people_views.require_user(), project_id, route_id, participant))
 
 
 @router.post(_BASE + "/{route_id}/participants/{participant_id}/remind", response_model=s.SigningReminder)

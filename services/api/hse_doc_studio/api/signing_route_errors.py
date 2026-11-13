@@ -2,7 +2,8 @@
 
 - `RouteInputError` (маршрут собран неверно) 400;
 - `RouteConflictError` 409, кроме `not_participant`: не участнику маршрут не раскрывается (404 `not_found`);
-  `doc_changed` и `doc_on_route` несут `docs`, `route_blocked` несёт `blockers`;
+  `doc_changed` и `doc_on_route` несут `docs`, `route_blocked` несёт `blockers`, `participant_not_skippable`
+  несёт `reason` и `slots` (обязательные пары, которые мешают; пусто при других причинах);
 - `SigningKeyError` отказ подписи ключом Студии («Отправить и подписать», «Согласовать и подписать», «Подписать»,
   плашка из ключа): 400 (`passphrase_required`, `passphrase_invalid`, `sign_failed`), 409 (`key_not_found`) или 403
   (`server_keys_forbidden`, `forbidden` за чужой слот или другого подписанта на плашке). У `sign_failed` отправки
@@ -16,7 +17,11 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from hse_doc_studio.core.signing_route.entities import RouteConflictError, RouteInputError
+from hse_doc_studio.core.signing_route.entities import (
+    ParticipantNotSkippableError,
+    RouteConflictError,
+    RouteInputError,
+)
 from hse_doc_studio.core.signing_route.readiness import Blocker, DocChangedError, RouteBlockedError
 from hse_doc_studio.core.signing_route.repositories import DocumentOnRouteError
 
@@ -63,6 +68,9 @@ async def _conflict_handler(_request: Request, exc: Exception) -> JSONResponse:
         body["docs"] = list(exc.doc_ids)
     if isinstance(exc, RouteBlockedError):
         body["blockers"] = [blocker_body(b) for b in exc.blockers]
+    if isinstance(exc, ParticipantNotSkippableError):
+        body["reason"] = exc.reason.value
+        body["slots"] = [{"doc_id": pair.doc_id, "slot_id": pair.slot_id} for pair in exc.slots]
     return JSONResponse(status_code=409, content=body)
 
 

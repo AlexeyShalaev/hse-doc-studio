@@ -64,7 +64,9 @@ def _other_slot(slot: TaskSlot) -> s.SigningTaskOtherSlot:
 
 def _own_slot(slot: TaskSlot) -> s.SigningTaskSlot:
     return s.SigningTaskSlot(
-        **_other_slot(slot).model_dump(), reason=slot.reason.value if slot.reason is not None else None
+        **_other_slot(slot).model_dump(),
+        reason=slot.reason.value if slot.reason is not None else None,
+        optional=slot.optional,
     )
 
 
@@ -124,6 +126,7 @@ def task_response(task: TaskDetails) -> s.SigningTask:
             keys=s.SigningTaskKeys(
                 server_keys_allowed=task.keys.server_keys_allowed, default_key=key_info(task.keys.default_key)
             ),
+            optional=task.optional,
         ),
         docs=[
             s.SigningTaskDoc(
