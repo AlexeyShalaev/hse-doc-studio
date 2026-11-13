@@ -282,6 +282,33 @@ The version for signing stays after the route is completed and after “Stop tra
 - While a route holds the document (running, stopped, returned, or completed and still tracked), the button is disabled. First send a new version, cancel the route or stop tracking it.
 - Cancelling the route removes the version for signing by itself.
 
+## Optional signatures and skipping { #optional }
+
+Sometimes a signature is not needed at this checkpoint: for example, the supervisor has already approved the application, and the academic supervisor's signature was added by the author or turned out to be redundant. The route waits for that person and will not complete until they sign. To avoid cancelling the route, mark the signature optional, and when the person's turn comes, skip them.
+
+**Mark a signature optional.** On the document's "Signatures" tab, in the slot panel, tick "Signature optional at this checkpoint". The same checkbox is in the route editor, in the "Where the signatures go" block, next to every signature place (there it is called "Signature optional"). The mark belongs to the checkpoint: the same document at another checkpoint may still require the same signature. You can change the mark on a running route, it does not touch the document's visible layer. You cannot mark a signature the template requires ("The template requires this signature: it cannot be made optional") or one that is already in place.
+
+**Skip.** In the "Signing" card, next to the person whose turn it is, you see the hint "All of this person's signatures at this checkpoint are optional. They can be skipped" and the "Skip" button. Only the people who manage the route (the owner and editors) see it, and only when all of the person's remaining signatures at the checkpoint are optional. While at least one is required, skipping is refused: "There are required signatures: cannot skip". You cannot skip before the person's turn: "You can skip once it is their turn". If the person has already signed some places, those stay, only the remaining ones are skipped.
+
+Studio asks you to confirm: "Skip ...?" The window lists the signatures that will not be placed and what happens next: the route moves to the next step, freezes the documents and asks the e-signature signers, keeps waiting for others, or completes ("All signatures will be collected"). The buttons are "Skip" and "Do not skip".
+
+**What happens after a skip.**
+
+- The skipped person gets an inbox notification and an email, if mail is set up: "Signature not required: ...". Their "To sign" task disappears, and the signing page says "Your signature is not required". If the skipped person is you, you get no notification.
+- In the card's steps the person is shown as "signature not required, skipped on ...". The route moves on or completes: "Everyone has signed. You can build the package."
+- The skipped person's mark is not drawn on the document page. If electronic signatures already sit over the frozen PDF and the mark is printed in it, the mark stays: signatures must not be broken. The confirmation window warns about this, and the package guide marks it as not required. If there are no electronic signatures over the PDF yet, Studio freezes the document again without the mark, and signers who have not signed will open the new version.
+- The action is written to the audit log (`signing_route.skip`), and the mail log gets a row for the email to the skipped person.
+- The package does not wait for the skipped signature: the package check does not block on it. In the `КАК_ПРОВЕРИТЬ.txt` guide the document has the line "not required (skipped by the author)" (in a Russian-language project: «не требуется (пропущено автором)»). An optional signature that nobody placed and nobody skipped does not block the package either: Studio warns "Optional signature "..." in "..." is not placed" and writes "not signed (optional)" there. As before, the guide goes into the package only together with electronic signatures.
+
+**Bring a skipped person back.** There is no separate button: a skip is undone by a new send. Clear the "Signature optional" mark on the signature (the skipped person's row shows "Returns to the route on the next send") and press "Send again" or "Send a new version". The person gets a request in their turn. While the mark stays, a new send keeps the skip.
+
+**What you cannot do.**
+
+- You cannot skip through MCP, there is no tool for it: a skip cancels the signature requirement and emails a third person, so it is the author's decision in the interface. An agent can only read that a signature is optional, who can be skipped, and the hint `skip_hint`: "The route author can skip them in the interface" ([MCP](mcp.md)).
+- There is no automatic skipping: not by deadline, not by any other condition. Only the author's action.
+- You cannot skip when the route is not running (stopped, returned, completed, cancelled) or when the person has no remaining signatures.
+- You cannot skip a step that is not in the route yet: to add the person to the route later, send again.
+
 ## Routes sent earlier { #migration }
 
 A route sent on an earlier Studio version had no version for signing yet. The Studio restores it on its own the first time it checks such a route:
