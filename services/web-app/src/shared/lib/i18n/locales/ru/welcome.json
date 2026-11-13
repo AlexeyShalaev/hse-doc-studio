@@ -25,8 +25,8 @@
     "title": "Недавние"
   },
   "card": {
-    "company": "Компания",
-    "university": "Вуз",
+    "company": "Не из ВШЭ",
+    "university": "ВШЭ",
     "pin": "Закрепить",
     "unpin": "Открепить",
     "archive": "Архивировать",

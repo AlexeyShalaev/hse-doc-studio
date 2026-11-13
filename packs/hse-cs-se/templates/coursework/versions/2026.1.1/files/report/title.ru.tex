@@ -1,0 +1,112 @@
+% ============================================================
+% research/report/title.tex — титульный лист Отчёта исследовательского
+% курсового проекта ОП «Программная инженерия» ФКН НИУ ВШЭ.
+% Чистый титул БЕЗ штампа/рамки/ЛУ. Ветвится по project.lang:
+%   RU — «Отчёт по исследовательскому курсовому проекту» (форма ОП ПИ);
+%   EN — «Research Project Report on the Topic» (форма ФКН на англ.).
+% Все данные — из макросов \hse… (common/meta), кроме англ. литералов
+% названия ОП/города (мета хранит их по-русски).
+% ============================================================
+\begin{titlepage}
+\thispagestyle{empty}
+\singlespacing
+\footnotesize
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+
+
+\begin{center}
+\textbf{ПРАВИТЕЛЬСТВО РОССИЙСКОЙ ФЕДЕРАЦИИ}\\
+\textbf{ФЕДЕРАЛЬНОЕ ГОСУДАРСТВЕННОЕ АВТОНОМНОЕ}\\
+\textbf{ОБРАЗОВАТЕЛЬНОЕ УЧРЕЖДЕНИЕ ВЫСШЕГО ОБРАЗОВАНИЯ}\\
+\textbf{НАЦИОНАЛЬНЫЙ ИССЛЕДОВАТЕЛЬСКИЙ УНИВЕРСИТЕТ}\\
+\textbf{«ВЫСШАЯ ШКОЛА ЭКОНОМИКИ»}
+
+\vspace{0.35cm}
+\hseFaculty\\
+Образовательная программа «\hseSpecialization»
+\end{center}
+
+\vspace{0.25cm}
+\noindent
+УДК~\hseUDC
+
+\vspace{0.4cm}
+\noindent
+\begin{minipage}[t]{0.46\textwidth}
+\raggedright
+\textbf{СОГЛАСОВАНО}\\
+Руководитель курсового проекта
+
+\vspace{0.15cm}
+\strut\hseSupervisorTitle\\[-0.05cm]
+\rule{6cm}{0.4pt}\\[-0.05cm]
+{\scriptsize Должность, место работы, ученая степень}
+
+\vspace{0.12cm}
+\strut\hseSupervisorName\\[-0.05cm]
+\rule{6cm}{0.4pt}\\[-0.05cm]
+{\scriptsize Подпись, И.О. Фамилия}
+
+\vspace{0.1cm}
+\signdateblank
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.46\textwidth}
+\raggedright
+\textbf{УТВЕРЖДАЮ}\\
+\strut\hseAcademicSupervisorTitle
+
+\vspace{0.35cm}
+\mbox{\rule{6cm}{0.4pt}}\\[-0.05cm]
+\hseAcademicSupervisorName
+
+\vspace{0.12cm}
+«\rule{0.8cm}{0.4pt}» \rule{2.5cm}{0.4pt} \hseYear~г.
+\end{minipage}
+
+\vspace{0.95cm}
+\begin{center}
+\textbf{\normalsize Отчёт}
+
+\vspace{0.12cm}
+\textbf{\normalsize по исследовательскому курсовому проекту}
+
+\vspace{0.35cm}
+на тему
+\underline{\makebox[0.8\textwidth][c]{\hseProjectName}}
+
+\vspace{0.3cm}
+по направлению подготовки бакалавров \hseProgramCode\ «\hseSpecialization»
+\end{center}
+
+\vspace{0.95cm}
+\noindent\hfill
+\begin{minipage}[t]{0.52\textwidth}
+\raggedright
+Выполнил\\
+студент группы \hseGroup\\
+\hseCourse{} курса \hseDegreeLevel\\
+образовательной программы\\
+«\hseSpecialization»
+
+\vspace{0.25cm}
+\strut\hseAuthorName\\[-0.05cm]
+\rule{6cm}{0.4pt}\\[-0.05cm]
+{\scriptsize И.О. Фамилия}
+
+\vspace{0.15cm}
+\rule{3.6cm}{0.4pt}\quad\rule{2.2cm}{0.4pt}\\[-0.05cm]
+{\scriptsize Подпись, Дата}
+\end{minipage}
+
+\vfill
+\begin{center}
+\textbf{\hseCity{} \hseYear}
+\end{center}
+
+\end{titlepage}
+
+% Титульный лист — страница 1 (без номера); нумерация со 2-й.
+\setcounter{page}{2}
+\clearpage

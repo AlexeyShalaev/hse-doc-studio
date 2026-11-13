@@ -65,7 +65,8 @@ const SupervisorRow = ({
               </button>
               <button
                 type="button"
-                className={clsx(value.role === "company" && "active")}
+                className={clsx("tt", value.role === "company" && "active")}
+                data-tt={t("projectSettings.companyHint")}
                 onClick={() => {
                   onChange({ role: "company" });
                 }}
