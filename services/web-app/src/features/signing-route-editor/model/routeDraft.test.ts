@@ -200,6 +200,7 @@ const ROUTE: SigningRoute = {
   candidates: [],
   changed_docs: [],
   preset: null,
+  point_deadline: null,
 };
 
 describe("тело PUT", () => {

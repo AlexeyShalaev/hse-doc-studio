@@ -407,6 +407,16 @@ const COPY: Record<
       action: "Open the checkpoint",
     },
   },
+  checkpoint_due: {
+    ru: {
+      lead: "Срок контрольной точки «{profile}» в проекте «{project}»: {deadline}. Пакет для сдачи ещё не собран.",
+      action: "Открыть контрольную точку",
+    },
+    en: {
+      lead: "The checkpoint “{profile}” in the project “{project}” is due {deadline}. The submission package is not built yet.",
+      action: "Open the checkpoint",
+    },
+  },
   smtp_test: {
     ru: {
       lead: "Это тестовое письмо Студии. Если вы его читаете, отправка работает.",
@@ -805,6 +815,24 @@ export const MAIL_DEFAULT_DRAFTS: readonly MailDraft[] = [
     link_path: SIGN_PATH,
     note_len: 212,
     values: { actor: P.petr.name, project: PR.bertie.name },
+  },
+  {
+    ago: DAY + 3 * HOUR + 30 * MIN,
+    template: "checkpoint_due",
+    to: P.maria,
+    subject: `Скоро срок сдачи: ${TOPIC}`,
+    status: "sent",
+    cause: "system",
+    task: "checkpoint_reminders",
+    origin: "notification",
+    project: PR.bertie,
+    link: "page",
+    link_path: `/projects/${PR.bertie.id}/submit/cp/topic-approval`,
+    values: {
+      project: PR.bertie.name,
+      profile: TOPIC,
+      deadline: "15.11.2026 20:59 UTC",
+    },
   },
   {
     ago: DAY + 4 * HOUR,

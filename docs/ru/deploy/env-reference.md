@@ -417,6 +417,8 @@ tags:
 | `HSE_STUDIO__SIGNING_ROUTE__REMINDER_WAITING_DAYS` | float | `3.0` | server | Через сколько суток без запросов и напоминаний подписанту в очереди уходит автонапоминание. |
 | `HSE_STUDIO__SIGNING_ROUTE__REMINDER_MAX_AUTO` | int | `3` | server | Сколько автонапоминаний получает один подписант за одну отправку маршрута; 0 выключает их. |
 | `HSE_STUDIO__SIGNING_ROUTE__SWEEP_INTERVAL_S` | float | `300.0` | server | Как часто сервер сверяет идущие маршруты подписания с документами проектов, в секундах. |
+| `HSE_STUDIO__CHECKPOINT__REMINDER_DAYS` | int | `3` | server | За сколько суток до срока контрольной точки владелец и авторы получают напоминание, если пакет точки ещё не собран; 0 выключает напоминание. |
+| `HSE_STUDIO__CHECKPOINT__REMINDER_INTERVAL_S` | float | `900.0` | server | Как часто сервер проверяет, кому пора напомнить о сроке контрольной точки, в секундах. |
 | `HSE_STUDIO__MODE` | local / server | `local` | оба | Instance mode: 'local' (single-user install) or 'server' (shared; not supported yet). |
 | `HSE_STUDIO__DATA_DIR` | Path | `~/.config/hse-studio` | оба | Local data storage directory |
 | `HSE_STUDIO__HOST_DATA_DIR` | str | не задано | оба | Host path of data_dir for sibling-container mounts; None when backend runs natively. |

@@ -46,6 +46,8 @@ class MailTemplate(StrEnum):
     signing_skipped = "signing_skipped"
     signing_returned = "signing_returned"
     signing_completed = "signing_completed"
+    # Срок контрольной точки через 3 дня (16.7): автору, ведёт на точку сдачи.
+    checkpoint_due = "checkpoint_due"
     smtp_test = "smtp_test"
 
 

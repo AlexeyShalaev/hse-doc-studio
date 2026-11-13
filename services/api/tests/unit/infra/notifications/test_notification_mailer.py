@@ -480,3 +480,40 @@ async def test__signing_skipped__letter_with_link_to_the_signing_page_in_both_la
     assert f"{SERVER}/sign/{PROJECT}/{ROUTE}" in ru.text
     assert request is not None
     assert (request.link_kind.value, request.ref_kind.value if request.ref_kind else None) == ("page", "signing_route")
+
+
+async def test__checkpoint_due__letter_to_the_checkpoint_with_deadline_and_journal_row_without_object() -> None:
+    log = InMemoryMailLogRepository()
+    mailer = _mailer(_Sender(), SERVER, log=log)
+    payload = NotificationPayload(
+        project_id=PROJECT,
+        project_name="Bertie",
+        excerpt="Заявка на тему КП (SmartLMS)",
+        profile_id="topic-approval",
+        deadline="2026-11-15T23:59:00+03:00",
+    )
+
+    ru = mailer.render_notification("a@x.org", NotificationKind.checkpoint_due, payload, locale="ru")
+    en = mailer.render_notification("a@x.org", NotificationKind.checkpoint_due, payload, locale="en")
+    ok = await mailer.send_notification(
+        "a@x.org", NotificationKind.checkpoint_due, payload, locale="ru", to_user_id="u-a"
+    )
+
+    assert ru is not None
+    assert en is not None
+    assert ru.subject == "Скоро срок сдачи: Заявка на тему КП (SmartLMS)"
+    assert en.subject == "Deadline soon: Заявка на тему КП (SmartLMS)"
+    assert "15.11.2026 20:59 UTC" in ru.text
+    assert "2026-11-15 20:59 UTC" in en.text
+    assert f"{SERVER}/projects/{PROJECT}/submit/cp/topic-approval" in ru.text
+    entry = _row(log)
+    assert ok is True
+    assert (entry.template, entry.status, entry.origin) == ("checkpoint_due", MailStatus.sent, "notification")
+    assert (entry.to_user_id, entry.project_id, entry.ref_kind, entry.ref_id) == ("u-a", PROJECT, None, None)
+    assert entry.params.link is MailLinkKind.page
+    assert entry.params.link_path == f"/projects/{PROJECT}/submit/cp/topic-approval"
+    assert entry.params.values == {
+        "project": "Bertie",
+        "profile": "Заявка на тему КП (SmartLMS)",
+        "deadline": "15.11.2026 20:59 UTC",
+    }

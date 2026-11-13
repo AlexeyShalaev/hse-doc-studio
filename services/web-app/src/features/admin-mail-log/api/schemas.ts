@@ -47,6 +47,7 @@ export const MAIL_TEMPLATES = [
   "signing_skipped",
   "signing_returned",
   "signing_completed",
+  "checkpoint_due",
   "smtp_test",
 ] as const;
 export type MailTemplate = (typeof MAIL_TEMPLATES)[number];
@@ -67,6 +68,7 @@ export const MAIL_TEMPLATE_GROUPS = {
     "project_invitation_link",
     "access_request",
     "transfer_request",
+    "checkpoint_due",
   ],
   signing: [
     "signing_request",

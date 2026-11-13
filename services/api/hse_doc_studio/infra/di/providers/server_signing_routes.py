@@ -1,5 +1,5 @@
 """Провайдер маршрутов подписания (серверный режим): хранилище в Postgres, факты, уведомления, задачи «На подпись»,
-люди проекта, сценарии автора и подписанта, сторожа и сверка с проектом.
+люди проекта, сценарии автора и подписанта, сторожа и сверка с проектом, напоминание о сроке контрольной точки.
 
 Локальная Студия маршрутов не хранит (docs/design/signing-route.md, раздел 6.9): порта там нет, сценарии маршрута
 подключаются только в `MODE=server`.
@@ -52,6 +52,7 @@ from hse_doc_studio.core.signing_route.ports import (
 from hse_doc_studio.core.signing_route.reminders import ReminderPolicy
 from hse_doc_studio.core.signing_route.repositories import ISigningRouteRepository
 from hse_doc_studio.core.uow import IUnitOfWork
+from hse_doc_studio.infra.db.repositories.checkpoint_reminders import PostgresCheckpointReminderStore
 from hse_doc_studio.infra.db.repositories.signing_route_people import PostgresRoutePeople
 from hse_doc_studio.infra.db.repositories.signing_routes import SqlSigningRouteRepository
 from hse_doc_studio.infra.db.session import SessionProvider
@@ -87,6 +88,7 @@ from hse_doc_studio.use_cases.signing_route.signer import SignerTools, SigningTa
 from hse_doc_studio.use_cases.signing_route.skipping import SigningRouteSkipping
 from hse_doc_studio.use_cases.signing_route.tasks import ListSigningTasksUC
 from hse_doc_studio.use_cases.signing_route.watch import RouteWatch, WatchedSignatureRepository
+from hse_doc_studio.use_cases.submission.checkpoint_reminders import CheckpointReminderSweeper
 
 
 class ServerSigningRoutesProvider(Provider):
@@ -157,6 +159,16 @@ class ServerSigningRoutesProvider(Provider):
             max_auto=cfg.reminder_max_auto,
         )
         return SigningReminderSweeper(routes, facts, notifier, uow, policy)
+
+    @provide
+    def get_checkpoint_reminder_sweeper(
+        self, sessions: SessionProvider, notifier: INotifier, uow: IUnitOfWork
+    ) -> CheckpointReminderSweeper:
+        """Напоминание автору о сроке контрольной точки (16.7, срез R29): задача лидера, как автонапоминания
+        маршрута; срок за сколько суток из настроек `checkpoint`."""
+        return CheckpointReminderSweeper(
+            PostgresCheckpointReminderStore(sessions), notifier, uow, days=settings.checkpoint.reminder_days
+        )
 
     # --- сценарии автора (срез R5) ---
 

@@ -14,6 +14,7 @@ from hse_doc_studio.api.config.auth import AuthConfig, SecretsConfig
 from hse_doc_studio.api.config.autoscale import AutoscaleConfig
 from hse_doc_studio.api.config.backups import BackupsConfig
 from hse_doc_studio.api.config.build import CompileConfig, FontsConfig
+from hse_doc_studio.api.config.checkpoint import CheckpointConfig
 from hse_doc_studio.api.config.collab import CollabConfig
 from hse_doc_studio.api.config.db import DbConfig
 from hse_doc_studio.api.config.devices import DevicesConfig
@@ -127,6 +128,7 @@ class Settings(BaseSettings):
     hse_persons: HsePersonsConfig = Field(default_factory=HsePersonsConfig)
     sharing: SharingConfig = Field(default_factory=SharingConfig)
     signing_route: SigningRouteConfig = Field(default_factory=SigningRouteConfig)
+    checkpoint: CheckpointConfig = Field(default_factory=CheckpointConfig)
 
     # Режим инстанса (HSE_STUDIO__MODE). Не путать с DeploymentMode (all-in-one/standard/native):
     # тот описывает, где запущен бэкенд, этот — одна локальная установка или общий сервер.

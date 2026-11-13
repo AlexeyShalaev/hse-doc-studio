@@ -15,6 +15,7 @@ from uuid import UUID, uuid4
 
 from hse_doc_studio.core.access.checker import ProjectForbiddenError
 from hse_doc_studio.core.access.entities import Actor
+from hse_doc_studio.core.checkpoint_deadlines import route_deadline_from_point
 from hse_doc_studio.core.entities import SigningIdentity
 from hse_doc_studio.core.enums import PlacementOrigin
 from hse_doc_studio.core.errors import NotFoundError
@@ -330,7 +331,8 @@ class SigningRouteDrafts(RouteScenario):
     async def _new_route(
         self, point: RoutePoint, actor_id: UUID, previous: SigningRoute | None, preset: RoutePreset | None
     ) -> SigningRoute:
-        """Состав черновика: прежний маршрут точки (6.5), иначе пресет точки, а без него порядок 5.2."""
+        """Состав черновика: прежний маршрут точки (6.5), иначе пресет точки, а без него порядок 5.2. Срок черновика
+        из срока точки (16.5)."""
         extras: list[DocSlot] = []
         # По какой версии шаблона собран состав (15.7): у черновика после прежнего маршрута та же, что у прежнего.
         preset_version: str | None = None
@@ -352,6 +354,8 @@ class SigningRouteDrafts(RouteScenario):
             participants = draft_participants(steps, candidates, invitees, prefer=actor_id)
         pairs = [*point.required, *extras]
         participants, _ = assign_pairs(participants, pairs)
+        # Срок черновика из срока точки (16.5); дальше автор меняет его сам.
+        point_deadline = point.project.deadlines.get(point.profile.id)
         return SigningRoute(
             id=uuid4(),
             project_id=point.project_id,
@@ -359,7 +363,9 @@ class SigningRouteDrafts(RouteScenario):
             created_by=actor_id,
             docs=point.docs_of(pairs),
             participants=participants,
+            deadline=route_deadline_from_point(point_deadline, now=self._s.clock()),
             preset_version=preset_version,
+            point_deadline=point_deadline,
         )
 
     async def _write_preset(  # noqa: PLR0913 — что применить и к чему

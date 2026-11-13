@@ -276,6 +276,8 @@ def route_view(details: RouteDetails) -> dict[str, object]:
         "current_step": details.current_step,
         "steps_total": len(details.steps),
         "deadline": route.deadline,
+        # Срок точки сдачи, из которого посчитан срок черновика (16.5); срок точки сейчас в list_submission_profiles.
+        "point_deadline": route.point_deadline,
         "message": route.message,
         "stop_reason": details.stop_reason.value if details.stop_reason is not None else None,
         "stop_text": _stop_text(details.stop_reason, details.docs),
@@ -345,7 +347,8 @@ class GetSigningRouteTool(McpTool):
         name="get_signing_route",
         description=(
             "Ход маршрута подписания контрольной точки («Отправить на подписание»): статус и фаза, шаги с людьми и их "
-            "состояниями, чья очередь сейчас, срок, причина остановки (документ изменился, вернули на доработку, "
+            "состояниями, чья очередь сейчас, срок (deadline; point_deadline: срок точки, из которого посчитан срок "
+            "черновика), причина остановки (документ изменился, вернули на доработку, "
             "участник ушёл) и последние события. У документов версия на подписи (sent) и есть ли изменения после "
             "отправки (changed): правка и пересборка маршрут не останавливают, подписывают версию на подписи. Без "
             "profile_id сводка по всем маршрутам проекта. Слоты: extra (добавлен сверх точки), optional (подпись "

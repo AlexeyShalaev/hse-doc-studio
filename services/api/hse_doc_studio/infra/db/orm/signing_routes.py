@@ -66,6 +66,8 @@ class SigningRouteRow(Base):
     stopped_by: Mapped[UUID | None] = mapped_column(Uuid)
     # Версия шаблона, по пресету которой собран состав (signing-route.md, 15.7); NULL: не по пресету.
     preset_version: Mapped[str | None] = mapped_column(String(64))
+    # Срок точки сдачи, из которого посчитан срок черновика (signing-route.md, 16.5); NULL: срока точки не было.
+    point_deadline: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_by: Mapped[str] = mapped_column(String(64), nullable=False)
     sent_by: Mapped[str | None] = mapped_column(String(64))
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

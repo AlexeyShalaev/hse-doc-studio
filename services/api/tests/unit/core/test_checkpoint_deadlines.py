@@ -1,8 +1,10 @@
-"""Сроки контрольных точек (docs/design/signing-route.md, 16.4 и 16.6): разбор, состояние, ближайший срок, подсказка."""
+"""Сроки контрольных точек (docs/design/signing-route.md, 16.4–16.7): разбор, состояние, ближайший срок, подсказка,
+срок черновика маршрута из срока точки и правила напоминания автору."""
 
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta, timezone
+from uuid import UUID
 
 import pytest
 from hse_doc_studio.core.checkpoint_deadlines import (
@@ -16,6 +18,9 @@ from hse_doc_studio.core.checkpoint_deadlines import (
     parse_deadline,
     parse_deadline_hint,
     project_next_deadline,
+    reminder_due,
+    reminder_key,
+    route_deadline_from_point,
 )
 
 pytestmark = pytest.mark.unit
@@ -230,3 +235,81 @@ def test__has_date__concrete_dates(text: str) -> None:
 )
 def test__has_date__hints_without_dates(text: str) -> None:
     assert not has_date(text)
+
+
+# --- срок черновика маршрута (16.5) -------------------------------------------------------------
+
+
+def test__route_deadline_from_point__a_day_earlier_at_the_same_moscow_time() -> None:
+    route = route_deadline_from_point(DEADLINE, now=_msk(1, 10))
+
+    assert route == _msk(14, 23, 59)
+    assert route is not None
+    assert route.utcoffset() == timedelta(hours=3)
+
+
+def test__route_deadline_from_point__utc_point__same_moment_a_day_earlier() -> None:
+    assert route_deadline_from_point(DEADLINE.astimezone(UTC), now=_msk(1, 10)) == _msk(14, 23, 59)
+
+
+@pytest.mark.parametrize(
+    "now",
+    [_msk(14, 0), DEADLINE - timedelta(days=2) + timedelta(seconds=1), _msk(15, 23, 58)],
+    ids=["a_day_left", "just_under_two_days", "a_minute_left"],
+)
+def test__route_deadline_from_point__less_than_two_days_left__equals_the_point(now: datetime) -> None:
+    assert route_deadline_from_point(DEADLINE, now=now) == DEADLINE
+
+
+def test__route_deadline_from_point__exactly_two_days_left__a_day_earlier() -> None:
+    assert route_deadline_from_point(DEADLINE, now=DEADLINE - timedelta(days=2)) == _msk(14, 23, 59)
+
+
+@pytest.mark.parametrize("point", [None, DEADLINE], ids=["no_point", "point_passed"])
+def test__route_deadline_from_point__no_point_or_passed__no_route_deadline(point: datetime | None) -> None:
+    assert route_deadline_from_point(point, now=_msk(16, 0)) is None
+
+
+# --- напоминание автору (16.7) --------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("now", "due"),
+    [
+        (DEADLINE - timedelta(days=3, seconds=1), False),
+        (DEADLINE - timedelta(days=3), True),
+        (DEADLINE - timedelta(minutes=1), True),
+        (DEADLINE, False),
+        (DEADLINE + timedelta(hours=1), False),
+    ],
+    ids=["before_window", "window_opens", "last_minute", "deadline_reached", "after_deadline"],
+)
+def test__reminder_due__three_days_before_up_to_the_deadline(now: datetime, due: bool) -> None:
+    assert reminder_due(DEADLINE, now=now, packaged=None) is due
+
+
+def test__reminder_due__package_built__no_reminder() -> None:
+    now = DEADLINE - timedelta(days=1)
+
+    assert reminder_due(DEADLINE, now=now, packaged=now - timedelta(hours=1)) is False
+
+
+def test__reminder_due__days_setting__window_follows_and_zero_disables() -> None:
+    now = DEADLINE - timedelta(days=5)
+
+    assert reminder_due(DEADLINE, now=now, packaged=None, days=7) is True
+    assert reminder_due(DEADLINE, now=now, packaged=None) is False
+    assert reminder_due(DEADLINE, now=DEADLINE - timedelta(hours=1), packaged=None, days=0) is False
+
+
+def test__reminder_key__one_per_deadline_any_zone_and_fits_the_column() -> None:
+    project = UUID("5b0c1d2e-3f40-4152-8364-758697a8b9c0")
+
+    key = reminder_key(project, "topic-approval", DEADLINE)
+    long_key = reminder_key(project, "p" * 256, DEADLINE)
+
+    assert key == f"checkpoint:{project.hex}:topic-approval:{int(DEADLINE.timestamp())}:due"
+    assert reminder_key(project, "topic-approval", DEADLINE.astimezone(UTC)) == key
+    assert reminder_key(project, "topic-approval", DEADLINE + timedelta(days=1)) != key
+    assert len(long_key) <= 128
+    assert long_key != reminder_key(project, "q" * 256, DEADLINE)

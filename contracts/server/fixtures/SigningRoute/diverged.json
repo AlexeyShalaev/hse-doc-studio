@@ -187,5 +187,6 @@
   "changed_docs": [
     "topic_application"
   ],
-  "preset": null
+  "preset": null,
+  "point_deadline": null
 }

@@ -19,10 +19,11 @@ export type RoutePointDeadlineProps = {
   /** Нынешний срок маршрута. */
   routeDeadline: string | null;
   /**
-   * Срок точки, из которого сервер посчитал срок черновика (R29). undefined, пока сервер поля не
-   * присылает: тогда «Срок точки изменился» не определить, и редактор только предлагает срок.
+   * Срок точки, из которого сервер посчитал срок черновика (R29). null, если срока точки тогда не
+   * было (или черновик старше R29): «Срок точки изменился» не определить, редактор только
+   * предлагает срок.
    */
-  pointDeadlineAtDraft: string | null | undefined;
+  pointDeadlineAtDraft: string | null;
   /** Маршрут можно править и человек управляет им: можно «Поставить» и указать срок точки. */
   canEdit: boolean;
   /** «Поставить»: срок маршрута из срока точки (16.5). */
@@ -117,7 +118,7 @@ export const RoutePointDeadline = ({
     );
   } else if (
     canEdit &&
-    pointDeadlineAtDraft != null &&
+    pointDeadlineAtDraft !== null &&
     !sameMoment(pointDeadlineAtDraft, point)
   ) {
     main = offer("route.changed", suggest);

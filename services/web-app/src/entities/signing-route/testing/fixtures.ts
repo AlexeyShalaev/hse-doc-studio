@@ -199,6 +199,7 @@ export const makeSigningRoute = (
   ],
   changed_docs: [],
   preset: null,
+  point_deadline: null,
   ...overrides,
 });
 

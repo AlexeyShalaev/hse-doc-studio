@@ -44,6 +44,7 @@ SERVER_GROUPS = frozenset(
         "sharing",
         "devices",
         "signing_route",
+        "checkpoint",
     }
 )
 # Секреты, не оформленные как SecretStr (в значении может быть пароль).

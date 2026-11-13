@@ -330,7 +330,7 @@ describe("срок точки в редакторе маршрута", () => {
         projectId={PROJECT}
         profile={withPoint}
         routeDeadline={null}
-        pointDeadlineAtDraft={undefined}
+        pointDeadlineAtDraft={null}
         canEdit
         onApply={onApply}
         now={NOW}
@@ -369,7 +369,7 @@ describe("срок точки в редакторе маршрута", () => {
         projectId={PROJECT}
         profile={withPoint}
         routeDeadline="2026-11-17T23:59:00+03:00"
-        pointDeadlineAtDraft={undefined}
+        pointDeadlineAtDraft={null}
         canEdit
         onApply={vi.fn()}
         now={NOW}

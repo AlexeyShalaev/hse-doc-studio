@@ -1102,9 +1102,11 @@ export const createSigningRouteDemo = (
     candidates: candidatesOf(r),
     changed_docs: changedDocs(r),
     preset: presetView(r, viewer),
-    ...(r.point_deadline === undefined
-      ? {}
-      : { point_deadline: r.point_deadline }),
+    // Как сервер (R29): управляющему и у маршрута, который можно править, иначе null.
+    point_deadline:
+      EDITABLE.includes(r.status) && manages(r, viewer)
+        ? (r.point_deadline ?? null)
+        : null,
   });
 
   const waitingFor = (r: Route) =>

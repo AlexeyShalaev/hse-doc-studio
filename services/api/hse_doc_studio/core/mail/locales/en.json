@@ -458,6 +458,30 @@
         "You sent these documents for signing on the server {server}. This email was sent to {email}."
       ]
     },
+    "checkpoint_due": {
+      "subject": "Deadline soon: {profile}",
+      "preheader": "The submission package is not built yet, and the deadline is a few days away.",
+      "title": "Deadline soon",
+      "lead": "The checkpoint “{profile}” in the project “{project}” is due {deadline}. The submission package is not built yet.",
+      "action": "Open the checkpoint",
+      "details": [
+        [
+          "Project",
+          "{project}"
+        ],
+        [
+          "Checkpoint",
+          "{profile}"
+        ],
+        [
+          "Deadline",
+          "{deadline}"
+        ]
+      ],
+      "context": [
+        "You are an author of the project on the server {server}. This email was sent to {email}."
+      ]
+    },
     "smtp_test": {
       "subject": "HSE Doc Studio: mail check",
       "preheader": "This is a test message: mail sending is set up correctly.",
