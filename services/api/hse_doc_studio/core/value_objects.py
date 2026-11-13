@@ -148,6 +148,20 @@ class SignedAt:
 
 
 @dataclass(frozen=True)
+class FromPack:
+    """Пометка «место из шаблона» у размещения (signing-route.md, 15.4).
+
+    `version` версия шаблона, из которой взято место; `digest` отпечаток места и меток даты в момент применения
+    (`core/signatures/pack_places.place_digest`). Место «как в шаблоне», пока отпечаток текущей геометрии и меток
+    совпадает с записанным: старая Студия сохраняет незнакомое поле, но двигает рамку, и место станет ручным.
+    Пишет её только сервер при применении пресета; правка человеком её снимает.
+    """
+
+    version: str
+    digest: str
+
+
+@dataclass(frozen=True)
 class SignaturePlacement:
     """Per-(doc, slot) placement on the compiled PDF.
 
@@ -169,6 +183,8 @@ class SignaturePlacement:
     dates: tuple[DateMark, ...] = ()
     # Момент подписи этого слота в этом документе: из него печатаются метки даты.
     signed_at: SignedAt | None = None
+    # Место поставлено пресетом шаблона (signing-route.md, 15.4); None у ручного места и у затравки.
+    from_pack: FromPack | None = None
 
 
 @dataclass(frozen=True)

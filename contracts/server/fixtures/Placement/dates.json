@@ -43,5 +43,7 @@
   "signed_at": {
     "at": "2026-11-12T23:30:00+00:00",
     "source": "approval"
-  }
+  },
+  "origin": "manual",
+  "preset_available": true
 }

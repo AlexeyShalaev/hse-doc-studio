@@ -3,11 +3,13 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from hse_doc_studio.core.catalog import SignatureDefaultPlacement, SigningSlotPreset, SlotCondition
 from hse_doc_studio.core.enums import (
     CheckSeverity,
     DateMarkAlign,
     DateMarkFormat,
     MetaFieldAuto,
+    PersonRole,
     RequiredAt,
     TemplateUpdateClass,
 )
@@ -18,6 +20,8 @@ from hse_doc_studio.infra.template.yaml_template_repository import (
     _parse_submission_profile,
     parse_default_dates,
     parse_signing_route,
+    parse_signing_slot,
+    parse_slot_placement,
 )
 
 # ---------------------------------------------------------------------------
@@ -613,3 +617,109 @@ def test__deadline_hint__absent__none(tmp_path: Path) -> None:
 
     assert version is not None
     assert version.pack_submission.profiles[0].deadline_hint is None
+
+
+# --- пресет маршрута из пака (signing-route.md, 15.3 и 15.8) --------------------------------------------------------
+
+
+def test__parse_signature_slot__placements_by_document__broken_entry_dropped_others_kept() -> None:
+    slot = _parse_signature_slot(
+        {
+            "id": "supervisor",
+            "applies_to": ["project_proposal", "topic_application", "report"],
+            "default_placement": {"page": 1, "x_mm": 110, "y_mm": 130, "width_mm": 40},
+            "placements": {
+                "project_proposal": {"page": 1, "x_mm": 80, "y_mm": 139, "width_mm": 40},
+                "topic_application": {"page": 1, "x_mm": 190, "y_mm": 168, "width_mm": 40},
+                "report": {"page": 0, "x_mm": 10, "y_mm": 10, "width_mm": 40},
+            },
+        }
+    )
+
+    assert slot.placements == (("project_proposal", SignatureDefaultPlacement(1, 80, 139, 40)),)
+    assert slot.place_for("topic_application") == SignatureDefaultPlacement(1, 110, 130, 40)
+
+
+@pytest.mark.parametrize(
+    ("item", "fragment"),
+    [
+        ({"page": 0, "x_mm": 10, "y_mm": 10, "width_mm": 40}, "before the first page"),
+        ({"x_mm": 10, "y_mm": 10, "width_mm": 5}, "width_mm 5 is outside 10..200"),
+        ({"x_mm": 10, "y_mm": 10, "width_mm": 201}, "width_mm 201"),
+        ({"x_mm": 180, "y_mm": 10, "width_mm": 40}, "left or right edge"),
+        ({"x_mm": -1, "y_mm": 10, "width_mm": 40}, "left or right edge"),
+        ({"x_mm": 10, "y_mm": 290, "width_mm": 40}, "y_mm 290 is outside 0..287"),
+        ({"x_mm": 10, "y_mm": 10}, "width_mm"),
+        ([10, 10, 40], "must be a mapping"),
+    ],
+)
+def test__parse_slot_placement__wrong_place__error_names_the_entry(item: object, fragment: str) -> None:
+    with pytest.raises((TypeError, ValueError, KeyError)) as exc:
+        parse_slot_placement(item, "placements.report")
+
+    assert fragment in str(exc.value)
+
+
+def test__parse_signature_slot__placements_not_a_mapping__dropped() -> None:
+    slot = _parse_signature_slot({"id": "author", "applies_to": ["report"], "placements": ["report"]})
+
+    assert slot.placements == ()
+
+
+def test__parse_submission_profile__signing_slots__conditions_and_optional() -> None:
+    profile = _parse_submission_profile(
+        {
+            "id": "topic-approval",
+            "items": [{"doc_id": "topic_application", "signatures": ["author", "supervisor"]}],
+            "signing_slots": [
+                {"doc_id": "topic_application", "slot_id": "co_supervisor", "when": {"person": "co_supervisor"}},
+                {"doc_id": "topic_application", "slot_id": "academic_supervisor",
+                 "when": {"person": "supervisor", "role": "company"}},
+                {"doc_id": "topic_application", "slot_id": "supervisor", "optional": True},
+            ],
+        }
+    )  # fmt: skip
+
+    assert profile.signing_slots == (
+        SigningSlotPreset("topic_application", "co_supervisor", SlotCondition("co_supervisor")),
+        SigningSlotPreset("topic_application", "academic_supervisor", SlotCondition("supervisor", PersonRole.company)),
+        SigningSlotPreset("topic_application", "supervisor", None, optional=True),
+    )
+
+
+@pytest.mark.parametrize(
+    ("entry", "fragment"),
+    [
+        ({"doc_id": "d", "slot_id": "s", "when": {"person": "supervisor", "kind": "project"}}, "unknown condition"),
+        ({"doc_id": "d", "slot_id": "s", "when": {"person": "dean"}}, "when.person"),
+        ({"doc_id": "d", "slot_id": "s", "when": {"role": "company"}}, "when.person"),
+        ({"doc_id": "d", "slot_id": "s", "when": {"person": "supervisor", "role": "ministry"}}, "when.role"),
+        ({"doc_id": "d", "slot_id": "s", "when": "supervisor"}, "must be a mapping"),
+        ({"doc_id": "d", "slot_id": "s", "optional": "yes"}, "optional must be true or false"),
+        ({"doc_id": "d", "slot_id": "author--ivanov"}, "runtime slot id"),
+        ({"doc_id": "", "slot_id": "s"}, "non-empty strings"),
+        ("supervisor", "must be a mapping"),
+    ],
+)
+def test__parse_signing_slot__wrong_entry__error(entry: object, fragment: str) -> None:
+    with pytest.raises((TypeError, ValueError)) as exc:
+        parse_signing_slot(entry, "signing_slots[0]")
+
+    assert fragment in str(exc.value)
+
+
+def test__parse_submission_profile__signing_slots_unknown_condition__entry_dropped_profile_kept() -> None:
+    profile = _parse_submission_profile(
+        {
+            "id": "topic-approval",
+            "items": [{"doc_id": "topic_application", "signatures": ["author"]}],
+            "signing_slots": [
+                {"doc_id": "topic_application", "slot_id": "academic_supervisor", "when": {"meta": "nda"}},
+                {"doc_id": "topic_application", "slot_id": "supervisor"},
+            ],
+        }
+    )
+
+    assert profile.id == "topic-approval"
+    assert profile.signing_slots == (SigningSlotPreset("topic_application", "supervisor"),)
+    assert _parse_submission_profile({"id": "x", "signing_slots": {"a": 1}}).signing_slots == ()

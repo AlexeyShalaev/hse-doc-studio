@@ -1,6 +1,32 @@
 {
   "releases": [
     {
+      "version": "0.25.0",
+      "date": "2026-11-13",
+      "notes": [
+        {
+          "ru": "Дата подписания. У места подписи можно поставить метки даты: «Добавить дату» на вкладке «Подписи» или в блоке «Где подписи» редактора маршрута. Метку можно разместить на любой странице, отдельно от подписи. Форматы: день, месяц словом в родительном падеже, месяц числом, год, год двумя цифрами, полная дата числами и словами. «« 13 » ноября 2026 г.» это три метки поверх готовых кавычек и черты.",
+          "en": "Signing date. A signature slot can now have date marks: “Add date” on the Signatures tab or in the “Where signatures go” block of the route editor. A mark can sit on any page, apart from the signature. Formats: day, month as a word, month as a number, year, two-digit year, and the full date in numbers or words."
+        },
+        {
+          "ru": "Дата в метке это момент согласия подписанта по маршруту, по московскому времени, для картинки и для электронной подписи. Если человек согласовал до появления меток, дата берётся из его согласия сама. Вне маршрута автор указывает день в поле «Дата подписи». Пропущенный подписант даты не получает. На странице подписи свои рамки подписаны «Дата согласования».",
+          "en": "The date in a mark is the moment the signer approved on the route, in Moscow time, for both an image and an e-signature. If the person approved before the marks were added, the date is taken from that approval automatically. Outside a route the author sets the day in the “Signing date” field. A skipped signer gets no date. On the signing page the signer's own frames are labelled “Approval date”."
+        },
+        {
+          "ru": "Метки даты можно добавить на идущем или завершённом маршруте, он не останавливается. Если над документом уже стоит электронная подпись, Студия сначала предупреждает, чьи подписи будут сброшены. После подтверждения документ фиксируется заново, и эти люди получают новый запрос подписать итоговый PDF. В КАК_ПРОВЕРИТЬ.txt появились строки «дата на странице» и «время подписи».",
+          "en": "Date marks can be added on a running or finished route without stopping it. If an e-signature already stands over the document, the Studio first warns whose signatures will be reset. After you confirm, the document is frozen again and those people get a new request to sign the final PDF. HOW_TO_VERIFY.txt gains the lines “date on the page” and “signing time”."
+        },
+        {
+          "ru": "Исправлено: дата в рамке подписи бралась по UTC, и согласие ночью по Москве печаталось предыдущим днём. Двойная точка после инициалов в предупреждении о сбросе подписей. Новая метка у правого края листа больше не выходит за край страницы.",
+          "en": "Fixed: the date inside a signature frame used UTC, so a night-time approval in Moscow printed the previous day. A double full stop after initials in the signature reset warning. A new mark near the right edge of the sheet no longer goes past the page edge."
+        },
+        {
+          "ru": "Чтобы собрать документ с метками даты, раннер должен быть версии 0.25.0 или новее. Обновите раннеры в админке, раздел «Раннеры».",
+          "en": "Building a document with date marks needs runner 0.25.0 or newer. Update runners in the admin panel, Runners section."
+        }
+      ]
+    },
+    {
       "version": "0.24.0",
       "date": "2026-11-13",
       "notes": [

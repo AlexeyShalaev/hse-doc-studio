@@ -126,7 +126,9 @@ SIGNATURES_SHAPE = Struct(
     {
         "slots": MapOf(Struct({"signer": Struct()})),
         # Метки даты по id и момент подписи (signing-route.md, 14.3): поля, которых писатель не знает, остаются.
-        "placements": MapOf(MapOf(Struct({"dates": ListOf(Struct(), key=_id_key), "signed_at": Struct()}))),
+        "placements": MapOf(
+            MapOf(Struct({"dates": ListOf(Struct(), key=_id_key), "signed_at": Struct(), "from_pack": Struct()}))
+        ),
         "frozen": MapOf(Struct()),
         "detached": MapOf(MapOf(Struct())),
         "embedded": MapOf(MapOf(Struct())),

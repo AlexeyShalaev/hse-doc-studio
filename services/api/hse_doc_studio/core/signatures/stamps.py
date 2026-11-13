@@ -15,6 +15,7 @@ from hse_doc_studio.core.enums import SignMode
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.signatures.dates import format_date_mark
 from hse_doc_studio.core.signatures.errors import StampImageError
+from hse_doc_studio.core.signatures.pack_places import keep_from_pack
 from hse_doc_studio.core.value_objects import DateMark, SignaturePlacement, SignaturesState, SignerInfo
 
 logger = structlog.get_logger()
@@ -38,9 +39,9 @@ def widen_for_plate(state: SignaturesState, pairs: Iterable[tuple[str, str]]) ->
         if placement is None or not placement.enabled or placement.width_mm >= PLATE_MIN_WIDTH_MM:
             continue
         right = placement.x_mm + placement.width_mm
-        placements[doc_id][slot_id] = replace(
-            placement, x_mm=max(0.0, right - PLATE_MIN_WIDTH_MM), width_mm=PLATE_MIN_WIDTH_MM
-        )
+        widened = replace(placement, x_mm=max(0.0, right - PLATE_MIN_WIDTH_MM), width_mm=PLATE_MIN_WIDTH_MM)
+        # Расширение системное: место из шаблона остаётся местом из шаблона (signing-route.md, 15.4).
+        placements[doc_id][slot_id] = keep_from_pack(placement, widened)
         touched = True
     return replace(state, placements=placements) if touched else state
 

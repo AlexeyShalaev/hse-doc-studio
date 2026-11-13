@@ -22,7 +22,14 @@ r"""Линтер пака (bundle-раскладка v2): превращает �
   * метки даты по умолчанию слота (`default_dates`): разбираются, рамка внутри
     листа A4, документ из `applies_to` слота;
   * подсказка срока точки (`deadline_hint` профиля): обе локали, не длиннее 200
-    знаков и без конкретных дат (сроки меняются каждый год).
+    знаков и без конкретных дат (сроки меняются каждый год);
+  * пресет маршрута (signing-route.md, 15.8): места слота по документам
+    (`placements`) внутри листа и только на документах слота и версии;
+    `signing_slots` профиля называют документ точки и применимый к нему слот
+    каталога, без повторов, `when` только у слота сверх точки, `optional: true`
+    не у слота с `required: true`; предупреждения: слот сверх точки не стоит в
+    порядке маршрута, место `per_author` слота на общем документе командного
+    шаблона, узкое место под плашку открепленной ЭП.
 
 Запуск: `python -m hse_doc_studio.infra.template.pack_lint <version_dir>…`
 (exit code 1 при ошибках). Roster ↔ doc.yaml проверяется fail-fast самим
@@ -42,12 +49,21 @@ import yaml
 from jinja2 import Environment, TemplateSyntaxError
 
 from hse_doc_studio.core.checkpoint_deadlines import parse_deadline_hint
+from hse_doc_studio.core.signatures.route_order import BUILTIN_ROUTE
+from hse_doc_studio.core.signatures.stamps import PLATE_MIN_WIDTH_MM
 from hse_doc_studio.infra.project_init.template_renderer import (
     PACK_DOC_MANIFEST,
     _split_lang_qualifier,
     collect_sources_suffixed,
 )
-from hse_doc_studio.infra.template.yaml_template_repository import parse_default_dates, parse_signing_route
+from hse_doc_studio.infra.template.yaml_template_repository import (
+    parse_default_dates,
+    parse_signing_route,
+    parse_signing_slot,
+    parse_slot_placement,
+    signing_slot_entries,
+    slot_placement_entries,
+)
 
 _TEXT_SUFFIXES = {".tex", ".md", ".html", ".txt", ".cls", ".sty", ".bib", ".j2"}
 _INPUT_RE = re.compile(r"\\(?:input|include)\{([^}]+)\}")
@@ -245,6 +261,195 @@ def _lint_deadline_hints(manifest: dict[str, Any]) -> list[str]:
     return errors
 
 
+def _doc_scopes(version_dir: Path, manifest: dict[str, Any]) -> dict[str, str]:
+    """id документа версии → `scope` (`shared` по умолчанию), v2: roster + doc.yaml, v1: записи в манифесте."""
+    scopes: dict[str, str] = {}
+    for entry in manifest.get("documents", []) or []:
+        if isinstance(entry, str):
+            doc_path = version_dir / "files" / entry / "doc.yaml"
+            data = yaml.safe_load(doc_path.read_text(encoding="utf-8")) if doc_path.exists() else {}
+            scopes[entry] = str((data or {}).get("scope", "shared"))
+        elif isinstance(entry, dict) and entry.get("id"):
+            scopes[str(entry["id"])] = str(entry.get("scope", "shared"))
+    return scopes
+
+
+def _catalog(manifest: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Слоты каталога подписей по id (сырые записи манифеста)."""
+    signatures = manifest.get("signatures")
+    slots = signatures.get("slots", []) if isinstance(signatures, dict) else []
+    return {str(s["id"]): s for s in slots or [] if isinstance(s, dict) and s.get("id")}
+
+
+def _applies(slot: dict[str, Any]) -> set[str]:
+    applies = slot.get("applies_to", [])
+    return {str(a) for a in applies} if isinstance(applies, list) else {str(applies)}
+
+
+def _profiles(manifest: dict[str, Any]) -> list[dict[str, Any]]:
+    submission = manifest.get("pack_submission")
+    profiles = (submission.get("profiles", []) or []) if isinstance(submission, dict) else []
+    return [p for p in profiles if isinstance(p, dict)]
+
+
+def _lint_slot_placements(version_dir: Path, manifest: dict[str, Any]) -> tuple[list[str], list[str]]:
+    """Места слотов по документам (`placements`, signing-route.md, 15.8): рамка в листе, документ слота и версии.
+
+    Лоадер битую запись документа отбрасывает молча (с записью в журнал), линтер делает это ошибкой. Место
+    `per_author` слота на общем документе командного шаблона это предупреждение: в команде пресет такие места не
+    ставит, все авторы встали бы в одну рамку (15.5).
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+    scopes = _doc_scopes(version_dir, manifest)
+    team = "team" in (manifest.get("supported_staffing") or ())
+    for slot_id, slot in _catalog(manifest).items():
+        where = f"signatures.slots[{slot_id}]"
+        try:
+            entries = slot_placement_entries(slot.get("placements"))
+        except TypeError as exc:
+            errors.append(f"{where}: {exc}")
+            continue
+        shared_warning = team and bool(slot.get("per_author"))
+        for doc_id, item in entries:
+            problem = _placement_problem(doc_id, item, _applies(slot), scopes)
+            if problem is not None:
+                errors.append(f"{where}: {problem}")
+            elif shared_warning and scopes.get(doc_id) == "shared":
+                warnings.append(
+                    f"{where}: placements.{doc_id}: слот per_author на общем документе, в команде место из пака "
+                    f"не ставится (все авторы встали бы в одну рамку)"
+                )
+    return errors, warnings
+
+
+def _placement_problem(doc_id: str, item: Any, applies: set[str], scopes: dict[str, str]) -> str | None:
+    """Что не так с записью `placements` документа; None, если запись годится."""
+    try:
+        parse_slot_placement(item, f"placements.{doc_id}")
+    except (TypeError, ValueError, KeyError) as exc:
+        return str(exc)
+    if doc_id not in applies:
+        return f"placements.{doc_id}: документ не входит в applies_to слота"
+    if scopes and doc_id not in scopes:
+        return f"placements.{doc_id}: такого документа нет в documents версии"
+    return None
+
+
+def _lint_signing_slots(manifest: dict[str, Any]) -> tuple[list[str], list[str]]:  # noqa: C901, PLR0912
+    """Пресеты точек (`signing_slots`, signing-route.md, 15.8): ошибки формы и связей, предупреждение о порядке.
+
+    Лоадер терпим: битая запись или запись с незнакомым условием отбрасывается, а запись с неизвестным документом
+    или слотом просто ничего не включит. Линтер делает это ошибкой. Слот сверх точки, которого нет в порядке
+    маршрута, встал бы молча последним шагом: это предупреждение.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+    catalog = _catalog(manifest)
+    signatures = manifest.get("signatures")
+    version_route = signatures.get("route") if isinstance(signatures, dict) else None
+    for profile in _profiles(manifest):
+        owner = f"профиль {profile.get('id', '?')}"
+        where = f"{owner}: signing_slots"
+        try:
+            entries = signing_slot_entries(profile.get("signing_slots"))
+        except TypeError as exc:
+            errors.append(f"{owner}: {exc}")
+            continue
+        point: dict[str, set[str]] = {}
+        for item in profile.get("items", []) or []:
+            if isinstance(item, dict) and item.get("doc_id"):
+                point.setdefault(str(item["doc_id"]), set()).update(str(s) for s in item.get("signatures", []) or [])
+        seen: set[tuple[str, str]] = set()
+        extra: list[str] = []
+        for i, raw in enumerate(entries):
+            try:
+                entry = parse_signing_slot(raw, f"signing_slots[{i}]")
+            except (TypeError, ValueError) as exc:
+                errors.append(f"{owner}: {exc}")
+                continue
+            pair = f"{entry.doc_id}/{entry.slot_id}"
+            slot = catalog.get(entry.slot_id)
+            if entry.doc_id not in point:
+                errors.append(f"{where}: {pair}: документа нет в items профиля")
+            elif slot is None:
+                errors.append(f"{where}: {pair}: слот не объявлен в signatures.slots")
+            elif entry.doc_id not in _applies(slot):
+                errors.append(f"{where}: {pair}: слот не применим к документу (applies_to)")
+            if (entry.doc_id, entry.slot_id) in seen:
+                errors.append(f"{where}: {pair}: пара указана дважды")
+            seen.add((entry.doc_id, entry.slot_id))
+            of_point = entry.slot_id in point.get(entry.doc_id, set())
+            if entry.when is not None and of_point:
+                errors.append(f"{where}: {pair}: when только у слота сверх точки, а эту подпись точка требует")
+            if entry.optional and slot is not None and bool(slot.get("required")):
+                errors.append(f"{where}: {pair}: optional: true у слота с required: true")
+            if not of_point:
+                extra.append(entry.slot_id)
+        declared_raw = profile.get("signing_route") or version_route
+        try:
+            declared = parse_signing_route(declared_raw) if declared_raw else BUILTIN_ROUTE
+        except (TypeError, ValueError):
+            continue  # битый порядок уже назвал `_lint_signing_routes`
+        ordered = {slot_id for step in declared for slot_id in step}
+        warnings.extend(
+            f"{where}: слот сверх точки {slot_id!r} не стоит в порядке маршрута, он пойдёт последним шагом"
+            for slot_id in dict.fromkeys(extra)
+            if slot_id not in ordered
+        )
+    return errors, warnings
+
+
+def _detached_pairs(manifest: dict[str, Any]) -> list[tuple[str, str]]:
+    """Пары «документ, слот» пунктов точек, где открепленная ЭП разрешена (`methods` слота без записи: любой способ)."""
+    pairs: list[tuple[str, str]] = []
+    for profile in _profiles(manifest):
+        for item in profile.get("items", []) or []:
+            if not isinstance(item, dict):
+                continue
+            raw_methods = item.get("methods")
+            methods: dict[str, Any] = raw_methods if isinstance(raw_methods, dict) else {}
+            for slot_id in (str(s) for s in item.get("signatures", []) or []):
+                allowed = methods.get(slot_id)
+                listed = allowed if isinstance(allowed, list) else [allowed] if allowed else []
+                pair = (str(item.get("doc_id", "")), slot_id)
+                if (not listed or "detached" in listed) and pair not in pairs:
+                    pairs.append(pair)
+    return pairs
+
+
+def _lint_plate_room(manifest: dict[str, Any]) -> tuple[list[str], list[str]]:
+    """Место из `placements` у пары точки, где разрешена открепленная ЭП, и плашка (signing-route.md, 6.3, 15.8).
+
+    `widen_for_plate` расширяет узкое место до ширины плашки влево, сохраняя правый край: предупреждение, что рамка
+    станет шире, и ошибка, если слева не хватит листа.
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+    catalog = _catalog(manifest)
+    for doc_id, slot_id in _detached_pairs(manifest):
+        raw = catalog.get(slot_id, {}).get("placements")
+        place = raw.get(doc_id) if isinstance(raw, dict) else None
+        try:
+            parsed = parse_slot_placement(place, f"placements.{doc_id}") if isinstance(place, dict) else None
+        except (TypeError, ValueError, KeyError):
+            parsed = None  # битое место уже назвал `_lint_slot_placements`
+        if parsed is None or parsed.width_mm >= PLATE_MIN_WIDTH_MM:
+            continue
+        where = f"signatures.slots[{slot_id}]: placements.{doc_id}"
+        if parsed.x_mm + parsed.width_mm - PLATE_MIN_WIDTH_MM < 0:
+            errors.append(
+                f"{where}: под плашку открепленной ЭП рамка расширится до {PLATE_MIN_WIDTH_MM:g} мм влево "
+                f"и выйдет за левый край листа"
+            )
+        else:
+            warnings.append(
+                f"{where}: место уже плашки открепленной ЭП, при подписи ЭП рамка расширится до "
+                f"{PLATE_MIN_WIDTH_MM:g} мм влево"
+            )
+    return errors, warnings
+
+
 def _route_errors(where: str, raw: Any, slots: set[str]) -> list[str]:
     try:
         steps = parse_signing_route(raw)
@@ -330,6 +535,13 @@ def lint_version_dir(version_dir: Path) -> LintReport:  # noqa: C901, PLR0912, P
     report.errors.extend(_lint_signing_routes(manifest))
     report.errors.extend(_lint_default_dates(manifest))
     report.errors.extend(_lint_deadline_hints(manifest))
+    for errors, warnings in (
+        _lint_slot_placements(version_dir, manifest),
+        _lint_signing_slots(manifest),
+        _lint_plate_room(manifest),
+    ):
+        report.errors.extend(errors)
+        report.warnings.extend(warnings)
 
     if not langs:
         report.warnings.append("v1-раскладка (нет `langs:`): проверены только Jinja-шаблоны")

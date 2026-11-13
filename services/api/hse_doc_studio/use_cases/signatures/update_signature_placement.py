@@ -14,9 +14,11 @@ from hse_doc_studio.core.repositories import (
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import SignatureSlotService
+from hse_doc_studio.core.signatures.pack_places import clear_from_pack
 from hse_doc_studio.core.signatures.stamps import date_mark_text
 from hse_doc_studio.core.value_objects import SignaturePlacement
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
+from hse_doc_studio.use_cases.signatures.pack_places import MANUAL, PackPlaces, PlaceInfo
 
 logger = structlog.get_logger()
 
@@ -40,15 +42,19 @@ class UpdateSignaturePlacementOutput:
     placement: SignaturePlacement
     # Что напечатает каждая метка даты слота сейчас (signing-route.md, 14.7), в порядке `placement.dates`.
     texts: tuple[str | None, ...] = ()
+    # Происхождение места и есть ли место в шаблоне (signing-route.md, 15.11).
+    place: PlaceInfo = MANUAL
 
 
 class UpdateSignaturePlacementUC:
     """Partial update for a single (doc, slot) placement cell.
 
     Any field left as None falls back to the existing stored value; if no
-    placement existed for this (doc, slot) yet, we seed it from the template
-    slot's default_placement. Position is independent across docs — the same
-    slot can sit on page 1 of vkr and page 2 of tz.
+    placement existed for this (doc, slot) yet, we seed it from the pack's place
+    for the document (`placements`, else `default_placement`, signing-route.md, 15.3).
+    Position is independent across docs — the same slot can sit on page 1 of vkr
+    and page 2 of tz. A change by a person drops the `from_pack` mark (15.4); a
+    request that changes nothing keeps it.
     """
 
     def __init__(
@@ -113,7 +119,7 @@ class UpdateSignaturePlacementUC:
         doc_placements = dict(state.placements.get(inp.doc_id, {}))
         existing = doc_placements.get(inp.slot_id)
 
-        default = slot_def.default_placement
+        default = slot_def.place_for(doc.def_id)
         enabled = inp.enabled if inp.enabled is not None else (existing.enabled if existing else False)
         page = inp.page if inp.page is not None else (existing.page if existing else default.page)
         x_mm = inp.x_mm if inp.x_mm is not None else (existing.x_mm if existing else default.x_mm)
@@ -134,6 +140,8 @@ class UpdateSignaturePlacementUC:
             dates=existing.dates if existing else (),
             signed_at=existing.signed_at if existing else None,
         )
+        if existing is not None and clear_from_pack(existing) == new_placement:
+            new_placement = existing
         doc_placements[inp.slot_id] = new_placement
 
         new_state = replace(state, placements={**state.placements, inp.doc_id: doc_placements})
@@ -148,4 +156,5 @@ class UpdateSignaturePlacementUC:
         )
         lang = str(project.lang)
         texts = tuple(date_mark_text(new_state, inp.doc_id, inp.slot_id, mark, lang) for mark in new_placement.dates)
-        return UpdateSignaturePlacementOutput(placement=new_placement, texts=texts)
+        place = PackPlaces.load(self._template_repo, project, version).info(inp.doc_id, inp.slot_id, new_placement)
+        return UpdateSignaturePlacementOutput(placement=new_placement, texts=texts, place=place)

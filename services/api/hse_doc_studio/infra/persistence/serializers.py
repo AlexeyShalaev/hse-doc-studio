@@ -57,6 +57,7 @@ from hse_doc_studio.core.value_objects import (
     DetachedSignature,
     EmbeddedSignature,
     FormState,
+    FromPack,
     FrozenPdf,
     Person,
     PinnedPdf,
@@ -599,6 +600,9 @@ def serialize_signatures_state(state: SignaturesState) -> dict[str, Any]:
                     # `preserve_unknown` вернул бы удалённые метки и снятую дату из старого файла.
                     "dates": [_serialize_date_mark(mark) for mark in placement.dates],
                     "signed_at": dataclasses.asdict(placement.signed_at) if placement.signed_at else None,
+                    # Пометка «место из шаблона» (signing-route.md, 15.4) тоже всегда: снятая правкой человека, она не
+                    # должна вернуться из старого файла через `preserve_unknown`.
+                    "from_pack": dataclasses.asdict(placement.from_pack) if placement.from_pack else None,
                 }
                 for slot_id, placement in slot_map.items()
             }
@@ -807,6 +811,7 @@ def deserialize_signatures_state(data: dict[str, Any]) -> SignaturesState:  # no
                 sign_date=str(sign_date) if sign_date else None,
                 dates=_deserialize_date_marks(placement_data.get("dates")),
                 signed_at=_deserialize_signed_at(placement_data.get("signed_at")),
+                from_pack=_deserialize_from_pack(placement_data.get("from_pack")),
             )
         placements[doc_id] = doc_placements
     return SignaturesState(
@@ -867,6 +872,16 @@ def _deserialize_signed_at(raw: Any) -> SignedAt | None:
         return SignedAt(at=str(raw["at"]), source=SignedAtSource(raw["source"]), token=str(raw.get("token") or ""))
     except (KeyError, TypeError, ValueError):
         return None
+
+
+def _deserialize_from_pack(raw: Any) -> FromPack | None:
+    """Пометка «место из шаблона»; битая пометка читается как её отсутствие (место станет ручным)."""
+    if not isinstance(raw, dict):
+        return None
+    version, digest = raw.get("version"), raw.get("digest")
+    if not isinstance(version, str) or not isinstance(digest, str) or not version or not digest:
+        return None
+    return FromPack(version=version, digest=digest)
 
 
 def _slot_ids(raw: Any) -> frozenset[str]:
