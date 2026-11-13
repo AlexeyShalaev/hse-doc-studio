@@ -1,5 +1,5 @@
 {
-  "id": "sr_01hy2differs",
+  "id": "sr_01hy2b7k9q",
   "project_id": "p_01hxa1c4de",
   "profile": {
     "id": "topic-approval",
@@ -18,34 +18,9 @@
   "sent_by": null,
   "sent_at": null,
   "completed_at": null,
-  "created_at": "2026-11-10T08:40:00Z",
-  "updated_at": "2026-11-10T09:00:00Z",
+  "created_at": "2026-11-13T09:00:00Z",
+  "updated_at": "2026-11-13T09:20:00Z",
   "docs": [
-    {
-      "doc_id": "project_proposal",
-      "name": {
-        "ru": "Описание проекта и заявка",
-        "en": "Project description and application"
-      },
-      "frozen": false,
-      "sent": null,
-      "changed": false,
-      "slots": [
-        {
-          "slot_id": "supervisor",
-          "label": {
-            "ru": "Научный руководитель",
-            "en": "Supervisor"
-          },
-          "participant_id": "srp_supervisor",
-          "extra": false,
-          "optional": true,
-          "status": "pending",
-          "added_by": null,
-          "preset_optional": false
-        }
-      ]
-    },
     {
       "doc_id": "topic_application",
       "name": {
@@ -53,8 +28,6 @@
         "en": "Topic selection application"
       },
       "frozen": false,
-      "sent": null,
-      "changed": false,
       "slots": [
         {
           "slot_id": "author",
@@ -90,12 +63,14 @@
           },
           "participant_id": "srp_academic",
           "extra": true,
-          "optional": false,
+          "optional": true,
           "status": "pending",
-          "added_by": "author",
+          "added_by": "pack",
           "preset_optional": false
         }
-      ]
+      ],
+      "sent": null,
+      "changed": false
     }
   ],
   "steps": [
@@ -128,21 +103,17 @@
     ],
     [
       {
-        "id": "srp_supervisor",
-        "persona": "supervisor",
-        "user_id": "u_01hx7k5petr",
+        "id": "srp_academic",
+        "persona": "academic_supervisor",
+        "user_id": "u_01hx7k5sidr",
         "invitation_id": null,
-        "name": "Петров П. П.",
+        "name": "Сидоров С. С.",
         "membership": "member",
-        "card_name": "Петров П. П.",
+        "card_name": "Сидоров С. С.",
         "assignments": [
           {
-            "doc_id": "project_proposal",
-            "slot_id": "supervisor"
-          },
-          {
             "doc_id": "topic_application",
-            "slot_id": "supervisor"
+            "slot_id": "academic_supervisor"
           }
         ],
         "method": "image",
@@ -159,20 +130,20 @@
     ],
     [
       {
-        "id": "srp_academic",
-        "persona": "academic_supervisor",
-        "user_id": null,
+        "id": "srp_supervisor",
+        "persona": "supervisor",
+        "user_id": "u_01hx7k5petr",
         "invitation_id": null,
-        "name": null,
-        "membership": "missing",
-        "card_name": null,
+        "name": "Петров П. П.",
+        "membership": "member",
+        "card_name": "Петров П. П.",
         "assignments": [
           {
             "doc_id": "topic_application",
-            "slot_id": "academic_supervisor"
+            "slot_id": "supervisor"
           }
         ],
-        "method": "image",
+        "method": "detached",
         "state": "waiting",
         "next_action": "wait",
         "changes_visible": false,
@@ -208,7 +179,7 @@
       ]
     },
     {
-      "persona": "co_supervisor",
+      "persona": "academic_supervisor",
       "people": [
         {
           "kind": "member",
@@ -216,36 +187,24 @@
           "name": "Сидоров С. С."
         }
       ]
-    },
-    {
-      "persona": "academic_supervisor",
-      "people": []
     }
   ],
   "changed_docs": [],
   "preset": {
     "version": "2026.1.4",
+    "base_version": "2026.1.4",
     "steps": [
       [
         "author"
       ],
       [
-        "supervisor",
-        "co_supervisor"
+        "supervisor"
+      ],
+      [
+        "academic_supervisor"
       ]
     ],
     "extra_slots": [
-      {
-        "doc_id": "topic_application",
-        "slot_id": "co_supervisor",
-        "when": {
-          "person": "co_supervisor",
-          "role": null
-        }
-      }
-    ],
-    "optional": [],
-    "skipped_by_condition": [
       {
         "doc_id": "topic_application",
         "slot_id": "academic_supervisor",
@@ -255,9 +214,10 @@
         }
       }
     ],
+    "optional": [],
+    "skipped_by_condition": [],
     "differs": [
       "order",
-      "slots",
       "optional"
     ]
   }

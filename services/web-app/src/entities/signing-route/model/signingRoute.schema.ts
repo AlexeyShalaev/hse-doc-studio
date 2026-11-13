@@ -317,6 +317,11 @@ export const RoutePresetSlotSchema = z.strictObject({
  */
 export const RoutePresetSchema = z.strictObject({
   version: z.string(),
+  /**
+   * Версия шаблона, по пресету которой собран состав маршрута; null: не по пресету. Отличается от
+   * `version` после обновления шаблона: «В новой версии шаблона другой маршрут этой точки» (15.7).
+   */
+  base_version: z.string().nullable(),
   steps: z.array(z.array(z.string())),
   extra_slots: z.array(RoutePresetSlotSchema),
   optional: z.array(RouteSlotRefSchema),

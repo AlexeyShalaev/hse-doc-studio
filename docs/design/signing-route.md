@@ -3703,6 +3703,8 @@ updated: changed by you {n}, on a signing route {n}, signed {n}». MCP `plan_tem
 SigningRoute
   + preset: {
       version,                                   (версия шаблона проекта)
+      base_version,                              (версия, по пресету которой собран состав; null: не по пресету.
+                                                  Хранится в маршруте, `signing_routes.preset_version`; R25)
       steps: [[persona]],                        (шаги пресета для этого проекта сейчас)
       extra_slots: [{doc_id, slot_id, when: {person, role | null} | null}],
       optional: [{doc_id, slot_id}],
@@ -3901,10 +3903,17 @@ MCP, только чтение:
   `get_signing_route`, `place` в `get_signature_plan`, `route_preset` с `signing_slots[].met` в
   `list_submission_profiles`. **Отклонение**: у `send_for_signing` нет `touches` (15.5 говорит, что есть): места
   пишутся до отправки и входят в версию на подписи, пометка `signing_note` была бы неправдой;
-- контракт: поля `preset`, `added_by`, `preset_optional` обязательны в pydantic, все эталоны `SigningRoute` их несут;
-  новые эталоны `SigningRoute/from_preset`, `SigningRoute/preset_differs`, `Placement/restored`; тело
-  `RestorePlacementRequest` в `contracts/server/pending` до W15. В zod (`signingRoute.schema.ts`) поля пока
-  необязательные (`optional()`), флага `LEGACY_R25` нет: обязательными их делает W15 вместе с интерфейсом;
+- `preset.base_version` (по просьбе W15): версия шаблона, по пресету которой собран состав маршрута. Хранится в
+  маршруте: `SigningRoute.preset_version`, колонка `signing_routes.preset_version` (миграция `sr_12_preset_version`,
+  expand, nullable, у прежних маршрутов NULL). Ставят черновик из пресета и «Вернуть как в шаблоне»; черновик после
+  прежнего маршрута берёт версию прежнего; без пресета null. Редактор показывает «В новой версии шаблона другой
+  маршрут этой точки», когда `base_version` не равен `version`, а `differs` не пуст;
+- контракт: поля `preset` (с `base_version`), `added_by`, `preset_optional` обязательны в pydantic, все эталоны
+  `SigningRoute` их несут. Эталоны `SigningRoute/*` и `Placement/restored` взяты из `contracts/server/next` W15 (#359),
+  в `preset` добавлен `base_version`. Тело `RestorePlacementRequest` в `contracts/server/pending` до W15: zod-схема
+  есть только в его PR. В zod (`signingRoute.schema.ts`) новые поля пока необязательные (`optional()`): если R25
+  сливается раньше #359, W15 при слиянии удаляет свои `next/SigningRoute/*` и `next/Placement/restored`, снимает
+  `LEGACY_R25`, добавляет `base_version` в `RoutePresetSchema` и переносит `RestorePlacementRequest` в `fixtures`;
 - серверные тесты пресета берут каталог с выпущенной копией 2026.1.3 как 2026.1.4 с ключами 15.10
   (`tests/integration/api/signing_routes/preset_stand.py`); после R27 их можно перевести на настоящую 2026.1.4.
 

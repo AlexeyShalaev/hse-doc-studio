@@ -109,7 +109,7 @@ async def test__create__supervisor_from_hse__author_and_supervisor_places_writte
     assert set(_slots(route)) == {(PROPOSAL, "supervisor"), (APPLICATION, "author"), (APPLICATION, "supervisor")}
     assert {value[1] for value in _slots(route).values()} == {None}
     preset = route["preset"]
-    assert preset["version"] == PRESET_VERSION
+    assert (preset["version"], preset["base_version"]) == (PRESET_VERSION, PRESET_VERSION)
     assert preset["steps"] == [["author"], ["supervisor"]]
     assert preset["extra_slots"] == []
     assert preset["skipped_by_condition"] == [

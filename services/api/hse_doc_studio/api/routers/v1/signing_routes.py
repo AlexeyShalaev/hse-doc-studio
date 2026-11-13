@@ -162,10 +162,11 @@ def route_response(details: RouteDetails) -> s.SigningRouteResponse:
     )
 
 
-def preset_response(view: PresetView) -> s.RoutePreset:
+def preset_response(view: PresetView, base_version: str | None) -> s.RoutePreset:
     preset = view.preset
     return s.RoutePreset(
         version=preset.version,
+        base_version=base_version,
         steps=[list(step) for step in preset.steps],
         extra_slots=[
             s.RoutePresetSlot(doc_id=item.pair.doc_id, slot_id=item.pair.slot_id, when=_condition(item.when))
@@ -194,7 +195,7 @@ def _preset(details: RouteDetails) -> s.RoutePreset | None:
     """Пресет только тому, кто управляет маршрутом, и только у маршрута, который можно править (15.11)."""
     if details.preset is None or not details.manages or details.route.status not in EDITABLE_STATUSES:
         return None
-    return preset_response(details.preset)
+    return preset_response(details.preset, details.route.preset_version)
 
 
 def sent_response(sent: SentVersion | None) -> s.RouteDocVersion | None:

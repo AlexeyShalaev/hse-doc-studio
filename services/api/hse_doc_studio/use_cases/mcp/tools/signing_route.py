@@ -121,6 +121,7 @@ def _preset(details: RouteDetails) -> dict[str, object] | None:
     preset = view.preset
     return {
         "version": preset.version,
+        "base_version": details.route.preset_version,
         "steps": [list(step) for step in preset.steps],
         "extra_slots": [
             {"doc_id": item.pair.doc_id, "slot_id": item.pair.slot_id, "when": _condition(item.when)}

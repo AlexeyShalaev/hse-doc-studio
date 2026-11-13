@@ -369,7 +369,9 @@ class SigningRoute:
 
     `participants` в порядке редактора; шаги это их номера `step`, внутри шага параллельно. `phase` задан только
     у идущего (`active`) и завершённого (`completed`) маршрута. `stopped_by` участник, чей возврат или уход
-    остановил маршрут.
+    остановил маршрут. `preset_version` версия шаблона, по пресету которой собран состав (черновик из пресета,
+    «Вернуть как в шаблоне», 15.5 и 15.6); None, если состав собран не по пресету (маршрут до раздела 15, пак без
+    пресета). По ней редактор пишет «В новой версии шаблона другой маршрут этой точки» (15.7).
 
     `version` номер записи в хранилище: 0 у ещё не сохранённого, каждое сохранение его увеличивает. Хранилище
     принимает маршрут, только если с момента чтения его никто не перезаписал (`ISigningRouteRepository.save`),
@@ -396,6 +398,7 @@ class SigningRoute:
     completed_at: datetime | None = None
     stop_reason: StopReason | None = None
     stopped_by: UUID | None = None
+    preset_version: str | None = None
     version: int = 0
     created_at: datetime | None = field(default=None, compare=False)
     updated_at: datetime | None = field(default=None, compare=False)

@@ -64,6 +64,8 @@ class SigningRouteRow(Base):
     stop_reason: Mapped[str | None] = mapped_column(String(32))
     # Участник маршрута (signing_route_participants.id), чей возврат или уход остановил маршрут.
     stopped_by: Mapped[UUID | None] = mapped_column(Uuid)
+    # Версия шаблона, по пресету которой собран состав (signing-route.md, 15.7); NULL: не по пресету.
+    preset_version: Mapped[str | None] = mapped_column(String(64))
     created_by: Mapped[str] = mapped_column(String(64), nullable=False)
     sent_by: Mapped[str | None] = mapped_column(String(64))
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

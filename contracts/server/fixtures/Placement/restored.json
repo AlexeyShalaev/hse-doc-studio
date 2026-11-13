@@ -15,7 +15,7 @@
       "height_mm": 5.0,
       "format": "day",
       "align": "center",
-      "text": "13"
+      "text": null
     },
     {
       "id": "d2",
@@ -25,14 +25,11 @@
       "width_mm": 24.0,
       "height_mm": 5.0,
       "format": "month_word",
-      "align": "center",
-      "text": "ноября"
+      "align": "left",
+      "text": null
     }
   ],
-  "signed_at": {
-    "at": "2026-11-12T23:30:00+00:00",
-    "source": "approval"
-  },
+  "signed_at": null,
   "origin": "pack",
   "preset_available": true
 }

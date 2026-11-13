@@ -175,5 +175,29 @@
     }
   ],
   "changed_docs": [],
-  "preset": null
+  "preset": {
+    "version": "2026.1.4",
+    "base_version": "2026.1.4",
+    "steps": [
+      [
+        "author"
+      ],
+      [
+        "supervisor"
+      ]
+    ],
+    "extra_slots": [],
+    "optional": [],
+    "skipped_by_condition": [
+      {
+        "doc_id": "topic_application",
+        "slot_id": "academic_supervisor",
+        "when": {
+          "person": "supervisor",
+          "role": "company"
+        }
+      }
+    ],
+    "differs": []
+  }
 }

@@ -332,13 +332,17 @@ class SigningRouteDrafts(RouteScenario):
     ) -> SigningRoute:
         """Состав черновика: прежний маршрут точки (6.5), иначе пресет точки, а без него порядок 5.2."""
         extras: list[DocSlot] = []
+        # По какой версии шаблона собран состав (15.7): у черновика после прежнего маршрута та же, что у прежнего.
+        preset_version: str | None = None
         if previous is not None:
             participants = inherit_participants(previous)
             extras = [pair for pair in previous.pairs if point.is_optional(pair)]
+            preset_version = previous.preset_version
         else:
             if preset is not None:
                 extras = list(preset.extra_pairs)
                 steps = preset.steps
+                preset_version = preset.version
             else:
                 steps = default_route(
                     point.version, point.profile, point.project, slot_ids=[pair.slot_id for pair in point.required]
@@ -355,6 +359,7 @@ class SigningRouteDrafts(RouteScenario):
             created_by=actor_id,
             docs=point.docs_of(pairs),
             participants=participants,
+            preset_version=preset_version,
         )
 
     async def _write_preset(  # noqa: PLR0913 — что применить и к чему
@@ -425,7 +430,9 @@ class SigningRouteDrafts(RouteScenario):
             participants = await self._people_for(point, participants, (), actor_id)
             pairs = [*point.required, *preset.extra_pairs]
             participants, _ = assign_pairs(participants, pairs)
-            restored = replace(route, participants=participants, docs=point.docs_of(pairs))
+            restored = replace(
+                route, participants=participants, docs=point.docs_of(pairs), preset_version=preset.version
+            )
             held = route.docs if route.status in HOLDING_STATUSES else ()
             had = set(route.pairs)
 
