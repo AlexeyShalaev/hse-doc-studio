@@ -335,7 +335,8 @@
   },
   "signatures": {
     "customUnsignableHint": "Signing is not available — this custom document isn't a PDF and can't be converted automatically. You are responsible for signing it yourself.",
-    "customConvertiblePendingPreview": "The exact signature position can be set once a PDF preview is available."
+    "customConvertiblePendingPreview": "The exact signature position can be set once a PDF preview is available.",
+    "customDrawnSignatureHint": "Studio doesn't see a signature inside the uploaded PDF: upload the signature as an image into the slot."
   },
   "customFile": {
     "replaceMenuItem": "Replace with my own file…",
@@ -348,7 +349,7 @@
     "dropActive": "Release to select the file",
     "dropHint": "Any format — no restrictions",
     "classConvertible": "Looks like a Word/PowerPoint document — we can offer to convert it to PDF when packaging.",
-    "classPdf": "PDF — preview and signing will work as usual.",
+    "classPdf": "PDF — preview and signing will work as usual. Studio doesn't see a signature inside the uploaded PDF: upload the signature as an image into the slot.",
     "classUnknown": "Format not recognized — the file will be included in the package as-is, with no conversion. You'll need to sign it yourself.",
     "cancel": "Cancel",
     "uploadAction": "Upload",
