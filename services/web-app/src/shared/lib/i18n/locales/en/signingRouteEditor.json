@@ -182,6 +182,8 @@
     "changed": "Changed by you",
     "changedTitle": "Differs from the template: {{what}}",
     "changedWhat": "differs: {{what}}",
+    "newVersion": "The new template version has a different route for this checkpoint",
+    "newVersionTitle": "Template {{version}} sets a different route for this checkpoint, differs: {{what}}",
     "diff": {
       "order": "order",
       "slots": "extra signatures",

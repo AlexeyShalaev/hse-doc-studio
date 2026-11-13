@@ -62,9 +62,11 @@ Open the Submission mode and the checkpoint, and in the “Signing” card click
 
 Every document has to be built: a document that is not built has a “Build” button. A document held by the route of another checkpoint is marked with that checkpoint's name: “out for signing on the route “…”” or “held by the completed route “…””.
 
+A document replaced with your own file (“Replace with my own file…” on the document screen) counts as built, and the uploaded PDF is what gets signed: it becomes the version for signing, the boxes and date marks sit on it. Signatures already inside the uploaded PDF (a scan with a signature, or a PDF signed in another program) the Studio does not see and does not check. If the route needs that signature, upload it as an image into the slot or sign on the signing page.
+
 ### Who signs and in what order
 
-- Steps go in order, people in one step sign in parallel. The template sets the default order: usually the authors, then the supervisor and the co-supervisor in one step, then the academic supervisor.
+- Steps go in order, people in one step sign in parallel. The template sets the default order: usually the authors, then the supervisor and the co-supervisor in one step, then the academic supervisor. When the template sets the checkpoint's whole route, the top of the screen shows “From the template” ([Route from the template](#preset)).
 - Drag people and steps to reorder them. A person's menu has “Same step as previous”, “Separate step” and “Remove”.
 - Each person shows whether they are a member, “invitation sent” or “not in project”, the signing method (“Image”, “E-signature”, “E-signature in PDF”), whether their signature is ready and how many actions they will have (below).
 - “Add approver” adds a person who only approves the document, without a signature on the page.
@@ -101,6 +103,16 @@ If you are in the first step, sending counts as your approval.
 
 Both fields are optional. Signers see the deadline on the signing page, in the Inbox and in the email; a missed deadline is marked red, but the route is not cancelled. The message to signers shows on the signing page, for example “Please sign by Friday”.
 
+The route deadline comes from the checkpoint deadline ([Submission deadline](submit.md#deadline)). If the checkpoint has a deadline, the Studio sets the route deadline itself when it creates the draft: one day before the checkpoint deadline, at the same time. After the last signature you have a day to build the package and upload it to the LMS. If less than two days are left before the checkpoint deadline, the route deadline equals it; if the checkpoint deadline has already passed, the route deadline is empty. Under the “Deadline” field the Studio shows where it comes from:
+
+- “Route deadline: 14.11, 23:59. One day before the checkpoint deadline (15.11), so there is time to build the package”.
+- If the checkpoint deadline changed after the draft was created: “The checkpoint deadline changed: 20.11, 23:59. Set the route deadline to 19.11, 23:59?” and a “Set” button. The route deadline itself does not change until you press “Set”.
+- If the route deadline is empty (the checkpoint deadline was set after the draft was created), the Studio suggests it with the same button: “Checkpoint deadline: 15.11, 23:59. Set the route deadline to 14.11, 23:59?”.
+- You can set any other route deadline in the “Deadline” field. If it is later than the checkpoint deadline, the Studio warns: “The route deadline is later than the submission deadline”.
+- If the checkpoint has no deadline, this is the same “No submission deadline” line as on the checkpoint page, with the field and a “Set deadline” button.
+
+The deadline of a route already sent does not change by itself when the checkpoint deadline changes: the signers already got it in the request.
+
 ### What blocks sending, and sending
 
 The bottom of the screen lists “What blocks sending”. While the list is not empty, you cannot send.
@@ -118,6 +130,57 @@ The bottom of the screen lists “What blocks sending”. While the list is not 
 When you see “Ready to send.”, click “Send for signing”.
 
 If the documents are frozen right when you send and you sign with a Studio key, there is also a “Send and sign” button: it sends the route and adds your electronic signature at once (asking for the key passphrase if it has one). If the signature fails at that point, the route is still sent: the Studio says “The route is sent, but your signature is not in place” and offers to sign on your page.
+
+## Route from the template { #preset }
+
+A template can set a checkpoint's whole route: the order of signers, signatures beyond the checkpoint items and when they are needed, optional signatures, and signature places and date marks on the pages. Then the route is ready the first time you open “Send for signing”: check it, invite the people who are not in the project yet, prepare your own signature and send. The template does not set people: they come from the project.
+
+!!! note "Which templates can do this"
+    A route from the template appears only in projects on a template version that defines one. For the MSc SSE course project (`hse-cs-sse`) the route and the signature places on the template's signature lines come in the next template version after 2026.1.4: update the project from the overview card when it offers it. While the template version defines no route, the screen works as before: the default order, and you place the signatures yourself; there is no “From the template” or “Changed by you”.
+
+    The place marks (“Place from the template”, “Place changed”) show on such versions too. There the template knows only one common place per signature for all documents, usually not on the right line. So “Place changed” on a box you moved onto the signature line is fine: you do not need to reset it.
+
+**What the template does when you first prepare the checkpoint's route.**
+
+- The steps follow the template's order.
+- Signatures beyond the checkpoint are added on a condition about the project's people: for example, the academic supervisor's consent on the application only if the supervisor is not from HSE, or the consultant's signature only if the project has a consultant. “Not from HSE” comes from the “HSE / Not HSE” switch of the supervisor in the project settings.
+- Signatures the template treats as optional at this checkpoint are already marked “Signature optional” ([Optional signatures and skipping](#optional)).
+- Signature places and date marks go onto the pages and are switched on. Places you already set or moved yourself are left alone. So are documents held by another checkpoint's route and documents whose final PDF already carries e-signatures.
+
+If the checkpoint already had a route (cancelled or completed), the new route takes the people and the order from it, and the template only adds places that are missing.
+
+**Marks in the route editor.**
+
+| Where | Mark | What it means |
+|---|---|---|
+| top of the screen | “From the template” | the order, the extra signatures and the “optional” marks are as in the template |
+| top of the screen | “Changed by you”, “differs: order, extra signatures, “optional” marks” | you changed something; next to it is “Reset to template” |
+| top of the screen | “The new template version has a different route for this checkpoint” | the route was built from the previous template version, and after the update the template sets a different one; the same “Reset to template” button |
+| “Where the signatures go”, on a signature beyond the checkpoint | “added by the template: the supervisor is not from HSE” or “added by you” | who added the signature and why |
+| “Add signature: …” | “The template adds this signature only if the supervisor is not from HSE” | the template did not add it because the condition is not met; you can still add it yourself |
+| next to the “Signature optional” checkbox | “as in the template” | the template set the mark |
+| next to a signature box | “Place from the template” | the place and the date marks are as in the template |
+| next to a signature box | “Place changed” and “Reset place to template” | you moved the box or changed the date marks |
+
+The place marks are on the document's “Signatures” tab too.
+
+**You can change everything**, just as without a template: steps and people, “Add signature: …” and “Remove signature from route”, the “Signature optional” checkbox, places and date marks. The only thing you cannot do is mark optional a signature the template requires.
+
+**Reset to template.** The button at the top of the screen shows when the route is not sent yet, or is stopped, returned or cancelled, and differs from the template. The Studio asks “Reset to the template?”: “The order, the extra signatures and the “optional” marks will be as in the template. People stay if their role is in the template. Signature places on the pages will not change”. Buttons “Reset” and “Cancel”. A person whose role is in the template stays on their new step together with their approval; missing people are picked from the project.
+
+**Reset place to template.** The button next to a box marked “Place changed”: the place and the date marks of this signature on this document become as in the template; whether the signature is switched on does not change. Other places and the route composition are left alone. If the document's final PDF already carries e-signatures, the Studio first asks “Reset the place to the template?” and names whose signatures will be reset, as with date marks ([Signing date](#dates)). On a document under a running or completed route, the place is reset by whoever manages the route, and the route history shows “changed the date marks”.
+
+Two buttons rather than one, because a place is your work on a specific page while the route composition is a decision about the checkpoint: resetting one and losing the other would be a surprise.
+
+**What the template never touches by itself.** Routes already sent: running, stopped, completed (a stopped one can be reset to the template only with the button). And places you set or moved yourself: a manual place stays manual after a template update too.
+
+**Template update.** New routes take the new version's route right after the update. Places marked “Place from the template”, and places the Studio set itself and you never touched, move to the new version's places. The update preview in the project settings (“Template version”) says how many places will move and how many will not: “Template signature places will be updated: 3”, “Not updated: changed by you 1, on a signing route 2, signed 1”. If no template files change but places do, it says “No files change. Template signature places will be updated: 3”.
+
+- Places changed by you, places on documents under a route and on documents whose final PDF carries e-signatures are not updated.
+- The update does not change route compositions or “optional” marks. If a draft's route differs in the new version, the editor shows “The new template version has a different route for this checkpoint”.
+- Undoing the update in the project settings brings the places back too, if you did not touch them after the update.
+
+Over MCP the route from the template is read-only ([MCP](mcp.md)). Sending over MCP (`send_for_signing`) applies the template just like the button.
 
 ## How many actions each person has { #actions }
 
@@ -185,7 +248,7 @@ Before the first edit of a document out for signing the Studio asks: “Document
 
 - The question comes on the first text edit in the editor, on “Build”, when opening the office editor, when uploading or replacing the document's file and when changing files in the tree.
 - Shared files (`common/`, the bibliography) and project fields (metadata, authors, supervisors, language) affect several documents at once. Then there is one question with a list: “Out for signing: …”.
-- A template update plan shows a similar line if the update touches documents out for signing: “Out for signing: … The update will not reach the version being signed: afterwards the route asks you to send a new version”. The route does not stop; the document shows “There are changes”.
+- A template update plan shows a similar line if the update touches documents out for signing: “Out for signing: … The update will not reach the version being signed: afterwards the route asks you to send a new version (“Send new version” on the Signing card)”. The route does not stop; the document shows “There are changes”. The signers still see the earlier version; to have them sign the updated form, send a new version. The update does not change the composition of a running route: for example, if the new version of the application has no academic supervisor consent line but the academic supervisor is on the route, mark their signature optional and skip them when their turn comes ([Optional signatures and skipping](#optional)), or cancel the route and remove them.
 - The question is asked once per session per document. After a new sending it is asked again.
 - Only a running route asks. If the route is stopped, returned or completed, edits are expected and there is no question.
 - Edits from a local Studio, git sync and MCP go through without the question. They do not touch the version being signed either.
@@ -392,6 +455,7 @@ A route that an earlier Studio version stopped because of a rebuild (“The docu
 - **You found a typo while the document is being signed.** Fix and build the document. The route goes on with the old version. When you are ready, click “Send new version”: only this document is approved again, the other signatures stay.
 - **You edited the text after everyone signed.** The signed version does not disappear: the package is built from it with a warning. If you need the corrected text, send a new version, and the changed document is signed again.
 - **You rebuilt without edits, and the card shows changes.** This happens with documents from Word or PowerPoint: their PDF differs on every build. If the text did not change, you do not need to send a new version.
+- **A document is replaced with your own PDF, and the signature is already inside the file.** The Studio signs the uploaded PDF but does not see signatures inside it: the route waits for a signature in the slot. Upload the signature as an image or sign on the signing page.
 - **A document has to be signed from the current build without a route.** On the document's “Signatures” tab click “Sign the current build”. Signatures on the old version will no longer match the document.
 - **In a local Studio.** There are no routes there, but the version for signing arrives with the project through git sync. The “Signatures” tab says “Being signed: the version of … (route on the server)”. Local edits and builds do not stop the server route.
 - **“Sign the submission” says “The document is on a signing route”.** Route documents are signed only in turn, on the signing page. Click “Open the signing page” in the submission dialog.
