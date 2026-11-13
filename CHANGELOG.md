@@ -6,6 +6,16 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.24.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.23.0...v0.24.0) - 2026-11-13
+
+- Optional signatures and skipping a signer. For each signature slot on a checkpoint the author can tick “Signature is optional”, even on a route that is already running. When it is the turn of a signer whose signatures are all optional, the author presses “Skip” and the route goes on without a restart and without losing approvals.
+- A skipped signer gets a “signature not required” notice and email, and the event is recorded in the audit log. If an e-signature already stands over the document, the skipped signer's mark stays, otherwise the document is frozen again without it. A skipped signer can be brought back by sending a new version. MCP can read this but not skip.
+- The submission pack is not blocked by a skipped or optional signature, and HOW_TO_VERIFY.txt lists it as not required. While a route is not finished the pack cannot be built, and instead of an English 400 error the Project folder card explains why: the route step and who we are waiting for.
+- Comments from the PDF preview. The selection bar has a new “Comment” button. A comment is anchored to the LaTeX source through SyncTeX, or to the place on the PDF page when the source is not found or there is none. Margin marks and a Comments panel show them, also on phones. On servers with runners SyncTeX now comes back with the PDF, so “In source” and Ctrl+click work.
+- Registration: exemptions from admin approval. In the sign-in settings you can list addresses and domains (hse.ru, *.hse.ru, name@example.com) that do not need approval. The exemption applies only to a confirmed address: after the email or on single sign-on. The “Check address” line shows the result before saving, and a pass by rule is written to the audit log.
+- The double dot after initials (“Petrov P. P..”) is fixed on the signing page, the route card and elsewhere. The signing page is lighter: rare dialogs load only when opened.
+- On phones the document tab row scrolls with an edge hint, the selected tab scrolls into view, and the “…” button stays on screen.
+
 ## [0.23.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.22.0...v0.23.0) - 2026-11-11
 
 - New admin section “Mail”: every email the Studio sent or tried to send, with its outcome (sent, failed, not sent), recipient, subject and who triggered it. Filters by kind, outcome, recipient, project and period, plus search.
