@@ -12,6 +12,7 @@ from typing import Any, Literal
 
 from pydantic import Field, field_validator, model_validator
 
+from hse_doc_studio.api.schemas.checkpoint_deadlines import NextDeadline
 from hse_doc_studio.api.schemas.common import StrictModel
 from hse_doc_studio.api.schemas.invitations import InboxBadge
 from hse_doc_studio.core.identity.normalize import is_valid_email
@@ -363,6 +364,8 @@ class ProjectSummary(StrictModel):
     shared_enabled: bool
     # links: роль держится на ссылке, а не на членстве (значок «По ссылке»).
     via_link: bool = False
+    # Ближайший срок контрольной точки (signing-route.md, 16.6); null, если показывать нечего.
+    next_deadline: NextDeadline | None = None
 
 
 class ProjectSummaryPage(StrictModel):

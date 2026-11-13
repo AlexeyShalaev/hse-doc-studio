@@ -41,6 +41,7 @@ from hse_doc_studio.core.catalog import (
     TemplateVersion,
     VisibleIf,
 )
+from hse_doc_studio.core.checkpoint_deadlines import parse_deadline_hint
 from hse_doc_studio.core.enums import (
     CheckEngine,
     CheckSeverity,
@@ -747,8 +748,18 @@ def _parse_submission_profile(data: dict[str, Any]) -> SubmissionProfile:
         items=items,
         extra_items=extra_items,
         signing_route=_profile_signing_route(data),
+        deadline_hint=_profile_deadline_hint(data),
         signing_slots=_profile_signing_slots(data),
     )
+
+
+def _profile_deadline_hint(data: dict[str, Any]) -> dict[str, str] | None:
+    """Подсказка срока точки (signing-route.md, 16.4); битая отбрасывается с предупреждением, профиль остаётся."""
+    try:
+        return parse_deadline_hint(data.get("deadline_hint"))
+    except (TypeError, ValueError) as exc:
+        logger.warning("profile deadline_hint ignored", profile_id=data.get("id"), exc=str(exc))
+        return None
 
 
 def parse_signing_route(raw: Any) -> tuple[tuple[str, ...], ...]:

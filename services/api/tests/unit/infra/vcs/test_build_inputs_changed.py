@@ -77,6 +77,8 @@ def test__inputs__project_json_state_fields_do_not_count() -> None:
         "pinned": True,
         "meta": {**PROJECT_JSON["meta"], "vcs": {"track_pdf": True}},
         "documents": [{**DOCUMENT, "status": "ok", "last_compile_id": "c1"}],
+        # Срок точки PDF не меняет (signing-route.md, 16.3): версия на подписи от него не устаревает.
+        "deadlines": {"topic-approval": "2026-11-15T23:59:00+03:00"},
     }
     topic = {**PROJECT_JSON, "meta": {"topic": "Другая тема"}}
 

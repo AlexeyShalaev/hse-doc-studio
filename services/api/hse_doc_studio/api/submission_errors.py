@@ -9,6 +9,7 @@ from __future__ import annotations
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from hse_doc_studio.core.checkpoint_deadlines import BadDeadlineError
 from hse_doc_studio.core.submission_errors import PackError
 
 
@@ -17,5 +18,12 @@ async def _pack_handler(_request: Request, exc: Exception) -> JSONResponse:
     return JSONResponse(status_code=400, content=exc.body())
 
 
+async def _deadline_handler(_request: Request, exc: Exception) -> JSONResponse:
+    """Срок точки не разобрать (signing-route.md, 16.8): 400 `{detail, code: bad_deadline}`."""
+    assert isinstance(exc, BadDeadlineError)  # noqa: S101 — обработчик зарегистрирован только на этот тип
+    return JSONResponse(status_code=400, content={"detail": str(exc), "code": exc.code})
+
+
 def install_submission_error_handlers(app: FastAPI) -> None:
     app.add_exception_handler(PackError, _pack_handler)
+    app.add_exception_handler(BadDeadlineError, _deadline_handler)

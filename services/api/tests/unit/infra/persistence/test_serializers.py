@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from dataclasses import replace
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import uuid4
 
@@ -39,6 +40,7 @@ from hse_doc_studio.core.value_objects import (
     SignaturesState,
     SkippedSlot,
 )
+from hse_doc_studio.infra.persistence.project import JsonProjectRepository
 from hse_doc_studio.infra.persistence.serializers import (
     _parse_dt,
     deserialize_changelog_entry,
@@ -636,3 +638,52 @@ def test__signatures_state__mark_hidden__withheld_and_skipped_without_kept_mark(
     assert state.mark_hidden("a", "supervisor")
     assert not state.mark_hidden("a", "academic_supervisor")
     assert not state.mark_hidden("b", "supervisor")
+
+
+@pytest.mark.unit
+def test__serializers__project_deadlines__roundtrip_sorted_and_always_written(tmp_path: Path) -> None:
+    """Сроки точек (signing-route.md, 16.3): момент с поясом, ключ это id точки; пустой словарь тоже пишется."""
+    msk = timezone(timedelta(hours=3))
+    deadlines = {
+        "topic-approval": datetime(2026, 11, 15, 23, 59, tzinfo=msk),
+        "final": datetime(2027, 6, 1, 20, 59, tzinfo=timezone.utc),
+    }
+    project = replace(make_project(folder=tmp_path), deadlines=deadlines)
+
+    data = serialize_project(project)
+    restored = deserialize_project(data, folder=tmp_path)
+
+    assert data["deadlines"] == {"final": "2027-06-01T20:59:00+00:00", "topic-approval": "2026-11-15T23:59:00+03:00"}
+    assert list(data["deadlines"]) == ["final", "topic-approval"]
+    assert restored.deadlines == deadlines
+    assert serialize_project(make_project(folder=tmp_path))["deadlines"] == {}
+
+
+@pytest.mark.unit
+def test__serializers__project_deadlines__legacy_and_broken_entries(tmp_path: Path) -> None:
+    data = serialize_project(make_project(folder=tmp_path))
+    data.pop("deadlines")
+    assert deserialize_project(data, folder=tmp_path).deadlines == {}
+
+    data["deadlines"] = {"a": "2026-11-15T23:59:00+03:00", "naive": "2026-11-15T23:59:00", "bad": "завтра", "n": 5}
+    assert list(deserialize_project(data, folder=tmp_path).deadlines) == ["a"]
+    data["deadlines"] = ["2026-11-15T23:59:00+03:00"]
+    assert deserialize_project(data, folder=tmp_path).deadlines == {}
+
+
+@pytest.mark.unit
+def test__project_repository__removed_deadline__does_not_come_back_from_the_old_file(tmp_path: Path) -> None:
+    """Сохранение неизвестных полей сливает `deadlines` по ключам нового словаря: снятый срок не воскресает."""
+    msk = timezone(timedelta(hours=3))
+    repo = JsonProjectRepository()
+    project = replace(
+        make_project(folder=tmp_path),
+        deadlines={"a": datetime(2026, 11, 15, 23, 59, tzinfo=msk), "b": datetime(2027, 1, 20, 23, 59, tzinfo=msk)},
+    )
+    repo.save(project)
+
+    repo.save(replace(project, deadlines={"b": project.deadlines["b"]}))
+
+    restored = repo.get(tmp_path)
+    assert restored is not None
+    assert restored.deadlines == {"b": project.deadlines["b"]}

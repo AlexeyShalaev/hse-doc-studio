@@ -35,6 +35,8 @@ const base = {
   archived: false,
   shared_enabled: true,
   via_link: false,
+  // Ближайший срок точки (signing-route.md, 16.6); демо сроков пока не задаёт (W16).
+  next_deadline: null,
 };
 
 export const DEMO_FOREIGN_PROJECT_ID = "p_01hxa9foreign";

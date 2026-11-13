@@ -6,7 +6,7 @@
 
     project.json     схема — максимум, `lock` — старшая версия шаблона, авторы по slug, документы по id,
                      `updated_at` — максимум, `created_at` — минимум; `pinned`, `archived`, `meta.vcs` и
-                     `documents[].last_compile_id` остаются моими
+                     `documents[].last_compile_id` остаются моими; срок точки (`deadlines.<точка>`) неделим
     signatures.json  слоты и размещения по ключам, `signing_identity_id` и `sign_mode` мои, картинка
                      слота следует за новейшей; размещение неделимо вместе с метками даты и моментом
                      подписи (`dates`, `signed_at`); подписанный PDF, подписи к нему и придержанные маршрутом
@@ -199,6 +199,8 @@ PROJECT_RULES = JsonRules(
         LocalOnly(("archived",), False),
         LocalOnly(("meta", "vcs")),
         LocalOnly(("documents", "*", "last_compile_id"), None),
+        # Срок точки неделим (signing-route.md, 16.3): правки разных точек сливаются, одной точки дают конфликт.
+        Atomic(("deadlines", "*")),
     ),
 )
 

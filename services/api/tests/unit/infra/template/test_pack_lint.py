@@ -205,6 +205,48 @@ def test__lint_version_dir__signing_route_malformed__reports_error(tmp_path: Pat
     assert any(e.startswith("signatures.route:") for e in lint_version_dir(tmp_path).errors)
 
 
+# ── подсказка срока точки (`deadline_hint`, signing-route.md, 16.4) ──
+
+
+def _manifest_with_hint(hint: object) -> dict:
+    manifest = _manifest(required_for_pack=True)
+    manifest["pack_submission"]["profiles"][0]["deadline_hint"] = hint
+    return manifest
+
+
+def test__lint_version_dir__deadline_hint_without_dates__no_error(tmp_path: Path) -> None:
+    hint = {
+        "ru": "Обычно в середине ноября, точную дату объявляют в SmartLMS",
+        "en": "Usually mid-November; the exact date is announced in SmartLMS",
+    }
+    _write_version(tmp_path, _manifest_with_hint(hint))
+
+    assert lint_version_dir(tmp_path).errors == []
+
+
+@pytest.mark.parametrize(
+    ("hint", "fragment"),
+    [
+        (
+            {"ru": "Жёсткий дедлайн 15 ноября 23:59", "en": "Usually mid-November"},
+            "deadline_hint.ru names a concrete date",
+        ),
+        ({"ru": "Обычно в середине ноября", "en": "By 2026-11-15"}, "deadline_hint.en names a concrete date"),
+        ({"ru": "До 15.11.2026", "en": "Usually mid-November"}, "concrete date"),
+        ({"ru": "Обычно в середине ноября", "en": "Hard deadline November 15"}, "concrete date"),
+        ({"ru": "Обычно в середине ноября"}, "deadline_hint.en is missing"),
+        ({"ru": "я" * 201, "en": "Usually mid-November"}, "longer than 200"),
+        ("Обычно в середине ноября", "must be a mapping"),
+    ],
+)
+def test__lint_version_dir__deadline_hint_broken__reports_error(tmp_path: Path, hint: object, fragment: str) -> None:
+    _write_version(tmp_path, _manifest_with_hint(hint))
+
+    errors = lint_version_dir(tmp_path).errors
+
+    assert any(e.startswith("профиль final:") and fragment in e for e in errors), errors
+
+
 # ── метки даты по умолчанию (`default_dates`, signing-route.md, 14.10) ──
 
 

@@ -1,4 +1,5 @@
-"""Копия name/kind/lang, закрепления, архива и руководителя проекта в таблице projects и сверка каталога с томом.
+"""Копия name/kind/lang, закрепления, архива, руководителя и сроков точек проекта в таблице projects и сверка
+каталога с томом.
 
 Источник правды о содержимом проекта остаётся project.json. Таблица держит копию для списков и
 админки: её обновляет декоратор над репозиторием проектов на каждый save, а на старте сверка
@@ -10,16 +11,17 @@ from __future__ import annotations
 import asyncio
 import contextvars
 from dataclasses import dataclass, field
-from datetime import UTC
+from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 from uuid import UUID
 
 import structlog
-from sqlalchemy import func, select, update
+from sqlalchemy import func, null, select, update
 
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.projects.volume import IProjectVolume, UnsafePathError
-from hse_doc_studio.core.repositories import IProjectRepository
+from hse_doc_studio.core.repositories import IProjectRepository, ITemplateRepository
 from hse_doc_studio.infra.db.orm.projects import ProjectRow
 from hse_doc_studio.infra.db.session import SessionProvider
 from hse_doc_studio.infra.projects.acl_flags import AclFlags, AclFlagsCache
@@ -27,16 +29,64 @@ from hse_doc_studio.infra.projects.acl_flags import AclFlags, AclFlagsCache
 logger = structlog.get_logger()
 
 
+def catalog_deadlines(project: Project, templates: ITemplateRepository | None) -> dict[str, Any] | None:
+    """Копия сроков точек для списка проектов (signing-route.md, 16.3): `{profile_id: {deadline, name}}`.
+
+    Только точки версии шаблона проекта, с их названием из пака: срок точки, которую новая версия убрала, хранится в
+    `project.json`, но в списке не показывается. None, если сроков нет или версию шаблона не найти.
+    """
+    if not project.deadlines or templates is None:
+        return None
+    lock = project.lock
+    version = templates.get_version(lock.pack_id, lock.template_id, lock.version)
+    if version is None:
+        return None
+    names = {profile.id: dict(profile.name) for profile in version.pack_submission.profiles}
+    copy = {
+        profile_id: {"deadline": moment.isoformat(), "name": names[profile_id]}
+        for profile_id, moment in sorted(project.deadlines.items())
+        if profile_id in names
+    }
+    return copy or None
+
+
+def read_catalog_deadlines(raw: object) -> tuple[dict[str, datetime], dict[str, dict[str, str]]]:
+    """Сроки и названия точек из копии в каталоге; битая запись пропускается."""
+    deadlines: dict[str, datetime] = {}
+    names: dict[str, dict[str, str]] = {}
+    if not isinstance(raw, dict):
+        return deadlines, names
+    for profile_id, entry in raw.items():
+        if not isinstance(entry, dict) or not isinstance(entry.get("deadline"), str):
+            continue
+        try:
+            moment = datetime.fromisoformat(entry["deadline"])
+        except ValueError:
+            continue
+        if moment.tzinfo is None:
+            continue
+        name = entry.get("name")
+        deadlines[str(profile_id)] = moment
+        names[str(profile_id)] = {str(k): str(v) for k, v in name.items()} if isinstance(name, dict) else {}
+    return deadlines, names
+
+
 class ProjectCatalogMirror:
-    def __init__(self, sessions: SessionProvider) -> None:
+    def __init__(self, sessions: SessionProvider, templates: ITemplateRepository | None = None) -> None:
         self._sessions = sessions
+        # Без каталога шаблонов копия сроков не пишется: названия и состав точек берутся из версии шаблона.
+        self._templates = templates
 
     async def mirror(self, project_id: UUID, project: Project) -> bool:
-        """Переносит в строку каталога то, что нужно спискам: name/kind/lang, закрепление, архив и руководителя.
+        """Переносит в строку каталога то, что нужно спискам: name/kind/lang, закрепление, архив, руководителя и
+        сроки точек.
 
         False, если строки нет или копия уже совпадает. Время архивации берётся при первом переходе в архив.
         """
         supervisor = project.supervisor.name if project.supervisor else None
+        # SQL NULL, а не JSON null: у проектов без срока колонка пустая, как после миграции.
+        copy = catalog_deadlines(project, self._templates)
+        deadlines: Any = copy if copy is not None else null()
         archived = ProjectRow.archived_at.is_not(None)
         # Старые project.json хранят время без зоны: это UTC, как и всё время студии.
         edited = project.updated_at if project.updated_at.tzinfo else project.updated_at.replace(tzinfo=UTC)
@@ -50,6 +100,7 @@ class ProjectCatalogMirror:
                 | (ProjectRow.pinned != project.pinned)
                 | (archived != project.archived)
                 | ProjectRow.supervisor_name.is_distinct_from(supervisor)
+                | ProjectRow.deadlines.is_distinct_from(deadlines)
                 | (ProjectRow.updated_at != edited),
             )
             .values(
@@ -59,6 +110,7 @@ class ProjectCatalogMirror:
                 pinned=project.pinned,
                 archived_at=func.coalesce(ProjectRow.archived_at, func.now()) if project.archived else None,
                 supervisor_name=supervisor,
+                deadlines=deadlines,
                 # Время правки из файла: по нему список проектов сортирует «недавние».
                 updated_at=edited,
             )
@@ -156,11 +208,17 @@ class ReconcileReport:
 class ProjectCatalogReconciler:
     """Сверка при старте: помечает проекты без папки и подтягивает копию из project.json. Приложение не роняет."""
 
-    def __init__(self, sessions: SessionProvider, volume: IProjectVolume, projects: IProjectRepository) -> None:
+    def __init__(
+        self,
+        sessions: SessionProvider,
+        volume: IProjectVolume,
+        projects: IProjectRepository,
+        templates: ITemplateRepository | None = None,
+    ) -> None:
         self._sessions = sessions
         self._volume = volume
         self._projects = projects
-        self._mirror = ProjectCatalogMirror(sessions)
+        self._mirror = ProjectCatalogMirror(sessions, templates)
 
     async def reconcile(self) -> ReconcileReport:
         report = ReconcileReport()

@@ -126,6 +126,8 @@ async def test__migration__sr_11_skip__widens_notification_kinds_and_keeps_exist
 
     async with pg_engine.begin() as conn:
         await conn.execute(_INSERT_SKIPPED_NOTICE)
+    # Дрейф сверяется с нынешними моделями, поэтому на head: колонки следующих ревизий (dl_01) моделям уже известны.
+    await migrator.upgrade(pg_engine)
     assert await migrator.check_drift(pg_engine) == []
     await migrator.downgrade(pg_engine, previous)
     assert await _count(pg_engine, "users") == 1

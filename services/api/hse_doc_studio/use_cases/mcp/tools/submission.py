@@ -4,13 +4,16 @@
 from __future__ import annotations
 
 from hse_doc_studio.core.agent.entities import AgentToolContext, ToolResult, ToolSpec
+from hse_doc_studio.core.checkpoint_deadlines import BadDeadlineError, DeadlineState
 from hse_doc_studio.core.enums import ToolKind
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.signatures.plan import SignaturePlan
 from hse_doc_studio.use_cases.mcp.tools._base import (
+    ArgumentError,
     McpTool,
     bool_arg,
     json_result,
+    jsonable,
     optional_text,
     project_schema,
     text_arg,
@@ -27,12 +30,22 @@ from hse_doc_studio.use_cases.submission.get_submission_profiles import (
     GetSubmissionProfilesUC,
 )
 from hse_doc_studio.use_cases.submission.list_submissions import ListSubmissionsInput, ListSubmissionsUC
+from hse_doc_studio.use_cases.submission.set_checkpoint_deadline import (
+    SetCheckpointDeadlineInput,
+    SetCheckpointDeadlineUC,
+)
 
 
 class ListSubmissionProfilesTool(McpTool):
     spec = ToolSpec(
         name="list_submission_profiles",
-        description="Профили сдачи проекта (куда и какой комплект документов сдаётся) для package_project.",
+        description=(
+            "Профили сдачи проекта (контрольные точки: куда и какой комплект документов сдаётся) для "
+            "package_project. У точки срок сдачи в проекте (deadline), его состояние (deadline_state: none, "
+            "upcoming, soon, today, packaged, overdue; overdue значит, что пакет точки не собран к сроку), "
+            "подсказка шаблона о сроке (deadline_hint) и последняя сборка пакета к сроку (packaged_at). "
+            "Поставить срок: set_checkpoint_deadline."
+        ),
         parameters=project_schema({}),
     )
     kind = ToolKind.read
@@ -41,7 +54,63 @@ class ListSubmissionProfilesTool(McpTool):
         out = await (await self._deps.get(GetSubmissionProfilesUC)).execute(
             GetSubmissionProfilesInput(project_id=ctx.project_id)
         )
-        return json_result(out.profiles)
+        profiles: list[object] = []
+        for profile in out.profiles:
+            view = jsonable(profile)
+            assert isinstance(view, dict)  # noqa: S101 — профиль это dataclass
+            deadline = out.deadlines.get(profile.id)
+            view["deadline"] = deadline.deadline if deadline else None
+            view["deadline_state"] = deadline.state if deadline else DeadlineState.none
+            view["packaged_at"] = deadline.packaged_at if deadline else None
+            profiles.append(view)
+        return json_result(profiles)
+
+
+class SetCheckpointDeadlineTool(McpTool):
+    spec = ToolSpec(
+        name="set_checkpoint_deadline",
+        description=(
+            "Поставить или снять срок сдачи контрольной точки проекта (profile_id из list_submission_profiles). "
+            "Срок объявляют в ЛМС, шаблон его не знает. deadline: дата и время с часовым поясом в ISO 8601, "
+            "например 2026-11-15T23:59:00+03:00 (по Москве); null снимает срок. Срок в прошлом можно поставить. "
+            "Срок маршрута подписания тул не меняет. В ответе срок, его состояние и последняя сборка пакета к сроку."
+        ),
+        parameters=project_schema(
+            {
+                "profile_id": {"type": "string", "description": "Контрольная точка (list_submission_profiles)"},
+                "deadline": {
+                    "type": ["string", "null"],
+                    "description": "ISO 8601 с поясом, например 2026-11-15T23:59:00+03:00; null снимает срок",
+                },
+            },
+            required=("profile_id", "deadline"),
+        ),
+    )
+    kind = ToolKind.write
+
+    async def handle(self, ctx: AgentToolContext, args: dict[str, object]) -> ToolResult:
+        if "deadline" not in args:
+            raise ArgumentError(
+                localized_error(
+                    "укажите параметр deadline (null снимает срок)", "specify the deadline parameter (null clears it)"
+                )
+            )
+        raw = args["deadline"]
+        if raw is not None and not isinstance(raw, str):
+            raise ArgumentError(
+                localized_error("deadline: ожидается строка или null", "deadline: a string or null is expected")
+            )
+        try:
+            out = await (await self._deps.get(SetCheckpointDeadlineUC)).execute(
+                SetCheckpointDeadlineInput(
+                    project_id=ctx.project_id,
+                    profile_id=text_arg(args, "profile_id"),
+                    deadline=raw,
+                )
+            )
+        except BadDeadlineError as exc:
+            return ToolResult.error(str(exc))
+        return json_result(out)
 
 
 class ListSubmissionsTool(McpTool):

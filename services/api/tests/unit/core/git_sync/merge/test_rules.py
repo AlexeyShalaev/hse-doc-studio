@@ -284,6 +284,46 @@ def test__project__document_status_changed_differently__is_a_conflict_on_that_fi
     assert _load(decision.content)["documents"][0]["status"] == "ready"
 
 
+def _deadline(profile_id: str, value: str | None) -> Callable[[Json], None]:
+    def change(data: Json) -> None:
+        if value is None:
+            data["deadlines"].pop(profile_id, None)
+        else:
+            data["deadlines"][profile_id] = value
+
+    return change
+
+
+def test__project__deadlines_are_written_by_the_repository(project_json: Json) -> None:
+    assert project_json["deadlines"] == {}
+
+
+def test__project__deadlines_of_different_checkpoints__are_merged(project_json: Json) -> None:
+    """Срок каждой точки отдельная запись (signing-route.md, 16.3): правки разных точек сливаются."""
+    base = _edited(project_json, _deadline("final", "2027-06-01T23:59:00+03:00"))
+    ours = _edited(base, _deadline("topic-approval", "2026-11-15T23:59:00+03:00"))
+    theirs = _edited(base, _deadline("final", None))
+
+    decision = _merge(_PROJECT, base, ours, theirs)
+
+    assert not decision.conflict
+    assert _load(decision.content)["deadlines"] == {"topic-approval": "2026-11-15T23:59:00+03:00"}
+
+
+def test__project__deadline_of_one_checkpoint_changed_by_both__is_a_conflict_on_that_record(
+    project_json: Json,
+) -> None:
+    ours = _edited(project_json, _deadline("topic-approval", "2026-11-15T23:59:00+03:00"))
+    theirs = _edited(project_json, _deadline("topic-approval", "2026-11-20T23:59:00+03:00"))
+
+    decision = _merge(_PROJECT, project_json, ours, theirs)
+
+    assert decision.conflict
+    assert [(f.pointer, f.ours, f.theirs) for f in decision.fields] == [
+        ("/deadlines/topic-approval", "2026-11-15T23:59:00+03:00", "2026-11-20T23:59:00+03:00")
+    ]
+
+
 def test__project__lock_takes_the_record_with_the_higher_template_version(project_json: Json) -> None:
     def lock(version: str, digest: str) -> Callable[[Json], None]:
         return lambda data: data["lock"].update(version=version, digest=digest)

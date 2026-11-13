@@ -152,6 +152,7 @@ def serialize_project(project: Project) -> dict[str, Any]:
         "archived": project.archived,
         "checks_override": _serialize_checks_override(project.checks_override),
         "requirements": _serialize_requirements_format(project.requirements_format),
+        "deadlines": {profile_id: moment.isoformat() for profile_id, moment in sorted(project.deadlines.items())},
     }
 
 
@@ -188,8 +189,24 @@ def deserialize_project(data: dict[str, Any], folder: Path) -> Project:
         archived=data.get("archived", False),
         checks_override=_deserialize_checks_override(data.get("checks_override", {})),
         requirements_format=_deserialize_requirements_format(data.get("requirements")),
+        deadlines=_deserialize_deadlines(data.get("deadlines")),
         schema=deserialize_project_schema(data.get("schema")),
     )
+
+
+def _deserialize_deadlines(raw: Any) -> dict[str, datetime]:
+    """Сроки точек; запись без пояса или не ISO отбрасывается, остальные остаются (руками правленный файл)."""
+    if not isinstance(raw, dict):
+        return {}
+    result: dict[str, datetime] = {}
+    for profile_id, value in raw.items():
+        try:
+            moment = datetime.fromisoformat(value) if isinstance(value, str) else None
+        except ValueError:
+            moment = None
+        if moment is not None and moment.tzinfo is not None:
+            result[str(profile_id)] = moment
+    return result
 
 
 def _serialize_author(author: Author) -> dict[str, Any]:

@@ -42,8 +42,8 @@ class GetProjectTool(McpTool):
     spec = ToolSpec(
         name="get_project",
         description=(
-            "Карточка проекта: название, вид, язык, авторы, руководитель, документы, моя роль и можно ли писать "
-            "в проект."
+            "Карточка проекта: название, вид, язык, авторы, руководитель, документы, сроки контрольных точек "
+            "(deadlines), моя роль и можно ли писать в проект."
         ),
         parameters=project_schema({}),
     )
@@ -79,6 +79,8 @@ class GetProjectTool(McpTool):
                 "meta": project.meta,
                 "documents": documents,
                 "archived": project.archived,
+                # Сроки контрольных точек (signing-route.md, 16.8); состояние срока в list_submission_profiles.
+                "deadlines": dict(sorted(project.deadlines.items())),
                 "updated_at": project.updated_at,
                 "my_role": membership.my_role if membership is not None else None,
                 "writable": access.access.writable,

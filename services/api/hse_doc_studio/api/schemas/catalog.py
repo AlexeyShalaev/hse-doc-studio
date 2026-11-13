@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 from pydantic import BaseModel
@@ -132,6 +133,12 @@ class SubmissionProfileResponse(BaseModel):
     description: dict[str, str]
     items: list[SubmissionDocItemResponse]
     extra_items: list[SubmissionExtraItemResponse]
+    # Срок точки в проекте и его состояние (signing-route.md, 16.6 и 16.8): `none|upcoming|soon|today|packaged|
+    # overdue`; подсказка пака текстом без дат; последняя сборка пакета точки к сроку.
+    deadline: datetime | None = None
+    deadline_state: str = "none"
+    deadline_hint: dict[str, str] | None = None
+    packaged_at: datetime | None = None
 
 
 class VersionDetailResponse(BaseModel):

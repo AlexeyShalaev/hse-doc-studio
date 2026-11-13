@@ -1,7 +1,7 @@
 """Список проектов серверного режима: поиск, фильтры, сортировка и страница по каталогу в базе.
 
 Список не читает project.json каждой папки. Поля, которые меняются в файле проекта (название, закрепление,
-архив, руководитель, время правки), каталог получает копией на каждый save и при сверке на старте.
+архив, руководитель, время правки, сроки точек), каталог получает копией на каждый save и при сверке на старте.
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ from uuid import UUID
 
 from hse_doc_studio.core.access.entities import Actor, Role
 from hse_doc_studio.core.access.repositories import ProjectOwnerView
+from hse_doc_studio.core.checkpoint_deadlines import NextDeadline
 from hse_doc_studio.core.listing import Found, SortKey, Window
 
 PROJECT_SORTS = ("name", "updated_at", "created_at")
@@ -53,6 +54,8 @@ class ProjectCard:
     shared_enabled: bool
     # Роль держится на ссылке, а не на членстве: в списке значок «По ссылке».
     via_link: bool = False
+    # Ближайший срок контрольной точки (signing-route.md, 16.6) из копии сроков в каталоге.
+    next_deadline: NextDeadline | None = None
 
 
 class IProjectBrowser(Protocol):

@@ -21,6 +21,8 @@ r"""Линтер пака (bundle-раскладка v2): превращает �
     разбирается и называет только объявленные слоты, каждый один раз;
   * метки даты по умолчанию слота (`default_dates`): разбираются, рамка внутри
     листа A4, документ из `applies_to` слота;
+  * подсказка срока точки (`deadline_hint` профиля): обе локали, не длиннее 200
+    знаков и без конкретных дат (сроки меняются каждый год);
   * пресет маршрута (signing-route.md, 15.8): места слота по документам
     (`placements`) внутри листа и только на документах слота и версии;
     `signing_slots` профиля называют документ точки и применимый к нему слот
@@ -46,6 +48,7 @@ from typing import Any
 import yaml
 from jinja2 import Environment, TemplateSyntaxError
 
+from hse_doc_studio.core.checkpoint_deadlines import parse_deadline_hint
 from hse_doc_studio.core.signatures.route_order import BUILTIN_ROUTE
 from hse_doc_studio.core.signatures.stamps import PLATE_MIN_WIDTH_MM
 from hse_doc_studio.infra.project_init.template_renderer import (
@@ -236,6 +239,25 @@ def _lint_default_dates(manifest: dict[str, Any]) -> list[str]:
             for doc_id, _ in by_doc
             if doc_id not in applies
         )
+    return errors
+
+
+def _lint_deadline_hints(manifest: dict[str, Any]) -> list[str]:
+    """Подсказка срока точки (`deadline_hint`, signing-route.md, 16.4): обе локали, не длиннее 200 знаков, без дат.
+
+    Лоадер битую подсказку отбрасывает молча (с записью в журнал), и точка останется без серого текста; дата в
+    подсказке устареет к следующему году, а выпущенную версию пака уже не поправить. Линтер делает это ошибкой.
+    """
+    submission = manifest.get("pack_submission")
+    profiles = (submission.get("profiles", []) or []) if isinstance(submission, dict) else []
+    errors: list[str] = []
+    for profile in profiles:
+        if not isinstance(profile, dict) or profile.get("deadline_hint") is None:
+            continue
+        try:
+            parse_deadline_hint(profile["deadline_hint"])
+        except (TypeError, ValueError) as exc:
+            errors.append(f"профиль {profile.get('id', '?')}: {exc}")
     return errors
 
 
@@ -512,6 +534,7 @@ def lint_version_dir(version_dir: Path) -> LintReport:  # noqa: C901, PLR0912, P
     report.errors.extend(_lint_changes(manifest))
     report.errors.extend(_lint_signing_routes(manifest))
     report.errors.extend(_lint_default_dates(manifest))
+    report.errors.extend(_lint_deadline_hints(manifest))
     for errors, warnings in (
         _lint_slot_placements(version_dir, manifest),
         _lint_signing_slots(manifest),

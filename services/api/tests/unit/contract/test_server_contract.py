@@ -16,6 +16,7 @@ from hse_doc_studio.api.schemas import admin_install as inst
 from hse_doc_studio.api.schemas import admin_ops as ops
 from hse_doc_studio.api.schemas import ai_providers as aip
 from hse_doc_studio.api.schemas import artifacts as art
+from hse_doc_studio.api.schemas import checkpoint_deadlines as dl
 from hse_doc_studio.api.schemas import compile as cmp
 from hse_doc_studio.api.schemas import diagnostics as dg
 from hse_doc_studio.api.schemas import git_remote as gr
@@ -332,6 +333,9 @@ _SCHEMAS: dict[str, Any] = {
     "SetDateMarksRequest": sig.SetDateMarksRequest,
     "Placement": sig.PlacementResponse,
     "SignaturePlan": sp.SignaturePlanResponse,
+    # Сроки контрольных точек (signing-route.md, 16.8): эталоны в pending до среза W16.
+    "SetCheckpointDeadlineRequest": dl.SetCheckpointDeadlineRequest,
+    "CheckpointDeadline": dl.CheckpointDeadline,
 }
 
 

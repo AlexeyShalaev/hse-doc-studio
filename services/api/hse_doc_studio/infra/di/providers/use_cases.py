@@ -458,8 +458,10 @@ from hse_doc_studio.use_cases.submission.get_submission_file import GetSubmissio
 # --- Submission ---
 from hse_doc_studio.use_cases.submission.get_submission_profiles import GetSubmissionProfilesUC
 from hse_doc_studio.use_cases.submission.list_submissions import ListSubmissionsUC
+from hse_doc_studio.use_cases.submission.next_deadlines import ProjectNextDeadlinesUC
 from hse_doc_studio.use_cases.submission.pack_planner import PackPlanner
 from hse_doc_studio.use_cases.submission.preview_custom_docs import PreviewSubmissionCustomDocsUC
+from hse_doc_studio.use_cases.submission.set_checkpoint_deadline import SetCheckpointDeadlineUC
 from hse_doc_studio.use_cases.synctex.query_synctex import SyncTexUC
 
 # --- System (Docker disk usage / cleanup, update checks) ---
@@ -3343,12 +3345,31 @@ class UseCaseProvider(Provider):
         project_repo: IProjectRepository,
         project_index_repo: IProjectIndexRepository,
         template_repo: ITemplateRepository,
+        submission_repo: IPackSubmissionRepository,
     ) -> GetSubmissionProfilesUC:
         return GetSubmissionProfilesUC(
             project_repo=project_repo,
             project_index_repo=project_index_repo,
             template_repo=template_repo,
+            submission_repo=submission_repo,
         )
+
+    @provide
+    def get_project_next_deadlines_uc(
+        self, template_repo: ITemplateRepository, submission_repo: IPackSubmissionRepository
+    ) -> ProjectNextDeadlinesUC:
+        return ProjectNextDeadlinesUC(template_repo, submission_repo)
+
+    @provide
+    def get_set_checkpoint_deadline_uc(  # noqa: PLR0913 — порты сценария
+        self,
+        project_repo: IProjectRepository,
+        project_index_repo: IProjectIndexRepository,
+        template_repo: ITemplateRepository,
+        submission_repo: IPackSubmissionRepository,
+        audit: ISignatureAudit,
+    ) -> SetCheckpointDeadlineUC:
+        return SetCheckpointDeadlineUC(project_repo, project_index_repo, template_repo, submission_repo, audit)
 
     @provide
     def get_preview_submission_custom_docs_uc(

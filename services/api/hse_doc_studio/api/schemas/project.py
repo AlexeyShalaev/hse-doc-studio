@@ -5,6 +5,7 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
+from hse_doc_studio.api.schemas.checkpoint_deadlines import NextDeadline
 from hse_doc_studio.api.schemas.common import AuthorSchema, LockResponse, PersonSchema
 from hse_doc_studio.api.schemas.session import ProjectOwner, ProjectRoleName
 
@@ -21,6 +22,8 @@ class ProjectListItemResponse(BaseModel):
     updated_at: datetime
     pinned: bool
     archived: bool
+    # Ближайший срок контрольной точки (signing-route.md, 16.6); null, если показывать нечего.
+    next_deadline: NextDeadline | None = None
 
 
 class FolderRootResponse(BaseModel):

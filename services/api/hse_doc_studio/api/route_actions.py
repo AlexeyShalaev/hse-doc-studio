@@ -198,6 +198,8 @@ ROUTE_ACTIONS: Mapping[RouteKey, RouteRule] = {
     ("GET", "/projects/{project_id}/submissions/preflight"): RouteRule(Action.SUBMISSION_READ),
     ("GET", "/projects/{project_id}/submissions/{submission_id}/download"): RouteRule(Action.SUBMISSION_READ),
     ("POST", "/projects/{project_id}/submissions"): RouteRule(Action.SUBMISSION_CREATE),
+    # Срок контрольной точки (signing-route.md, 16.8): те же, кто собирает пакет и отправляет маршрут.
+    ("PUT", "/projects/{project_id}/submissions/profiles/{profile_id}/deadline"): RouteRule(Action.SUBMISSION_CREATE),
     # Подписи: слот `<слот>--<слаг>` принадлежит автору слага. В пути пакета на подпись слота нет.
     ("GET", "/projects/{project_id}/docs/{doc_id}/signing-package"): RouteRule(Action.SIGN),
     ("POST", "/projects/{project_id}/docs/{doc_id}/detached/{slot_id}"): RouteRule(Action.SIGN, path_param="slot_id"),

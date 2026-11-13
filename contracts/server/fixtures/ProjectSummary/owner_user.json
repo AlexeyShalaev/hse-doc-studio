@@ -15,5 +15,6 @@
   "pinned": true,
   "archived": false,
   "shared_enabled": true,
-  "via_link": false
+  "via_link": false,
+  "next_deadline": null
 }

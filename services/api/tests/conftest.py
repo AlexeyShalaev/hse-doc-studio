@@ -95,6 +95,7 @@ if importlib.util.find_spec("sqlalchemy") is None:
         "integration/api/signing_routes/test_route_pack.py",
         "integration/api/signing_routes/test_route_guards.py",
         "integration/api/signing_routes/test_route_dates.py",
+        "integration/api/signing_routes/test_checkpoint_deadline_api.py",
         "integration/api/signing_routes/test_route_keeps_builds_fresh.py",
         "integration/api/signing_routes/test_route_triggers.py",
         "integration/api/signing_routes/test_send_and_sign.py",

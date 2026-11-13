@@ -117,6 +117,8 @@ PROJECT_SHAPE = Struct(
         ),
         "checks_override": _CHECKS_OVERRIDE,
         "requirements": Struct(),
+        # Сроки точек (signing-route.md, 16.3): набор ключей из нового словаря, снятый срок не воскресает.
+        "deadlines": MapOf(),
     }
 )
 
