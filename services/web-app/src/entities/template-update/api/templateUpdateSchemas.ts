@@ -138,3 +138,25 @@ export type RevertTemplateUpdateResult = z.infer<
 export type TemplateDiff = z.infer<typeof TemplateDiffSchema>;
 export type TemplateFileState = z.infer<typeof TemplateFileStateSchema>;
 export type CompareWithTemplate = z.infer<typeof CompareWithTemplateSchema>;
+
+// Строгая форма для контракта сервера (contracts/server/fixtures/TemplateUpdatePlanResponse):
+// лишнее поле значит расхождение сторон. Экран разбирает план терпимой схемой выше.
+export const TemplateUpdatePlanContractSchema = z.strictObject({
+  ...TemplateUpdatePlanSchema.shape,
+  files: z.array(z.strictObject(TemplateFileOpSchema.shape)),
+  warnings: z.array(z.strictObject(UpdateWarningSchema.shape)),
+  signature_presets: z
+    .strictObject({
+      updated: z.array(
+        z.strictObject({ doc_id: z.string(), slot_id: z.string() }),
+      ),
+      kept: z.array(
+        z.strictObject({
+          doc_id: z.string(),
+          slot_id: z.string(),
+          reason: z.enum(["manual", "route", "signed"]),
+        }),
+      ),
+    })
+    .optional(),
+});

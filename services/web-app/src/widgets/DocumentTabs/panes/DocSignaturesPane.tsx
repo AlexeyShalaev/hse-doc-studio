@@ -24,6 +24,8 @@ import {
   DocPlacementPanel,
   PdfStampEditor,
   useDateMarksSave,
+  useRestorePlace,
+  type PlaceRestoreControl,
   type SlotDateControl,
 } from "@features/signature-stamper";
 import { SignedVersionPanel } from "@features/signing-version";
@@ -90,6 +92,7 @@ export const DocSignaturesPane = ({
   });
   const { start, isRunning, slot, block } = useStartCompile(projectId, docId);
   const dateMarks = useDateMarksSave(projectId);
+  const restorePlace = useRestorePlace(projectId);
 
   // The signature preview needs a PDF, which exists iff the most recent build
   // actually produced one. Gate on the *compile* result, not doc.status: a doc
@@ -305,6 +308,15 @@ export const DocSignaturesPane = ({
     },
   };
   const dateMarksEditable = dateControl.canEdit && hasBuild;
+  // «Вернуть место из шаблона» (15.6): те же права, что у меток даты; на документе под маршрутом
+  // место возвращает его сценарий (сброс ЭП над B только с подтверждением).
+  const placeControl: PlaceRestoreControl = {
+    canRestore: dateControl.canEdit,
+    isRestoring: (slotId) => restorePlace.isRestoring(docId, slotId),
+    onRestore: (slotId) => {
+      restorePlace.restore(docId, slotId);
+    },
+  };
 
   const goToProjectSignatures = () => {
     void navigate(`/projects/${projectId}/submit/signatures`);
@@ -371,6 +383,7 @@ export const DocSignaturesPane = ({
             locked={locked}
             optionalControl={optionalControl}
             dateControl={dateControl}
+            placeControl={placeControl}
           />
         </div>
       </div>
@@ -419,6 +432,7 @@ export const DocSignaturesPane = ({
         />
       </div>
       {dateMarks.dialog}
+      {restorePlace.dialog}
     </div>
   );
 };

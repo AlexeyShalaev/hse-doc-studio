@@ -339,7 +339,7 @@ _SCHEMAS: dict[str, Any] = {
     "SetCheckpointDeadlineRequest": dl.SetCheckpointDeadlineRequest,
     "CheckpointDeadline": dl.CheckpointDeadline,
     "SubmissionProfile": cat.SubmissionProfileResponse,
-    # План обновления шаблона с местами подписей из шаблона (signing-route.md, 15.11): эталон в pending до среза W15.
+    # План обновления шаблона с местами подписей из шаблона (signing-route.md, 15.11): эталон из pending перенёс W15.
     "TemplateUpdatePlanResponse": tu.TemplateUpdatePlanResponse,
 }
 

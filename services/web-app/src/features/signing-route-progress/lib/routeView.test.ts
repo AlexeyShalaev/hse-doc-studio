@@ -72,6 +72,8 @@ const esignRoute = (o: EsignOptions = {}): SigningRoute => {
     extra: false,
     optional: false,
     status,
+    added_by: null,
+    preset_optional: false,
   });
   return makeSigningRoute({
     status: o.status ?? "active",
@@ -258,6 +260,8 @@ describe("сводки маршрута", () => {
               extra: true,
               optional: false,
               status: "pending",
+              added_by: null,
+              preset_optional: false,
             },
           ],
         },

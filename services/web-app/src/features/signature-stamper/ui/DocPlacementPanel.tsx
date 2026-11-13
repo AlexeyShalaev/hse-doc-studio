@@ -8,6 +8,7 @@ import {
   MapPin,
   User,
 } from "lucide-react";
+import { packPlaceOf } from "@entities/signature";
 import { pickLocalized } from "@shared/lib";
 import {
   FreezeCard,
@@ -16,9 +17,12 @@ import {
 } from "./DetachedSignatureBlocks";
 import { SlotOptionalRows, type SlotOptionalControl } from "./SlotOptionalRows";
 import { SlotDateMarks, type SlotDateRoute } from "./SlotDateMarks";
+import { PlaceOriginMark } from "./PlaceOriginMark";
 import { signatureHeightMm } from "../lib/coords";
 import type { DateMarksSave } from "../lib/dateMarkEdit";
 import type {
+  PackDateMarkResponse,
+  PackPlaceResponse,
   SignMode,
   SignatureProfileRef,
   SignaturesStateResponse,
@@ -36,6 +40,20 @@ export type PlacementSlot = Omit<SignatureSlotDefResponse, "required_by"> & {
   // чей маршрут включил слот сверх точки.
   required?: boolean;
   extra_by?: Record<string, SignatureProfileRef[]>;
+  // Только у рантайм-слотов (15.11): место и метки даты из пака по документам.
+  default_placements?: Record<string, PackPlaceResponse>;
+  default_dates?: Record<string, PackDateMarkResponse[]>;
+};
+
+/**
+ * «Вернуть место из шаблона» у слотов документа (docs/design/signing-route.md, 15.6). Пометка
+ * места видна всегда, кнопка только при `canRestore`. На документе под маршрутом строка вне
+ * `inert`: место возвращают сценарием маршрута, как метки даты (14.6).
+ */
+export type PlaceRestoreControl = {
+  canRestore: boolean;
+  isRestoring: (slotId: string) => boolean;
+  onRestore: (slotId: string) => void;
 };
 
 /**
@@ -86,6 +104,8 @@ export type DocPlacementPanelProps = {
   optionalControl?: SlotOptionalControl;
   /** Метки даты у слотов; без него блока дат нет. */
   dateControl?: SlotDateControl;
+  /** Пометка «Место из шаблона» и «Вернуть место из шаблона»; без него пометки нет. */
+  placeControl?: PlaceRestoreControl;
 };
 
 const lockedStyle = { opacity: 0.6 } as const;
@@ -111,6 +131,7 @@ export const DocPlacementPanel = ({
   locked = false,
   optionalControl,
   dateControl,
+  placeControl,
 }: DocPlacementPanelProps) => {
   const { t } = useTranslation("signatureStamper");
   const docSlots = slotDefs.filter((slot) => slot.applies_to.includes(docId));
@@ -179,7 +200,8 @@ export const DocPlacementPanel = ({
         const isDetached = slotInfo?.sign_mode === "detached_text";
         const hasPng = slotInfo?.png_path != null || isDetached;
         const isEnabled = Boolean(placement?.enabled);
-        const placedPage = placement?.page ?? slot.default_placement.page;
+        const packPlace = packPlaceOf(slot, docId);
+        const placedPage = placement?.page ?? packPlace.page;
         const isOnThisPage = placedPage === currentPage;
         // Обязательность зависит от контрольной точки, поэтому показываем не
         // «обязательно», а КОГДА: список точек, чей комплект эту подпись
@@ -288,8 +310,7 @@ export const DocPlacementPanel = ({
                         ...(next && !isEnabled && isDetached
                           ? {
                               width_mm: Math.max(
-                                placement?.width_mm ??
-                                  slot.default_placement.width_mm,
+                                placement?.width_mm ?? packPlace.width_mm,
                                 MIN_CAPTION_WIDTH_MM,
                               ),
                             }
@@ -308,6 +329,19 @@ export const DocPlacementPanel = ({
                 </span>
               )}
             </div>
+
+            {placeControl && isEnabled && (
+              <PlaceOriginMark
+                placement={placement}
+                canRestore={placeControl.canRestore}
+                pending={placeControl.isRestoring(slot.id)}
+                onRestore={() => {
+                  placeControl.onRestore(slot.id);
+                }}
+                slotId={slot.id}
+                indent
+              />
+            )}
 
             {optionalControl && (
               <SlotOptionalRows
@@ -536,7 +570,7 @@ export const DocPlacementPanel = ({
                 currentPage={currentPage}
                 pageCount={pageCount}
                 signatureHeightMm={signatureHeightMm(
-                  placement?.width_mm ?? slot.default_placement.width_mm,
+                  placement?.width_mm ?? packPlace.width_mm,
                   slotInfo,
                 )}
                 signerName={personName ?? label}

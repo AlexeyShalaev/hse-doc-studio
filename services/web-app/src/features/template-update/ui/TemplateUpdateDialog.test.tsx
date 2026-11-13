@@ -160,6 +160,35 @@ describe("TemplateUpdateDialog (list rendering)", () => {
       ),
     ).toBeInTheDocument();
     expect(screen.queryByText(/не меняет ни одного файла/)).toBeNull();
+    expect(screen.getByTestId("update-signature-presets")).toHaveTextContent(
+      "Не обновятся: на подписании 1",
+    );
+  });
+
+  it("a file plan lists template signature places: updated and kept by reason", () => {
+    plan = {
+      ...makePlan(),
+      signature_presets: {
+        updated: [{ doc_id: "report", slot_id: "supervisor" }],
+        kept: [
+          { doc_id: "proposal", slot_id: "supervisor", reason: "manual" },
+          { doc_id: "application", slot_id: "author", reason: "route" },
+          { doc_id: "application", slot_id: "supervisor", reason: "route" },
+          { doc_id: "report", slot_id: "author", reason: "signed" },
+        ],
+      },
+    };
+    renderDialog();
+    const lines = screen.getByTestId("update-signature-presets");
+    expect(lines).toHaveTextContent("Места подписей из шаблона обновятся: 1");
+    expect(lines).toHaveTextContent(
+      "Не обновятся: изменены вами 1, на подписании 2, подписаны 1",
+    );
+  });
+
+  it("no template signature places: no lines", () => {
+    renderDialog();
+    expect(screen.queryByTestId("update-signature-presets")).toBeNull();
   });
 
   it("an empty file plan without signature places says the version still applies", () => {

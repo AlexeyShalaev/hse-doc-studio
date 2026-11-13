@@ -33,6 +33,8 @@ const PLACEMENT = {
   sign_date: null,
   dates: [{ ...MARK, text: "13" }],
   signed_at: { at: "2026-11-13T07:30:00+00:00", source: "approval" as const },
+  origin: "manual" as const,
+  preset_available: true,
 };
 
 const Harness = () => {

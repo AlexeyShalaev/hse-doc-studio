@@ -64,6 +64,15 @@
       "recorded": "",
       "root": "The comparison base was reconstructed from the project history.",
       "approximate": "The project's creation history is missing: the base was reconstructed approximately, so there may be more conflicts than actual edits."
+    },
+    "presets": {
+      "updated": "Template signature places will be updated: {{n}}",
+      "kept": "Not updated: {{list}}",
+      "reason": {
+        "manual": "changed by you {{n}}",
+        "route": "on a signing route {{n}}",
+        "signed": "signed {{n}}"
+      }
     }
   },
   "count": {

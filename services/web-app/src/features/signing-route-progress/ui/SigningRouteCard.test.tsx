@@ -141,6 +141,8 @@ const approvedAuthorRoute = ({ optional = true } = {}): SigningRoute => {
     extra: opt,
     optional: false,
     status: "pending" as const,
+    added_by: null,
+    preset_optional: false,
   });
   const esign = (id: string, slotId: string) =>
     makeRouteParticipant({

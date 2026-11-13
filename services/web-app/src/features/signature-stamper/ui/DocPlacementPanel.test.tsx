@@ -271,3 +271,104 @@ describe("Подписи документа: «Подпись необязате
     expect(screen.queryByTestId(/^doc-optional-/)).toBeNull();
   });
 });
+
+// Маршрут из шаблона (docs/design/signing-route.md, 15.7): пометка места и «Вернуть место из
+// шаблона» у включённого места; затравка и место как в шаблоне без кнопки.
+
+describe("Подписи документа: место из шаблона", () => {
+  const placed = (
+    origin: "pack" | "seed" | "manual",
+    presetAvailable = true,
+  ) => ({
+    enabled: true,
+    page: 1,
+    x_mm: 10,
+    y_mm: 10,
+    width_mm: 40,
+    sign_date: null,
+    dates: [],
+    signed_at: null,
+    origin,
+    preset_available: presetAvailable,
+  });
+
+  const mountPlaces = (
+    placements: SignaturesStateResponse["placements"],
+    control: {
+      canRestore: boolean;
+      onRestore: (slotId: string) => void;
+    },
+  ) =>
+    render(
+      <I18nextProvider i18n={i18n}>
+        <DocPlacementPanel
+          projectId="p1"
+          docId={DOC}
+          pdfAvailable
+          slotDefs={[
+            slot("author", "Студент"),
+            slot("supervisor", "Научный руководитель"),
+          ]}
+          state={{ ...state({}), placements }}
+          lang="ru"
+          currentPage={1}
+          pageCount={1}
+          personNameForSlot={() => null}
+          onPlacementChange={vi.fn()}
+          onJumpToPage={vi.fn()}
+          onOpenProjectSignatures={vi.fn()}
+          onSlotModeChange={vi.fn()}
+          locked
+          placeControl={{
+            canRestore: control.canRestore,
+            isRestoring: () => false,
+            onRestore: control.onRestore,
+          }}
+        />
+      </I18nextProvider>,
+    );
+
+  it("«Место изменено» с кнопкой, «Место из шаблона» без неё; под маршрутом кнопка открыта", async () => {
+    const restore = vi.fn();
+    const u = userEvent.setup();
+    mountPlaces(
+      { [DOC]: { author: placed("pack"), supervisor: placed("manual") } },
+      { canRestore: true, onRestore: restore },
+    );
+    expect(screen.getByTestId("place-origin-author")).toHaveTextContent(
+      "Место из шаблона",
+    );
+    expect(screen.queryByTestId("place-restore-author")).toBeNull();
+    expect(screen.getByTestId("place-origin-supervisor")).toHaveTextContent(
+      "Место изменено",
+    );
+    // Документ на подписании (`locked`): правки слота закрыты, а «Вернуть место» открыта.
+    await u.click(screen.getByTestId("place-restore-supervisor"));
+    expect(restore).toHaveBeenCalledWith("supervisor");
+  });
+
+  it("без прав кнопки нет; без места в шаблоне и у выключенного места пометки нет", () => {
+    mountPlaces(
+      {
+        [DOC]: {
+          author: { ...placed("seed"), enabled: false },
+          supervisor: placed("manual", false),
+        },
+      },
+      { canRestore: false, onRestore: vi.fn() },
+    );
+    expect(screen.queryByTestId("place-origin-author")).toBeNull();
+    expect(screen.queryByTestId("place-origin-supervisor")).toBeNull();
+  });
+
+  it("ручное место без прав: пометка есть, кнопки нет", () => {
+    mountPlaces(
+      { [DOC]: { supervisor: placed("manual") } },
+      { canRestore: false, onRestore: vi.fn() },
+    );
+    expect(screen.getByTestId("place-origin-supervisor")).toHaveTextContent(
+      "Место изменено",
+    );
+    expect(screen.queryByTestId("place-restore-supervisor")).toBeNull();
+  });
+});

@@ -79,6 +79,10 @@ export const SignedAtSchema = z.object({
 });
 export type SignedAt = z.infer<typeof SignedAtSchema>;
 
+/** Откуда место слота документа (15.4): как в шаблоне, затравка из пака, изменено автором. */
+export const PlacementOriginSchema = z.enum(["pack", "seed", "manual"]);
+export type PlacementOrigin = z.infer<typeof PlacementOriginSchema>;
+
 export const PlacementSchema = z.object({
   enabled: z.boolean(),
   page: z.number(),
@@ -92,12 +96,25 @@ export const PlacementSchema = z.object({
   signed_at: SignedAtSchema.nullable(),
   /**
    * Откуда место (signing-route.md, 15.4 и 15.11): `pack` как в шаблоне, `seed` затравка из пака,
-   * `manual` изменено автором. Пока необязательно: интерфейс пометок и кнопок делает W15.
+   * `manual` изменено автором. Сервер отдаёт оба поля всегда (с R24) в GET состояния, PATCH,
+   * `PUT .../dates` и `restore`, поэтому они обязательны: демо и эталоны обязаны их нести.
    */
-  origin: z.enum(["pack", "seed", "manual"]).optional(),
+  origin: PlacementOriginSchema,
   /** В шаблоне есть место этого слота для документа («Вернуть место из шаблона», 15.6). */
-  preset_available: z.boolean().optional(),
+  preset_available: z.boolean(),
 });
+
+/**
+ * «Вернуть место из шаблона» (`POST .../signatures/placements/{doc_id}/{slot_id}/restore`, 15.6):
+ * место и метки даты как в шаблоне. `confirm_reset` как у меток даты: согласие сбросить ЭП над
+ * зафиксированным B документа под маршрутом (409 `resets_signatures` без него).
+ */
+export const RestorePlacementRequestSchema = z.strictObject({
+  confirm_reset: z.boolean(),
+});
+export type RestorePlacementRequest = z.infer<
+  typeof RestorePlacementRequestSchema
+>;
 
 /**
  * Метки даты слота документа целиком и ручная дата
@@ -140,6 +157,21 @@ export const SignatureProfileRefSchema = z.object({
   name: z.record(z.string(), z.string()),
 });
 
+/** Место слота на документе из пака (`PackPlaceResponse`, 15.3). */
+export const PackPlaceSchema = z.object({
+  page: z.number(),
+  x_mm: z.number(),
+  y_mm: z.number(),
+  width_mm: z.number(),
+});
+
+/** Метка даты слота на документе из пака (`PackDateMarkResponse`): рамка и формат, без id и текста. */
+export const PackDateMarkSchema = z.object({
+  ...DateMarkPlaceShape,
+  format: DateMarkFormatSchema,
+  align: DateMarkAlignSchema,
+});
+
 // Effective slot set computed by the backend for the CURRENT project. In team
 // mode per-author slots are multiplied ("author--ivanov", label already carries
 // the name) and applies_to/required_by reference document INSTANCE ids. When
@@ -163,12 +195,15 @@ export const RuntimeSignatureSlotSchema = z.object({
   extra_by: z
     .record(z.string(), z.array(SignatureProfileRefSchema))
     .default({}),
-  default_placement: z.object({
-    page: z.number(),
-    x_mm: z.number(),
-    y_mm: z.number(),
-    width_mm: z.number(),
-  }),
+  /** Общее место слота из пака: документам без своей записи в `default_placements`. */
+  default_placement: PackPlaceSchema,
+  /**
+   * Место из пака по экземплярам документов из `applies_to` (signing-route.md, 15.3, 15.11):
+   * `placements` слота, иначе `default_placement`. Брать через `packPlaceOf`.
+   */
+  default_placements: z.record(z.string(), PackPlaceSchema).default({}),
+  /** Метки даты из пака по экземплярам документов (`default_dates`, 14.10); без меток документа нет. */
+  default_dates: z.record(z.string(), z.array(PackDateMarkSchema)).default({}),
   owner: z.string().nullish().default(null),
 });
 

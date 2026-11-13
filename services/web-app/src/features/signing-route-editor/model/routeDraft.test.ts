@@ -166,6 +166,8 @@ const ROUTE: SigningRoute = {
           extra: false,
           optional: false,
           status: "pending",
+          added_by: null,
+          preset_optional: false,
         },
         {
           slot_id: "academic_supervisor",
@@ -174,6 +176,8 @@ const ROUTE: SigningRoute = {
           extra: true,
           optional: false,
           status: "pending",
+          added_by: "author",
+          preset_optional: false,
         },
       ],
       sent: null,
@@ -195,6 +199,7 @@ const ROUTE: SigningRoute = {
   events: [],
   candidates: [],
   changed_docs: [],
+  preset: null,
 };
 
 describe("тело PUT", () => {
