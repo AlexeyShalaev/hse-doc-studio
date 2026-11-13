@@ -37,11 +37,13 @@ A template version number is `YEAR.MINOR.PATCH`. The year is the intake whose re
 
 | Class | What changes | How it is offered |
 |---|---|---|
-| Fixes (patch) | Template bugs without new requirements: colours, typos, false check alarms; signing presets and deadline hints (below) | A card on the project overview |
-| New features (minor) | New sections, documents, fields and submission profiles, renames that carry your data over | Only in project settings, "Template version" |
+| Fixes (patch) | Template bugs without new requirements: colours, typos, false check alarms, form fixes; optional fields that change nothing in the output when empty; signing presets and deadline hints (below) | A card on the project overview |
+| New features (minor) | New sections, documents, required fields or fields that change the output, submission profiles, renames that carry your data over | Only in project settings, "Template version" |
 | New edition (major) | Next academic year's regulations | Only in project settings, only when you decide |
 
 Besides fixes, the patch class covers signing presets and deadline hints: the order of signers, signature places and dates on the pages, signatures needed only under certain conditions (for example, when the supervisor is not from HSE), optional signatures, and a hint on when a checkpoint deadline usually falls. Template files and requirements do not change. Presets apply to new signing routes; signature places you set yourself and routes already sent are left as they are.
+
+The patch class also covers form fixes and optional fields that change nothing in the output when empty. A form fix brings a document in line with the official form or the project data: for example, the city and the year come from the settings instead of being hard-coded in the template, and an “if any” line is printed only when the project has such a person. An optional field in a patch only refines such a form: an empty field leaves the document as the fixed form made it (for example, “City in English” is empty and the city is translated automatically). A field the document cannot be built without, or one that changes the document as soon as the project is created, is a minor.
 
 A released version never changes: a project created on it is built and checked against the same requirements until you update it yourself.
 

@@ -185,7 +185,7 @@ Before the first edit of a document out for signing the Studio asks: “Document
 
 - The question comes on the first text edit in the editor, on “Build”, when opening the office editor, when uploading or replacing the document's file and when changing files in the tree.
 - Shared files (`common/`, the bibliography) and project fields (metadata, authors, supervisors, language) affect several documents at once. Then there is one question with a list: “Out for signing: …”.
-- A template update plan shows the same line if the update touches documents out for signing.
+- A template update plan shows a similar line if the update touches documents out for signing: “Out for signing: … The update will not reach the version being signed: afterwards the route asks you to send a new version”. The route does not stop; the document shows “There are changes”.
 - The question is asked once per session per document. After a new sending it is asked again.
 - Only a running route asks. If the route is stopped, returned or completed, edits are expected and there is no question.
 - Edits from a local Studio, git sync and MCP go through without the question. They do not touch the version being signed either.
