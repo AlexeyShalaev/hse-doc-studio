@@ -163,13 +163,17 @@ async def test__get_signatures__runtime_slot_carries_the_pack_place_and_marks_of
 
     (slot,) = (s for s in data["runtime_slots"] if s["id"] == "supervisor")
     assert slot["default_placement"] == _GENERAL
-    assert slot["default_placements"] == {"proposal": _PROPOSAL, "report": _GENERAL}
+    # Запись пака в мм (`source: mm`); запись на якоре шаблона отдаётся своей формой (15.17.14).
+    assert slot["default_placements"] == {
+        "proposal": {"source": "mm", **_PROPOSAL},
+        "report": {"source": "mm", **_GENERAL},
+    }
     assert slot["default_dates"] == {
         "proposal": [
-            {"page": 1, "x_mm": 81.0, "y_mm": 156.0, "width_mm": 7.0, "height_mm": 5.0, "format": "day",
-             "align": "center"},
-            {"page": 1, "x_mm": 90.0, "y_mm": 156.0, "width_mm": 24.0, "height_mm": 5.0, "format": "month_word",
-             "align": "center"},
+            {"source": "mm", "page": 1, "x_mm": 81.0, "y_mm": 156.0, "width_mm": 7.0, "height_mm": 5.0,
+             "format": "day", "align": "center"},
+            {"source": "mm", "page": 1, "x_mm": 90.0, "y_mm": 156.0, "width_mm": 24.0, "height_mm": 5.0,
+             "format": "month_word", "align": "center"},
         ]
     }  # fmt: skip
 

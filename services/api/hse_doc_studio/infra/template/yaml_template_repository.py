@@ -10,6 +10,10 @@ import structlog
 import yaml
 
 from hse_doc_studio.core.catalog import (
+    ANCHOR_DATE_HEIGHT_MM,
+    ANCHOR_DEFAULT_DY_MM,
+    AnchorDate,
+    AnchorPlace,
     CheckRule,
     CheckSource,
     ChecksVersionConfig,
@@ -58,6 +62,7 @@ from hse_doc_studio.core.enums import (
     TemplateVersionStatus,
 )
 from hse_doc_studio.core.meta_usage import PERSON_KEYS
+from hse_doc_studio.core.signatures.anchors import AnchorKind, is_anchor_id
 from hse_doc_studio.core.signatures.dates import MAX_DATE_MARKS, SHEET_HEIGHT_MM, SHEET_WIDTH_MM, frame_problem
 from hse_doc_studio.core.template_versions import MANIFEST_FORMAT
 from hse_doc_studio.core.value_objects import ChecksOverride, RequirementsFormat
@@ -201,6 +206,10 @@ def _parse_version(  # noqa: C901, PLR0915 — плоский разбор ма�
                 if slot is not None
             ),
             route=_tolerant(parse_signing_route, sig_data.get("route"), "signatures.route", ver_yaml) or (),
+            anchor_macros=_tolerant(
+                parse_anchor_macros, sig_data.get("anchor_macros"), "signatures.anchor_macros", ver_yaml
+            )
+            or (),
         )
 
         forms = tuple(f for f in (_parse_form(fd) for fd in data.get("forms", [])) if f is not None)
@@ -574,8 +583,11 @@ def _parse_signature_slot(data: dict[str, Any]) -> SignatureSlotDef:
         y_mm=float(placement_data.get("y_mm", 230.0)),
         width_mm=float(placement_data.get("width_mm", 50.0)),
     )
-    applies_to_raw = data.get("applies_to", [])
     slot_id = str(data["id"])
+    default_anchor = _tolerant_default_anchor(placement_data, slot_id)
+    if default_anchor is not None and default_anchor.fallback is not None:
+        placement = default_anchor.fallback
+    applies_to_raw = data.get("applies_to", [])
     if "--" in slot_id:
         raise ValueError(f"signature slot id {slot_id!r} must not contain '--'")
     # `required_for` из старых паков читается и ОТБРАСЫВАЕТСЯ намеренно:
@@ -592,7 +604,28 @@ def _parse_signature_slot(data: dict[str, Any]) -> SignatureSlotDef:
         required=bool(data.get("required", False)),
         default_dates=_tolerant_default_dates(data.get("default_dates"), slot_id),
         placements=_tolerant_slot_placements(data.get("placements"), slot_id),
+        default_anchor=default_anchor,
     )
+
+
+def _tolerant_default_anchor(raw: Any, slot_id: str) -> AnchorPlace | None:
+    """`default_placement` на якоре (15.17.7); без полного запасного места в мм запись отбрасывается: прежняя
+    Студия потеряла бы место слота совсем, а `default_placement` берётся как в мм."""
+    if not isinstance(raw, dict) or "anchor" not in raw:
+        return None
+    try:
+        return parse_default_anchor(raw)
+    except (TypeError, ValueError, KeyError) as exc:
+        logger.warning("signature slot default_placement anchor skipped", slot_id=slot_id, exc=str(exc))
+        return None
+
+
+def parse_default_anchor(raw: Any) -> AnchorPlace:
+    """`default_placement` на якоре: та же запись, что в `placements`, но запасное место в мм обязательно."""
+    place = parse_anchor_place(raw, "default_placement")
+    if place.fallback is None:
+        raise ValueError("default_placement: an anchored default placement needs page, x_mm, y_mm and width_mm")
+    return place
 
 
 # Рамка места подписи из пака (signing-route.md, 15.8): ширина и вертикаль, в которые она обязана уложиться. Высота
@@ -602,8 +635,23 @@ PLACE_MAX_WIDTH_MM = 200.0
 PLACE_MAX_Y_MM = 287.0
 
 
-def parse_slot_placement(item: Any, where: str) -> SignatureDefaultPlacement:
-    """Место слота на документе из `placements` (signing-route.md, 15.3): `{page, x_mm, y_mm, width_mm}`.
+# Пределы полей записи на якоре (15.17.13): сдвиги не дальше листа A4, высота метки даты от 2 до 20 мм.
+ANCHOR_MAX_DX_MM = 200.0
+ANCHOR_MAX_DY_MM = 287.0
+ANCHOR_DATE_MIN_HEIGHT_MM = 2.0
+ANCHOR_DATE_MAX_HEIGHT_MM = 20.0
+_ALIGNS = tuple(a.value for a in DateMarkAlign)
+
+
+def parse_slot_placement(item: Any, where: str) -> SignatureDefaultPlacement | AnchorPlace:
+    """Место слота на документе из `placements` (signing-route.md, 15.3, 15.17.7): в мм или на якоре (`anchor`)."""
+    if isinstance(item, dict) and "anchor" in item:
+        return parse_anchor_place(item, where)
+    return parse_mm_placement(item, where)
+
+
+def parse_mm_placement(item: Any, where: str) -> SignatureDefaultPlacement:
+    """Место в мм: `{page, x_mm, y_mm, width_mm}`.
 
     Страница с 1, ширина от 10 до 200 мм, рамка по ширине внутри листа A4, верх рамки от 0 до 287 мм. Ошибка
     называет запись (`where`) по-английски, для журнала и линтера пака.
@@ -629,6 +677,122 @@ def parse_slot_placement(item: Any, where: str) -> SignatureDefaultPlacement:
     return place
 
 
+def _ranged(item: dict[str, Any], key: str, where: str, low: float, high: float) -> float | None:
+    """Число поля в пределах или None без поля; не число и вне пределов это ошибка записи."""
+    raw = item.get(key)
+    if raw is None:
+        return None
+    if isinstance(raw, bool) or not isinstance(raw, int | float):
+        raise TypeError(f"{where}: {key} must be a number")
+    value = float(raw)
+    if not low <= value <= high:
+        raise ValueError(f"{where}: {key} {value:g} is outside {low:g}..{high:g} mm")
+    return value
+
+
+def _anchor_align(item: dict[str, Any], where: str) -> DateMarkAlign:
+    raw = item.get("align", DateMarkAlign.centered.value)
+    if raw not in _ALIGNS:
+        raise ValueError(f"{where}: align {raw!r} is not one of {list(_ALIGNS)}")
+    return DateMarkAlign(raw)
+
+
+def _anchor_name(item: dict[str, Any], where: str, kind: AnchorKind | None) -> str:
+    anchor = item.get("anchor")
+    if not isinstance(anchor, str) or not is_anchor_id(anchor, kind):
+        shape = "name.part" if kind is AnchorKind.date else "name"
+        raise ValueError(f"{where}: anchor {anchor!r} is not an anchor id ({shape}, [a-z][a-z0-9_]{{0,39}})")
+    return anchor
+
+
+def _has_fallback(item: dict[str, Any]) -> bool:
+    return any(key in item for key in ("page", "x_mm", "y_mm"))
+
+
+def parse_anchor_place(item: Any, where: str) -> AnchorPlace:
+    """Место подписи на якоре (15.17.7): `anchor`, `align`, `dx_mm`, `dy_mm`, `width_mm` и запасное место в мм.
+
+    Запасное место (`page`, `x_mm`, `y_mm` с `width_mm`) проверяется как место в мм. Ошибка по-английски.
+    """
+    if not isinstance(item, dict):
+        raise TypeError(f"{where} must be a mapping")
+    anchor = _anchor_name(item, where, None)
+    width = _ranged(item, "width_mm", where, PLACE_MIN_WIDTH_MM, PLACE_MAX_WIDTH_MM)
+    fallback = parse_mm_placement(item, where) if _has_fallback(item) else None
+    dx = _ranged(item, "dx_mm", where, -ANCHOR_MAX_DX_MM, ANCHOR_MAX_DX_MM)
+    dy = _ranged(item, "dy_mm", where, -ANCHOR_MAX_DY_MM, ANCHOR_MAX_DY_MM)
+    return AnchorPlace(
+        anchor=anchor,
+        align=_anchor_align(item, where),
+        dx_mm=dx if dx is not None else 0.0,
+        dy_mm=dy if dy is not None else ANCHOR_DEFAULT_DY_MM,
+        width_mm=width,
+        fallback=fallback,
+    )
+
+
+def parse_anchor_date(item: Any, where: str) -> AnchorDate:
+    """Метка даты на якоре (15.17.7): `anchor` «имя.часть», `format` (по умолчанию часть, если это формат),
+    `height_mm`, `width_mm`, `dx_mm`, `dy_mm`, `align` и запасная метка в мм (`page`, `x_mm`, `y_mm` с `width_mm`)."""
+    if not isinstance(item, dict):
+        raise TypeError(f"{where} must be a mapping")
+    anchor = _anchor_name(item, where, AnchorKind.date)
+    part = anchor.partition(".")[2]
+    raw_format = item.get("format", part)
+    if raw_format not in DateMarkFormat.__members__.values():
+        raise ValueError(f"{where}: format {raw_format!r} is unknown and the anchor part does not name a format")
+    height = _ranged(item, "height_mm", where, ANCHOR_DATE_MIN_HEIGHT_MM, ANCHOR_DATE_MAX_HEIGHT_MM)
+    width = _ranged(item, "width_mm", where, 0.1, PLACE_MAX_WIDTH_MM)
+    dx = _ranged(item, "dx_mm", where, -ANCHOR_MAX_DX_MM, ANCHOR_MAX_DX_MM)
+    dy = _ranged(item, "dy_mm", where, -ANCHOR_MAX_DY_MM, ANCHOR_MAX_DY_MM)
+    mark = AnchorDate(
+        anchor=anchor,
+        format=DateMarkFormat(raw_format),
+        height_mm=height if height is not None else ANCHOR_DATE_HEIGHT_MM,
+        width_mm=width,
+        dx_mm=dx if dx is not None else 0.0,
+        dy_mm=dy,
+        align=_anchor_align(item, where),
+    )
+    if not _has_fallback(item):
+        return mark
+    if width is None:
+        raise ValueError(f"{where}: a fallback date mark needs width_mm")
+    fallback = SignatureDefaultDate(
+        page=int(item.get("page", 1)),
+        x_mm=float(item["x_mm"]),
+        y_mm=float(item["y_mm"]),
+        width_mm=width,
+        height_mm=mark.height_mm,
+        format=mark.format,
+        align=mark.align,
+    )
+    problem = frame_problem(
+        fallback.page,
+        fallback.x_mm,
+        fallback.y_mm,
+        fallback.width_mm,
+        fallback.height_mm,
+        (SHEET_WIDTH_MM, SHEET_HEIGHT_MM),
+    )
+    if problem is not None:
+        raise ValueError(f"{where}: {problem}")
+    return replace(mark, fallback=fallback)
+
+
+def parse_anchor_macros(raw: Any) -> tuple[str, ...]:
+    """`signatures.anchor_macros`: имена обёрток шаблона без обратной косой (`hseSignField`)."""
+    if raw is None:
+        return ()
+    if not isinstance(raw, list) or not all(isinstance(name, str) for name in raw):
+        raise TypeError("anchor_macros must be a list of macro names")
+    names = tuple(name.removeprefix("\\") for name in raw)
+    bad = [name for name in names if not name.isascii() or not name.isalpha()]
+    if bad:
+        raise ValueError(f"anchor_macros: {bad} are not TeX macro names (letters only)")
+    return names
+
+
 def slot_placement_entries(raw: Any) -> list[tuple[str, Any]]:
     """Записи `placements` слота «id документа, сырое место»; не словарь это ошибка ключа целиком."""
     if raw is None:
@@ -638,14 +802,16 @@ def slot_placement_entries(raw: Any) -> list[tuple[str, Any]]:
     return [(str(doc_id), item) for doc_id, item in raw.items()]
 
 
-def _tolerant_slot_placements(raw: Any, slot_id: str) -> tuple[tuple[str, SignatureDefaultPlacement], ...]:
+def _tolerant_slot_placements(
+    raw: Any, slot_id: str
+) -> tuple[tuple[str, SignatureDefaultPlacement | AnchorPlace], ...]:
     """`placements` слота: битая запись документа отбрасывается с предупреждением, остальные и слот остаются."""
     try:
         entries = slot_placement_entries(raw)
     except TypeError as exc:
         logger.warning("signature slot placements skipped", slot_id=slot_id, exc=str(exc))
         return ()
-    result: list[tuple[str, SignatureDefaultPlacement]] = []
+    result: list[tuple[str, SignatureDefaultPlacement | AnchorPlace]] = []
     for doc_id, item in entries:
         try:
             result.append((doc_id, parse_slot_placement(item, f"placements.{doc_id}")))
@@ -654,16 +820,28 @@ def _tolerant_slot_placements(raw: Any, slot_id: str) -> tuple[tuple[str, Signat
     return tuple(result)
 
 
-def _tolerant_default_dates(raw: Any, slot_id: str) -> tuple[tuple[str, tuple[SignatureDefaultDate, ...]], ...]:
-    """`default_dates` слота; неверный ключ отбрасывается целиком с предупреждением, а сам слот остаётся."""
+def _tolerant_default_dates(
+    raw: Any, slot_id: str
+) -> tuple[tuple[str, tuple[SignatureDefaultDate | AnchorDate, ...]], ...]:
+    """`default_dates` слота; неверный ключ отбрасывается целиком с предупреждением, а сам слот остаётся.
+
+    Битая метка на якоре отбрасывается одна (15.17.13), остальные метки документа остаются.
+    """
     try:
-        return parse_default_dates(raw)
+        return parse_default_dates(
+            raw,
+            on_bad_anchor=lambda where, exc: logger.warning(
+                "signature slot anchored date mark skipped", slot_id=slot_id, mark=where, exc=str(exc)
+            ),
+        )
     except (TypeError, ValueError, KeyError) as exc:
         logger.warning("signature slot default_dates skipped", slot_id=slot_id, exc=str(exc))
         return ()
 
 
-def parse_default_dates(raw: Any) -> tuple[tuple[str, tuple[SignatureDefaultDate, ...]], ...]:
+def parse_default_dates(
+    raw: Any, on_bad_anchor: Callable[[str, Exception], None] | None = None
+) -> tuple[tuple[str, tuple[SignatureDefaultDate | AnchorDate, ...]], ...]:
     """Метки даты по умолчанию слота (signing-route.md, 14.10): `{doc_def_id: [{page, x_mm, y_mm, ...}]}`.
 
     Проверяется при загрузке пака: страница с 1, рамка внутри листа A4, известный формат и выравнивание, не больше
@@ -673,20 +851,37 @@ def parse_default_dates(raw: Any) -> tuple[tuple[str, tuple[SignatureDefaultDate
         return ()
     if not isinstance(raw, dict):
         raise TypeError("default_dates must be a mapping of document ids to lists of date marks")
-    result: list[tuple[str, tuple[SignatureDefaultDate, ...]]] = []
+    result: list[tuple[str, tuple[SignatureDefaultDate | AnchorDate, ...]]] = []
     for doc_id, items in raw.items():
         if not isinstance(items, list):
             raise TypeError(f"default_dates.{doc_id} must be a list")
         if len(items) > MAX_DATE_MARKS:
             raise ValueError(f"default_dates.{doc_id}: more than {MAX_DATE_MARKS} date marks")
-        marks = tuple(_default_date(item, f"default_dates.{doc_id}[{i}]") for i, item in enumerate(items))
-        result.append((str(doc_id), marks))
+        result.append((str(doc_id), _doc_dates(str(doc_id), items, on_bad_anchor)))
     return tuple(result)
 
 
-def _default_date(item: Any, where: str) -> SignatureDefaultDate:
+def _doc_dates(
+    doc_id: str, items: list[Any], on_bad_anchor: Callable[[str, Exception], None] | None
+) -> tuple[SignatureDefaultDate | AnchorDate, ...]:
+    """Метки документа; битая метка на якоре при `on_bad_anchor` отбрасывается одна, иначе ошибка всего ключа."""
+    marks: list[SignatureDefaultDate | AnchorDate] = []
+    for i, item in enumerate(items):
+        where = f"default_dates.{doc_id}[{i}]"
+        try:
+            marks.append(_default_date(item, where))
+        except (TypeError, ValueError, KeyError) as exc:
+            if on_bad_anchor is None or not (isinstance(item, dict) and "anchor" in item):
+                raise
+            on_bad_anchor(where, exc)
+    return tuple(marks)
+
+
+def _default_date(item: Any, where: str) -> SignatureDefaultDate | AnchorDate:
     if not isinstance(item, dict):
         raise TypeError(f"{where} must be a mapping")
+    if "anchor" in item:
+        return parse_anchor_date(item, where)
     mark = SignatureDefaultDate(
         page=int(item.get("page", 1)),
         x_mm=float(item["x_mm"]),

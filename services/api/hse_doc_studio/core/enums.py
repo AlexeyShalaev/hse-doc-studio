@@ -169,6 +169,21 @@ class PlacementOrigin(StrEnum):
     manual = "manual"  # место поставил или изменил автор
 
 
+class PlaceSource(StrEnum):
+    """Какой формой пака задано место, по которому стоит место из шаблона (signing-route.md, 15.17.14)."""
+
+    anchor = "anchor"  # на якоре шаблона: место считается по линии собранного документа
+    mm = "mm"  # в миллиметрах страницы
+
+
+class AnchorState(StrEnum):
+    """Есть ли якорь места пака в источнике подписи документа (15.17.8)."""
+
+    found = "found"  # якоря сборки известны, нужный есть
+    missing = "missing"  # якоря известны, нужного нет: строки в документе нет
+    unknown = "unknown"  # якоря неизвестны: сборки нет, раннер прежней версии, PDF не из сборки шаблона
+
+
 class PersonRole(StrEnum):
     university = "university"
     company = "company"

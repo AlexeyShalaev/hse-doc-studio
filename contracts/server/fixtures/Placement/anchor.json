@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "page": 1,
+  "x_mm": 168.0,
+  "y_mm": 176.9,
+  "width_mm": 28.0,
+  "sign_date": null,
+  "dates": [],
+  "signed_at": null,
+  "origin": "pack",
+  "preset_available": true,
+  "source": "anchor",
+  "anchor": {
+    "id": "supervisor",
+    "state": "found"
+  }
+}

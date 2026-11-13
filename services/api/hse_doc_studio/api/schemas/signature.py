@@ -7,12 +7,14 @@ from pydantic import BaseModel, Field
 
 from hse_doc_studio.api.schemas.common import StrictModel
 from hse_doc_studio.core.enums import (
+    AnchorState,
     DateMarkAlign,
     DateMarkFormat,
     DetachedFormat,
     DetachedOrigin,
     DetachedVerdict,
     PlacementOrigin,
+    PlaceSource,
     SignedAtSource,
     SignMode,
 )
@@ -85,6 +87,14 @@ class SignedAtResponse(StrictModel):
     source: SignedAtSource
 
 
+class PlaceAnchorResponse(StrictModel):
+    """Якорь места пака (15.17.14): `found` строка есть в собранном документе, `missing` якоря известны, а строки
+    нет, `unknown` якоря неизвестны (документ не собран, раннер прежней версии, свой загруженный PDF)."""
+
+    id: str
+    state: AnchorState
+
+
 class PlacementResponse(StrictModel):
     enabled: bool
     page: int
@@ -101,10 +111,26 @@ class PlacementResponse(StrictModel):
     origin: PlacementOrigin = PlacementOrigin.manual
     # В шаблоне проекта есть место этого слота для документа: по нему «Вернуть место из шаблона» (15.6).
     preset_available: bool = False
+    # Какой формой пака задано место, по которому стоит размещение: `anchor` на якоре шаблона, `mm` в миллиметрах;
+    # null у ручного (signing-route.md, 15.17.14).
+    source: PlaceSource | None = None
+    # Якорь места пака у пары и есть ли он в источнике подписи; null, если место пака в мм или его нет.
+    anchor: PlaceAnchorResponse | None = None
 
 
 class PackPlaceResponse(StrictModel):
-    """Место слота на документе из пака (signing-route.md, 15.3): `placements` документа, иначе `default_placement`."""
+    """Место слота на документе из пака в мм (signing-route.md, 15.3): `placements` документа, иначе
+    `default_placement`."""
+
+    source: Literal["mm"] = "mm"
+    page: int
+    x_mm: float
+    y_mm: float
+    width_mm: float
+
+
+class PackFallbackResponse(StrictModel):
+    """Запасное место записи на якоре в мм: им место встаёт, пока якоря сборки неизвестны (15.17.7)."""
 
     page: int
     x_mm: float
@@ -112,9 +138,23 @@ class PackPlaceResponse(StrictModel):
     width_mm: float
 
 
-class PackDateMarkResponse(StrictModel):
-    """Метка даты слота на документе из пака (`default_dates`, 14.10): рамка и формат, без id и текста."""
+class PackAnchorPlaceResponse(StrictModel):
+    """Место слота на документе из пака на якоре шаблона (15.17.7): считается по линии собранного документа."""
 
+    source: Literal["anchor"] = "anchor"
+    anchor: str
+    align: DateMarkAlign
+    dx_mm: float
+    dy_mm: float
+    # Ширина рамки; null: ширина линии, не меньше 10 мм.
+    width_mm: float | None
+    fallback: PackFallbackResponse | None
+
+
+class PackDateMarkResponse(StrictModel):
+    """Метка даты слота на документе из пака в мм (`default_dates`, 14.10): рамка и формат, без id и текста."""
+
+    source: Literal["mm"] = "mm"
     page: int
     x_mm: float
     y_mm: float
@@ -124,6 +164,36 @@ class PackDateMarkResponse(StrictModel):
     align: DateMarkAlign
 
 
+class PackDateFallbackResponse(StrictModel):
+    """Запасная метка даты записи на якоре в мм (15.17.7)."""
+
+    page: int
+    x_mm: float
+    y_mm: float
+    width_mm: float
+    height_mm: float
+
+
+class PackAnchorDateMarkResponse(StrictModel):
+    """Метка даты из пака на якоре шаблона (15.17.7): `anchor` «имя.часть»; метка без якоря в сборке не ставится."""
+
+    source: Literal["anchor"] = "anchor"
+    anchor: str
+    format: DateMarkFormat
+    align: DateMarkAlign
+    height_mm: float
+    # Ширина рамки; null: ширина линии.
+    width_mm: float | None
+    dx_mm: float
+    # Верх рамки относительно линии; null: минус высота (рамка стоит на линии).
+    dy_mm: float | None
+    fallback: PackDateFallbackResponse | None
+
+
+PackPlaceEntry = Annotated[PackPlaceResponse | PackAnchorPlaceResponse, Field(discriminator="source")]
+PackDateEntry = Annotated[PackDateMarkResponse | PackAnchorDateMarkResponse, Field(discriminator="source")]
+
+
 class ProfileRefResponse(BaseModel):
     """Контрольная точка, требующая эту подпись."""
 
@@ -131,7 +201,7 @@ class ProfileRefResponse(BaseModel):
     name: dict[str, str]
 
 
-class RuntimeSlotResponse(BaseModel):
+class RuntimeSlotResponse(StrictModel):
     """Рантайм-слот проекта: team размножает per-author слоты пака в
     "{slot}--{slug}"; applies_to/required_by уже на уровне ИНСТАНСОВ доков."""
 
@@ -152,9 +222,10 @@ class RuntimeSlotResponse(BaseModel):
     extra_by: dict[str, list[ProfileRefResponse]] = {}
     # Место из пака по экземплярам документов из `applies_to` (signing-route.md, 15.11); `default_placement` остаётся
     # общим местом слота для старых клиентов.
-    default_placements: dict[str, PackPlaceResponse] = {}
+    # Запись в мм (`source: mm`) или на якоре шаблона (`source: anchor`, 15.17.14).
+    default_placements: dict[str, PackPlaceEntry] = {}
     # Метки даты из пака по экземплярам документов; документа без меток в словаре нет.
-    default_dates: dict[str, list[PackDateMarkResponse]] = {}
+    default_dates: dict[str, list[PackDateEntry]] = {}
 
 
 class FrozenPdfResponse(BaseModel):
@@ -220,7 +291,7 @@ class BuildAnchorsResponse(BaseModel):
     problems: list[str]
 
 
-class SignaturesStateResponse(BaseModel):
+class SignaturesStateResponse(StrictModel):
     slots: dict[str, SlotInfoResponse]
     placements: dict[str, dict[str, PlacementResponse]]
     frozen: dict[str, FrozenPdfResponse] = {}

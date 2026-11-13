@@ -30,6 +30,7 @@ from hse_doc_studio.core.repositories import (
     IProjectRepository,
     ITemplateRepository,
 )
+from hse_doc_studio.core.signatures.ports import IBuildPlaces
 from hse_doc_studio.core.value_objects import CheckResult
 from hse_doc_studio.core.vcs.entities import VcsSettings
 from hse_doc_studio.core.vcs.protocols import IVcsFolderLocks, IVcsService
@@ -80,6 +81,7 @@ class CompileJobHooks:
         artifacts: IArtifactStore,
         project_folder: Path,
         pdf_observer: IBuiltPdfObserver | None = None,
+        build_places: IBuildPlaces | None = None,
     ) -> None:
         self._compile_repo = compile_repo
         self._project_repo = project_repo
@@ -90,6 +92,7 @@ class CompileJobHooks:
         self._artifacts = artifacts
         self._project_folder = project_folder
         self._pdf_observer = pdf_observer
+        self._build_places = build_places
         self._started_at: datetime | None = None
 
     @property
@@ -232,13 +235,34 @@ class CompileJobHooks:
     async def _after_success(
         self, spec: JobSpec, record: CompileRecord, *, pages: int | None, has_errors: bool
     ) -> None:
-        """Снимок исходников, архив PDF для визуального diff, коммит и отпечаток в записи, выгрузка на сервер."""
+        """Места подписей по строкам шаблона, снимок исходников, архив PDF для визуального diff, коммит и отпечаток в
+        записи, выгрузка на сервер."""
         source_file = compile_payload_of(spec).source_file
+        record = await self._rebuild_places(spec, record)
         commit = await self._vcs_commit_on_success(record.doc_id, pages)
         await self._artifacts.archive_pdf(spec.project_id, self._project_folder, record.doc_id, record.id, source_file)
         await self._stamp_build(record, commit, source_file)
         if not has_errors:
             self._notify_pdf_built(spec, record.doc_id, pages)
+
+    async def _rebuild_places(self, spec: JobSpec, record: CompileRecord) -> CompileRecord:
+        """Места подписей «из шаблона» на якорях по строкам этой сборки (signing-route.md, 15.17.9), до снимка VCS,
+        чтобы снимок их включал. Сбой пересчёта сборку не роняет: места останутся прежними до следующей сборки."""
+        if self._build_places is None:
+            return record
+        try:
+            moved = await self._build_places.after_build(spec.project_id, self._project_folder, record.doc_id)
+        except Exception as exc:  # noqa: BLE001 — пересчёт мест вторичен
+            logger.warning("signature places after build failed", doc_id=record.doc_id, exc=str(exc))
+            return record
+        if not moved:
+            return record
+        updated = replace(record, signature_places_moved=moved)
+        try:
+            await self._compile_repo.save(updated)
+        except Exception as exc:  # noqa: BLE001 — число в записи вторично
+            logger.warning("compile record save failed", compile_id=str(record.id), exc=str(exc))
+        return updated
 
     def _notify_pdf_built(self, spec: JobSpec, doc_id: str, pages: int | None) -> None:
         """Выгрузка на сервер Студии (если проект оттуда) идёт фоном и сборку не задерживает."""

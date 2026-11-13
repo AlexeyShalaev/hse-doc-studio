@@ -13,12 +13,12 @@ from hse_doc_studio.core.repositories import (
     ISignatureRepository,
     ITemplateRepository,
 )
-from hse_doc_studio.core.services import SignatureSlotService
+from hse_doc_studio.core.services import ProjectTemplateService, SignatureSlotService
 from hse_doc_studio.core.signatures.pack_places import clear_from_pack
 from hse_doc_studio.core.signatures.stamps import date_mark_text
 from hse_doc_studio.core.value_objects import SignaturePlacement
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
-from hse_doc_studio.use_cases.signatures.pack_places import MANUAL, PackPlaces, PlaceInfo
+from hse_doc_studio.use_cases.signatures.pack_places import MANUAL, PlaceInfo, load_places
 
 logger = structlog.get_logger()
 
@@ -63,9 +63,11 @@ class UpdateSignaturePlacementUC:
         project_index_repo: IProjectIndexRepository,
         signature_repo: ISignatureRepository,
         template_repo: ITemplateRepository,
+        template_service: ProjectTemplateService | None = None,
     ) -> None:
         self._signature_repo = signature_repo
         self._template_repo = template_repo
+        self._template_service = template_service
         self._slot_service = SignatureSlotService()
         self._get_uc = GetProjectUC(project_repo, project_index_repo)
 
@@ -156,5 +158,8 @@ class UpdateSignaturePlacementUC:
         )
         lang = str(project.lang)
         texts = tuple(date_mark_text(new_state, inp.doc_id, inp.slot_id, mark, lang) for mark in new_placement.dates)
-        place = PackPlaces.load(self._template_repo, project, version).info(inp.doc_id, inp.slot_id, new_placement)
+        places = await load_places(
+            self._template_repo, self._template_service, project, version, new_state, [inp.doc_id]
+        )
+        place = places.info(inp.doc_id, inp.slot_id, new_placement)
         return UpdateSignaturePlacementOutput(placement=new_placement, texts=texts, place=place)

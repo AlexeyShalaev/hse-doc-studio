@@ -165,3 +165,89 @@ describe("необязательные подписи", () => {
     expect(parsed.docs[0]?.slots[0]?.optional).toBe(true);
   });
 });
+
+describe("места пака на якорях (R32)", () => {
+  const slot = {
+    id: "supervisor",
+    label: { ru: "Научный руководитель" },
+    applies_to: ["topic_application", "project_proposal", "report"],
+    default_placement: { page: 1, x_mm: 110, y_mm: 130, width_mm: 40 },
+  };
+
+  it("запись на якоре читается её запасным местом, без него у документа общее место", () => {
+    const parsed = RuntimeSignatureSlotSchema.parse({
+      ...slot,
+      default_placements: {
+        topic_application: {
+          source: "anchor",
+          anchor: "supervisor",
+          align: "right",
+          dx_mm: 0,
+          dy_mm: -10,
+          width_mm: 28,
+          fallback: null,
+        },
+        project_proposal: {
+          source: "anchor",
+          anchor: "supervisor",
+          align: "left",
+          dx_mm: 0,
+          dy_mm: -14,
+          width_mm: 40,
+          fallback: { page: 1, x_mm: 80, y_mm: 139, width_mm: 40 },
+        },
+        report: { source: "mm", page: 1, x_mm: 110, y_mm: 130, width_mm: 40 },
+      },
+      default_dates: {
+        project_proposal: [
+          {
+            source: "anchor",
+            anchor: "supervisor.day",
+            format: "day",
+            align: "center",
+            height_mm: 5,
+            width_mm: null,
+            dx_mm: 0,
+            dy_mm: null,
+            fallback: null,
+          },
+          {
+            source: "anchor",
+            anchor: "supervisor.month_word",
+            format: "month_word",
+            align: "center",
+            height_mm: 5,
+            width_mm: 24,
+            dx_mm: 0,
+            dy_mm: null,
+            fallback: {
+              page: 1,
+              x_mm: 90,
+              y_mm: 148,
+              width_mm: 24,
+              height_mm: 5,
+            },
+          },
+        ],
+      },
+    });
+
+    expect(parsed.default_placements).toEqual({
+      project_proposal: { page: 1, x_mm: 80, y_mm: 139, width_mm: 40 },
+      report: { page: 1, x_mm: 110, y_mm: 130, width_mm: 40 },
+    });
+    expect(parsed.default_dates).toEqual({
+      project_proposal: [
+        {
+          page: 1,
+          x_mm: 90,
+          y_mm: 148,
+          width_mm: 24,
+          height_mm: 5,
+          format: "month_word",
+          align: "center",
+        },
+      ],
+    });
+  });
+});

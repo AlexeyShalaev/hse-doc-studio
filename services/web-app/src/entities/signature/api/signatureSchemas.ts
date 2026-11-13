@@ -83,6 +83,16 @@ export type SignedAt = z.infer<typeof SignedAtSchema>;
 export const PlacementOriginSchema = z.enum(["pack", "seed", "manual"]);
 export type PlacementOrigin = z.infer<typeof PlacementOriginSchema>;
 
+/**
+ * Якорь места пака у пары (signing-route.md, 15.17.14, R32): `found` строка есть в собранном
+ * документе, `missing` якоря известны, а строки нет, `unknown` якоря неизвестны.
+ */
+export const PlaceAnchorSchema = z.object({
+  id: z.string(),
+  state: z.enum(["found", "missing", "unknown"]),
+});
+export type PlaceAnchor = z.infer<typeof PlaceAnchorSchema>;
+
 export const PlacementSchema = z.object({
   enabled: z.boolean(),
   page: z.number(),
@@ -102,6 +112,12 @@ export const PlacementSchema = z.object({
   origin: PlacementOriginSchema,
   /** В шаблоне есть место этого слота для документа («Вернуть место из шаблона», 15.6). */
   preset_available: z.boolean(),
+  /**
+   * Форма места пака, по которому стоит место (`anchor` на якоре шаблона, `mm`; null у ручного), и
+   * якорь места пака у пары (15.17.14). Сервер отдаёт их с R32; пометки по ним делает W17.
+   */
+  source: z.enum(["anchor", "mm"]).nullable().optional(),
+  anchor: PlaceAnchorSchema.nullable().optional(),
 });
 
 /**
@@ -172,6 +188,73 @@ export const PackDateMarkSchema = z.object({
   align: DateMarkAlignSchema,
 });
 
+/**
+ * Место из пака на якоре шаблона (15.17.7, R32): считается по линии собранного документа, `fallback`
+ * запасное место в мм, пока якоря неизвестны.
+ */
+export const PackAnchorPlaceSchema = z.object({
+  source: z.literal("anchor"),
+  anchor: z.string(),
+  align: DateMarkAlignSchema,
+  dx_mm: z.number(),
+  dy_mm: z.number(),
+  width_mm: z.number().nullable(),
+  fallback: PackPlaceSchema.nullable(),
+});
+
+/** Метка даты из пака на якоре шаблона (15.17.7, R32). */
+export const PackAnchorDateMarkSchema = z.object({
+  source: z.literal("anchor"),
+  anchor: z.string(),
+  format: DateMarkFormatSchema,
+  align: DateMarkAlignSchema,
+  height_mm: z.number(),
+  width_mm: z.number().nullable(),
+  dx_mm: z.number(),
+  dy_mm: z.number().nullable(),
+  fallback: z.object(DateMarkPlaceShape).nullable(),
+});
+
+type PackPlace = z.infer<typeof PackPlaceSchema>;
+type PackDateMark = z.infer<typeof PackDateMarkSchema>;
+
+/**
+ * Записи мест пака по документам: в мм или на якоре (15.17.14). Пока интерфейс не умеет места на
+ * якоре (W17), запись на якоре читается как её запасное место в мм, а без него документ берёт общее
+ * место слота (`packPlaceOf`).
+ */
+const PackPlacesSchema = z
+  .record(z.string(), z.union([PackAnchorPlaceSchema, PackPlaceSchema]))
+  .default({})
+  .transform((entries) => {
+    const places: Record<string, PackPlace> = {};
+    for (const [docId, entry] of Object.entries(entries)) {
+      if (!("anchor" in entry)) places[docId] = entry;
+      else if (entry.fallback) places[docId] = entry.fallback;
+    }
+    return places;
+  });
+
+/** Метки даты пака по документам; метка на якоре читается как её запасная метка, без неё пропускается. */
+const PackDatesSchema = z
+  .record(
+    z.string(),
+    z.array(z.union([PackAnchorDateMarkSchema, PackDateMarkSchema])),
+  )
+  .default({})
+  .transform((entries) => {
+    const dates: Record<string, PackDateMark[]> = {};
+    for (const [docId, marks] of Object.entries(entries)) {
+      const placed = marks.flatMap((mark): PackDateMark[] => {
+        if (!("anchor" in mark)) return [mark];
+        if (!mark.fallback) return [];
+        return [{ ...mark.fallback, format: mark.format, align: mark.align }];
+      });
+      if (placed.length > 0) dates[docId] = placed;
+    }
+    return dates;
+  });
+
 // Effective slot set computed by the backend for the CURRENT project. In team
 // mode per-author slots are multiplied ("author--ivanov", label already carries
 // the name) and applies_to/required_by reference document INSTANCE ids. When
@@ -201,9 +284,9 @@ export const RuntimeSignatureSlotSchema = z.object({
    * Место из пака по экземплярам документов из `applies_to` (signing-route.md, 15.3, 15.11):
    * `placements` слота, иначе `default_placement`. Брать через `packPlaceOf`.
    */
-  default_placements: z.record(z.string(), PackPlaceSchema).default({}),
+  default_placements: PackPlacesSchema,
   /** Метки даты из пака по экземплярам документов (`default_dates`, 14.10); без меток документа нет. */
-  default_dates: z.record(z.string(), z.array(PackDateMarkSchema)).default({}),
+  default_dates: PackDatesSchema,
   owner: z.string().nullish().default(null),
 });
 
@@ -372,6 +455,11 @@ export const PlanSlotSchema = z.object({
     .default([]),
   /** Момент подписи слота в документе. */
   signed_at: SignedAtSchema.nullable().default(null),
+  /**
+   * Подсказки, которые не блокируют подпись (15.17.14, R32): `anchor_missing` в собранном документе
+   * нет строки шаблона для подписи. Текст подсказки рисует W17.
+   */
+  hints: z.array(z.string()).default([]),
 });
 
 // Маршрут подписания, который держит документы точки сдачи или документ: состояние

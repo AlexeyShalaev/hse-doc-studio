@@ -16,19 +16,19 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Collection, Iterable
+from collections.abc import Callable, Collection, Iterable, Mapping
 from dataclasses import dataclass, replace
 
-from hse_doc_studio.core.catalog import SubmissionProfile, TemplateVersion
+from hse_doc_studio.core.catalog import AnchorPlace, SubmissionProfile, TemplateVersion
 from hse_doc_studio.core.enums import PlacementOrigin
 from hse_doc_studio.core.services import SignatureSlotService
-from hse_doc_studio.core.signatures.pack_places import pack_placement
+from hse_doc_studio.core.signatures.pack_places import NO_ANCHORS, SourceAnchors, pack_placement
 from hse_doc_studio.core.signatures.plan import SignMethod, VisibleMark, mark_of, method_of
 from hse_doc_studio.core.signatures.route_order import default_route
 from hse_doc_studio.core.signing_route.entities import DocSlot
 from hse_doc_studio.core.signing_route.preset import PresetSlot, RoutePreset, condition_met
 from hse_doc_studio.core.team import is_team, split_instance_id
-from hse_doc_studio.core.value_objects import SignaturesState
+from hse_doc_studio.core.value_objects import SignaturePlacement, SignaturesState
 from hse_doc_studio.use_cases.signatures.pack_places import PackPlaces
 from hse_doc_studio.use_cases.signatures.set_slot_optional import with_optional, without_skip
 from hse_doc_studio.use_cases.signing_route.point import RoutePoint
@@ -47,7 +47,10 @@ def has_preset(version: TemplateVersion, profile: SubmissionProfile) -> bool:
     """
     if profile.signing_slots:
         return True
-    return any(slot.placements or slot.default_dates for slot in version.signatures_config.slots)
+    return any(
+        slot.placements or slot.default_dates or slot.default_anchor is not None
+        for slot in version.signatures_config.slots
+    )
 
 
 def _pairs_of(point: RoutePoint, doc_def_id: str, slot_id: str) -> list[DocSlot]:
@@ -154,7 +157,7 @@ def _shared_per_author(point: RoutePoint, pair: DocSlot) -> bool:
     )
 
 
-def apply_places(
+def apply_places(  # noqa: PLR0913 — что применить и к чему
     point: RoutePoint,
     state: SignaturesState,
     pairs: Iterable[DocSlot],
@@ -162,31 +165,57 @@ def apply_places(
     *,
     origins: Collection[PlacementOrigin | None],
     skip_docs: Collection[str] = (),
+    anchors: Mapping[str, SourceAnchors] | None = None,
 ) -> tuple[SignaturesState, tuple[DocSlot, ...]]:
     """Места и метки даты пресета у пар, где места нет или оно из `origins` (15.5); места включаются, если метка
     может появиться (`mark_may_show`). Ручные места, документы `skip_docs`, документы с ЭП над B и `per_author` на
-    общем документе команды не трогаются."""
+    общем документе команды не трогаются.
+
+    Место на якоре считается по якорям источника подписи документа (`anchors`, 15.17.8). Нет места (якоря
+    известны, а строки нет; свой PDF; якоря неизвестны без запасного места) или якоря неизвестны, а место уже
+    стоит: пара не трогается.
+    """
     placed: list[DocSlot] = []
+    known = anchors or {}
     for pair in dict.fromkeys(pairs):
-        doc = point.documents.get(pair.doc_id)
-        runtime = point.runtime.get(pair.slot_id)
-        if doc is None or runtime is None or pair.doc_id in skip_docs:
-            continue
-        if signed_over_frozen(state, pair.doc_id) or _shared_per_author(point, pair):
+        if pair.doc_id in skip_docs:
             continue
         existing = state.placements.get(pair.doc_id, {}).get(pair.slot_id)
-        origin = places.info(pair.doc_id, pair.slot_id, existing).origin if existing is not None else None
-        if origin not in origins:
-            continue
-        placement = pack_placement(runtime.slot_def, doc.def_id, existing, point.version.version)
-        if mark_may_show(point, pair, state):
-            placement = replace(placement, enabled=True)
-        if placement == existing:
+        placement = _preset_place(point, state, pair, places, origins, known.get(pair.doc_id, NO_ANCHORS))
+        if placement is None or placement == existing:
             continue
         doc_placements = {**state.placements.get(pair.doc_id, {}), pair.slot_id: placement}
         state = replace(state, placements={**state.placements, pair.doc_id: doc_placements})
         placed.append(pair)
     return state, tuple(placed)
+
+
+def _preset_place(  # noqa: PLR0913 — входы одной пары
+    point: RoutePoint,
+    state: SignaturesState,
+    pair: DocSlot,
+    places: PackPlaces,
+    origins: Collection[PlacementOrigin | None],
+    src: SourceAnchors,
+) -> SignaturePlacement | None:
+    """Место пресета у пары или None, если пару не трогать (см. `apply_places`)."""
+    doc = point.documents.get(pair.doc_id)
+    runtime = point.runtime.get(pair.slot_id)
+    if doc is None or runtime is None:
+        return None
+    if signed_over_frozen(state, pair.doc_id) or _shared_per_author(point, pair):
+        return None
+    existing = state.placements.get(pair.doc_id, {}).get(pair.slot_id)
+    origin = places.info(pair.doc_id, pair.slot_id, existing).origin if existing is not None else None
+    if origin not in origins:
+        return None
+    anchored = isinstance(runtime.slot_def.entry_for(doc.def_id), AnchorPlace)
+    if anchored and existing is not None and not src.known:
+        return None
+    placement = pack_placement(runtime.slot_def, doc.def_id, existing, point.version.version, src)
+    if placement is not None and mark_may_show(point, pair, state):
+        placement = replace(placement, enabled=True)
+    return placement
 
 
 def apply_optional(

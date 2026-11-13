@@ -21,8 +21,13 @@ from hse_doc_studio.api.schemas.signature import (
     FrozenPdfResponse,
     LevelRequest,
     ManualSignerRequest,
+    PackAnchorDateMarkResponse,
+    PackAnchorPlaceResponse,
+    PackDateFallbackResponse,
     PackDateMarkResponse,
+    PackFallbackResponse,
     PackPlaceResponse,
+    PlaceAnchorResponse,
     PlacementResponse,
     ProfileRefResponse,
     RestorePlacementRequest,
@@ -40,6 +45,7 @@ from hse_doc_studio.api.schemas.signature import (
     UpdateSlotConfigRequest,
     UploadSignatureResponse,
 )
+from hse_doc_studio.core.catalog import PackDate, PackPlace, SignatureDefaultDate, SignatureDefaultPlacement
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.signatures.anchors import BuildAnchors
 from hse_doc_studio.core.signatures.stamps import date_mark_text
@@ -162,6 +168,8 @@ def _map_placement(
         else None,
         origin=place.origin,
         preset_available=place.preset_available,
+        source=place.source,
+        anchor=PlaceAnchorResponse(id=place.anchor.id, state=place.anchor.state) if place.anchor is not None else None,
     )
 
 
@@ -196,25 +204,59 @@ def _map_runtime_slot(item: RuntimeSlotItem) -> RuntimeSlotResponse:
             doc_id: [ProfileRefResponse(id=ref.id, name=ref.name) for ref in refs]
             for doc_id, refs in item.extra_by.items()
         },
-        default_placements={
-            doc_id: PackPlaceResponse(page=p.page, x_mm=p.x_mm, y_mm=p.y_mm, width_mm=p.width_mm)
-            for doc_id, p in item.default_placements.items()
-        },
-        default_dates={
-            doc_id: [
-                PackDateMarkResponse(
-                    page=m.page,
-                    x_mm=m.x_mm,
-                    y_mm=m.y_mm,
-                    width_mm=m.width_mm,
-                    height_mm=m.height_mm,
-                    format=m.format,
-                    align=m.align,
-                )
-                for m in marks
-            ]
-            for doc_id, marks in item.default_dates.items()
-        },
+        default_placements={doc_id: _pack_place(p) for doc_id, p in item.default_placements.items()},
+        default_dates={doc_id: [_pack_date(m) for m in marks] for doc_id, marks in item.default_dates.items()},
+    )
+
+
+def _pack_place(entry: PackPlace) -> PackPlaceResponse | PackAnchorPlaceResponse:
+    """Место из пака для ответа: в мм или на якоре шаблона с запасным местом (signing-route.md, 15.17.14)."""
+    if isinstance(entry, SignatureDefaultPlacement):
+        return PackPlaceResponse(page=entry.page, x_mm=entry.x_mm, y_mm=entry.y_mm, width_mm=entry.width_mm)
+    fallback = entry.fallback
+    return PackAnchorPlaceResponse(
+        anchor=entry.anchor,
+        align=entry.align,
+        dx_mm=entry.dx_mm,
+        dy_mm=entry.dy_mm,
+        width_mm=entry.width_mm,
+        fallback=PackFallbackResponse(
+            page=fallback.page, x_mm=fallback.x_mm, y_mm=fallback.y_mm, width_mm=fallback.width_mm
+        )
+        if fallback is not None
+        else None,
+    )
+
+
+def _pack_date(mark: PackDate) -> PackDateMarkResponse | PackAnchorDateMarkResponse:
+    if isinstance(mark, SignatureDefaultDate):
+        return PackDateMarkResponse(
+            page=mark.page,
+            x_mm=mark.x_mm,
+            y_mm=mark.y_mm,
+            width_mm=mark.width_mm,
+            height_mm=mark.height_mm,
+            format=mark.format,
+            align=mark.align,
+        )
+    fallback = mark.fallback
+    return PackAnchorDateMarkResponse(
+        anchor=mark.anchor,
+        format=mark.format,
+        align=mark.align,
+        height_mm=mark.height_mm,
+        width_mm=mark.width_mm,
+        dx_mm=mark.dx_mm,
+        dy_mm=mark.dy_mm,
+        fallback=PackDateFallbackResponse(
+            page=fallback.page,
+            x_mm=fallback.x_mm,
+            y_mm=fallback.y_mm,
+            width_mm=fallback.width_mm,
+            height_mm=fallback.height_mm,
+        )
+        if fallback is not None
+        else None,
     )
 
 
@@ -441,6 +483,8 @@ async def restore_placement(
 
     Отказы: 400 `unknown_slot` (слот не ставится на документ); 409 `route_locked` (документ держит идущий или
     завершённый маршрут, а права отправки маршрута нет) и `resets_signatures` с `resets` (без `confirm_reset`).
+    Место на якоре шаблона (15.17.9): 409 `anchors_unknown`, пока якоря источника неизвестны, а запасного места в
+    паке нет (и у своего загруженного PDF); 409 `anchor_missing`, если в собранном документе нет строки подписи.
     """
     try:
         result = await uc.execute(

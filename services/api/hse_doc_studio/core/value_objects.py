@@ -159,6 +159,10 @@ class FromPack:
 
     version: str
     digest: str
+    # Место на якоре шаблона (15.17.10): id якоря записи пака и первые 16 знаков sha256 PDF, по якорям которого место
+    # посчитано. У места в мм оба None; у запасного места записи на якоре `build` None (якоря были неизвестны).
+    anchor: str | None = None
+    build: str | None = None
 
 
 @dataclass(frozen=True)

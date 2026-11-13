@@ -83,7 +83,9 @@ from hse_doc_studio.core.signing_route.versions import (
     version_changes,
 )
 from hse_doc_studio.core.value_objects import SignaturesState
+from hse_doc_studio.use_cases.signatures.anchor_places import rebuild_places
 from hse_doc_studio.use_cases.signatures.pack_places import PackPlaces
+from hse_doc_studio.use_cases.signatures.source_anchors import doc_anchors, docs_anchors
 from hse_doc_studio.use_cases.signing_route.key_signer import KeyInfo, KeyRequest, RouteKeySigner
 from hse_doc_studio.use_cases.signing_route.pinning import PinnedVersion, RoutePinning
 from hse_doc_studio.use_cases.signing_route.point import RoutePoint
@@ -399,8 +401,17 @@ class SigningRouteDrafts(RouteScenario):
                 signed=signed or (lambda _pair: False),
                 skip_docs=elsewhere,
             )
-            places = PackPlaces.load(self._s.points.templates, point.project, point.version)
-            updated, placed = apply_places(point, updated, place_pairs, places, origins=origins, skip_docs=elsewhere)
+            anchors = await docs_anchors(
+                self._s.points.template_service,
+                point.project,
+                point.version,
+                updated,
+                {pair.doc_id for pair in place_pairs},
+            )
+            places = PackPlaces.load(self._s.points.templates, point.project, point.version, anchors)
+            updated, placed = apply_places(
+                point, updated, place_pairs, places, origins=origins, skip_docs=elsewhere, anchors=anchors
+            )
             if updated != state:
                 repo.save_state(point.project.folder, updated)
         return PresetApplied(updated, placed, marked, unmarked)
@@ -731,6 +742,11 @@ class SigningRouteSending(RouteScenario):
         changes = version_changes(route, candidate)
         if route.status in NEW_VERSION_STATUSES and not has_news(route, candidate):
             raise nothing_changed()
+        if await self._follow_lines(point, _to_pin(route, loaded.state, changes)):
+            # Места на якорях встали по строкам отправляемых сборок: факты считаются заново по новым местам.
+            loaded = await self._s.facts.load(point, route)
+            candidate = loaded.facts.candidate()
+            changes = version_changes(route, candidate)
         people = await self._people(point.project_id, route, loaded)
         readiness = await self._readiness(point, route, candidate, people, actor_id, at)
         if readiness.blockers:
@@ -751,6 +767,27 @@ class SigningRouteSending(RouteScenario):
         if settled.frozen:
             events.append(RouteEvent(sent.id, sent.round, at, EventKind.frozen, details={"docs": list(settled.frozen)}))
         return _Sending(settled, events, losing_approval(route, candidate))
+
+    async def _follow_lines(self, point: RoutePoint, doc_ids: Sequence[str]) -> bool:
+        """Места «из шаблона» на якоре у документов, чья версия на подписи меняется, по якорям их текущей сборки
+        (signing-route.md, 15.17.9), до снятия версии. Документ и так изменился: согласия по нему запрашиваются
+        заново, ЭП над прежним B сбрасываются так же. Ручные места и свой PDF не трогаются. Пишет состояние подписей,
+        только если места изменились; True, если изменились."""
+        repo = self._s.effects.signatures
+        state = repo.get_state(point.project.folder)
+        updated = state
+        for doc_id in doc_ids:
+            doc = point.documents.get(doc_id)
+            if doc is None or doc.custom_file is not None:
+                continue
+            # Якоря той сборки, которая станет версией на подписи, а не прежней версии.
+            working = replace(updated, pinned={k: v for k, v in updated.pinned.items() if k != doc_id})
+            src = await doc_anchors(self._s.points.template_service, point.project, point.version, working, doc)
+            updated = rebuild_places(updated, point.project, point.version, doc, src)
+        if updated == state:
+            return False
+        repo.save_state(point.project.folder, updated)
+        return True
 
     async def _sign_own(
         self,

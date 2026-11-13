@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import contextlib
 import dataclasses
+import re
 from datetime import datetime, timezone
 from enum import StrEnum
 from pathlib import Path
@@ -46,6 +47,7 @@ from hse_doc_studio.core.enums import (
     ToolApprovalDecision,
 )
 from hse_doc_studio.core.project_schema import LEGACY_PROJECT_SCHEMA
+from hse_doc_studio.core.signatures.anchors import is_anchor_id
 from hse_doc_studio.core.value_objects import (
     Author,
     CheckFix,
@@ -294,6 +296,8 @@ def _serialize_checks_override(co: ChecksOverride) -> dict[str, Any]:
 
 
 # Неизвестная строгость (данные более новой Студии) отбрасывается, а не роняет чтение.
+# Сборка в пометке места на якоре (15.17.10): первые 16 знаков sha256 PDF.
+_BUILD_RE = re.compile(r"[0-9a-f]{16}")
 _SEVERITY_VALUES = frozenset(severity.value for severity in CheckSeverity)
 
 
@@ -380,6 +384,7 @@ def serialize_compile_record(record: CompileRecord) -> dict[str, Any]:
         "output_size": record.output_size,
         "error_code": record.error_code,
         "error_detail": record.error_detail,
+        "signature_places_moved": record.signature_places_moved,
     }
 
 
@@ -406,6 +411,7 @@ def deserialize_compile_record(data: dict[str, Any], project_folder: Path) -> Co
         output_size=data.get("output_size"),
         error_code=data.get("error_code"),
         error_detail=data.get("error_detail"),
+        signature_places_moved=_places_moved(data.get("signature_places_moved")),
     )
 
 
@@ -602,7 +608,7 @@ def serialize_signatures_state(state: SignaturesState) -> dict[str, Any]:
                     "signed_at": dataclasses.asdict(placement.signed_at) if placement.signed_at else None,
                     # Пометка «место из шаблона» (signing-route.md, 15.4) тоже всегда: снятая правкой человека, она не
                     # должна вернуться из старого файла через `preserve_unknown`.
-                    "from_pack": dataclasses.asdict(placement.from_pack) if placement.from_pack else None,
+                    "from_pack": _serialize_from_pack(placement.from_pack),
                 }
                 for slot_id, placement in slot_map.items()
             }
@@ -874,14 +880,39 @@ def _deserialize_signed_at(raw: Any) -> SignedAt | None:
         return None
 
 
+def _serialize_from_pack(from_pack: FromPack | None) -> dict[str, Any] | None:
+    """Пометка «место из шаблона»; якорь и сборка (15.17.10) пишутся только у места на якоре, чтобы прежние места
+    в мм не меняли `signatures.json`."""
+    if from_pack is None:
+        return None
+    data: dict[str, Any] = {"version": from_pack.version, "digest": from_pack.digest}
+    if from_pack.anchor is not None:
+        data["anchor"] = from_pack.anchor
+        data["build"] = from_pack.build
+    return data
+
+
+def _places_moved(raw: Any) -> int | None:
+    """Число сдвинутых мест подписей сборки (15.17.9); не число читается как его отсутствие."""
+    return raw if isinstance(raw, int) and not isinstance(raw, bool) and raw >= 0 else None
+
+
 def _deserialize_from_pack(raw: Any) -> FromPack | None:
-    """Пометка «место из шаблона»; битая пометка читается как её отсутствие (место станет ручным)."""
+    """Пометка «место из шаблона»; битая пометка читается как её отсутствие (место станет ручным).
+
+    Битые якорь или сборка (15.17.10) читаются как место в мм: пересчёт после сборки такое место не трогает.
+    """
     if not isinstance(raw, dict):
         return None
     version, digest = raw.get("version"), raw.get("digest")
     if not isinstance(version, str) or not isinstance(digest, str) or not version or not digest:
         return None
-    return FromPack(version=version, digest=digest)
+    anchor, build = raw.get("anchor"), raw.get("build")
+    if not isinstance(anchor, str) or not is_anchor_id(anchor):
+        return FromPack(version=version, digest=digest)
+    if not isinstance(build, str) or not _BUILD_RE.fullmatch(build):
+        build = None
+    return FromPack(version=version, digest=digest, anchor=anchor, build=build)
 
 
 def _slot_ids(raw: Any) -> frozenset[str]:

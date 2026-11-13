@@ -222,6 +222,9 @@ def _plan_json(plan: SignaturePlan, places: Mapping[str, Mapping[str, PlaceInfo]
                         "hint": s.hint,
                         "is_mine": s.is_mine,
                         "place": _place(known, doc.doc_id, s.slot_id),
+                        # Форма места пака (signing-route.md, 15.17.14): на якоре шаблона, в мм, null у ручного.
+                        "place_source": _place_source(known, doc.doc_id, s.slot_id),
+                        "anchor_missing": s.anchor_missing,
                         "optional": s.optional,
                         "skipped": {"at": s.skipped.at, "route_id": s.skipped.route_id} if s.skipped else None,
                         # Метки даты подписания (signing-route.md, 14.9): что напечатано сейчас, null у пустой.
@@ -250,6 +253,11 @@ def _place(places: Mapping[str, Mapping[str, PlaceInfo]], doc_id: str, slot_id: 
     return info.origin.value if info is not None else "none"
 
 
+def _place_source(places: Mapping[str, Mapping[str, PlaceInfo]], doc_id: str, slot_id: str) -> str | None:
+    info = places.get(doc_id, {}).get(slot_id)
+    return info.source.value if info is not None and info.source is not None else None
+
+
 async def _places(deps: IDependencyResolver, ctx: AgentToolContext) -> dict[str, dict[str, PlaceInfo]]:
     """Происхождение размещений проекта (место из шаблона, затравка, ручное) для `place` слотов плана."""
     out = await (await deps.get(GetSignaturesUC)).execute(GetSignaturesInput(project_id=ctx.project_id))
@@ -262,7 +270,10 @@ class GetSignaturePlanTool(McpTool):
         description=(
             "План подписей по профилю сдачи или документу: «подписано k из n», по каждому слоту подписант, способ "
             "(картинка, открепленная ЭП, PAdES), статус и чего не хватает. place: место подписи на странице как в "
-            "шаблоне (pack), затравка из шаблона (seed), изменено автором (manual) или его нет (none)."
+            "шаблоне (pack), затравка из шаблона (seed), изменено автором (manual) или его нет (none); "
+            "place_source: место из шаблона задано по строке шаблона (anchor) или в миллиметрах (mm); "
+            "anchor_missing: в собранном документе нет строки шаблона для этой подписи, место можно поставить "
+            "вручную."
         ),
         parameters=project_schema(
             {

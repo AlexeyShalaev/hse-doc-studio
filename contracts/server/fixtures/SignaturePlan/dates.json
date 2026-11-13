@@ -39,7 +39,8 @@
           "optional": false,
           "skipped": null,
           "dates": [],
-          "signed_at": null
+          "signed_at": null,
+          "hints": []
         },
         {
           "slot_id": "supervisor",
@@ -87,7 +88,8 @@
           "signed_at": {
             "at": "2026-11-12T23:30:00+00:00",
             "source": "approval"
-          }
+          },
+          "hints": []
         }
       ],
       "held_by_route": false,

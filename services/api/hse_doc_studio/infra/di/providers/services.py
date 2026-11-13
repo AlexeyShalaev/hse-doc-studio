@@ -93,6 +93,7 @@ from hse_doc_studio.core.services import (
     SubmissionProfileService,
 )
 from hse_doc_studio.core.signatures.ports import (
+    IBuildPlaces,
     IChainFetcher,
     IOpenPgpKeyImporter,
     IPadesSigner,
@@ -224,6 +225,7 @@ from hse_doc_studio.use_cases.languagetool.list_languagetool_images import resol
 from hse_doc_studio.use_cases.office_editor.access import IOfficeAccess, LocalOfficeAccess
 from hse_doc_studio.use_cases.office_services.list_office_service_images import resolve_active_office_image
 from hse_doc_studio.use_cases.projects.get_project_access import ProjectAccessService
+from hse_doc_studio.use_cases.signatures.anchor_places import BuildPlaces
 from hse_doc_studio.use_cases.signer_profile.plate_data import SlotSignerPlateData
 from hse_doc_studio.use_cases.submission.pack_planner import PackPlanner
 from hse_doc_studio.use_cases.template_update.base_service import TemplateBaseService
@@ -1047,6 +1049,18 @@ class DomainServiceProvider(Provider):
     @provide
     def get_shared_folder_detector(self, paths: PathMapping) -> ISharedFolderDetector:
         return SharedFolderDetector(paths)
+
+    @provide
+    def get_build_places(
+        self,
+        project_repo: IProjectRepository,
+        template_repo: ITemplateRepository,
+        signature_repo: ISignatureRepository,
+        template_service: ProjectTemplateService,
+    ) -> IBuildPlaces:
+        """Пересчёт мест подписей на якорях после сборки (signing-route.md, 15.17.9); маршрутов локально нет, сервер
+        подменяет на пересчёт с черновиками маршрутов."""
+        return BuildPlaces(project_repo, template_repo, signature_repo, template_service)
 
     @provide
     def get_built_pdf_observer(self) -> IBuiltPdfObserver:

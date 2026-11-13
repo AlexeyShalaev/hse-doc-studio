@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -82,6 +83,9 @@ class PlanSlotResponse(StrictModel):
     # Метки даты подписания слота и момент подписи (14.7); без меток пустой список.
     dates: list[PlanDateResponse] = []
     signed_at: PlanSignedAtResponse | None = None
+    # Подсказки, которые не блокируют подпись (signing-route.md, 15.17.14): `anchor_missing` в собранном документе
+    # нет строки шаблона для этой подписи, место можно поставить руками.
+    hints: list[Literal["anchor_missing"]] = []
 
 
 class PlanFrozenResponse(StrictModel):
@@ -192,6 +196,7 @@ def _map_slot(slot: PlanSlot, routes: PlanRoutes) -> PlanSlotResponse:
         skipped=PlanSkippedResponse(at=skip.at, route_id=skip.route_id) if (skip := slot.skipped) is not None else None,
         dates=[PlanDateResponse(page=d.page, format=d.format, text=d.text) for d in slot.dates],
         signed_at=PlanSignedAtResponse(at=at.at, source=at.source) if (at := slot.signed_at) is not None else None,
+        hints=["anchor_missing"] if slot.anchor_missing else [],
     )
 
 

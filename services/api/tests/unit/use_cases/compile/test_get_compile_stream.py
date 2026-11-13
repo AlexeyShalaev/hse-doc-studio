@@ -100,7 +100,13 @@ async def test__successful_record__result_has_no_error(tmp_path: Path) -> None:
         )
     ]
 
-    assert json.loads(lines[-1][len(RESULT_PREFIX) :]) == {"pages": 3, "warnings": 0, "errors": 0, "error": None}
+    assert json.loads(lines[-1][len(RESULT_PREFIX) :]) == {
+        "pages": 3,
+        "warnings": 0,
+        "errors": 0,
+        "error": None,
+        "signature_places_moved": 0,
+    }
 
 
 async def test__wait_is_capped__stream_ends_with_the_current_status(tmp_path: Path, monkeypatch) -> None:

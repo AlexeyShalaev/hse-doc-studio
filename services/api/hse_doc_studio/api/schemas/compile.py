@@ -97,3 +97,5 @@ class CompileDetailResponse(BaseModel):
     wait: CompileWait | None = None
     # Только серверный режим: где идёт сборка (общий раннер, свой раннер или раннер владельца). В локальном null.
     placement: CompilePlacement | None = None
+    # Сколько мест подписей из шаблона пересчёт сдвинул по строкам шаблона этой сборки (signing-route.md, 15.17.9).
+    signature_places_moved: int = 0

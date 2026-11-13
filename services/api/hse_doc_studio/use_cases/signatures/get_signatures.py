@@ -6,7 +6,7 @@ from uuid import UUID
 
 import structlog
 
-from hse_doc_studio.core.catalog import SignatureDefaultDate, SignatureDefaultPlacement, TemplateVersion
+from hse_doc_studio.core.catalog import PackDate, PackPlace, TemplateVersion
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.repositories import (
@@ -17,13 +17,14 @@ from hse_doc_studio.core.repositories import (
 )
 from hse_doc_studio.core.services import ProjectTemplateService, RuntimeSlot, SignatureSlotService
 from hse_doc_studio.core.signatures.anchors import BuildAnchors
+from hse_doc_studio.core.signatures.pack_places import SourceAnchors
 from hse_doc_studio.core.signatures.stamps import stamps_digest_matches, stamps_for_doc
 from hse_doc_studio.core.signing_route.ports import HeldRoute, ISigningRouteGate
 from hse_doc_studio.core.value_objects import SignaturesState
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 from hse_doc_studio.use_cases.signatures.pack_places import PackPlaces, PlaceInfo
 from hse_doc_studio.use_cases.signatures.signing_source import source_of
-from hse_doc_studio.use_cases.signatures.source_anchors import source_anchors
+from hse_doc_studio.use_cases.signatures.source_anchors import docs_anchors
 
 logger = structlog.get_logger()
 
@@ -55,9 +56,10 @@ class RuntimeSlotItem:
     # (signing-route.md, 13.6). Там автор тоже может отметить подпись необязательной.
     extra_by: dict[str, list[ProfileRef]] = field(default_factory=dict)
     # Место и метки даты из пака по экземплярам документов, к которым слот применим (signing-route.md, 15.11):
-    # `placements` документа, иначе `default_placement`; метки только у документов, где пак их задаёт.
-    default_placements: dict[str, SignatureDefaultPlacement] = field(default_factory=dict)
-    default_dates: dict[str, tuple[SignatureDefaultDate, ...]] = field(default_factory=dict)
+    # `placements` документа, иначе `default_placement`; метки только у документов, где пак их задаёт. Запись в мм
+    # или на якоре шаблона (15.17.14).
+    default_placements: dict[str, PackPlace] = field(default_factory=dict)
+    default_dates: dict[str, tuple[PackDate, ...]] = field(default_factory=dict)
 
 
 @dataclass
@@ -128,14 +130,16 @@ class GetSignaturesUC:
                         applies_to=[d.id for d in docs],
                         required_by=_refs(required.get(slot.id, {}), profile_names),
                         extra_by=_refs(extra.get(slot.id, {}), profile_names),
-                        default_placements={d.id: slot.slot_def.place_for(d.def_id) for d in docs},
+                        default_placements={d.id: slot.slot_def.entry_for(d.def_id) for d in docs},
                         default_dates={d.id: marks for d in docs if (marks := slot.slot_def.dates_for(d.def_id))},
                     )
                 )
-            places = PackPlaces.load(self._template_repo, project, version).infos(state.placements)
+        sources = await self._sources(project, version, state)
+        if version is not None:
+            places = PackPlaces.load(self._template_repo, project, version, sources).infos(state.placements)
 
         stale, outdated = await self._frozen_flags(project, version, state)
-        anchors = await self._anchors(project, version, state)
+        anchors = {doc.id: sources[doc.id].anchors if doc.id in sources else None for doc in project.documents}
 
         return GetSignaturesOutput(
             state=state,
@@ -147,28 +151,13 @@ class GetSignaturesUC:
             anchors=anchors,
         )
 
-    async def _anchors(
+    async def _sources(
         self, project: Project, version: TemplateVersion | None, state: SignaturesState
-    ) -> dict[str, BuildAnchors | None]:
+    ) -> dict[str, SourceAnchors]:
         """Якоря источника подписи по документам: версии на подписи, иначе текущей сборки (свой PDF их не имеет)."""
-        result: dict[str, BuildAnchors | None] = {}
-        for doc in project.documents:
-            compiled: str | None = None
-            source_file: str | None = None
-            if version is not None and self._template_service is not None:
-                try:
-                    source_file = self._template_service.resolve_instance_source(project, doc, version)[0]
-                    compiled = self._template_service.resolve_signing_output(project, doc, version)
-                except (NotFoundError, ValueError):
-                    source_file = compiled = None
-            result[doc.id] = await source_anchors(
-                project.folder,
-                state,
-                doc.id,
-                compiled=project.folder / compiled if compiled else None,
-                source_file=source_file,
-            )
-        return result
+        if version is None or self._template_service is None:
+            return {}
+        return await docs_anchors(self._template_service, project, version, state)
 
     async def _frozen_flags(  # noqa: C901
         self, project: Project, version: TemplateVersion | None, state: SignaturesState

@@ -53,6 +53,55 @@ class SignatureDefaultDate:
     align: DateMarkAlign = DateMarkAlign.centered
 
 
+# Рамка подписи на якоре по умолчанию (signing-route.md, 15.17.7): верх рамки на 10 мм выше линии, ширина линии, но
+# не уже 10 мм; метка даты по умолчанию 5 мм высотой и стоит на линии.
+ANCHOR_DEFAULT_DY_MM = -10.0
+ANCHOR_MIN_WIDTH_MM = 10.0
+ANCHOR_DATE_HEIGHT_MM = 5.0
+
+
+@dataclass(frozen=True)
+class AnchorPlace:
+    """Место подписи на якоре шаблона (signing-route.md, 15.17.7): от линии `anchor` собранного документа.
+
+    `align` как рамка стоит относительно линии (левые края вместе, по центру, правые края вместе), `dx_mm` сдвиг после
+    выравнивания, `dy_mm` верх рамки относительно базовой линии (минус выше), `width_mm` ширина рамки (None: ширина
+    линии, не меньше 10 мм). `fallback` запасное место в мм, когда якоря сборки неизвестны (15.17.4); без него места
+    нет. Место считает `core/signatures/pack_places.anchor_box`.
+    """
+
+    anchor: str
+    align: DateMarkAlign = DateMarkAlign.centered
+    dx_mm: float = 0.0
+    dy_mm: float = ANCHOR_DEFAULT_DY_MM
+    width_mm: float | None = None
+    fallback: SignatureDefaultPlacement | None = None
+
+
+@dataclass(frozen=True)
+class AnchorDate:
+    """Метка даты на якоре шаблона (15.17.7): от линии `anchor` («имя.часть», `supervisor.day`).
+
+    `format` формат метки (по умолчанию часть якоря, если это формат 14.3), `height_mm` высота рамки, `width_mm`
+    ширина (None: ширина линии), `dy_mm` верх рамки относительно базовой линии (None: минус высота, рамка стоит на
+    линии), `align` и рамки на линии, и текста в ней. `fallback` запасная метка в мм; без якоря и без неё метки нет.
+    """
+
+    anchor: str
+    format: DateMarkFormat
+    height_mm: float = ANCHOR_DATE_HEIGHT_MM
+    width_mm: float | None = None
+    dx_mm: float = 0.0
+    dy_mm: float | None = None
+    align: DateMarkAlign = DateMarkAlign.centered
+    fallback: SignatureDefaultDate | None = None
+
+
+# Запись места или метки даты пака: в мм или на якоре (15.17.7).
+PackPlace = SignatureDefaultPlacement | AnchorPlace
+PackDate = SignatureDefaultDate | AnchorDate
+
+
 @dataclass(frozen=True)
 class SignatureSlotDef:
     id: str
@@ -68,18 +117,39 @@ class SignatureSlotDef:
     # Это не обязательность на точке (её задают профили сдачи, см. ниже), а запрет её снимать.
     required: bool = False
     # Метки даты по умолчанию (14.10): пары «id определения документа, метки». Применяются вместе с местом (15.5).
-    default_dates: tuple[tuple[str, tuple[SignatureDefaultDate, ...]], ...] = ()
+    # Метка в мм или на якоре шаблона (15.17.7).
+    default_dates: tuple[tuple[str, tuple[PackDate, ...]], ...] = ()
     # Место подписи по документу (`placements`, signing-route.md, 15.3): пары «id определения документа, место».
-    # Документ без записи получает `default_placement`; читать через `place_for`, а не напрямую.
-    placements: tuple[tuple[str, SignatureDefaultPlacement], ...] = ()
+    # Место в мм или на якоре шаблона (15.17.7). Читать через `entry_for` или `place_for`, а не напрямую.
+    placements: tuple[tuple[str, PackPlace], ...] = ()
+    # `default_placement` на якоре (15.17.7): только вместе с полным запасным местом в мм, оно и есть
+    # `default_placement` (его читают все версии Студии).
+    default_anchor: AnchorPlace | None = None
+
+    def entry_for(self, doc_def_id: str) -> PackPlace:
+        """Запись места слота на документе: `placements` документа, иначе общее место (на якоре или в мм)."""
+        found = next((place for doc_id, place in self.placements if doc_id == doc_def_id), None)
+        if found is not None:
+            return found
+        return self.default_anchor if self.default_anchor is not None else self.default_placement
 
     def place_for(self, doc_def_id: str) -> SignatureDefaultPlacement:
-        """Место слота на документе из пака: запись `placements` документа, иначе `default_placement`."""
-        return next((place for doc_id, place in self.placements if doc_id == doc_def_id), self.default_placement)
+        """Место слота на документе в мм без сборки: запись в мм, запасное место записи на якоре, иначе
+        `default_placement`. Место по якорям сборки считает `core/signatures/pack_places.resolve_place`."""
+        entry = self.entry_for(doc_def_id)
+        if isinstance(entry, AnchorPlace):
+            return entry.fallback if entry.fallback is not None else self.default_placement
+        return entry
 
-    def dates_for(self, doc_def_id: str) -> tuple[SignatureDefaultDate, ...]:
+    def dates_for(self, doc_def_id: str) -> tuple[PackDate, ...]:
         """Метки даты слота на документе из пака (`default_dates` документа), пусто без записи."""
         return next((marks for doc_id, marks in self.default_dates if doc_id == doc_def_id), ())
+
+    def uses_anchors(self, doc_def_id: str) -> bool:
+        """Место или метки даты слота на документе заданы на якорях шаблона (15.17.7)."""
+        return isinstance(self.entry_for(doc_def_id), AnchorPlace) or any(
+            isinstance(mark, AnchorDate) for mark in self.dates_for(doc_def_id)
+        )
 
     # Поля `required_for` здесь СОЗНАТЕЛЬНО НЕТ. Обязательность подписи — это
     # свойство пары «документ + контрольная точка», а не документа: одно и то же
@@ -450,6 +520,9 @@ class SignaturesConfig:
     # Порядок маршрута подписания по умолчанию (`signatures.route`): шаги из id слотов каталога,
     # внутри шага параллельно. Пусто: встроенный порядок (core/signatures/route_order.py).
     route: tuple[tuple[str, ...], ...] = ()
+    # Обёртки шаблона, которые передают имя якоря первым `[...]` (`signatures.anchor_macros`, 15.17.13): их вызовы
+    # линтер пака считает вызовами якорей. Приложению они не нужны.
+    anchor_macros: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)

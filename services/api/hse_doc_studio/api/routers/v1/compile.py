@@ -208,6 +208,7 @@ async def get_compile(
         error=map_compile_error(record.error_code, record.error_detail),
         wait=wait_schema(waiting),
         placement=placement_schema(await waits.placement_of(record.id, _viewer_id())),
+        signature_places_moved=record.signature_places_moved or 0,
     )
 
 

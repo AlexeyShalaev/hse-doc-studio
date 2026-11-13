@@ -49,6 +49,8 @@ def _summary(record: CompileRecord) -> dict[str, object]:
         "words": record.words,
         "errors": severities.count("err"),
         "warnings": severities.count("warn"),
+        # Сколько мест подписей из шаблона пересчёт сдвинул по строкам этой сборки (signing-route.md, 15.17.9).
+        "signature_places_moved": record.signature_places_moved or 0,
     }
     if record.error_code:
         # Причина неудачи или отмены: `interrupted` значит, что сборку оборвал перезапуск сервера, а не документ.
