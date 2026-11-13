@@ -279,6 +279,18 @@ export default defineConfig({
       },
     },
     {
+      // Необязательные подписи и пропуск подписанта (signing-route.md, раздел 13, E3): настоящий маршрут из трёх
+      // участников на общем раннере, поддельный SMTP, журнал писем и аудита; идёт после журнала писем.
+      name: "signing-optional",
+      testMatch: /signing-optional\.spec\.ts/,
+      timeout: 5 * 60_000,
+      use: {
+        ...devices["Desktop Chrome"],
+        actionTimeout: 20_000,
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
+    {
       // Страница «Обновления» и закрытый протокол апдейтера; идёт после полного смоука на том же стенде.
       name: "updates",
       testMatch: /updates\.spec\.ts/,

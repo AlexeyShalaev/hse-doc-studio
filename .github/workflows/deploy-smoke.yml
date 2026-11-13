@@ -327,6 +327,15 @@ jobs:
           pnpm exec playwright test --project=mail-log
         working-directory: e2e
 
+      # Необязательные подписи и пропуск (signing-route.md, раздел 13, E3): маршрут из трёх участников, пропуск академрука,
+      # письмо на поддельном SMTP, журналы писем и аудита, пакет. Почту включает и выключает сам сценарий.
+      - name: Run signing optional e2e
+        run: |
+          ../scripts/dev/server-stack/stack.sh mail-up
+          eval "$(../scripts/dev/server-stack/stack.sh env)"
+          pnpm exec playwright test --project=signing-optional
+        working-directory: e2e
+
       # Очистка места (storage-cleanup.md, E1): «Диск» общего и личного раннера, «Освободить место». Идёт последней:
       # чистит висячие образы и кэш раннера, удаляет состаренную задачу сборки и оставляет личный раннер остановленным.
       - name: Run storage cleanup e2e

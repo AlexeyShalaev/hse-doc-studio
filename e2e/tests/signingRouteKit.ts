@@ -62,7 +62,14 @@ export type Route = {
   docs: {
     doc_id: string;
     frozen: boolean;
-    slots: { slot_id: string; status: string; participant_id: string | null }[];
+    slots: {
+      slot_id: string;
+      status: string;
+      participant_id: string | null;
+      /** Необязательна на точке маршрута и добавлена сверх точки (13.6). */
+      optional?: boolean;
+      extra?: boolean;
+    }[];
     /** Версия на подписи (12.9): null у черновика, после отмены и у маршрута 0.20.0 без переноса. */
     sent: { sha256: string; at: string; round: number } | null;
     /** Рабочая сборка ушла от версии на подписи. */
