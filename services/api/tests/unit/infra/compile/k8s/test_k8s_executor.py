@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 import uuid
 from pathlib import Path
 from typing import Any, cast
@@ -19,7 +21,8 @@ from hse_doc_studio.infra.compile.k8s.config import KubernetesExecutorConfig
 from hse_doc_studio.infra.compile.k8s.executor import KubernetesTexExecutor, LogCursor
 from hse_doc_studio.infra.compile.latexmk import SENTINEL_DONE, SENTINEL_FAILED, SENTINEL_PAGES, SENTINEL_WORDS
 
-from tests.unit.infra.compile.k8s.fake_kube import FakeKubeApi, FakePod, failing_build
+from tests.unit.infra.compile.k8s.fake_kube import FakeKubeApi, FakePod, failing_build, ok_build
+from tests.unit.infra.compile.test_build_anchors import pdf_bytes, write_build
 
 _COMPILE_ID = uuid.UUID("12345678-1234-5678-1234-567812345678")
 
@@ -553,3 +556,25 @@ def test__log_cursor__nanosecond_precision__compared_numerically() -> None:
 
     assert cursor.accept("2026-11-03T10:00:00.12Z") is False
     assert cursor.accept("2026-11-03T10:00:00.9Z") is True
+
+
+async def test__run__template_with_anchors__anchors_json_bound_to_the_published_pdf(
+    tmp_path: Path, project: Path
+) -> None:
+    # Каталог сборки возвращается из пода целиком: файл позиций и `.fls` с ним, публикация пишет `anchors.json`.
+    pdf = pdf_bytes()
+
+    async def build(pod: FakePod) -> list[str]:
+        lines = await ok_build(pod)
+        write_build(pod.work / "tz" / ".build" / "tz", pdf=pdf)
+        return lines
+
+    api = FakeKubeApi(tmp_path / "cluster", build=build)
+
+    lines = await _run(_executor(api), project)
+
+    assert lines[-1] == SENTINEL_DONE
+    assert (project / "tz" / "main.pdf").read_bytes() == pdf
+    anchors = json.loads((project / "tz" / ".build" / "tz" / "main.anchors.json").read_text(encoding="utf-8"))
+    assert anchors["pdf_sha256"] == hashlib.sha256(pdf).hexdigest()
+    assert [a["id"] for a in anchors["anchors"]] == ["supervisor"]

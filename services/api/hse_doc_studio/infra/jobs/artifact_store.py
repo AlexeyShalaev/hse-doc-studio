@@ -8,6 +8,7 @@ from uuid import UUID
 
 from hse_doc_studio.core.jobs.artifacts import PdfFingerprint, PublishPdfOutcome, PublishPdfRequest
 from hse_doc_studio.core.storage.models import PresignedUrl
+from hse_doc_studio.infra.compile.build_anchors import publish_anchors
 from hse_doc_studio.infra.compile.pdf_archive import (
     archive_compiled_pdf,
     archived_pdf_path,
@@ -45,7 +46,10 @@ class LocalDiskArtifactStore:
                 move_error = exc
                 if attempt < self._move_attempts - 1:
                     await asyncio.sleep(self._retry_delay_s)
-        return PublishPdfOutcome(replaced=move_error is None, final_name=final.name)
+        replaced = move_error is None
+        # Якоря привязаны к тому PDF, который вышел: перенесённому к исходнику, иначе оставшемуся в `.build`.
+        await asyncio.to_thread(publish_anchors, built.parent, built.stem, final if replaced else built, req.positions)
+        return PublishPdfOutcome(replaced=replaced, final_name=final.name)
 
     async def archive_pdf(self, project_id: UUID, workspace: Path, doc_id: str, job_id: UUID, source_file: str) -> None:
         await asyncio.to_thread(archive_compiled_pdf, workspace, doc_id, job_id, source_file)

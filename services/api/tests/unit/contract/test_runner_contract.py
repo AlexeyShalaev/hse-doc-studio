@@ -266,6 +266,7 @@ def test__wire__server_features_are_the_documented_capabilities() -> None:
         wire.FEATURE_DEPLOYMENT,
         wire.FEATURE_CONTROL,
         wire.FEATURE_DISK,
+        wire.FEATURE_BUILD_ANCHORS,
     } == wire.SERVER_FEATURES
 
 

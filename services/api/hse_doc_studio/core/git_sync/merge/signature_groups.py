@@ -1,10 +1,10 @@
 """Группы подписей: замороженный PDF и откреплённые подписи к нему берутся целиком с одной стороны.
 
 Конфликт группы записан в `signatures.json` указателем `/signature_groups/<документ>`. Сами файлы группы
-(`frozen[документ].path`, `detached[документ][слот].file`, версия на подписи `pinned[документ].path`) планировщик
-видит как обычные бинарники и решил бы по новизне, то есть мог бы смешать PDF одной стороны с подписями другой.
-Здесь по плану определяется, какие файлы принадлежат спорной группе, чтобы они следовали за решением по группе,
-а не за новизной.
+(`frozen[документ].path`, `detached[документ][слот].file`, версия на подписи `pinned[документ].path` и копия якорей
+её сборки рядом) планировщик видит как обычные бинарники и решил бы по новизне, то есть мог бы смешать PDF одной
+стороны с подписями другой. Здесь по плану определяется, какие файлы принадлежат спорной группе, чтобы они следовали
+за решением по группе, а не за новизной.
 """
 
 from __future__ import annotations
@@ -25,6 +25,9 @@ from hse_doc_studio.core.git_sync.merge.jsonmerge import ConflictKind
 from hse_doc_studio.core.git_sync.untrusted_json import loads_untrusted
 
 SIGNATURES_FILE: Final = ".hse-studio/signatures.json"
+# Как `use_cases.signatures.signing_source` называет версию на подписи и копию якорей её сборки.
+PINNED_SUFFIX: Final = ".source.pdf"
+PINNED_ANCHORS_SUFFIX: Final = ".source.anchors.json"
 _GROUP_PREFIX: Final = "/signature_groups/"
 
 
@@ -66,9 +69,14 @@ def _referenced(raw: bytes | None, doc_id: str) -> frozenset[str]:
     pinned = _entry(data, "pinned", doc_id)
     pairs: list[tuple[object, str]] = [(frozen, "path"), (frozen, "signed_path"), (pinned, "path")]
     pairs += [(item, "file") for item in (detached.values() if isinstance(detached, dict) else ())]
-    return frozenset(
+    paths = {
         value for item, key in pairs if isinstance(item, dict) and isinstance(value := item.get(key), str) and value
-    )
+    }
+    # Копия якорей версии на подписи (signing-route.md, 15.17.6) едет вместе с её PDF.
+    pinned_path = pinned.get("path") if isinstance(pinned, dict) else None
+    if isinstance(pinned_path, str) and pinned_path.endswith(PINNED_SUFFIX):
+        paths.add(pinned_path.removesuffix(PINNED_SUFFIX) + PINNED_ANCHORS_SUFFIX)
+    return frozenset(paths)
 
 
 def conflicting_groups(plan: MergePlan) -> list[GroupFiles]:

@@ -3,11 +3,24 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
 from pathlib import Path
 from typing import Protocol
 from uuid import UUID
 
 from hse_doc_studio.core.storage.models import PresignedUrl
+
+
+class PositionsSource(StrEnum):
+    """Откуда файл позиций якорей (`<stem>.hsepos`) в каталоге сборки при публикации PDF (signing-route.md, 15.17.6)."""
+
+    # Сборка шла здесь же (docker, kubernetes, встроенный раннер): свежесть по `.fls` последнего прохода TeX.
+    tex = "tex"
+    # Файл выгрузил удалённый раннер вместе с PDF этой задачи (возможность `build_anchors`), свежесть проверил он.
+    runner = "runner"
+    # Раннер файла не выгрузил (прежняя версия, нет `build_anchors`, шаблон без якорей): всё, что лежит в каталоге
+    # сборки, от прошлых сборок, и якоря неизвестны.
+    absent = "absent"
 
 
 @dataclass(frozen=True)
@@ -18,6 +31,7 @@ class PublishPdfRequest:
     source_file: str
     project_id: UUID | None = None
     """Ключ проекта для серверного хранилища; локальная реализация его не использует."""
+    positions: PositionsSource = PositionsSource.tex
 
 
 @dataclass(frozen=True)

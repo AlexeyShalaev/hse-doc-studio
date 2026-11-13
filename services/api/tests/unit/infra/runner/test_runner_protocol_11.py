@@ -115,8 +115,9 @@ async def test__announce__negotiates_features_and_declares_ai_endpoints() -> Non
     (announce,) = rig.state.announces
     assert announce["host_kind"] == "desktop"
     assert announce["ai_endpoints"] == [{"name": "ollama", "flavor": "ollama"}]
-    assert set(announce["features"]) == {"announce", "offline", "ai_slots", "ai_relay"}
+    assert set(announce["features"]) == {"announce", "offline", "ai_slots", "ai_relay", "build_anchors"}
     assert "ai" in announce["tags"]
+    # Фейковый сервер как 0.26.0: `build_anchors` не знает, и раннер её не получает.
     assert rig.client.features == {"announce", "offline", "ai_slots", "ai_relay"}
     assert rig.state.poll_bodies[0]["free_ai_slots"] == 2
     assert rig.state.offline_calls == 1
@@ -129,10 +130,34 @@ async def test__announce__without_endpoints__no_relay_and_no_ai_tag() -> None:
     await rig.stop()
 
     (announce,) = rig.state.announces
-    assert set(announce["features"]) == {"announce", "offline"}
+    assert set(announce["features"]) == {"announce", "offline", "build_anchors"}
     assert announce["ai_concurrency"] == 0
     assert "ai" not in announce["tags"]
     assert "free_ai_slots" not in rig.state.poll_bodies[0]
+
+
+async def test__build_anchors__server_knows_it__job_context_carries_the_feature() -> None:
+    rig = Rig()
+    rig.state.server_features.add("build_anchors")
+    job = rig.state.enqueue(envelope_body("compile", job_id=JOB_A))
+    rig.start()
+    await until(lambda: job.completed)
+    await rig.stop()
+
+    assert "build_anchors" in rig.client.features
+    assert rig.executor.features == [rig.client.features]
+
+
+async def test__build_anchors__server_0_26_without_it__job_context_lacks_the_feature() -> None:
+    # Новый раннер и сервер 0.26.0: возможность не согласована, исполнитель файла позиций не выгружает.
+    rig = Rig()
+    job = rig.state.enqueue(envelope_body("compile", job_id=JOB_A))
+    rig.start()
+    await until(lambda: job.completed)
+    await rig.stop()
+
+    assert "build_anchors" not in rig.client.features
+    assert all("build_anchors" not in features for features in rig.executor.features)
 
 
 async def test__old_server__404_on_announce__falls_back_to_protocol_one() -> None:

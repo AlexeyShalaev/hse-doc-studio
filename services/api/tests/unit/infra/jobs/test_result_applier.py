@@ -9,7 +9,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from hse_doc_studio.core.jobs.applier import ApplyError
-from hse_doc_studio.core.jobs.artifacts import PublishPdfOutcome, PublishPdfRequest
+from hse_doc_studio.core.jobs.artifacts import PositionsSource, PublishPdfOutcome, PublishPdfRequest
 from hse_doc_studio.core.jobs.entities import JobSpec
 from hse_doc_studio.core.jobs.files import ArtifactRef
 from hse_doc_studio.core.jobs.pack import PackSubmissionPayload
@@ -96,6 +96,41 @@ async def test__apply__compile_synctex__lands_next_to_the_built_pdf_and_publishe
     assert (rig.folder / "tz/.build/tz/main.synctex.gz").read_bytes() == b"synctex"
     assert not (rig.folder / "tz/main.synctex.gz").exists()
     assert len(rig.artifacts.published) == 1
+
+
+async def test__apply__positions_from_runner__land_in_build_dir_and_publish_trusts_them(rig: Rig) -> None:
+    # Новый раннер с `build_anchors`: файл позиций рядом с PDF, место ему рядом со сборкой.
+    spec = rig.spec()
+    pdf = await rig.upload(spec, FINAL, b"%PDF-1")
+    positions = await rig.upload(spec, "tz/main.hsepos", b"hsepos 1 1 1\n")
+
+    await rig.applier.apply(spec, [pdf, positions])
+
+    assert (rig.folder / "tz/.build/tz/main.hsepos").read_bytes() == b"hsepos 1 1 1\n"
+    assert not (rig.folder / "tz/main.hsepos").exists()
+    assert [r.positions for r in rig.artifacts.published] == [PositionsSource.runner]
+
+
+async def test__apply__old_runner_without_positions__published_as_absent(rig: Rig) -> None:
+    # Раннер 0.22–0.26: только PDF и SyncTeX; файл позиций в `.build` от прошлых сборок не в счёт.
+    spec = rig.spec()
+    pdf = await rig.upload(spec, FINAL, b"%PDF-1")
+    synctex = await rig.upload(spec, "tz/main.synctex.gz", b"synctex")
+
+    await rig.applier.apply(spec, [pdf, synctex])
+
+    assert [r.positions for r in rig.artifacts.published] == [PositionsSource.absent]
+
+
+async def test__apply__positions_of_another_document__not_allowed(rig: Rig) -> None:
+    spec = rig.spec()
+    pdf = await rig.upload(spec, FINAL, b"%PDF-1")
+    positions = await rig.upload(spec, "tz/other.hsepos", b"x")
+
+    with pytest.raises(ApplyError) as caught:
+        await rig.applier.apply(spec, [pdf, positions])
+
+    assert caught.value.code == "output_not_allowed"
 
 
 async def test__apply__synctex_without_pdf__placed_but_nothing_published(rig: Rig) -> None:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -201,6 +201,25 @@ class SkippedSlotResponse(BaseModel):
     keep_mark: bool
 
 
+class BuildAnchorResponse(BaseModel):
+    """Якорь сборки (signing-route.md, 15.17.4): мм от левого верхнего угла страницы, `y_mm` базовая линия."""
+
+    id: str
+    kind: Literal["sign", "date"]
+    page: int
+    x_mm: float
+    y_mm: float
+    width_mm: float
+
+
+class BuildAnchorsResponse(BaseModel):
+    """Якоря источника подписи документа: `build` первые 16 знаков sha256 его PDF, `problems` коды отброшенных строк."""
+
+    build: str
+    items: list[BuildAnchorResponse]
+    problems: list[str]
+
+
 class SignaturesStateResponse(BaseModel):
     slots: dict[str, SlotInfoResponse]
     placements: dict[str, dict[str, PlacementResponse]]
@@ -216,6 +235,9 @@ class SignaturesStateResponse(BaseModel):
     optional: dict[str, dict[str, list[str]]] = {}
     # Пропущенные маршрутом подписи: документ → слот → пропуск.
     skipped: dict[str, dict[str, SkippedSlotResponse]] = {}
+    # Якоря источника подписи по документам проекта (signing-route.md, 15.17.14): null, пока они неизвестны
+    # (документ не собран, собран раннером прежней версии, PDF выгружен локальной Студией или загружен свой).
+    anchors: dict[str, BuildAnchorsResponse | None] = {}
 
 
 class UpdatePlacementRequest(BaseModel):

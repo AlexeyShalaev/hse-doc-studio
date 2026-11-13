@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
 
@@ -29,10 +29,12 @@ class JobOutcome:
 
 @dataclass(frozen=True)
 class JobContext:
-    """Что цикл даёт исполнителю: строка живого лога и признак отмены."""
+    """Что цикл даёт исполнителю: строка живого лога, признак отмены и согласованные с сервером возможности."""
 
     log: Callable[[str], None]
     cancelled: asyncio.Event
+    # Снимок на начало задачи: от него зависит, какие выходы сервер примет (`build_anchors`).
+    features: frozenset[str] = field(default_factory=frozenset)
 
 
 class JobExecutor(Protocol):

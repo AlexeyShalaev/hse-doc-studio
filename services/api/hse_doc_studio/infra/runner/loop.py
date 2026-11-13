@@ -24,6 +24,7 @@ from hse_doc_studio.core.jobs.wire import (
     FEATURE_AI_RELAY,
     FEATURE_AI_SLOTS,
     FEATURE_ANNOUNCE,
+    FEATURE_BUILD_ANCHORS,
     FEATURE_CONTROL,
     FEATURE_DEPLOYMENT,
     FEATURE_DISK,
@@ -187,7 +188,9 @@ class RunnerLoop:
         cfg = self._config
         endpoints = self._ai_endpoints
         relay = cfg.ai_concurrency > 0 and bool(endpoints)
-        features = {FEATURE_ANNOUNCE, FEATURE_OFFLINE} | ({FEATURE_AI_SLOTS, FEATURE_AI_RELAY} if relay else set())
+        features = {FEATURE_ANNOUNCE, FEATURE_OFFLINE, FEATURE_BUILD_ANCHORS} | (
+            {FEATURE_AI_SLOTS, FEATURE_AI_RELAY} if relay else set()
+        )
         if cfg.deployment is not None:
             features.add(FEATURE_DEPLOYMENT)
         if self._control is not None:
@@ -463,7 +466,9 @@ class RunnerLoop:
         batcher = LogBatcher(send_log, attempt, flush_s=self._config.log_flush_s)
         batcher.start()
         execution = asyncio.create_task(
-            self._executor.execute(envelope, JobContext(log=batcher.append, cancelled=cancelled))
+            self._executor.execute(
+                envelope, JobContext(log=batcher.append, cancelled=cancelled, features=self._client.features)
+            )
         )
         heartbeat = asyncio.create_task(self._heartbeats(envelope))
         forced = asyncio.create_task(self._force.wait())

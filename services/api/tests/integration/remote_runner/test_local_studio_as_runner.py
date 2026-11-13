@@ -169,6 +169,8 @@ async def test__token_from_ui__studio_registers_and_takes_jobs(world: _World) ->
     assert registered.name == "studio-mac"
     assert "tex" not in registered.tags
     assert "office" in registered.tags
+    # Студия-раннер выгружает файл позиций якорей вместе с PDF (signing-route.md, 15.17.6).
+    assert "build_anchors" in registered.features
     job_id = await _enqueue_verify(world)
 
     async def taken() -> bool:

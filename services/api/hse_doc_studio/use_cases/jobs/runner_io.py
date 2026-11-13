@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Callable
+from dataclasses import replace
 from datetime import UTC, datetime
 from uuid import UUID
 
+import structlog
+
 from hse_doc_studio.core.jobs.codec import decode_result, encode
-from hse_doc_studio.core.jobs.enums import JobState, JobStatus
+from hse_doc_studio.core.jobs.enums import JobKind, JobState, JobStatus
 from hse_doc_studio.core.jobs.errors import (
     ArtifactInvalidError,
     BlobForbiddenError,
@@ -20,6 +23,7 @@ from hse_doc_studio.core.jobs.queue import IJobQueue, QueuedJob
 from hse_doc_studio.core.jobs.runners import IRunnerRepository, JobTokenSigner, Runner
 from hse_doc_studio.core.jobs.storage import IJobBlobStore, IJobLogSink, IJobOutputIngest, RunnerStoragePolicy
 from hse_doc_studio.core.jobs.wire import (
+    FEATURE_BUILD_ANCHORS,
     ArtifactUploadRequest,
     ArtifactUploadResponse,
     BlobLocation,
@@ -29,7 +33,10 @@ from hse_doc_studio.core.jobs.wire import (
     CompleteResponse,
     LogBatch,
 )
+from hse_doc_studio.core.signatures.anchors import POSITIONS_SUFFIX
 from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
+
+logger = structlog.get_logger()
 
 
 def _utc_now() -> datetime:
@@ -115,6 +122,7 @@ class RunnerJobIoService:
             result = decode_result(job.kind, request.result)
         except (ValueError, KeyError, TypeError) as exc:
             raise ArtifactInvalidError(f"invalid job result: {exc!r}") from exc
+        request = _without_undeclared(runner, job, request)
         await self._outputs.commit(job.id, job.attempt, request.artifacts)
         await self._service.complete(
             job.id,
@@ -149,3 +157,17 @@ class RunnerJobIoService:
 def _manifest_hashes(job: QueuedJob) -> frozenset[str]:
     manifest = job.payload.get("manifest", [])
     return frozenset(str(entry["sha256"]) for entry in manifest if entry.get("sha256"))
+
+
+def _without_undeclared(runner: Runner, job: QueuedJob, request: CompleteRequest) -> CompleteRequest:
+    """Файл позиций якорей принимается только от раннера, объявившего `build_anchors` (signing-route.md, 15.17.6).
+
+    Такой раннер его и не шлёт; если всё же прислал, файл отбрасывается, а сборка не падает: якоря просто неизвестны.
+    """
+    if job.kind is not JobKind.compile or FEATURE_BUILD_ANCHORS in runner.features:
+        return request
+    kept = tuple(ref for ref in request.artifacts if not ref.path.endswith(POSITIONS_SUFFIX))
+    if len(kept) == len(request.artifacts):
+        return request
+    logger.warning("undeclared build positions dropped", job_id=str(job.id), runner_id=runner.id)
+    return replace(request, artifacts=kept)

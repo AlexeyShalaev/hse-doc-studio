@@ -6,6 +6,9 @@
 считается по копии: сборка, закончившаяся в эту секунду, не подменит байты после сверки. Не совпало: 409
 `doc_changed`, ничего не записано.
 
+Вместе с PDF снимается копия якорей его сборки (`<doc>.source.anchors.json`, 15.17.6): только якоря с тем же sha256,
+что у снятой копии, иначе у версии на подписи якоря неизвестны. Снимается и удаляется копия вместе с версией.
+
 Если транзакция маршрута упадёт после записи файлов, снимок в Postgres останется прежним, и следующая сверка
 остановит маршрут (`sent_changed`): состояние безопасное, автор отправит ещё раз.
 """
@@ -25,11 +28,18 @@ from uuid import uuid4
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.repositories import ISignatureRepository
 from hse_doc_studio.core.services import ProjectTemplateService
+from hse_doc_studio.core.signatures.anchors import encode_anchors
 from hse_doc_studio.core.signing_route.entities import SigningRoute
 from hse_doc_studio.core.signing_route.readiness import DocChangedError
 from hse_doc_studio.core.value_objects import PinnedPdf, SignaturesState
 from hse_doc_studio.use_cases.signatures._doc_context import sha256_file
-from hse_doc_studio.use_cases.signatures.signing_source import pinned_file, pinned_rel
+from hse_doc_studio.use_cases.signatures.signing_source import (
+    pinned_anchors_file,
+    pinned_anchors_rel,
+    pinned_file,
+    pinned_rel,
+)
+from hse_doc_studio.use_cases.signatures.source_anchors import build_anchors_rel, drop_anchors_file, read_anchors
 from hse_doc_studio.use_cases.signing_route.point import RoutePoint
 
 
@@ -49,6 +59,26 @@ class _Staged:
     target: Path
     sha256: str
     size: int
+    # Копия якорей снятой сборки во временном файле; None: якоря у версии на подписи неизвестны.
+    anchors_temp: Path | None = None
+
+    @property
+    def anchors_target(self) -> Path:
+        rel = pinned_anchors_rel(self.target.name)
+        return self.target.with_name(rel if rel is not None else f"{self.target.name}.anchors.json")
+
+    @property
+    def temps(self) -> tuple[Path, ...]:
+        return (self.temp,) if self.anchors_temp is None else (self.temp, self.anchors_temp)
+
+
+def _place_anchors(item: _Staged) -> None:
+    """Копия якорей на место; не вышло или копии нет: прежней копии быть не должно (она от другого PDF)."""
+    if item.anchors_temp is not None:
+        with contextlib.suppress(OSError):
+            os.replace(item.anchors_temp, item.anchors_target)
+            return
+    drop_anchors_file(item.anchors_target)
 
 
 class RoutePinning:
@@ -87,10 +117,12 @@ class RoutePinning:
                 staged.append(await self._stage(point, state.pinned.get(doc_id), doc_id, sha256, given.get(doc_id)))
             for item in staged:
                 await asyncio.to_thread(os.replace, item.temp, item.target)
+                await asyncio.to_thread(_place_anchors, item)
         finally:
             for item in staged:
-                with contextlib.suppress(OSError):
-                    item.temp.unlink(missing_ok=True)
+                for temp in item.temps:
+                    with contextlib.suppress(OSError):
+                        temp.unlink(missing_ok=True)
         moment = at.astimezone(UTC).isoformat()
         pinned = dict(state.pinned)
         for item in staged:
@@ -129,7 +161,41 @@ class RoutePinning:
             with contextlib.suppress(OSError):
                 temp.unlink(missing_ok=True)
             raise DocChangedError([doc_id])
-        return _Staged(doc_id, temp, target, copied, temp.stat().st_size)
+        staged = _Staged(doc_id, temp, target, copied, temp.stat().st_size)
+        anchors_temp = await asyncio.to_thread(self._stage_anchors, point, previous, staged)
+        return replace(staged, anchors_temp=anchors_temp)
+
+    def _stage_anchors(self, point: RoutePoint, previous: PinnedPdf | None, staged: _Staged) -> Path | None:
+        """Копия якорей той сборки, чей PDF снят: из текущей сборки или прежней версии на подписи, по sha256 копии."""
+        folder = point.project.folder
+        candidates = (
+            self._build_anchors(point, staged.doc_id),
+            pinned_anchors_file(folder, previous) if previous is not None else None,
+        )
+        for candidate in candidates:
+            anchors = read_anchors(candidate)
+            if anchors is None or not anchors.of(staged.sha256):
+                continue
+            temp = staged.target.with_name(f".{staged.anchors_target.name}.{uuid4().hex}.tmp")
+            try:
+                temp.write_bytes(encode_anchors(anchors))
+            except OSError:
+                with contextlib.suppress(OSError):
+                    temp.unlink(missing_ok=True)
+                return None
+            return temp
+        return None
+
+    def _build_anchors(self, point: RoutePoint, doc_id: str) -> Path | None:
+        """Якоря текущей сборки документа (`.build/<doc_id>/<stem>.anchors.json`); None, если сборки не бывает."""
+        doc = point.documents.get(doc_id)
+        if doc is None:
+            return None
+        try:
+            source_file, _ = self._template_service.resolve_instance_source(point.project, doc, point.version)
+        except (NotFoundError, ValueError):
+            return None
+        return point.project.folder / build_anchors_rel(source_file, doc_id)
 
     def working(self, point: RoutePoint, doc_id: str) -> Path | None:
         """Путь текущей сборки документа; None, если документа нет или сборки у него не бывает."""
@@ -161,5 +227,6 @@ class RoutePinning:
             if path is not None:
                 with contextlib.suppress(OSError):
                     path.unlink(missing_ok=True)
+            drop_anchors_file(pinned_anchors_file(folder, pinned))
         order = [doc_id for doc_id in route.docs if doc_id in mine]
         return (*order, *sorted(doc_id for doc_id in mine if doc_id not in route.docs))

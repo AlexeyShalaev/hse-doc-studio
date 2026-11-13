@@ -38,6 +38,9 @@ class _Templates:
     def resolve_signing_output(self, project: Any, doc: Any, version: Any) -> str | None:
         return f"out/{doc.id}.pdf"
 
+    def resolve_instance_source(self, project: Any, doc: Any, version: Any) -> tuple[str, str]:
+        return f"out/{doc.id}.tex", f"out/{doc.id}.pdf"
+
 
 def _point(folder: Path) -> Any:
     documents = {doc_id: SimpleNamespace(id=doc_id) for doc_id in (DOC, DOC2)}

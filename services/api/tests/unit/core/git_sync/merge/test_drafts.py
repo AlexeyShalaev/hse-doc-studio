@@ -223,6 +223,8 @@ def test__signature_groups__the_pinned_version_follows_its_group(engine: GitMerg
     """Версия на подписи (signing-route.md, 12.3) тоже файл группы: она следует решению по группе, а не новизне."""
     path = ".hse-studio/signatures.json"
     pdf, source = ".hse-studio/frozen/main.pdf", ".hse-studio/frozen/main.source.pdf"
+    # Копия якорей версии на подписи (15.17.6) едет с ней.
+    anchors = ".hse-studio/frozen/main.source.anchors.json"
 
     def with_pin(sha: str) -> bytes:
         data = json.loads(_signatures(sha, pdf))
@@ -231,8 +233,8 @@ def test__signature_groups__the_pinned_version_follows_its_group(engine: GitMerg
 
     inp = MergeInput(
         base={path: _signatures("0", pdf)},
-        ours={path: with_pin("1"), source: b"%PDF-mine"},
-        theirs={path: with_pin("2"), source: b"%PDF-theirs"},
+        ours={path: with_pin("1"), source: b"%PDF-mine", anchors: b"{}"},
+        theirs={path: with_pin("2"), source: b"%PDF-theirs", anchors: b"[]"},
         base_commit="b" * 40,
         theirs_commit="c" * 40,
     )
@@ -240,8 +242,8 @@ def test__signature_groups__the_pinned_version_follows_its_group(engine: GitMerg
 
     [group] = conflicting_groups(plan)
 
-    assert group.ours == {pdf, source}
-    assert source in group_paths(plan)
+    assert group.ours == {pdf, source, anchors}
+    assert {source, anchors} <= group_paths(plan)
 
 
 def test__signature_groups__no_signatures_file__no_groups(engine: GitMergeFileEngine) -> None:
