@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { UpdatePlacementRequest } from "@shared/api/types";
 import { signatureApi, type SignSubmissionBody } from "./signatureApi";
+import type { SetDateMarksRequest } from "./signatureSchemas";
 
 type SignaturesState = Awaited<ReturnType<typeof signatureApi.getState>>;
 type Placement = Awaited<ReturnType<typeof signatureApi.updatePlacement>>;
@@ -167,6 +168,80 @@ export const useSetSlotOptional = () => {
         profile_id: profileId,
         optional,
       }),
+    onSettled: (_data, _error, { projectId }) => {
+      void queryClient.invalidateQueries({
+        queryKey: signatureKeys.state(projectId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["signing-routes", "project", projectId],
+      });
+    },
+  });
+};
+
+/**
+ * Метки даты слота документа (signing-route.md, 14.7). Ответ сразу встаёт в состояние подписей:
+ * рамку тянут несколько раз подряд, и каждое следующее сохранение берёт свежий список меток. Метки
+ * меняют видимый слой, план и задачи маршрута, поэтому сбрасываются и они.
+ */
+export const useSetDateMarks = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      projectId,
+      docId,
+      slotId,
+      body,
+    }: {
+      projectId: string;
+      docId: string;
+      slotId: string;
+      body: SetDateMarksRequest;
+    }) => signatureApi.setDateMarks(projectId, docId, slotId, body),
+    // Рамка остаётся там, куда её отпустили, пока идёт запрос; отказ или «Отмена» в окне сброса
+    // подписей возвращают её повторным чтением состояния (onSettled).
+    onMutate: ({ projectId, docId, slotId, body }) => {
+      queryClient.setQueryData<SignaturesState>(
+        signatureKeys.state(projectId),
+        (state) => {
+          const current = state?.placements[docId]?.[slotId];
+          if (!state || !current) return state;
+          // Текст прежний, пока формат тот же; новый пришлёт сервер.
+          const before = new Map(current.dates.map((m) => [m.id, m]));
+          const dates = body.dates.map((mark, i) => {
+            const old = mark.id === null ? undefined : before.get(mark.id);
+            return {
+              ...mark,
+              id: mark.id ?? `new-${String(i)}`,
+              text: old?.format === mark.format ? old.text : null,
+            };
+          });
+          return {
+            ...state,
+            placements: {
+              ...state.placements,
+              [docId]: {
+                ...state.placements[docId],
+                [slotId]: { ...current, dates },
+              },
+            },
+          };
+        },
+      );
+    },
+    onSuccess: (placement, { projectId, docId, slotId }) => {
+      queryClient.setQueryData<SignaturesState>(
+        signatureKeys.state(projectId),
+        (state) =>
+          state && {
+            ...state,
+            placements: {
+              ...state.placements,
+              [docId]: { ...state.placements[docId], [slotId]: placement },
+            },
+          },
+      );
+    },
     onSettled: (_data, _error, { projectId }) => {
       void queryClient.invalidateQueries({
         queryKey: signatureKeys.state(projectId),

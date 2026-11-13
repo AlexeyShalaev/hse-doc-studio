@@ -13,7 +13,12 @@ import {
   SigningRouteSchema,
   SigningTaskSchema,
 } from "@entities/signing-route";
-import { SignaturesStateSchema, SlotOptionalSchema } from "@entities/signature";
+import {
+  PlacementSchema,
+  SignaturePlanSchema,
+  SignaturesStateSchema,
+  SlotOptionalSchema,
+} from "@entities/signature";
 import { activateServerScenario } from "./index";
 import { serverDemoRoutes, setServerDemoActive } from "./routes";
 import { SERVER_SCENARIOS } from "./scenarios";
@@ -35,16 +40,17 @@ const router = createDemoRouter(serverDemoRoutes);
 
 const call = async (
   method: DemoRequest["method"],
-  path: string,
+  target: string,
   body?: unknown,
 ): Promise<DemoResponse> => {
+  const [path = "", search = ""] = target.split("?");
   const found = router.match(method, path);
   if (!found) throw new Error(`no demo route ${method} ${path}`);
   return found.handler({
     method,
     path,
     params: found.params,
-    query: {},
+    query: Object.fromEntries(new URLSearchParams(search)),
     body,
     forward: () => Promise.reject(new Error("forward")),
   });
@@ -298,6 +304,104 @@ describe("серверное демо: версия на подписи", () => 
       skipped: true,
       returns_next_round: true,
     });
+  });
+
+  it("даты подписания: три метки научрука по согласию, сброс ЭП только с подтверждением", async () => {
+    activateServerScenario("student_signing_dates");
+    const own = await routeOf("p_01hxa1c4de");
+    expect(own.status).toBe("completed");
+    const state = SignaturesStateSchema.parse(
+      (await call("GET", "/projects/p_01hxa1c4de/signatures")).data,
+    );
+    const supervisor = state.placements.topic_application?.supervisor;
+    expect(supervisor?.signed_at?.source).toBe("approval");
+    expect(supervisor?.dates.map((m) => m.format)).toEqual([
+      "day",
+      "month_word",
+      "year_short",
+    ]);
+    expect(supervisor?.dates.every((m) => m.text !== null)).toBe(true);
+    // План документа: пары маршрута с состоянием участника, по нему видно, что ручной даты нет.
+    const plan = SignaturePlanSchema.parse(
+      (
+        await call(
+          "GET",
+          "/projects/p_01hxa1c4de/signature-plan?doc_id=topic_application",
+        )
+      ).data,
+    );
+    expect(
+      plan.docs[0]?.slots.find((s) => s.slot_id === "supervisor")?.route_state,
+    ).toBe("done");
+
+    const path =
+      "/projects/p_01hxa1c4de/signatures/placements/topic_application/supervisor/dates";
+    const marks = (supervisor?.dates ?? []).map(({ text: _text, ...m }) => m);
+    const manual = await call("PUT", path, {
+      dates: marks,
+      signed_at: { date: "2026-11-01" },
+    });
+    expect(manual.status).toBe(409);
+    expect((manual.data as { code: string }).code).toBe("date_from_route");
+
+    // Над B стоит ЭП научрука: без confirm_reset ничего не записано.
+    const moved = marks.map((m, i) => (i === 0 ? { ...m, x_mm: 112 } : m));
+    const refused = await call("PUT", path, { dates: moved });
+    expect(refused.status).toBe(409);
+    expect(refused.data).toMatchObject({
+      code: "resets_signatures",
+      resets: [
+        {
+          doc_id: "topic_application",
+          slot_id: "supervisor",
+          name: "Петров П. П.",
+        },
+      ],
+    });
+    const confirmed = await call("PUT", path, {
+      dates: moved,
+      confirm_reset: true,
+    });
+    expect(PlacementSchema.parse(confirmed.data).dates[0]?.x_mm).toBe(112);
+    // Подпись сброшена: маршрут снова идёт, научрук подписывает новый B.
+    const after = await routeOf("p_01hxa1c4de");
+    expect(after.status).toBe("active");
+    expect(after.phase).toBe("signing");
+
+    // Проект без маршрута: ручная дата и пустая метка.
+    const free = SignaturesStateSchema.parse(
+      (await call("GET", "/projects/p_01hxa4n7pq/signatures")).data,
+    );
+    expect(free.placements.topic_application?.supervisor).toMatchObject({
+      signed_at: { at: "2026-11-10", source: "manual" },
+    });
+    expect(free.placements.topic_application?.supervisor?.dates[0]?.text).toBe(
+      "10 ноября 2026 г.",
+    );
+    expect(
+      free.placements.topic_application?.academic_supervisor?.dates[0]?.text,
+    ).toBeNull();
+    const bad = await call(
+      "PUT",
+      "/projects/p_01hxa4n7pq/signatures/placements/topic_application/academic_supervisor/dates",
+      {
+        dates: [{ ...marks[0], id: null, page: 9 }],
+      },
+    );
+    expect(bad.status).toBe(400);
+
+    // Чужой проект: у места студента-научрука рамки дат в задаче, пока без текста.
+    const foreign = await routeOf("p_01hxa2f8gh");
+    const task = SigningTaskSchema.parse(
+      (
+        await call(
+          "GET",
+          `/projects/p_01hxa2f8gh/signing-routes/${foreign.id}/task`,
+        )
+      ).data,
+    );
+    expect(task.docs[0]?.mine[0]?.dates).toHaveLength(3);
+    expect(task.docs[0]?.mine[0]?.dates[0]?.text).toBeNull();
   });
 
   it("у обычного студента своего маршрута нет", async () => {

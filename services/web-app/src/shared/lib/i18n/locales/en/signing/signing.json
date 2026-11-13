@@ -187,6 +187,7 @@
     "title": "Documents",
     "tabs": "Route documents",
     "yourSlot": "Your signature",
+    "dateSlot": "Approval date",
     "toPlace": "Go to signature",
     "openPdf": "Open PDF",
     "final": "final PDF",

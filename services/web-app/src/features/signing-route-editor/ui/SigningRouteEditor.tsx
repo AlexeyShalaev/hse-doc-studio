@@ -470,6 +470,7 @@ export const SigningRouteEditor = ({
                 state={signatures.data}
                 documents={documents.data}
                 personaLabel={personaLabel}
+                docLang={project.lang ?? i18n.language}
                 onAddExtra={onAddExtra}
                 onRemoveExtra={onRemoveExtra}
                 onSetOptional={onSetOptional}

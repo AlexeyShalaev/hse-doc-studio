@@ -133,6 +133,18 @@
   white-space: nowrap;
 }
 
+/* A date mark's place (the signer's own date): dashed, in the date colour so it
+   reads apart from the signature frame. */
+.pdf-stamp-frame.pdf-stamp-date {
+  border: 1.5px dashed var(--chart-4);
+  background: color-mix(in oklch, var(--chart-4) 10%, transparent);
+  box-shadow: none;
+}
+.pdf-stamp-frame.pdf-stamp-date > span {
+  background: var(--chart-4);
+  color: #fff;
+}
+
 /* Night / invert reading mode — flips the rasterised page; hue-rotate keeps
    coloured figures roughly true instead of colour-negated. */
 .pdf-invert {

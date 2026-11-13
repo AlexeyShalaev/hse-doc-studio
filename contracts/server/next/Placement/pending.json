@@ -1,0 +1,44 @@
+{
+  "enabled": true,
+  "page": 1,
+  "x_mm": 110,
+  "y_mm": 130,
+  "width_mm": 40,
+  "sign_date": null,
+  "dates": [
+    {
+      "id": "d1",
+      "page": 1,
+      "x_mm": 114,
+      "y_mm": 150,
+      "width_mm": 7,
+      "height_mm": 5,
+      "format": "day",
+      "align": "center",
+      "text": null
+    },
+    {
+      "id": "d2",
+      "page": 1,
+      "x_mm": 126,
+      "y_mm": 150,
+      "width_mm": 24,
+      "height_mm": 5,
+      "format": "month_word",
+      "align": "center",
+      "text": null
+    },
+    {
+      "id": "d3",
+      "page": 1,
+      "x_mm": 156,
+      "y_mm": 150,
+      "width_mm": 6,
+      "height_mm": 5,
+      "format": "year_short",
+      "align": "left",
+      "text": null
+    }
+  ],
+  "signed_at": null
+}

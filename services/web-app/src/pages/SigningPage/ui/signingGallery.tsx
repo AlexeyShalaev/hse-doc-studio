@@ -28,6 +28,7 @@ import type {
   SigningTaskSlot,
 } from "@entities/signing-route";
 import type { SigningPageState } from "../model/useSigningPage";
+import { signatureDatesEditorEntries } from "./datesGallery";
 import { galleryPdfUrl } from "./galleryPdf";
 import { GalleryInlineView } from "./GalleryInlineView";
 import type { SigningViewProps } from "./SigningView";
@@ -93,6 +94,7 @@ const slot = (
     status: "pending",
     reason: "awaiting_approval",
     optional: false,
+    dates: [],
     ...base,
     ...overrides,
   };
@@ -215,6 +217,10 @@ const academicTask = (
 /** Эталон W7: научрук согласует заново заявление, отзыв без изменений (его ЭП осталась). */
 const newVersionTask = (): SigningTask =>
   SIGNING_ROUTE_CONTRACT_EXAMPLES.SigningTask?.new_version as SigningTask;
+
+/** Эталон 14.7: у места научрука три метки даты, пока пустые; у автора дата его отправки. */
+const datesTask = (): SigningTask =>
+  SIGNING_ROUTE_CONTRACT_EXAMPLES.SigningTask?.dates as SigningTask;
 
 /** Эталоны раздела 13: `optional` (место необязательно) и `skipped` (пропущен автором). */
 const optionalTask = (name: "optional" | "skipped"): SigningTask =>
@@ -933,6 +939,21 @@ export const getSigningPageGallery = (): GalleryGroup[] => [
             }),
           ),
         ),
+      ),
+    ],
+  },
+  {
+    id: "signature-dates",
+    title: "Дата подписания",
+    description:
+      "Раздел 14: рамки дат в редакторе размещения (пустые с примером, три метки, на другой странице, ручная дата вне маршрута), подтверждение сброса подписей и страница подписанта с «Дата согласования». Язык и тема переключаются сверху; на узком экране панель встаёт над превью. Живьём то же в сценарии серверного демо «Подписание: даты».",
+    entries: [
+      ...signatureDatesEditorEntries(),
+      entry(
+        "signing_dates_turn",
+        "Страница подписи: рамки «Дата согласования»",
+        () => view(ready(datesTask())),
+        "Свои метки даты обведены пунктиром с подписью у первой рамки строки; чужие (дата автора) уже в PDF.",
       ),
     ],
   },

@@ -343,6 +343,7 @@ export const makeSigningTask = (
           width_mm: 40,
           height_mm: 22,
           mark: "plate",
+          dates: [],
           status: "pending",
           reason: "no_signature_file",
           optional: false,
@@ -358,6 +359,7 @@ export const makeSigningTask = (
           width_mm: 30,
           height_mm: 12,
           mark: "png",
+          dates: [],
           status: "signed",
         },
       ],
@@ -673,6 +675,7 @@ const SNAPSHOT_TASK_EXAMPLES = {
             width_mm: 40,
             height_mm: 22,
             mark: "plate",
+            dates: [],
             status: "pending",
             reason: "awaiting_approval",
             optional: false,
@@ -698,6 +701,7 @@ const SNAPSHOT_TASK_EXAMPLES = {
             width_mm: 40,
             height_mm: 22,
             mark: "plate",
+            dates: [],
             status: "signed",
             reason: null,
             optional: false,
@@ -713,6 +717,7 @@ const SNAPSHOT_TASK_EXAMPLES = {
             width_mm: 40,
             height_mm: 16,
             mark: "png",
+            dates: [],
             status: "signed",
           },
         ],
@@ -1040,6 +1045,7 @@ const optionalTask = (
             width_mm: 40,
             height_mm: 16,
             mark: "png",
+            dates: [],
             status,
             reason: status === "pending" ? "awaiting_approval" : null,
             optional: true,
@@ -1067,6 +1073,49 @@ const OPTIONAL_TASK_EXAMPLES = {
     "skipped",
   ),
 } satisfies Record<string, SigningTask>;
+
+/** Научрук картинкой до фиксации, с метками даты у своего места и у автора (эталон `dates`). */
+const datesTask = (): SigningTask => {
+  const task = makeSigningTask({
+    route: { ...makeSigningTask().route, phase: "approval" },
+  });
+  const [doc] = task.docs;
+  if (!doc) return task;
+  const empty = { width_mm: 7, height_mm: 5, text: null };
+  return {
+    ...task,
+    docs: [
+      {
+        ...doc,
+        frozen: false,
+        token: `build:${BUILD_SHA}`,
+        mine: doc.mine.map((slot) => ({
+          ...slot,
+          status: "pending" as const,
+          reason: "awaiting_approval",
+          dates: [
+            { page: 1, x_mm: 114, y_mm: 150, ...empty },
+            { page: 1, x_mm: 126, y_mm: 150, ...empty, width_mm: 24 },
+            { page: 1, x_mm: 156, y_mm: 150, ...empty, width_mm: 6 },
+          ],
+        })),
+        others: doc.others.map((slot) => ({
+          ...slot,
+          dates: [
+            {
+              page: 1,
+              x_mm: slot.x_mm,
+              y_mm: slot.y_mm + 14,
+              width_mm: 26,
+              height_mm: 5,
+              text: "10.11.2026",
+            },
+          ],
+        })),
+      },
+    ],
+  };
+};
 
 /**
  * Эталоны тел по каталогам contracts/server/fixtures/<Схема>/<вариант>.json.
@@ -1361,6 +1410,7 @@ export const SIGNING_ROUTE_CONTRACT_EXAMPLES: Record<
               width_mm: 40,
               height_mm: 13.33,
               mark: "png",
+              dates: [],
               status: "pending",
               reason: "awaiting_approval",
               optional: false,
@@ -1381,6 +1431,9 @@ export const SIGNING_ROUTE_CONTRACT_EXAMPLES: Record<
         }),
       ],
     }),
+    // Дата подписания (14.7): у места научрука три метки «« 13 » ноября 2026 г.», пока пустые; у
+    // автора метка с датой его согласия (отправки).
+    dates: datesTask(),
     // Согласующий без слотов видит все документы маршрута, своих мест на них нет.
     approver: makeSigningTask({
       me: {
@@ -1413,6 +1466,7 @@ export const SIGNING_ROUTE_CONTRACT_EXAMPLES: Record<
               width_mm: 40,
               height_mm: 22,
               mark: "plate",
+              dates: [],
               status: "pending",
             },
           ],

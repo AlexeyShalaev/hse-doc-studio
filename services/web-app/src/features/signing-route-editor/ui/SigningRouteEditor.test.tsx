@@ -177,6 +177,8 @@ const placement = (enabled: boolean) => ({
   y_mm: 200,
   width_mm: 40,
   sign_date: null,
+  dates: [],
+  signed_at: null,
 });
 
 const slotInfo = (mode: "image" | "detached_text") => ({

@@ -4,7 +4,17 @@ export { SignatureOverlay } from "./ui/SignatureOverlay";
 export { SignatureEditorModal } from "./ui/SignatureEditorModal";
 export { SignerPlateEditor } from "./ui/DetachedSignatureBlocks";
 export { SlotPanel } from "./ui/SlotPanel";
-export type { DocPlacementPanelProps } from "./ui/DocPlacementPanel";
+export type {
+  DocPlacementPanelProps,
+  SlotDateControl,
+} from "./ui/DocPlacementPanel";
+export { SlotDateMarks } from "./ui/SlotDateMarks";
+export { signatureHeightMm } from "./lib/coords";
+export type { SlotDateMarksProps, SlotDateRoute } from "./ui/SlotDateMarks";
+export { ResetSignaturesDialog } from "./ui/ResetSignaturesDialog";
+export { useDateMarksSave } from "./model/useDateMarksSave";
+export type { DateMarksSaver } from "./model/useDateMarksSave";
+export type { DateMarkPlace, DateMarksSave } from "./lib/dateMarkEdit";
 export type { SlotOptionalControl } from "./ui/SlotOptionalRows";
 export type { PdfStampEditorProps } from "./ui/PdfStampEditor";
 export type { SlotPanelProps } from "./ui/SlotPanel";

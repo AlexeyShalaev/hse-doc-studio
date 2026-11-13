@@ -11,6 +11,7 @@ export {
   useRecheckDetachedSignature,
   useReleaseWithheld,
   useSetSignerLevel,
+  useSetDateMarks,
   useSetSlotOptional,
   useSetSlotSigner,
   useTrustRoot,
@@ -26,6 +27,14 @@ export {
   useUploadSignaturePng,
 } from "./api/signatureQueries";
 export {
+  DATE_MARKS_MAX,
+  DateMarkAlignSchema,
+  DateMarkFormatSchema,
+  DateMarkInputSchema,
+  DateMarkSchema,
+  ResetsSignaturesSchema,
+  SetDateMarksRequestSchema,
+  SignedAtSchema,
   AttachDetachedResponseSchema,
   DetachedSignatureSchema,
   DetachedVerdictSchema,
@@ -44,3 +53,19 @@ export {
   UpdatePlacementRequestSchema,
   UploadSignatureResponseSchema,
 } from "./api/signatureSchemas";
+export type {
+  DateMark,
+  DateMarkAlign,
+  DateMarkFormat,
+  DateMarkInput,
+  SetDateMarksRequest,
+  SignedAt,
+} from "./api/signatureSchemas";
+export {
+  DATE_MARK_FORMATS,
+  dateMarkFits,
+  dateMarkFontPt,
+  formatDateMark,
+  longestDateText,
+  todayInDisplayZone,
+} from "./lib/dateMarks";

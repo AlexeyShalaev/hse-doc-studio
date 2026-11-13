@@ -9,7 +9,7 @@ import {
   useCompile,
   useDocument,
 } from "@entities/document";
-import { useProject } from "@entities/project";
+import { isReadOnlyRole, useProject } from "@entities/project";
 import { useBootstrap } from "@entities/session";
 import {
   useDocSignaturePlan,
@@ -20,7 +20,12 @@ import {
 } from "@entities/signature";
 import { useUpdateSlotConfig } from "@entities/signing-identity";
 import { useVersionDetail } from "@entities/template-catalog";
-import { DocPlacementPanel, PdfStampEditor } from "@features/signature-stamper";
+import {
+  DocPlacementPanel,
+  PdfStampEditor,
+  useDateMarksSave,
+  type SlotDateControl,
+} from "@features/signature-stamper";
 import { SignedVersionPanel } from "@features/signing-version";
 import type { SignMode, UpdatePlacementRequest } from "@shared/api/types";
 import { ApiError, failureCode } from "@shared/api";
@@ -84,6 +89,7 @@ export const DocSignaturesPane = ({
     enabled: isServer && boot.user !== null,
   });
   const { start, isRunning, slot, block } = useStartCompile(projectId, docId);
+  const dateMarks = useDateMarksSave(projectId);
 
   // The signature preview needs a PDF, which exists iff the most recent build
   // actually produced one. Gate on the *compile* result, not doc.status: a doc
@@ -282,6 +288,24 @@ export const DocSignaturesPane = ({
     },
   };
 
+  // Метки даты (signing-route.md, 14.2): правят те, кто размещает подписи; на документе под
+  // маршрутом ещё нужны права отправителя маршрута (14.6, 14.7). Слот маршрута, который держит
+  // документ, получает дату из согласия участника, ручной даты у него нет.
+  const planSlots = docPlan?.docs.find((d) => d.doc_id === docId)?.slots ?? [];
+  const dateControl: SlotDateControl = {
+    canEdit: !isReadOnlyRole(project.my_role) && (!locked || canEditOptional),
+    route: (slotId) => {
+      if (!heldByRoute) return null;
+      const planSlot = planSlots.find((s) => s.slot_id === slotId);
+      return planSlot?.route_state != null ? { method: planSlot.method } : null;
+    },
+    isSaving: (slotId) => dateMarks.isSaving(docId, slotId),
+    onSave: (slotId, body) => {
+      dateMarks.save(docId, slotId, body);
+    },
+  };
+  const dateMarksEditable = dateControl.canEdit && hasBuild;
+
   const goToProjectSignatures = () => {
     void navigate(`/projects/${projectId}/submit/signatures`);
   };
@@ -346,6 +370,7 @@ export const DocSignaturesPane = ({
             routeHeld={locked}
             locked={locked}
             optionalControl={optionalControl}
+            dateControl={dateControl}
           />
         </div>
       </div>
@@ -380,11 +405,30 @@ export const DocSignaturesPane = ({
           onPageCountChange={setPageCount}
           onPlacementChange={handlePlacementChange}
           readOnly={locked}
+          docLang={lang}
+          {...(dateMarksEditable
+            ? {
+                onDateMarkChange: (
+                  slotId: string,
+                  index: number,
+                  place: Parameters<typeof dateMarks.movePlace>[4],
+                ) => {
+                  dateMarks.movePlace(
+                    docId,
+                    slotId,
+                    state.placements[docId]?.[slotId],
+                    index,
+                    place,
+                  );
+                },
+              }
+            : {})}
           onCompileRequest={start}
           isCompileRunning={isRunning}
           isCompileBlocked={block !== null}
         />
       </div>
+      {dateMarks.dialog}
     </div>
   );
 };

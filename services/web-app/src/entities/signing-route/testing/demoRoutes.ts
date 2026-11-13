@@ -37,6 +37,7 @@ import {
   type SigningRouteSummary,
   type SigningStopReason,
   type SigningTask,
+  type SigningTaskDateMark,
   type SigningTaskSummary,
 } from "../model/signingRoute.schema";
 
@@ -139,6 +140,16 @@ export type SigningRouteDemoOptions = {
   /** На сервере настроена почта: приглашения и напоминания уходят письмом. По умолчанию нет. */
   mailEnabled?: () => boolean;
   /**
+   * Метки даты слота документа (14.7) с текстом по моменту согласия `signedAt` (null: участник ещё
+   * не согласовал документ). Без функции меток нет.
+   */
+  datesOf?: (
+    projectId: string,
+    docId: string,
+    slotId: string,
+    signedAt: string | null,
+  ) => SigningTaskDateMark[];
+  /**
    * «Подпись необязательна» на точке (состояние подписей проекта, 13.3); без функции все подписи
    * обязательны.
    */
@@ -218,6 +229,37 @@ export type SigningRouteDemo = {
   ) => boolean;
   /** Маршрут точки держит документ (снятая отметка пропущенной пары вернётся следующим раундом). */
   holdsDoc: (projectId: string, profileId: string, docId: string) => boolean;
+  /**
+   * Дата подписания (14.4): момент согласия владельца пары в маршруте `active` или `completed`,
+   * который держит документ; null, если согласия нет.
+   */
+  approvedAt: (
+    projectId: string,
+    docId: string,
+    slotId: string,
+  ) => string | null;
+  /** Пара в маршруте, который держит документ (`active`, `completed`): ручной даты у неё нет (14.6). */
+  inRoute: (projectId: string, docId: string, slotId: string) => boolean;
+  /** ЭП над зафиксированным B документа под маршрутом: их сбросит правка меток даты (14.6). */
+  signedOver: (
+    projectId: string,
+    docId: string,
+  ) => { doc_id: string; slot_id: string; name: string }[];
+  /**
+   * Правка меток даты подтверждена (`confirm_reset`): B документа фиксируется заново, ЭП над ним
+   * сброшены, их владельцы снова подписывают, завершённый маршрут снова идёт.
+   */
+  refreeze: (projectId: string, docId: string) => void;
+  /**
+   * Свой завершённый маршрут автора для дат (14.11): научрук `signer` согласовал и подписал ЭП над
+   * B, академрук `academic` (сверх точки) согласовал картинкой. Возвращает id маршрута.
+   */
+  seedDates: (input: {
+    projectId: string;
+    sender: SigningDemoUser;
+    signer: SigningDemoUser;
+    academic: SigningDemoUser;
+  }) => string | null;
 };
 
 type ProfileRef = { id: string; name: Localized };
@@ -406,6 +448,7 @@ export const createSigningRouteDemo = (
   const isPlaced = options.isPlaced ?? (() => true);
   const mailEnabled = options.mailEnabled ?? (() => false);
   const isOptionalOption = options.isOptional ?? (() => false);
+  const datesOf = options.datesOf ?? (() => []);
 
   let routes: Route[] = [];
   let seq = 0;
@@ -951,7 +994,15 @@ export const createSigningRouteDemo = (
   };
 
   /** Место слота и его метка: высота как у сервера, по способу (картинка 0.4 ширины, плашка 0.55). */
+  /** Момент согласия владельца пары, если оно действует для её документа: дата его меток (14.4). */
+  const signedAtOf = (r: Route, pair: RouteSlotRef & { persona: string }) => {
+    const owner = participants(r).find((q) => q.persona === pair.persona);
+    return owner && !isSkipped(r, owner) && approvedDoc(r, owner, pair.doc_id)
+      ? (owner.approval?.at ?? null)
+      : null;
+  };
   const slotPlace = (
+    r: Route,
     pair: ReturnType<typeof pairsOf>[number],
     method: RouteSignMethod | null,
   ) => {
@@ -974,6 +1025,12 @@ export const createSigningRouteDemo = (
           ? null
           : Math.round(pair.width_mm * aspect[mark] * 100) / 100,
       mark,
+      dates: datesOf(
+        r.project_id,
+        pair.doc_id,
+        pair.slot_id,
+        signedAtOf(r, pair),
+      ),
     };
   };
 
@@ -1054,7 +1111,7 @@ export const createSigningRouteDemo = (
             .map((pair) => {
               const status = slotStatus(r, pair);
               return {
-                ...slotPlace(pair, p.method),
+                ...slotPlace(r, pair, p.method),
                 status,
                 optional: pairOptional(r, pair),
                 reason:
@@ -1069,6 +1126,7 @@ export const createSigningRouteDemo = (
             .filter((pair) => pair.persona !== p.persona)
             .map((pair) => ({
               ...slotPlace(
+                r,
                 pair,
                 participants(r).find((q) => q.persona === pair.persona)
                   ?.method ?? pair.method,
@@ -1560,6 +1618,56 @@ export const createSigningRouteDemo = (
     "completed",
   ];
 
+  /** Слоты плана документа по маршруту, который его держит: без проверок подписей и дат. */
+  const planSlotsOf = (r: Route, docId: string, user: SigningDemoUser) =>
+    pairsOf(r)
+      .filter((pair) => pair.doc_id === docId)
+      .map((pair) => {
+        const owner = participants(r).find((q) => q.persona === pair.persona);
+        const method = owner?.method ?? pair.method;
+        const status = slotStatus(r, pair);
+        return {
+          slot_id: pair.slot_id,
+          label: pair.label,
+          signer: { persona: pair.persona, name: owner?.name ?? "" },
+          mode: method === "detached" ? "detached_text" : "image",
+          method,
+          crypto: isCrypto(method),
+          mark:
+            method === "image"
+              ? "png"
+              : method === "detached"
+                ? "plate"
+                : "none",
+          status,
+          reason:
+            status === "pending"
+              ? owner && approvedDoc(r, owner, docId)
+                ? "no_signature_file"
+                : "awaiting_approval"
+              : null,
+          hint: "",
+          allowed_methods: [],
+          required_by: pair.extra ? [] : [r.profile.id],
+          is_mine: owner?.user_id === user.id,
+          check: null,
+          route_state: owner ? stateOf(r, owner) : null,
+          optional: pairOptional(r, pair),
+          skipped: null,
+          dates: [],
+          signed_at: null,
+        };
+      });
+
+  /** Маршрут, который держит правку меток даты документа (14.6): идущий или завершённый. */
+  const dateHolder = (projectId: string, docId: string): Route | undefined =>
+    routes.find(
+      (r) =>
+        r.project_id === projectId &&
+        (r.status === "active" || r.status === "completed") &&
+        routeDocs(r).includes(docId),
+    );
+
   // Обработчики
 
   type Ctx = { user: SigningDemoUser; projectId: string };
@@ -1652,7 +1760,7 @@ export const createSigningRouteDemo = (
       // отвечает только на запрос по документу.
       method: "GET",
       pattern: "/projects/:projectId/signature-plan",
-      handler: signedIn((req, { projectId }) => {
+      handler: signedIn((req, { user, projectId }) => {
         const docId = queryString(req, "doc_id");
         if (docId === null) return notFound();
         const holder = routes.find(
@@ -1676,7 +1784,9 @@ export const createSigningRouteDemo = (
                   doc_id: docId,
                   built: true,
                   frozen: null,
-                  slots: [],
+                  // Слоты маршрута с состоянием участника: по `route_state` вкладка «Подписи»
+                  // отличает пару маршрута (дату даёт согласие, 14.4) от слота вне его.
+                  slots: holder ? planSlotsOf(holder, docId, user) : [],
                   held_by_route: holder?.status === "active",
                   pinned: {
                     sha256: pinned.version.sha256,
@@ -2268,7 +2378,7 @@ export const createSigningRouteDemo = (
     },
   ];
 
-  return {
+  const api: SigningRouteDemo = {
     routes: handlers,
     reset: () => {
       routes = [];
@@ -2361,6 +2471,77 @@ export const createSigningRouteDemo = (
           HOLDING.includes(r.status) &&
           routeDocs(r).includes(docId),
       ),
+    approvedAt: (projectId, docId, slotId) => {
+      const r = dateHolder(projectId, docId);
+      const pair = r
+        ? pairsOf(r).find((q) => q.doc_id === docId && q.slot_id === slotId)
+        : undefined;
+      return r && pair ? signedAtOf(r, pair) : null;
+    },
+    inRoute: (projectId, docId, slotId) => {
+      const r = dateHolder(projectId, docId);
+      return (
+        r !== undefined &&
+        pairsOf(r).some((q) => q.doc_id === docId && q.slot_id === slotId)
+      );
+    },
+    signedOver: (projectId, docId) => {
+      const r = dateHolder(projectId, docId);
+      if (!r || !isDocFrozen(r, docId)) return [];
+      return participants(r).flatMap((p) =>
+        isCrypto(p.method) && signedDoc(r, p, docId)
+          ? pairsOf(r)
+              .filter((q) => q.doc_id === docId && q.persona === p.persona)
+              .map((q) => ({
+                doc_id: docId,
+                slot_id: q.slot_id,
+                name: p.name ?? p.persona,
+              }))
+          : [],
+      );
+    },
+    refreeze: (projectId, docId) => {
+      const r = dateHolder(projectId, docId);
+      if (!r) return;
+      unfreeze(r, docId);
+      for (const p of participants(r)) {
+        const { [docId]: _reset, ...rest } = p.signed;
+        p.signed = rest;
+        p.notified_at = null;
+      }
+      if (r.status === "completed") {
+        r.status = "active";
+        r.completed_at = null;
+      }
+      settle(r);
+    },
+    seedDates: ({ projectId, sender, signer, academic }) => {
+      const id = api.seedOptional({ projectId, sender, signer, academic });
+      const r = routes.find((item) => item.id === id);
+      if (!r) return null;
+      const acad = participants(r).find(
+        (q) => q.persona === "academic_supervisor",
+      );
+      if (acad) {
+        acad.imageReady = true;
+        acad.approval = {
+          round: r.round,
+          at: now(),
+          tokens: Object.fromEntries(
+            routeDocs(r).map((doc) => [doc, sentToken(r, doc)]),
+          ),
+        };
+        event(r, "approved", acad.name, { participant_id: acad.id });
+      }
+      settle(r);
+      const sup = participants(r).find((q) => q.persona === "supervisor");
+      if (sup) {
+        signAll(r, sup);
+        event(r, "signed", sup.name, { participant_id: sup.id });
+      }
+      settle(r);
+      return r.id;
+    },
     seedOptional: ({ projectId, sender, signer, academic }) => {
       const profile = profiles[0];
       if (!profile) return null;
@@ -2466,4 +2647,5 @@ export const createSigningRouteDemo = (
       return r.id;
     },
   };
+  return api;
 };

@@ -308,4 +308,11 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   // Необязательные подписи (signing-route.md, 13.6): эталоны в contracts/server/next до R19 и R21.
   SetSlotOptionalRequest: sig.SetSlotOptionalRequestSchema,
   SlotOptional: sig.SlotOptionalSchema,
+  // Дата подписания (signing-route.md, 14.7): эталоны в contracts/server/next до R22 (размещение,
+  // план, запрос меток) и R23 (`dates` в задаче подписанта). Размещение и план разбираются
+  // нестрогими схемами состояния подписей: здесь лишнее поле отвергается на верхнем уровне, а на
+  // вложенных z.object отбрасывает его, и разбор «без потерь» тоже не сходится.
+  SetDateMarksRequest: sig.SetDateMarksRequestSchema,
+  Placement: z.strictObject(sig.PlacementSchema.shape),
+  SignaturePlan: z.strictObject(sig.SignaturePlanSchema.shape),
 };
