@@ -24,6 +24,8 @@ export type CheckpointRowProps = {
   isActive: boolean;
   /** Не передаётся, когда бэкенд не описал состав точки (items == null). */
   readiness?: CheckpointReadiness | undefined;
+  /** Срок точки коротко («через 3 дня», «просрочено») и его цвет; без срока не передаётся. */
+  deadline?: { text: string; color: string } | undefined;
   /** Закреплена пользователем — по ней считается бейдж рейки. */
   isPinned?: boolean | undefined;
   onTogglePin?: (() => void) | undefined;
@@ -78,6 +80,7 @@ export const CheckpointRow = ({
   isPacked,
   isActive,
   readiness,
+  deadline,
   isPinned = false,
   onTogglePin,
   onOpen,
@@ -121,6 +124,15 @@ export const CheckpointRow = ({
               style={{ fontSize: "0.5625rem", letterSpacing: "0.06em" }}
             >
               {t("submit.packed")}
+            </span>
+          )}
+          {deadline && (
+            <span
+              className="truncate"
+              style={{ fontSize: "0.625rem", color: deadline.color }}
+              data-testid="checkpoint-row-deadline"
+            >
+              {deadline.text}
             </span>
           )}
         </span>

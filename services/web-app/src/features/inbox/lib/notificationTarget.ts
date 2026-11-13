@@ -1,4 +1,8 @@
-import { signingCardPath, signingPagePath } from "@entities/signing-route";
+import {
+  checkpointPath,
+  signingCardPath,
+  signingPagePath,
+} from "@entities/signing-route";
 import type { Notification } from "@entities/invitation";
 import { myRunnerDiskPath } from "@entities/runner";
 
@@ -81,6 +85,12 @@ export const notificationRoute = (n: Notification): string | null => {
         : "/admin/data";
   }
   if (isSigningKind(n.kind)) return signingTarget(n);
+  // Срок контрольной точки (signing-route.md, 16.7): ведёт на точку, где срок и пакет.
+  if (n.kind === "checkpoint_due" && n.payload.project_id) {
+    return n.payload.profile_id
+      ? checkpointPath(n.payload.project_id, n.payload.profile_id)
+      : `/projects/${encodeURIComponent(n.payload.project_id)}`;
+  }
   if (n.payload.project_id && n.kind !== "member_removed") {
     return notificationTarget(n);
   }

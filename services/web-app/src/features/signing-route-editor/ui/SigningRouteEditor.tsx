@@ -9,6 +9,7 @@ import { useDocuments } from "@entities/document";
 import type { ProjectResponseSchema } from "@entities/project";
 import { useBootstrap } from "@entities/session";
 import { useSetSlotOptional, useSignaturesState } from "@entities/signature";
+import { useSubmissionProfiles } from "@entities/submission";
 import {
   isActionable,
   isResend,
@@ -154,6 +155,8 @@ export const SigningRouteEditor = ({
   const signatures = useSignaturesState(project.id);
   const setOptional = useSetSlotOptional();
   const documents = useDocuments(project.id);
+  // Срок сдачи точки (signing-route.md, 16.2): строка под сроком маршрута.
+  const profiles = useSubmissionProfiles(project.id);
   const personaLabel = usePersonaLabel(project.authors);
   const [sendError, setSendError] = useState<string | null>(null);
   // «Отправить и подписать»: маршрут ушёл, а подпись отправителя не поставлена (причина отказа).
@@ -455,6 +458,9 @@ export const SigningRouteEditor = ({
                       n: (prev?.n ?? 0) + 1,
                     }));
                   }}
+                  pointProfile={profiles.data?.find(
+                    (p) => p.id === route.profile.id,
+                  )}
                 />
               </Card>
             </div>

@@ -1,6 +1,73 @@
 import { z } from "zod";
 
 const LocalizedStringSchema = z.record(z.string(), z.string());
+const iso = z.string().min(1);
+
+/**
+ * Состояние срока контрольной точки (docs/design/signing-route.md, 16.6): считает сервер, чтобы
+ * точка, список проектов и MCP говорили одно. Дни по календарю Москвы.
+ */
+export const DEADLINE_STATES = [
+  "none",
+  "upcoming",
+  "soon",
+  "today",
+  "packaged",
+  "overdue",
+] as const;
+export const DeadlineStateSchema = z.enum(DEADLINE_STATES);
+export type DeadlineState = z.infer<typeof DeadlineStateSchema>;
+
+/** Ответ `PUT .../submissions/profiles/{profile_id}/deadline` (16.8). */
+export const CheckpointDeadlineSchema = z.strictObject({
+  profile_id: z.string(),
+  deadline: iso.nullable(),
+  state: DeadlineStateSchema,
+  /** Последняя сборка пакета точки к сроку: за 14 дней до срока и не позже него. */
+  packaged_at: iso.nullable(),
+});
+export type CheckpointDeadline = z.infer<typeof CheckpointDeadlineSchema>;
+
+/** Тело `PUT .../deadline`: момент с поясом (ISO 8601) или null, чтобы снять срок. */
+export const SetCheckpointDeadlineRequestSchema = z.strictObject({
+  deadline: iso.nullable(),
+});
+export type SetCheckpointDeadlineRequest = z.infer<
+  typeof SetCheckpointDeadlineRequestSchema
+>;
+
+const SubmissionDocItemSchema = z.object({
+  doc_id: z.string(),
+  signatures: z.array(z.string()),
+  // Гейты состава, которые применяет бэкенд в build_item_list. Сам
+  // ДОКУМЕНТ может быть в проекте, а в комплект точки не входить: thesis
+  // на КТ2 ВКР — только проектный формат, Текст программы не сдаётся под
+  // NDA. Без них клиент показал бы блокер, которого при сборке не будет.
+  skip_if_nda: z.boolean().default(false),
+  supported_kinds: z.array(z.string()).default(["research", "project"]),
+  // Допустимые способы подписи по слоту каталога; слота нет, значит любой способ.
+  methods: z.record(z.string(), z.array(z.string())).default({}),
+});
+
+const SubmissionExtraItemSchema = z.object({
+  source: z.string(),
+  output_name: z.string(),
+  format: z.string().nullish(),
+  // Тот же гейт, что у пунктов-документов: «Ссылка на код.txt» на КТ2
+  // входит в пакет только у исследовательского формата.
+  supported_kinds: z.array(z.string()).default(["research", "project"]),
+});
+
+/**
+ * Срок точки в проекте (16.8): момент, состояние, подсказка пака текстом без дат и последняя
+ * сборка пакета к сроку. Сервер до R28 полей не присылал: тогда срока нет.
+ */
+const deadlineFields = {
+  deadline: iso.nullable().default(null),
+  deadline_state: DeadlineStateSchema.default("none"),
+  deadline_hint: LocalizedStringSchema.nullable().default(null),
+  packaged_at: iso.nullable().default(null),
+};
 
 export const SubmissionProfileSchema = z.object({
   id: z.string(),
@@ -8,32 +75,25 @@ export const SubmissionProfileSchema = z.object({
   description: LocalizedStringSchema,
   // Backend may omit these or return them empty depending on the endpoint;
   // .nullish() tolerates both null and undefined.
-  items: z
-    .array(
-      z.object({
-        doc_id: z.string(),
-        signatures: z.array(z.string()),
-        // Гейты состава, которые применяет бэкенд в build_item_list. Сам
-        // ДОКУМЕНТ может быть в проекте, а в комплект точки не входить: thesis
-        // на КТ2 ВКР — только проектный формат, Текст программы не сдаётся под
-        // NDA. Без них клиент показал бы блокер, которого при сборке не будет.
-        skip_if_nda: z.boolean().default(false),
-        supported_kinds: z.array(z.string()).default(["research", "project"]),
-      }),
-    )
-    .nullish(),
-  extra_items: z
-    .array(
-      z.object({
-        source: z.string(),
-        output_name: z.string(),
-        format: z.string().nullish(),
-        // Тот же гейт, что у пунктов-документов: «Ссылка на код.txt» на КТ2
-        // входит в пакет только у исследовательского формата.
-        supported_kinds: z.array(z.string()).default(["research", "project"]),
-      }),
-    )
-    .nullish(),
+  items: z.array(SubmissionDocItemSchema).nullish(),
+  extra_items: z.array(SubmissionExtraItemSchema).nullish(),
+  ...deadlineFields,
+});
+
+/**
+ * Профиль сдачи в контракте сервера (`SubmissionProfileResponse`, 16.8): строгая форма для
+ * эталонов, лишнее поле верхнего уровня отвергается. Экраны разбирают терпимой схемой выше.
+ */
+export const SubmissionProfileContractSchema = z.strictObject({
+  id: z.string(),
+  name: LocalizedStringSchema,
+  description: LocalizedStringSchema,
+  items: z.array(SubmissionDocItemSchema),
+  extra_items: z.array(SubmissionExtraItemSchema),
+  deadline: iso.nullable(),
+  deadline_state: DeadlineStateSchema,
+  deadline_hint: LocalizedStringSchema.nullable(),
+  packaged_at: iso.nullable(),
 });
 
 /**

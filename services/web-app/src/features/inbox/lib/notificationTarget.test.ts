@@ -217,3 +217,14 @@ describe("очистка диска раннера администраторо�
     ).toBe("/settings/runners");
   });
 });
+
+describe("срок контрольной точки (16.7)", () => {
+  it("ведёт на точку сдачи", () => {
+    const n = note("checkpoint_due", {
+      profile_id: "topic-approval",
+      deadline: "2026-11-15T23:59:00+03:00",
+    });
+    expect(notificationRoute(n)).toBe("/projects/p1/submit/cp/topic-approval");
+    expect(showsDeadline(n.kind)).toBe(false);
+  });
+});

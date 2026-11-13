@@ -137,7 +137,11 @@
     "runner_disk_cleaned_nothing": "An administrator cleaned up the disk of your runner “{{name}}”: there was nothing to free",
     "runner_disk_cleaned_error": "An administrator cleaned up the disk of your runner “{{name}}”, the cleanup finished with errors: {{size}} freed",
     "runner_disk_cleaned_cancelled": "The disk cleanup an administrator started on your runner “{{name}}” was stopped: {{size}} freed",
-    "runner_disk_cleaned_lost": "Your runner “{{name}}” went away during a disk cleanup an administrator started. What was removed will show in the next measurement"
+    "runner_disk_cleaned_lost": "Your runner “{{name}}” went away during a disk cleanup an administrator started. What was removed will show in the next measurement",
+    "checkpoint_due_one": "Due in {{count}} day: {{excerpt}}",
+    "checkpoint_due_other": "Due in {{count}} days: {{excerpt}}",
+    "checkpoint_due_today": "Due today: {{excerpt}}",
+    "checkpoint_due_past": "Deadline passed: {{excerpt}}"
   },
   "diagCheck": {
     "database": "Database",

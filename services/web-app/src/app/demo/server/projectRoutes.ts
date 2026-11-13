@@ -1,6 +1,6 @@
 import { demoError, demoJson } from "@shared/api/demo";
 import type { DemoRoute } from "@shared/api/demo";
-import type { ProjectRole } from "@entities/session";
+import type { NextDeadline, ProjectRole } from "@entities/session";
 import { boolParam, invalidQuery, offsetList, queryOne } from "./demoList";
 import { effectiveRole } from "./projectAccess";
 import type { DemoProject } from "./projects";
@@ -71,6 +71,8 @@ const IMPORT_REFUSALS: readonly (readonly [string, number, string, string])[] =
 
 export const createProjectRoutes = (
   getWorld: () => ServerDemoWorld,
+  /** Ближайший срок контрольной точки проекта (16.6); без функции берётся из `summary`. */
+  nextDeadlineOf?: (projectId: string) => NextDeadline | null,
 ): DemoRoute[] => [
   {
     method: "GET",
@@ -83,7 +85,11 @@ export const createProjectRoutes = (
       }
       const items = world.projects.flatMap((project) => {
         const role = roleOf(world, project, user.id);
-        return role ? [{ ...project.summary, my_role: role }] : [];
+        if (!role) return [];
+        const next_deadline = nextDeadlineOf
+          ? nextDeadlineOf(project.summary.id)
+          : (project.summary.next_deadline ?? null);
+        return [{ ...project.summary, my_role: role, next_deadline }];
       });
       // Серверный режим отдаёт страницу каталога, как настоящий API.
       type Row = (typeof items)[number];
