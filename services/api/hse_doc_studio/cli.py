@@ -161,6 +161,9 @@ def _parser() -> argparse.ArgumentParser:
         "runner",
         help="раннер задач серверного режима (verify, pack, office); настройки в HSE_RUNNER__*",
     )
+    from hse_doc_studio.cli_pack import configure_parser  # noqa: PLC0415
+
+    configure_parser(sub.add_parser("pack", help="команды автора паков: lint, check, classify, new-version, freeze"))
     return parser
 
 
@@ -345,6 +348,10 @@ def _run_operator_command(args: argparse.Namespace) -> int:
         return _run_db(args.db_command, args)
     if args.command == "server":
         return _run_server(args)
+    if args.command == "pack":
+        from hse_doc_studio.cli_pack import run_parsed  # noqa: PLC0415
+
+        return run_parsed(args)
     from hse_doc_studio.cli_backup import run_backup  # noqa: PLC0415
 
     return run_backup(args)
@@ -352,7 +359,7 @@ def _run_operator_command(args: argparse.Namespace) -> int:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
-    if args.command in {"db", "server", "backup"}:
+    if args.command in {"db", "server", "backup", "pack"}:
         return _run_operator_command(args)
     if args.command == "runner":
         return asyncio.run(_runner())

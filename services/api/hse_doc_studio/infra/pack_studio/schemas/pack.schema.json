@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hse-doc-studio.local/contracts/pack/pack.schema.json",
+  "title": "pack.yaml",
+  "description": "Манифест пака: `packs/<пак>/pack.yaml`.",
+  "type": "object",
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/id" },
+    "name": { "$ref": "common.schema.json#/$defs/localized" },
+    "description": { "$ref": "common.schema.json#/$defs/localized" },
+    "maintainer": {
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "email": { "type": "string" },
+            "url": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "license": { "description": "SPDX-идентификатор лицензии.", "type": "string" },
+    "source": { "description": "Адрес исходников пака (не читается лоадером).", "type": "string" },
+    "created_at": { "description": "Не читается лоадером.", "$ref": "common.schema.json#/$defs/isoDate" }
+  },
+  "required": ["id"],
+  "additionalProperties": false
+}

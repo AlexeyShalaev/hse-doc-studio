@@ -45,9 +45,10 @@ r"""Линтер пака (bundle-раскладка v2): превращает �
     предупреждение, если мягкие правила предлагают больше, а объяснения в
     `release.note` нет.
 
-Запуск: `python -m hse_doc_studio.infra.template.pack_lint <version_dir>…`
-(exit code 1 при ошибках). Roster ↔ doc.yaml проверяется fail-fast самим
-лоадером (`_parse_documents`) — здесь не дублируется.
+Запуск: `hse-doc-studio pack lint <каталог>…` (каталог версии, шаблона, пака или
+папка паков; код выхода 1 при ошибках); прежний
+`python -m hse_doc_studio.infra.template.pack_lint <каталог>…` делает то же.
+Roster ↔ doc.yaml проверяется fail-fast самим лоадером (`_parse_documents`) — здесь не дублируется.
 """
 
 from __future__ import annotations
@@ -586,7 +587,7 @@ def _release_block(manifest: dict[str, Any]) -> tuple[TemplateUpdateClass | None
     return kind, errors
 
 
-def _class_base(version_dir: Path) -> str | None:
+def class_base(version_dir: Path) -> str | None:
     """Версия, с которой сверяется класс `version_dir`; None, если сверять не нужно.
 
     Сверяется версия, которой нет в `releases.yaml`, и последняя внесённая: выпуск вносит версию в реестр в том же
@@ -643,7 +644,7 @@ def _class_errors(
 def _lint_release_class(version_dir: Path, manifest: dict[str, Any]) -> tuple[list[str], list[str]]:
     """Класс невыпущенной версии по содержимому (template-studio.md, 7.2): номер и `release.kind` не мягче минимума."""
     declared, errors = _release_block(manifest)
-    base = _class_base(version_dir)
+    base = class_base(version_dir)
     if base is None:
         return errors, []
     try:
@@ -763,24 +764,13 @@ def lint_version_dir(version_dir: Path) -> LintReport:  # noqa: C901, PLR0912, P
 
 
 def main(argv: list[str]) -> int:
-    # CLI-инструмент авторинга: stdout — его интерфейс, print намеренно.
+    """Прежний вход линтера: то же, что `hse-doc-studio pack lint <каталог>...`."""
+    from hse_doc_studio.cli_pack import run_pack  # noqa: PLC0415 — CLI собран поверх этого модуля
+
     if not argv:
-        print("usage: python -m hse_doc_studio.infra.template.pack_lint <version_dir>...")  # noqa: T201
+        sys.stderr.write("usage: python -m hse_doc_studio.infra.template.pack_lint <каталог>...\n")
         return 2
-    exit_code = 0
-    for arg in argv:
-        vdir = Path(arg)
-        report = lint_version_dir(vdir)
-        print(f"== {vdir}")  # noqa: T201
-        for e in report.errors:
-            print(f"  ERROR   {e}")  # noqa: T201
-        for w in report.warnings:
-            print(f"  warning {w}")  # noqa: T201
-        if report.ok and not report.warnings:
-            print("  ok")  # noqa: T201
-        if not report.ok:
-            exit_code = 1
-    return exit_code
+    return run_pack(["lint", *argv])
 
 
 if __name__ == "__main__":
