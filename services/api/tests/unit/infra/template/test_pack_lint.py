@@ -458,6 +458,66 @@ def test__lint_version_dir__narrow_place_where_detached_is_allowed__warns_and_er
     assert any("левый край" in e for e in lint_version_dir(tmp_path).errors)
 
 
+# ── Безопасность пака (template-studio.md, раздел 9) ────────────
+
+
+def _safety_version(tmp_path: Path, **manifest_extra: object) -> Path:
+    version_dir = tmp_path / "v"
+    _write_version(version_dir, {"langs": ["ru"], "documents": [], **manifest_extra})
+    (version_dir / "files" / "main.tex").write_text("\\documentclass{article}\n", encoding="utf-8")
+    return version_dir
+
+
+def test_symlink_in_pack_is_an_error(tmp_path: Path) -> None:
+    version_dir = _safety_version(tmp_path)
+    try:
+        (version_dir / "files" / "passwd.tex").symlink_to("/etc/passwd")
+        (version_dir / "files" / "outside").symlink_to(tmp_path, target_is_directory=True)
+    except OSError:
+        pytest.skip("символические ссылки недоступны (Windows без прав разработчика)")
+    errors = lint_version_dir(version_dir).errors
+    assert any("files/passwd.tex: символическая ссылка" in e for e in errors)
+    assert any("files/outside: символическая ссылка" in e for e in errors)
+
+
+@pytest.mark.parametrize(
+    ("secret", "label"),
+    [
+        ("ghp_" + "a1B2" * 9, "токен GitHub"),
+        ("github_pat_" + "x" * 30, "токен GitHub"),
+        ("glpat-" + "y" * 20, "токен GitLab"),
+        ("-----BEGIN OPENSSH PRIVATE KEY-----", "закрытый ключ"),
+        ("-----BEGIN PRIVATE KEY-----", "закрытый ключ"),
+    ],
+)
+def test_secret_in_pack_is_an_error_without_leaking_it(tmp_path: Path, secret: str, label: str) -> None:
+    version_dir = _safety_version(tmp_path)
+    (version_dir / "files" / "common").mkdir()
+    (version_dir / "files" / "common" / "ci.yml").write_text(f"token: {secret}\n", encoding="utf-8")
+    errors = lint_version_dir(version_dir).errors
+    assert f"files/common/ci.yml: похоже на {label}, секретам не место в паке" in errors
+    assert not any(secret in e for e in errors)
+
+
+@pytest.mark.parametrize("flags", ["-shell-escape", "-interaction=nonstopmode --shell-escape", "-enable-write18"])
+def test_shell_escape_flag_is_a_warning(tmp_path: Path, flags: str) -> None:
+    report = lint_version_dir(_safety_version(tmp_path, engine={"type": "xelatex", "flags": flags}))
+    assert any("engine.flags: -shell-escape" in w for w in report.warnings)
+    assert report.ok
+
+
+def test_safe_flags_are_quiet(tmp_path: Path) -> None:
+    report = lint_version_dir(_safety_version(tmp_path, engine={"flags": "-interaction=nonstopmode -no-shell-escape"}))
+    assert not any("shell-escape" in w for w in report.warnings)
+
+
+@pytest.mark.parametrize("version_dir", _real_version_dirs(), ids=lambda p: "/".join(p.parts[-4:]))
+def test_real_packs_pass_safety_rules(version_dir: Path) -> None:
+    report = lint_version_dir(version_dir)
+    assert not [e for e in report.errors if "символическая ссылка" in e or "секретам" in e]
+    assert not [w for w in report.warnings if "shell-escape" in w]
+
+
 # ── класс невыпущенной версии по содержимому (template-studio.md, 7.2) ──
 
 

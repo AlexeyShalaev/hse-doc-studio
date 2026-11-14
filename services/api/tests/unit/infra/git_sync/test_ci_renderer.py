@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import itertools
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -140,3 +141,28 @@ def test__render__custom_image__is_pinned_instead_of_default() -> None:
 
     assert "registry.example.org/studio:1.0" in text
     assert _IMAGE not in text
+
+
+@pytest.mark.parametrize(("provider", "publish", "triggers"), _combinations())
+def test__render__sandbox__matches_plain_jinja_byte_for_byte(
+    provider: str, publish: str, triggers: list[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from hse_doc_studio.infra.git_sync import ci_renderer  # noqa: PLC0415
+    from jinja2 import Environment, FileSystemLoader, StrictUndefined  # noqa: PLC0415
+
+    options = _options(provider, publish, triggers, docs=["report", "tz"])
+    sandboxed = JinjaCiRenderer().render(options).content
+    plain = Environment(  # noqa: S701 — прежнее окружение до песочницы, эталон сравнения
+        loader=FileSystemLoader(ci_renderer._TEMPLATES),
+        block_start_string="[%",
+        block_end_string="%]",
+        variable_start_string="[[",
+        variable_end_string="]]",
+        trim_blocks=True,
+        lstrip_blocks=True,
+        keep_trailing_newline=True,
+        undefined=StrictUndefined,
+    )
+    shim = SimpleNamespace(render_template=lambda name, context: plain.get_template(name).render(context))
+    monkeypatch.setattr(ci_renderer, "_ENV", shim)
+    assert sandboxed == JinjaCiRenderer().render(options).content

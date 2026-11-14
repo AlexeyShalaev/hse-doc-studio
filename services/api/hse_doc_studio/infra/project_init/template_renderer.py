@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import html
 import re
 import shutil
 import zipfile
@@ -9,7 +8,8 @@ from pathlib import Path
 from typing import Any
 
 import structlog
-from jinja2 import ChainableUndefined, Environment, TemplateSyntaxError, UndefinedError
+from jinja2 import TemplateSyntaxError, UndefinedError
+from jinja2.exceptions import SecurityError
 
 from hse_doc_studio.core.catalog import (
     DocumentDefinition,
@@ -31,6 +31,7 @@ from hse_doc_studio.core.team import (
     project_bases,
 )
 from hse_doc_studio.core.value_objects import Author
+from hse_doc_studio.infra.template.jinja_sandbox import pack_environment
 
 logger = structlog.get_logger()
 
@@ -209,44 +210,6 @@ def build_context(  # noqa: PLR0913 — `now` только для тестов
     }
 
 
-# Order matters: backslash must be escaped first or it doubles the replacements
-# that themselves introduce backslashes. Mirrors the standard LaTeX-escape map.
-_TEX_ESCAPES: tuple[tuple[str, str], ...] = (
-    ("\\", r"\textbackslash{}"),
-    ("&", r"\&"),
-    ("%", r"\%"),
-    ("$", r"\$"),
-    ("#", r"\#"),
-    ("_", r"\_"),
-    ("{", r"\{"),
-    ("}", r"\}"),
-    ("~", r"\textasciitilde{}"),
-    ("^", r"\textasciicircum{}"),
-)
-
-
-def _texesc(value: Any) -> str:
-    """Escape LaTeX special characters in user-supplied data.
-
-    Exposed as the `texesc` Jinja filter so generated includes (meta.tex) can
-    inject names/titles that contain `&`, `_`, `%`, … without breaking xelatex.
-    """
-    text = "" if value is None else str(value)
-    for char, repl in _TEX_ESCAPES:
-        text = text.replace(char, repl)
-    return text
-
-
-def _xmlesc(value: Any) -> str:
-    """Escape XML/HTML special characters (incl. quotes) in user-supplied data.
-
-    Exposed as the `xmlesc` Jinja filter for placeholders inside pptx slide XML
-    (see `_copy_pptx_rendered`): names/topics with `&`, `<`, `"` must not break
-    the OOXML markup the same way `texesc` guards xelatex.
-    """
-    return html.escape("" if value is None else str(value), quote=True)
-
-
 def _is_binary(path: Path) -> bool:
     return path.suffix.lower() in _BINARY_EXTENSIONS
 
@@ -263,6 +226,10 @@ def _render_text(content: str, context: dict[str, Any], source_path: Path) -> st
     `{{ ... }}` into the output and breaking downstream tools (e.g. xelatex).
     Hard syntax errors still fall back to a verbatim copy + warning so the
     user sees the unrendered file rather than silently losing it.
+
+    Рендер идёт в песочнице (`jinja_sandbox.pack_environment`): шаблон пака не
+    видит служебных атрибутов Python и упирается в пределы размера, времени и
+    глубины. Нарушение песочницы тоже даёт verbatim-копию с предупреждением.
     """
     try:
         # LaTeX collides hard with Jinja's default {% %} / {# #} delimiters:
@@ -274,22 +241,19 @@ def _render_text(content: str, context: dict[str, Any], source_path: Path) -> st
         # PDF). Keep the variable delimiter as `{{ }}` (every template already
         # uses it) but move block/comment to sequences that never occur in
         # LaTeX. NOTE: Jinja control blocks in templates must use `((* ... *))`
-        # / `((# ... #))` accordingly (see pres beamer template).
-        env = Environment(  # noqa: S701
-            undefined=ChainableUndefined,
-            keep_trailing_newline=True,
-            block_start_string="((*",
-            block_end_string="*))",
-            comment_start_string="((#",
-            comment_end_string="#))",
-        )
-        env.filters["texesc"] = _texesc
-        env.filters["xmlesc"] = _xmlesc
-        template = env.from_string(content)
-        return template.render(**context)
+        # / `((# ... #))` accordingly (see pres beamer template). Разметка
+        # задана в jinja_sandbox.LATEX_SYNTAX.
+        return pack_environment().render_source(content, context)
     except TemplateSyntaxError as exc:
         logger.warning(
             "jinja2 syntax error, copying as-is",
+            path=str(source_path),
+            exc=str(exc),
+        )
+        return content
+    except SecurityError as exc:
+        logger.warning(
+            "jinja2 sandbox violation, copying as-is",
             path=str(source_path),
             exc=str(exc),
         )
