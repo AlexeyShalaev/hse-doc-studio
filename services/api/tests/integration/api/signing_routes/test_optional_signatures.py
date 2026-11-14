@@ -32,7 +32,13 @@ def _mark(trio: Trio, who: Person, doc_id: str, slot_id: str, *, optional: bool 
 
 
 async def _skip(trio: Trio, doc_id: str, slot_id: str) -> None:
-    """Пропуск, как его записывает маршрут (R20): участник в базе и запись в `signatures.json`."""
+    """Пропуск, как его записывает маршрут (R20): участник в базе и запись в `signatures.json`.
+
+    Маршрут пишет пропуск под блокировкой своей строки и `project_lock`, тест пишет мимо них. Поэтому сначала ждём
+    фоновую сверку, которую поставила предыдущая отметка: иначе она прочитает участников до записи, а файлы после,
+    увидит пропуск в файлах без пропуска участника и уберёт его (`Unskip`).
+    """
+    drain(trio.stand)
     skipped = {
         "round": 1,
         "at": "2026-11-13T10:00:00+00:00",
@@ -51,7 +57,9 @@ async def _skip(trio: Trio, doc_id: str, slot_id: str) -> None:
 
 
 def _skip_in_files(trio: Trio, doc_id: str, slot_id: str) -> None:
-    """Запись пропуска в `signatures.json`."""
+    """Запись пропуска в `signatures.json` мимо `project_lock`: только когда фоновых сверок нет, иначе сверка,
+    прочитавшая файл раньше, перепишет его без пропуска."""
+    drain(trio.stand)
     path = trio.project.folder / ".hse-studio" / "signatures.json"
     data = json.loads(path.read_text(encoding="utf-8"))
     data.setdefault("skipped", {}).setdefault(doc_id, {})[slot_id] = {
