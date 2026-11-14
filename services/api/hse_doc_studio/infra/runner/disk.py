@@ -142,6 +142,7 @@ def build_runner_disk_service(
         blobs_limit_bytes=config.cache_max_bytes,
         workspaces_limit_bytes=config.workspaces_max_bytes,
         docker=docker,
+        auto_clean=config.disk_auto_clean,
     )
 
 
@@ -162,6 +163,7 @@ class RunnerDiskService:
         workspaces_limit_bytes: int,
         docker: RunnerDocker | DockerDiskReason,
         clock: Callable[[], datetime] = _utcnow,
+        auto_clean: bool = True,
     ) -> None:
         self._cache = cache
         self._workspaces = workspaces
@@ -171,6 +173,7 @@ class RunnerDiskService:
         self._docker = docker if isinstance(docker, RunnerDocker) else None
         self._docker_reason = docker if isinstance(docker, DockerDiskReason) else None
         self._clock = clock
+        self._auto_clean = auto_clean
         # Свой исполнитель: шаги кэша раннера подключаются к шагам Docker (у Kubernetes и Студии Docker-шагов нет,
         # планировщик их не строит, поэтому исполнитель Docker без Docker не вызывается).
         system = self._docker.system if self._docker is not None else _no_docker_system()
@@ -186,6 +189,15 @@ class RunnerDiskService:
     @property
     def docker_reason(self) -> DockerDiskReason | None:
         return self._docker_reason
+
+    @property
+    def auto_capable(self) -> bool:
+        """Раннер может объявить `disk_auto`: у него есть Docker-часть, и автоочистку не выключили на нём самом."""
+        return self._docker is not None and self._auto_clean
+
+    def free_space(self) -> DataVolume | None:
+        """Свободное место тома данных для `/control/disk-check` (блокирующий вызов: звать в потоке)."""
+        return _data_volume(self._data_dir)
 
     def current(self) -> DiskCleanupRun | None:
         """Идущая или последняя очистка."""
@@ -285,7 +297,10 @@ class RunnerDiskService:
                 error = f"docker targets are not available on this runner: {names}"
             else:
                 request = CleanupPlanRequest(
-                    targets=[target.value for target in docker_targets], include_rollback=payload.include_rollback
+                    targets=[target.value for target in docker_targets],
+                    include_rollback=payload.include_rollback,
+                    # Автоочистка оставляет и предыдущий тег каждого образа сервиса (storage-cleanup.md, 14.2, A2).
+                    keep_previous_service_tags=payload.auto,
                 )
                 try:
                     steps = await self._docker.planner.plan(request)

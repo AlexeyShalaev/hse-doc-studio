@@ -86,6 +86,10 @@ class FakeRunnerState:
         self.progress_unavailable = 0
         self.disks: list[dict[str, Any]] = []
         self.disk_status: int | None = None
+        # Автоочистка (`disk_auto`): что прислал раннер, какие команды отдать в ответ, каким кодом отказать.
+        self.disk_checks: list[dict[str, Any]] = []
+        self.auto_commands: list[dict[str, Any]] = []
+        self.disk_check_status: int | None = None
         # Порядок вызовов канала и `/offline`: итог очистки должен уйти раньше `/offline`.
         self.events: list[str] = []
         self.deployments: list[dict[str, Any]] = []
@@ -181,6 +185,16 @@ def create_fake_app(state: FakeRunnerState) -> FastAPI:  # noqa: C901
             return _error(status, code)
         state.progress.setdefault(command_id, []).append(body.model_dump(mode="json"))
         return {"cancel": command_id in state.cancel_commands}
+
+    @app.post("/api/runner/v1/control/disk-check")
+    async def disk_check(body: schemas.DiskCheckRequestBody) -> Any:
+        if "disk_auto" not in state.server_features:
+            return Response(status_code=404)
+        if state.disk_check_status is not None:
+            return _error(state.disk_check_status, "feature_not_negotiated")
+        state.events.append("disk-check")
+        state.disk_checks.append(body.model_dump(mode="json"))
+        return {"command": state.auto_commands.pop(0) if state.auto_commands else None}
 
     @app.post("/api/runner/v1/disk")
     async def disk(body: schemas.RunnerDiskReportBody) -> Any:

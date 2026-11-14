@@ -13,6 +13,10 @@
   сервере команда (`command_finished`, `command_not_found`) останавливают очистку после текущего шага. После итога
   раннер сразу присылает новый замер.
 
+Автоочистка (возможность `disk_auto`, storage-cleanup.md, раздел 14): раз в 5 минут раннер меряет свободное место
+тома данных и шлёт `/control/disk-check`, если у него сейчас не идёт очистка. Решает сервер; команда из ответа идёт
+тем же путём, что из опроса.
+
 Отчёт о диске раннер шлёт и сам: сразу после запуска канала (то есть после `/announce`), раз в 6 часов и после
 каждой очистки. Повторно доставленная команда (тот же id) второй раз не выполняется: идущая продолжается, по
 завершённой повторяется её итог.
@@ -31,6 +35,7 @@ from typing import Any
 from uuid import UUID
 
 from hse_doc_studio.core.jobs.disk import (
+    DISK_CHECK_EVERY_S,
     DISK_REPORT_EVERY_S,
     MAX_STEP_ERROR,
     CommandProgress,
@@ -40,9 +45,11 @@ from hse_doc_studio.core.jobs.disk import (
 )
 from hse_doc_studio.core.jobs.enums import RunnerErrorCode
 from hse_doc_studio.core.jobs.wire import (
+    FEATURE_DISK_AUTO,
     MAX_POLL_WAIT_S,
     CommandProgressRequest,
     ControlPollRequest,
+    DiskCheckRequest,
     RunnerCommandEnvelope,
 )
 from hse_doc_studio.infra.runner.backoff import Backoff
@@ -79,6 +86,8 @@ class ControlLoopConfig:
     progress_keepalive_s: float = PROGRESS_KEEPALIVE_S
     report_every_s: float = DISK_REPORT_EVERY_S
     report_retry_s: float = DISK_REPORT_RETRY_S
+    # Как часто сообщать свободное место для автоочистки (`disk_auto`).
+    disk_check_every_s: float = DISK_CHECK_EVERY_S
     # Сколько ждать при остановке, пока идущая очистка доведёт шаг и доставит итог `cancelled`.
     stop_timeout_s: float = 30.0
     backoff_factory: Callable[[], Backoff] = field(default=lambda: Backoff(base_s=0.5, cap_s=30.0))
@@ -105,6 +114,7 @@ class RunnerControlLoop:
         self._measure_lock = asyncio.Lock()
         self._poll_task: asyncio.Task[None] | None = None
         self._report_task: asyncio.Task[None] | None = None
+        self._auto_task: asyncio.Task[None] | None = None
         self._handlers: set[asyncio.Task[None]] = set()
         self._runs: dict[UUID, DiskCleanupRun] = {}
         # id команды: None пока выполняется, итог после завершения (повтор доставки повторяет итог).
@@ -124,6 +134,21 @@ class RunnerControlLoop:
         self._poll_task = asyncio.create_task(self._poll_loop())
         if self._report_task is None or self._report_task.done():
             self._report_task = asyncio.create_task(self._report_loop())
+        self.sync_auto()
+
+    @property
+    def disk_auto(self) -> bool:
+        """Раннер объявляет `disk_auto`: у него есть Docker-часть, и автоочистку не выключили переменной."""
+        return self._disk.auto_capable
+
+    def sync_auto(self) -> None:
+        """Проверка места для автоочистки по итогам `/announce`: идёт, только пока сервер согласовал `disk_auto`."""
+        agreed = self.disk_auto and FEATURE_DISK_AUTO in self._client.features and not self._stopping.is_set()
+        running = self._auto_task is not None and not self._auto_task.done()
+        if agreed and not running:
+            self._auto_task = asyncio.create_task(self._auto_loop())
+        elif not agreed and running and self._auto_task is not None:
+            self._auto_task.cancel()
 
     def request_report(self) -> None:
         """Прислать замер вне расписания (повторный `/announce`)."""
@@ -134,7 +159,7 @@ class RunnerControlLoop:
         self._stopping.set()
         for run in list(self._runs.values()):
             run.cancel()
-        background = [task for task in (self._poll_task, self._report_task) if task is not None]
+        background = [task for task in (self._poll_task, self._report_task, self._auto_task) if task is not None]
         for task in background:
             task.cancel()
         await asyncio.gather(*background, return_exceptions=True)
@@ -156,7 +181,9 @@ class RunnerControlLoop:
         for run in list(self._runs.values()):
             if run.task is not None:
                 run.task.cancel()
-        tasks = [task for task in (self._poll_task, self._report_task, *self._handlers) if task is not None]
+        tasks = [
+            task for task in (self._poll_task, self._report_task, self._auto_task, *self._handlers) if task is not None
+        ]
         await _cancel_all(tasks)
 
     # ------------------------------------------------------------------ опрос
@@ -194,8 +221,9 @@ class RunnerControlLoop:
     def _close_channel(self, exc: Exception) -> None:
         """Сервер больше не знает канала: опрос и отчёты прекращаются до следующего `/announce`."""
         logger.info("server closed the command channel (%s), waiting for the next announce", exc)
-        if self._report_task is not None:
-            self._report_task.cancel()
+        for task in (self._report_task, self._auto_task):
+            if task is not None:
+                task.cancel()
 
     def _accept(self, envelope: RunnerCommandEnvelope) -> None:
         if envelope.id in self._seen:
@@ -305,6 +333,43 @@ class RunnerControlLoop:
                 return f"disk report not delivered: {exc}"
             self._next_report = time.monotonic() + self._config.report_every_s
             return None
+
+    # ------------------------------------------------------------------ автоочистка
+
+    async def _auto_loop(self) -> None:
+        """Раз в `disk_check_every_s` свободное место серверу; команда из ответа выполняется, как из опроса."""
+        while not self._stopping.is_set():
+            await self._sleep_or_stop(self._config.disk_check_every_s)
+            if self._stopping.is_set():
+                return
+            if not await self._disk_check():
+                return
+
+    async def _disk_check(self) -> bool:
+        """Одна проверка; False, если сервер больше не знает адреса (проверки прекращаются до нового `/announce`)."""
+        current = self._disk.current()
+        if current is not None and not current.finished:
+            return True
+        volume = await asyncio.to_thread(self._disk.free_space)
+        if volume is None:
+            return True
+        try:
+            response = await self._client.disk_check(
+                DiskCheckRequest(free_bytes=volume.free_bytes, total_bytes=volume.total_bytes)
+            )
+        except RunnerCommandRejected as exc:
+            self._on_rejected(exc)
+            return True
+        except (RunnerApiError, RunnerUnreachable) as exc:
+            if _channel_gone(exc):
+                logger.info("server does not take disk checks (%s), waiting for the next announce", exc)
+                return False
+            _log_poll_failure(exc)
+            return True
+        if response.command is not None:
+            logger.info("disk auto cleanup: %d of %d bytes free", volume.free_bytes, volume.total_bytes)
+            self._accept(response.command)
+        return True
 
     async def _sleep_or_stop(self, delay_s: float) -> None:
         with contextlib.suppress(TimeoutError):

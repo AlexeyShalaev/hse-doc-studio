@@ -124,6 +124,41 @@ runner”, then the steps and the result **N freed**. It can be stopped after th
 cleanup goes to the audit log. Cleaning everything past its retention period on the server itself:
 [Storage and space](/help/en/admin/storage/).
 
+## Runner disk automatic cleanup
+
+A shared Docker runner can clean itself when space runs low. The setting is at the bottom of the
+**Disk** window, in the **Automatic cleanup** block.
+
+- **When.** Every 5 minutes the runner reports how much space is free on its data volume. If free
+  space is below the threshold (10 % by default), the runner starts a cleanup. At most once an hour,
+  and never on top of a cleanup that is already running.
+- **What is removed.** Dangling layers, the Docker build cache and old image versions. The current
+  and previous Studio versions stay for rollback; TeX Live and other services keep the active and the
+  previous tags. Images used by any container, including the container of a running build, are not
+  removed. The runner cache, unused images, volumes and images that are not the Studio's are never
+  touched by the automatic cleanup.
+- **Settings.** The **Clean automatically** switch, the **When free space is below** field (1 to
+  50 %) and **Save**. Automatic cleanup is on by default. Every change goes to the audit log.
+- **What you see.** The line “Automatic cleanup: last run ..., freed ...” and how much was free when
+  it started. A running automatic cleanup shows up in the **Disk** window like any other cleanup,
+  labelled “Started by automatic cleanup”; it can be stopped after the current step. The start and
+  the result go to the audit log on behalf of the system.
+- **Where it is not available.** Personal runners (they are someone else's machines, the owner
+  cleans them), runners in Kubernetes (Kubernetes removes images on the nodes, and the runner cache
+  has its own limits) and the local Studio. A runner older than 0.28.0 cannot clean itself: you can
+  save the setting in advance, it starts working after the update.
+- **Turning it off on the machine.** The `HSE_RUNNER__DISK_AUTO_CLEAN=false` variable forbids the
+  automatic cleanup on that runner, whatever the admin area says. The window then says it is turned
+  off on the runner.
+- **A separate disk for runner data.** The threshold is measured on the volume with the runner data
+  directory (`HSE_RUNNER__DATA_DIR`). In a regular installation that is the same disk as Docker's. If
+  the data directory lives on another disk, the automatic cleanup looks at that disk, not at the one
+  with the images.
+
+After a successful runner update with **Update to vX** (Docker next to the Studio) the Studio removes
+runner images older than the previous version by itself: the current and the previous versions stay
+for rollback, and the removed images are listed in the update event in the audit log.
+
 ## If something goes wrong
 
 - **“No runner is online”**: builds and checks wait in the queue. Check that the runner machines

@@ -7,6 +7,7 @@ import {
   useCancelRunnerDiskCleanup,
   useRefreshRunnerDisk,
   useRunnerDisk,
+  useSetRunnerDiskAuto,
   useStartRunnerDiskCleanup,
 } from "../api/runnerDiskQueries";
 import type { RunnerDiskCommand } from "../model/runnerDisk.schema";
@@ -96,6 +97,7 @@ const RunnerDiskDialogBody = ({
   const refresh = useRefreshRunnerDisk(scope, runner.id);
   const clean = useStartRunnerDiskCleanup(scope, runner.id);
   const cancel = useCancelRunnerDiskCleanup(scope, runner.id);
+  const setAuto = useSetRunnerDiskAuto(runner.id);
   const [failure, setFailure] = useState<string | null>(null);
   const onError = (error: unknown) => {
     setFailure(failureText(error));
@@ -137,6 +139,7 @@ const RunnerDiskDialogBody = ({
         refresh: refresh.isPending,
         clean: clean.isPending,
         cancel: cancel.isPending,
+        auto: setAuto.isPending,
       }}
       onRefresh={() => {
         setFailure(null);
@@ -150,6 +153,14 @@ const RunnerDiskDialogBody = ({
         setFailure(null);
         cancel.mutate(commandId, { onError });
       }}
+      onSaveAuto={
+        scope === "admin"
+          ? (request) => {
+              setFailure(null);
+              setAuto.mutate(request, { onError });
+            }
+          : undefined
+      }
     />
   );
 };

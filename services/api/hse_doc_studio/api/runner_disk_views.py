@@ -7,10 +7,16 @@ from fastapi import Request
 from hse_doc_studio.api.schemas import runner_disk as rd
 from hse_doc_studio.api.schemas.runner import CommandProgressBody, RunnerDiskReportBody
 from hse_doc_studio.core.jobs.codec import encode
-from hse_doc_studio.core.jobs.disk import DISK_MIN_RUNNER_VERSION, DiskCleanupPayload
+from hse_doc_studio.core.jobs.disk import (
+    DISK_AUTO_MIN_INTERVAL_S,
+    DISK_AUTO_MIN_RUNNER_VERSION,
+    DISK_MIN_RUNNER_VERSION,
+    DiskCleanupPayload,
+)
 from hse_doc_studio.use_cases.jobs.runner_disk import (
     DiskCommandView,
     PersonName,
+    RunnerDiskAutoState,
     RunnerDiskBrief,
     RunnerDiskState,
     RunnerDiskSummary,
@@ -41,6 +47,30 @@ def disk_command(view: DiskCommandView) -> rd.RunnerDiskCommand:
         finished_at=command.finished_at,
         created_by=_person(view.created_by),
         progress=CommandProgressBody.model_validate(encode(command.progress)) if command.progress is not None else None,
+        auto=view.auto,
+    )
+
+
+def disk_auto(state: RunnerDiskAutoState) -> rd.RunnerDiskAuto:
+    last = state.last
+    return rd.RunnerDiskAuto(
+        supported=state.supported,
+        reason=state.reason,
+        min_version=DISK_AUTO_MIN_RUNNER_VERSION,
+        enabled=state.policy.enabled,
+        min_free_percent=state.policy.min_free_percent,
+        interval_min=DISK_AUTO_MIN_INTERVAL_S // 60,
+        last=rd.RunnerDiskAutoLast(
+            command_id=str(last.command_id),
+            state=last.state.value,
+            started_at=last.started_at,
+            finished_at=last.finished_at,
+            freed_bytes=last.freed_bytes,
+            free_bytes=last.free_bytes,
+            total_bytes=last.total_bytes,
+        )
+        if last is not None
+        else None,
     )
 
 
@@ -61,6 +91,7 @@ def disk_view(state: RunnerDiskState) -> rd.RunnerDiskView:
         can_clean=state.can_clean,
         can_include_rollback=state.can_include_rollback,
         personal_owner=_person(state.personal_owner),
+        auto=disk_auto(state.auto) if state.auto is not None else None,
     )
 
 

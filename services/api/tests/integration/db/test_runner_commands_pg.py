@@ -17,6 +17,8 @@ from hse_doc_studio.core.jobs.disk import (
     CommandStep,
     CommandStepKind,
     CommandStepStatus,
+    DiskAutoLast,
+    DiskAutoPolicy,
     DiskCleanupPayload,
     DiskMeasurePayload,
     DiskTarget,
@@ -291,3 +293,47 @@ async def test__long_poll__two_service_instances_share_the_database(pg_migrated_
     assert polled.command.id == command.id
     assert polled.command.payload == _CLEANUP
     assert (await admin.get(runner.id, command.id)).state is _S.delivered
+
+
+# --- автоочистка (storage-cleanup.md, раздел 14) ---
+
+
+async def test__auto__defaults_policy_and_last_roundtrip(pg_migrated_engine: AsyncEngine) -> None:
+    repos = _Repos(pg_migrated_engine)
+    runner = await repos.runner()
+
+    stored = await repos.disks.get_auto(runner.id)
+    assert stored is not None
+    assert (stored.policy, stored.started_at, stored.last) == (DiskAutoPolicy(), None, None)
+    assert await repos.disks.get_auto("missing") is None
+
+    assert await repos.disks.set_auto_policy(runner.id, DiskAutoPolicy(enabled=False, min_free_percent=33))
+    last = DiskAutoLast(uuid4(), _S.delivered, NOW, None, 0, 5, 100)
+    assert await repos.disks.set_auto_last(runner.id, last)
+    # Итог другой команды не затирает начало следующей.
+    assert not await repos.disks.set_auto_last(runner.id, replace(last, command_id=uuid4()), only_command=uuid4())
+    done = replace(last, state=_S.done, finished_at=NOW + timedelta(minutes=2), freed_bytes=7)
+    assert await repos.disks.set_auto_last(runner.id, done, only_command=last.command_id)
+
+    stored = await repos.disks.get_auto(runner.id)
+    assert stored is not None
+    assert stored.policy == DiskAutoPolicy(enabled=False, min_free_percent=33)
+    assert stored.last == done
+
+
+async def test__auto__claim_once_per_interval_under_a_race(pg_migrated_engine: AsyncEngine) -> None:
+    repos = _Repos(pg_migrated_engine)
+    other = _Repos(pg_migrated_engine)
+    runner = await repos.runner()
+    hour_ago = NOW - timedelta(hours=1)
+
+    won = await asyncio.gather(
+        repos.disks.claim_auto(runner.id, now=NOW, not_after=hour_ago),
+        other.disks.claim_auto(runner.id, now=NOW, not_after=hour_ago),
+    )
+
+    assert sorted(won) == [False, True]
+    later = NOW + timedelta(minutes=59)
+    assert not await repos.disks.claim_auto(runner.id, now=later, not_after=later - timedelta(hours=1))
+    later = NOW + timedelta(minutes=60)
+    assert await repos.disks.claim_auto(runner.id, now=later, not_after=later - timedelta(hours=1))

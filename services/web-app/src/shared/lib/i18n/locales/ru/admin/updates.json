@@ -177,6 +177,7 @@
     "health": "здоровье",
     "rollback": "откат",
     "restore": "восстановление",
+    "cleanup": "чистка старых образов",
     "finish": "итог"
   },
   "confirmUpdate": {

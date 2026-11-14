@@ -11,11 +11,14 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
 from types import MappingProxyType
+from typing import Final
 from uuid import UUID
+
+from hse_doc_studio.core.jobs.files import WIRE_OMIT_DEFAULT
 
 # Закодированный отчёт больше этого сервер отвергает (413 `disk_report_too_large`); раннер обрезает списки.
 MAX_DISK_REPORT_BYTES = 64 * 1024
@@ -42,6 +45,15 @@ BLOB_MIN_IDLE_S = 600
 DISK_MIN_RUNNER_VERSION = "0.22.0"
 # Диалог «Диск» показывает незавершённую очистку или последнюю завершённую за это время.
 RECENT_COMMAND_S = 24 * 3600
+
+# Автоочистка по порогу места (storage-cleanup.md, раздел 14): раннер раз в 5 минут сообщает свободное место
+# (`/control/disk-check`), сервер ставит очистку не чаще раза в час, если свободно меньше порога.
+DISK_CHECK_EVERY_S = 300
+DISK_AUTO_MIN_INTERVAL_S = 3600
+DEFAULT_DISK_AUTO_MIN_FREE_PERCENT = 10
+DISK_AUTO_PERCENT_RANGE = (1, 50)
+# Первая версия раннера с автоочисткой (возможность `disk_auto`): экран берёт её из ответа сервера.
+DISK_AUTO_MIN_RUNNER_VERSION = "0.28.0"
 
 
 class DiskTarget(StrEnum):
@@ -376,15 +388,31 @@ class DiskMeasurePayload:
 
 @dataclass(frozen=True)
 class DiskCleanupPayload:
-    """`disk.cleanup`: только цели; что именно удалить, раннер решает по свежему замеру."""
+    """`disk.cleanup`: только цели; что именно удалить, раннер решает по свежему замеру.
+
+    `auto`: автоочистку поставил сервер по порогу места (14.3); раннер оставляет и предыдущий тег каждого образа
+    сервиса. По проводу едет, только когда `true` (`WIRE_OMIT_DEFAULT`), а ставится только раннеру с `disk_auto`.
+    """
 
     targets: tuple[DiskTarget, ...]
     include_rollback: bool = False
+    auto: bool = field(default=False, metadata=WIRE_OMIT_DEFAULT)
 
     def __post_init__(self) -> None:
         _check_targets(self.targets, at_least_one=True)
         if self.include_rollback and DiskTarget.old_versions not in self.targets:
             raise ValueError("include_rollback needs the old_versions target")
+        if self.auto and self.include_rollback:
+            raise ValueError("an automatic cleanup never removes the rollback image")
+
+
+# Цели автоочистки (A2): висячие слои, кэш сборки и старые версии без отката. Кэш раннера, неиспользуемые образы и
+# остановленные контейнеры в неё не входят.
+DISK_AUTO_TARGETS: Final[tuple[DiskTarget, ...]] = (
+    DiskTarget.dangling_images,
+    DiskTarget.build_cache,
+    DiskTarget.old_versions,
+)
 
 
 RunnerCommandPayload = DiskCleanupPayload | DiskMeasurePayload
@@ -474,3 +502,36 @@ class RunnerCommand:
 
     def __post_init__(self) -> None:
         check_payload(self.kind, self.payload)
+
+
+@dataclass(frozen=True)
+class DiskAutoPolicy:
+    """Настройка автоочистки раннера (`runners.disk_auto_*`): включена ли и при каком проценте свободного места."""
+
+    enabled: bool = True
+    min_free_percent: int = DEFAULT_DISK_AUTO_MIN_FREE_PERCENT
+
+    def __post_init__(self) -> None:
+        low, high = DISK_AUTO_PERCENT_RANGE
+        if not low <= self.min_free_percent <= high:
+            raise ValueError(f"min_free_percent must be within {low}..{high}")
+
+    def below(self, free_bytes: int, total_bytes: int) -> bool:
+        """Свободно меньше порога; пустой том (`total_bytes = 0`) порога не задевает."""
+        return total_bytes > 0 and free_bytes * 100 < total_bytes * self.min_free_percent
+
+
+@dataclass(frozen=True)
+class DiskAutoLast:
+    """Последняя автоочистка раннера (`runners.disk_auto_last`): начало, итог и место на момент проверки."""
+
+    command_id: UUID
+    state: RunnerCommandState
+    started_at: datetime
+    finished_at: datetime | None
+    freed_bytes: int
+    free_bytes: int
+    total_bytes: int
+
+    def __post_init__(self) -> None:
+        _check_bytes(self.freed_bytes, self.free_bytes, self.total_bytes)

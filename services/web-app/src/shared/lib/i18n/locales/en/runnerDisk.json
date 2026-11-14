@@ -118,6 +118,7 @@
     "lost": "The runner went away during the cleanup. The next measurement will show what was removed.",
     "startedBy": "Started by {{name}}, {{when}}",
     "startedAt": "Started {{when}}",
+    "startedAuto": "Started by automatic cleanup, {{when}}",
     "hide": "Hide result",
     "progress": "Cleanup progress",
     "step": {
@@ -148,5 +149,26 @@
   "failure": {
     "unknown": "That did not work. Please try again.",
     "network": "The server did not respond. Check the connection and try again."
+  },
+  "auto": {
+    "title": "Automatic cleanup",
+    "switch": "Clean automatically",
+    "threshold": "When free space is below",
+    "hint": "Dangling layers, the Docker build cache and old image versions, when the runner data volume has less free space than the threshold. The current and previous versions of the Studio and TeX Live stay, running builds are not affected. At most once every {{minutes}} min.",
+    "save": "Save",
+    "invalid": "The threshold is {{min}} to {{max}} %",
+    "lastNever": "Automatic cleanup has not run yet",
+    "lastRunning": "Automatic cleanup: running since {{when}}",
+    "lastDone": "Automatic cleanup: last run {{when}}, freed {{size}}",
+    "lastCancelled": "Automatic cleanup: last run {{when}}, stopped, freed {{size}}",
+    "lastError": "Automatic cleanup: last run {{when}}, with errors, freed {{size}}",
+    "lastLost": "Automatic cleanup: last run {{when}}, the runner went away during the cleanup",
+    "freeAt": "{{percent}} % was free",
+    "reason": {
+      "outdated": "Automatic cleanup becomes available after the runner is updated to {{version}}. You can save the setting in advance.",
+      "kubernetes": "Automatic cleanup is not needed: Kubernetes removes images on the nodes, and the runner cache has its own limits.",
+      "managed_locally": "Automatic cleanup is not needed: this is a local Studio, its images are cleaned in Settings, Disk.",
+      "runner_disabled": "Automatic cleanup is turned off on the runner itself (HSE_RUNNER__DISK_AUTO_CLEAN=false)."
+    }
   }
 }

@@ -29,6 +29,11 @@ info:
     `<stem>.hsepos` рядом с PDF (как SyncTeX), только записанный последним проходом TeX. Сервер кладёт его в
     `.build/<doc_id>/` и переводит в якоря при публикации PDF. Без согласования раннер файл не выгружает
     (прежний сервер отверг бы задачу `output_not_allowed`), а сервер файл от раннера без возможности отбрасывает.
+
+    Автоочистка (возможность `disk_auto`): раннер с Docker-частью раз в 5 минут сообщает свободное место тома
+    данных (`/control/disk-check`). Сервер сверяет его с настройкой раннера и отвечает командой `disk.cleanup` с
+    `auto: true`, уже доставленной, или пусто. Флаг `auto` едет только когда он `true`, и только раннеру с
+    возможностью: прежний раннер его не увидит.
 servers:
   - url: /api/runner/v1
 x-error-codes:
@@ -248,6 +253,17 @@ paths:
         "200": {description: Принято, content: {application/json: {schema: {$ref: '#/components/schemas/CommandProgressResponseBody'}}}}
         "401": {$ref: '#/components/responses/Error'}
         "404": {$ref: '#/components/responses/Error'}
+        "409": {$ref: '#/components/responses/Error'}
+        "422": {$ref: '#/components/responses/Error'}
+  /control/disk-check:
+    post:
+      operationId: checkRunnerDisk
+      summary: Свободное место тома данных раннера; в ответе автоочистка, если её пора начать. Только после согласования `disk_auto`.
+      security: [{runnerToken: []}]
+      requestBody: {content: {application/json: {schema: {$ref: '#/components/schemas/DiskCheckRequestBody'}}}, required: true}
+      responses:
+        "200": {description: Автоочистка или пусто, content: {application/json: {schema: {$ref: '#/components/schemas/DiskCheckResponseBody'}}}}
+        "401": {$ref: '#/components/responses/Error'}
         "409": {$ref: '#/components/responses/Error'}
         "422": {$ref: '#/components/responses/Error'}
   /disk:
@@ -624,9 +640,36 @@ components:
           type: array
         include_rollback:
           type: boolean
+        auto:
+          default: false
+          description: Автоочистку поставил сервер по порогу места; едет только когда `true`.
+          type: boolean
       required:
       - targets
       - include_rollback
+      type: object
+    DiskCheckRequestBody:
+      additionalProperties: false
+      properties:
+        free_bytes:
+          minimum: 0
+          type: integer
+        total_bytes:
+          minimum: 0
+          type: integer
+      required:
+      - free_bytes
+      - total_bytes
+      type: object
+    DiskCheckResponseBody:
+      additionalProperties: false
+      properties:
+        command:
+          anyOf:
+          - $ref: '#/components/schemas/RunnerCommandEnvelopeBody'
+          - type: 'null'
+      required:
+      - command
       type: object
     DiskCountBody:
       additionalProperties: false

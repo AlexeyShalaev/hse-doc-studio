@@ -367,6 +367,10 @@ class KubeLocalHost:
 
     # ---- обновление на месте ----
 
+    async def prune_old_images(self, image: str, previous_image: str) -> list[str]:  # noqa: ARG002
+        """Образы на узлах кластера чистит kubelet (storage-cleanup.md, 14.2, A13): Студия их не трогает."""
+        return []
+
     def upgrade_steps(self) -> tuple[str, ...]:
         return _UPGRADE_STEPS
 

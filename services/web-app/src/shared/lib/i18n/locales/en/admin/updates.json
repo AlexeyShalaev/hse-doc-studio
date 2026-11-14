@@ -177,6 +177,7 @@
     "health": "health",
     "rollback": "rollback",
     "restore": "restore",
+    "cleanup": "old image cleanup",
     "finish": "result"
   },
   "confirmUpdate": {

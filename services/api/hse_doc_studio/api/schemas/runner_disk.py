@@ -39,7 +39,7 @@ class RunnerDiskBrief(StrictModel):
 
 
 class RunnerDiskCommand(StrictModel):
-    """Команда раннеру; у `disk.measure` целей нет и откат `false`."""
+    """Команда раннеру; у `disk.measure` целей нет и откат `false`. `auto`: автоочистка по порогу места."""
 
     id: str
     kind: RunnerCommandKindName
@@ -48,9 +48,42 @@ class RunnerDiskCommand(StrictModel):
     include_rollback: bool
     created_at: datetime
     finished_at: datetime | None
-    # Кто запустил; `null`, если человека уже нет в установке.
+    # Кто запустил; `null`, если человека уже нет в установке или это автоочистка.
     created_by: RunnerDiskPerson | None
     progress: CommandProgressBody | None
+    auto: bool
+
+
+class RunnerDiskAutoLast(StrictModel):
+    """Последняя автоочистка: начало, итог (`finished_at` пусто, пока идёт) и место на момент проверки."""
+
+    command_id: str
+    state: RunnerCommandStateName
+    started_at: datetime
+    finished_at: datetime | None
+    freed_bytes: int = Field(ge=0)
+    free_bytes: int = Field(ge=0)
+    total_bytes: int = Field(ge=0)
+
+
+class RunnerDiskAuto(StrictModel):
+    """Автоочистка общего раннера по порогу места (storage-cleanup.md, 14.5)."""
+
+    supported: bool
+    # Почему не поддержана: старая версия, Kubernetes, локальная Студия или выключено на самом раннере.
+    reason: Literal["outdated", "kubernetes", "managed_locally", "runner_disabled"] | None
+    min_version: str
+    enabled: bool
+    min_free_percent: int = Field(ge=1, le=50)
+    interval_min: int
+    last: RunnerDiskAutoLast | None
+
+
+class RunnerDiskAutoRequest(StrictModel):
+    """Настройка автоочистки; процент вне 1..50 сервер отвергает как `input_invalid`."""
+
+    enabled: bool
+    min_free_percent: int
 
 
 class RunnerDiskView(StrictModel):
@@ -71,6 +104,8 @@ class RunnerDiskView(StrictModel):
     can_include_rollback: bool
     # Только в админке и только у личного раннера.
     personal_owner: RunnerDiskPerson | None
+    # Только в админке и только у общего раннера.
+    auto: RunnerDiskAuto | None
 
 
 class RunnerDiskCleanupRequest(StrictModel):

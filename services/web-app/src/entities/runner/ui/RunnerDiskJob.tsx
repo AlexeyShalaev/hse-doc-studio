@@ -196,9 +196,11 @@ export const RunnerDiskJob = ({
             {title}
           </span>
           <span className="dim" style={{ fontSize: "0.6875rem" }}>
-            {command.created_by
-              ? t("job.startedBy", { name: command.created_by.name, when })
-              : t("job.startedAt", { when })}
+            {command.auto
+              ? t("job.startedAuto", { when })
+              : command.created_by
+                ? t("job.startedBy", { name: command.created_by.name, when })
+                : t("job.startedAt", { when })}
           </span>
         </span>
         {!active && onHide && (

@@ -93,6 +93,8 @@
       "runner_disk_cleanup": "Runner disk cleanup started",
       "runner_disk_cleanup_cancel": "Runner disk cleanup stopped",
       "runner_disk_cleaned": "Runner disk cleanup finished",
+      "runner_disk_auto_cleanup": "Runner disk automatic cleanup started",
+      "runner_disk_auto_policy": "Runner disk automatic cleanup changed",
       "runner_deregister": "Runner deregistered",
       "runner_pairing_approve": "Runner pairing approved",
       "runner_pairing_deny": "Runner pairing denied",

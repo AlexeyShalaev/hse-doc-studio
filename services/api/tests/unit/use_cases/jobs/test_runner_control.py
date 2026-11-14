@@ -68,10 +68,16 @@ class _Clock:
 class _Observer:
     def __init__(self, *, fail: bool = False) -> None:
         self.closed: list[RunnerCommand] = []
+        self.started: list[tuple[RunnerCommand, int, int, int]] = []
         self._fail = fail
 
     async def command_finished(self, command: RunnerCommand) -> None:
         self.closed.append(command)
+        if self._fail:
+            raise RuntimeError("boom")
+
+    async def auto_started(self, command: RunnerCommand, *, free_bytes: int, total_bytes: int, percent: int) -> None:
+        self.started.append((command, free_bytes, total_bytes, percent))
         if self._fail:
             raise RuntimeError("boom")
 

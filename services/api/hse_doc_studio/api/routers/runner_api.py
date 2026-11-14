@@ -28,6 +28,8 @@ from hse_doc_studio.api.schemas.runner import (
     CompleteResponseBody,
     ControlPollRequestBody,
     ControlPollResponseBody,
+    DiskCheckRequestBody,
+    DiskCheckResponseBody,
     HeartbeatRequestBody,
     HeartbeatResponseBody,
     LogBatchBody,
@@ -64,6 +66,7 @@ from hse_doc_studio.core.jobs.wire import (
     CommandProgressRequest,
     CompleteRequest,
     ControlPollRequest,
+    DiskCheckRequest,
     LogBatch,
     PollRequest,
     RunnerAnnounceRequest,
@@ -232,7 +235,9 @@ async def _control(request: Request) -> RunnerControlService:
     return await request.state.dishka_container.get(RunnerControlService)
 
 
-@router.post("/control/poll", response_model=ControlPollResponseBody)
+# `response_model_exclude_unset`: флаг `auto` нагрузки, которого нет в закодированном ответе, не дописывается схемой
+# значением по умолчанию: раннер до `disk_auto` отверг бы незнакомое поле (storage-cleanup.md, 14.3).
+@router.post("/control/poll", response_model=ControlPollResponseBody, response_model_exclude_unset=True)
 async def poll_runner_command(
     body: ControlPollRequestBody, request: Request, runner: Runner = Depends(authenticated_runner)
 ) -> dict[str, object]:
@@ -240,6 +245,18 @@ async def poll_runner_command(
     response = await (await _control(request)).poll(
         runner, ControlPollRequest(wait_s=body.wait_s), gone=lambda: _poll_gone(request)
     )
+    encoded = encode(response)
+    assert isinstance(encoded, dict)  # noqa: S101 — датакласс кодируется словарём
+    return encoded
+
+
+@router.post("/control/disk-check", response_model=DiskCheckResponseBody, response_model_exclude_unset=True)
+async def check_runner_disk(
+    body: DiskCheckRequestBody, request: Request, runner: Runner = Depends(authenticated_runner)
+) -> dict[str, object]:
+    """Свободное место тома данных (возможность `disk_auto`); в ответе автоочистка, если её пора начать."""
+    check = DiskCheckRequest(free_bytes=body.free_bytes, total_bytes=body.total_bytes)
+    response = await (await _control(request)).disk_check(runner, check)
     encoded = encode(response)
     assert isinstance(encoded, dict)  # noqa: S101 — датакласс кодируется словарём
     return encoded

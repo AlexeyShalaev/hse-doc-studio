@@ -16,6 +16,8 @@ from uuid import UUID
 
 from hse_doc_studio.core.jobs.disk import (
     CommandProgress,
+    DiskAutoLast,
+    DiskAutoPolicy,
     RunnerCommand,
     RunnerCommandKind,
     RunnerCommandState,
@@ -49,6 +51,15 @@ class StoredDiskBrief:
     cleanable_bytes: int
     measured_at: datetime
     received_at: datetime
+
+
+@dataclass(frozen=True)
+class StoredDiskAuto:
+    """Автоочистка раннера (`runners.disk_auto_*`): настройка, начало последней и её итог."""
+
+    policy: DiskAutoPolicy
+    started_at: datetime | None
+    last: DiskAutoLast | None
 
 
 class IRunnerCommandRepository(Protocol):
@@ -119,6 +130,26 @@ class IRunnerDiskStore(Protocol):
         списки раннеров, сводка «Хранилища» и метрика читают её, а не отчёты целиком."""
         ...
 
+    async def get_auto(self, runner_id: str) -> StoredDiskAuto | None:
+        """Настройка и итог автоочистки; None, если раннера нет."""
+        ...
+
+    async def set_auto_policy(self, runner_id: str, policy: DiskAutoPolicy) -> bool:
+        """Новая настройка; False, если раннера нет или он отозван."""
+        ...
+
+    async def claim_auto(self, runner_id: str, *, now: datetime, not_after: datetime) -> bool:
+        """`disk_auto_at = now`, если прошлая автоочистка началась не позже `not_after` (или не было ни одной).
+
+        Условное обновление: из двух реплик, проверивших один раннер одновременно, начинает одна.
+        """
+        ...
+
+    async def set_auto_last(self, runner_id: str, last: DiskAutoLast, *, only_command: UUID | None = None) -> bool:
+        """Итог автоочистки на месте прежнего; с `only_command` только если там та же команда (итог не затирает
+        начало следующей)."""
+        ...
+
 
 class IRunnerCommandObserver(Protocol):
     async def command_finished(self, command: RunnerCommand) -> None:
@@ -126,6 +157,10 @@ class IRunnerCommandObserver(Protocol):
 
         Сбой наблюдателя переход не отменяет: он уже записан.
         """
+        ...
+
+    async def auto_started(self, command: RunnerCommand, *, free_bytes: int, total_bytes: int, percent: int) -> None:
+        """Сервер поставил автоочистку по порогу места: аудит начала. Сбой команду не отменяет."""
         ...
 
 

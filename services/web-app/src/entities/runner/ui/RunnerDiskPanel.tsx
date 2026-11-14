@@ -5,6 +5,7 @@ import { Badge, Button, Notice, Spinner } from "@shared/ui";
 import { DiskUsageOverview, buildDiskSegments } from "@entities/docker-system";
 import type {
   DiskTarget,
+  RunnerDiskAutoRequest,
   RunnerDiskCleanupRequest,
   RunnerDiskReport,
   RunnerDiskView,
@@ -26,6 +27,7 @@ import {
   VolumesBlock,
   type DiskBlockAction,
 } from "./RunnerDiskBlocks";
+import { RunnerDiskAutoBlock } from "./RunnerDiskAutoBlock";
 import { RunnerDiskConfirm } from "./RunnerDiskConfirm";
 import { RunnerDiskJob } from "./RunnerDiskJob";
 import { diskSize, diskWhen } from "./format";
@@ -50,9 +52,12 @@ export type RunnerDiskPanelProps = {
   onClean: (request: RunnerDiskCleanupRequest) => void;
   /** «Остановить после текущего шага» (и отмена до того, как раннер забрал команду). */
   onCancel: (commandId: string) => void;
+  /** Сохранить автоочистку (только админка, только общий раннер); без него блок только показывает. */
+  onSaveAuto?: ((request: RunnerDiskAutoRequest) => void) | undefined;
   /** Запросы, которые уже ушли: кнопки не нажимаются дважды. */
   pending?:
-    { refresh?: boolean; clean?: boolean; cancel?: boolean } | undefined;
+    | { refresh?: boolean; clean?: boolean; cancel?: boolean; auto?: boolean }
+    | undefined;
   /** Текст отказа последнего действия (409 runner_offline и прочие). */
   error?: string | null | undefined;
   /** Галерея и тесты: открыть сразу с подтверждением. */
@@ -86,6 +91,7 @@ export const RunnerDiskPanel = ({
   onRefresh,
   onClean,
   onCancel,
+  onSaveAuto,
   pending = {},
   error = null,
   initialConfirm = null,
@@ -339,6 +345,15 @@ export const RunnerDiskPanel = ({
           onCleanAll={() => {
             ask("all");
           }}
+        />
+      )}
+      {view.auto !== null && confirm === null && (
+        <RunnerDiskAutoBlock
+          // Новая настройка с сервера (сохранили в другой вкладке) сбрасывает правку в поле.
+          key={`${String(view.auto.enabled)}:${String(view.auto.min_free_percent)}`}
+          auto={view.auto}
+          onSave={onSaveAuto}
+          pending={Boolean(pending.auto)}
         />
       )}
     </div>

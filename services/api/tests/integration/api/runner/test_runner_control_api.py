@@ -279,3 +279,65 @@ async def test__disk__larger_than_64_kib__413_before_parsing(env: _Env) -> None:
     assert (declared.status_code, declared.json()["code"]) == (413, "disk_report_too_large")
     assert (streamed.status_code, streamed.json()["code"]) == (413, "disk_report_too_large")
     assert await env.service.disk(runner_id) is None
+
+
+# --- автоочистка (storage-cleanup.md, раздел 14) ---
+
+
+async def test__disk_check__without_disk_auto__feature_not_negotiated(env: _Env) -> None:
+    headers, _ = await env.runner(["control", "disk"])
+
+    response = await env.client.post(
+        f"{_API}/control/disk-check", json=_fixture("DiskCheckRequestBody", "low"), headers=headers
+    )
+
+    assert response.status_code == 409
+    assert response.json()["code"] == "feature_not_negotiated"
+
+
+async def test__disk_check__below_threshold__auto_command_with_the_flag(env: _Env) -> None:
+    headers, runner_id = await env.runner(["control", "disk", "disk_auto"])
+
+    low = await env.client.post(
+        f"{_API}/control/disk-check", json=_fixture("DiskCheckRequestBody", "low"), headers=headers
+    )
+    again = await env.client.post(
+        f"{_API}/control/disk-check", json=_fixture("DiskCheckRequestBody", "low"), headers=headers
+    )
+
+    assert low.status_code == 200
+    command = low.json()["command"]
+    assert command["kind"] == "disk.cleanup"
+    assert command["payload"] == {
+        "targets": ["dangling_images", "build_cache", "old_versions"],
+        "include_rollback": False,
+        "auto": True,
+    }
+    assert again.json() == {"command": None}
+    final = await env.client.post(
+        f"{_API}/control/{command['id']}/progress",
+        json={"state": "done", "progress": {"steps": [], "freed_bytes": 0, "error": None}},
+        headers=headers,
+    )
+    assert final.status_code == 200
+    stored = await env.service.recent(runner_id)
+    assert stored[0].state is RunnerCommandState.done
+
+
+async def test__disk_check__free_above_total__rejected(env: _Env) -> None:
+    headers, _ = await env.runner(["control", "disk", "disk_auto"])
+
+    response = await env.client.post(
+        f"{_API}/control/disk-check", json={"free_bytes": 2, "total_bytes": 1}, headers=headers
+    )
+
+    assert response.status_code == 422
+
+
+async def test__control_poll__manual_command_never_carries_the_auto_flag(env: _Env) -> None:
+    headers, runner_id = await env.runner(["control", "disk", "disk_auto"])
+    await env.cleanup(runner_id)
+
+    polled = await env.client.post(f"{_API}/control/poll", json={"wait_s": 0}, headers=headers)
+
+    assert "auto" not in polled.json()["command"]["payload"]

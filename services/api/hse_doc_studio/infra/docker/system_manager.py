@@ -35,6 +35,7 @@ from hse_doc_studio.core.docker_disk.usage import (
     DockerDiskUsage,
     ImageUsage,
     VolumeUsage,
+    parse_created_at,
 )
 from hse_doc_studio.infra.docker.cli import MANAGED_LABEL, run_docker
 
@@ -164,6 +165,7 @@ class DockerSystemManager:
             id=image_id,
             size_bytes=parse_size(str(entry.get("Size") or "")),
             created=str(entry.get("CreatedSince") or ""),
+            created_at=parse_created_at(str(entry.get("CreatedAt") or "")),
             containers=containers,
             category=category,
             dangling=dangling,

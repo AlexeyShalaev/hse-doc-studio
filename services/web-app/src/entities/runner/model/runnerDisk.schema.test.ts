@@ -52,11 +52,12 @@ describe("диск раннера: состояния галерей и этал
     "kubernetes",
     "desktop",
     "personal_admin",
+    "auto_running",
   ] as const)("вид %s совпадает с эталоном", (name) => {
     expect(RUNNER_DISK_STATES[name]).toEqual(fixture("RunnerDiskView", name));
   });
 
-  it.each(["queued", "running", "done", "lost", "measure"] as const)(
+  it.each(["queued", "running", "done", "lost", "measure", "auto"] as const)(
     "команда %s совпадает с эталоном",
     (name) => {
       expect(DISK_COMMANDS[name]).toEqual(fixture("RunnerDiskCommand", name));

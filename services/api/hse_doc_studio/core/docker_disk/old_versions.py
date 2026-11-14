@@ -125,3 +125,26 @@ def find_old_versions(usage: DockerDiskUsage, current_version: str, image_base: 
         if container.managed and container.state != "running" and container.image.rsplit(":", 1)[0] == image_base
     )
     return OldVersions(current_version=current_version, rollback=rollback, items=items)
+
+
+def previous_service_refs(usage: DockerDiskUsage, old: OldVersions) -> frozenset[str]:
+    """Предыдущий тег каждого образа сервиса среди «старых версий»: самый новый по времени сборки.
+
+    Автоочистка (storage-cleanup.md, 14.3) оставляет его, как откат Студии: откат раннера на прошлую версию не
+    качает заново гигабайты TeX Live. Если у какого-то тега репозитория время неизвестно, остаются все теги этого
+    репозитория: осторожность важнее места.
+    """
+    by_ref = {image.reference: image for image in usage.images}
+    groups: dict[str, list[ImageUsage]] = {}
+    for item in old.items:
+        image = by_ref.get(item.ref)
+        if item.kind == "service_image" and image is not None:
+            groups.setdefault(image.repository, []).append(image)
+    keep: set[str] = set()
+    for images in groups.values():
+        dated = [(image.created_at, image.reference) for image in images if image.created_at is not None]
+        if len(dated) < len(images):
+            keep.update(image.reference for image in images)
+        else:
+            keep.add(max(dated)[1])
+    return frozenset(keep)

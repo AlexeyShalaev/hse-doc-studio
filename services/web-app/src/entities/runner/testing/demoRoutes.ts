@@ -2,11 +2,16 @@ import { demoError, demoJson } from "@shared/api/demo";
 import type { DemoRequest, DemoResponse, DemoRoute } from "@shared/api/demo";
 import { runnerDiskTotals } from "../lib/runnerDiskLib";
 import {
+  DISK_AUTO_PERCENT_MAX,
+  DISK_AUTO_PERCENT_MIN,
   DISK_TARGETS,
   type DiskStep,
   type DiskTarget,
   type PersonRef,
   type RunnerCacheDisk,
+  type RunnerDiskAuto,
+  type RunnerDiskAutoLast,
+  type RunnerDiskAutoReason,
   type RunnerDiskBrief,
   type RunnerDiskCommand,
   type RunnerDiskReport,
@@ -14,6 +19,8 @@ import {
   type RunnerDiskView,
 } from "../model/runnerDisk.schema";
 import {
+  DISK_AUTO_LAST_DONE,
+  DISK_AUTO_MIN_VERSION,
   DISK_MIN_VERSION,
   DOCKER_TARGETS,
   GIB,
@@ -101,6 +108,8 @@ type DiskState = {
   receivedAt: number | null;
   cleanup: DemoCommand | null;
   measure: { command: RunnerDiskCommand; polls: number } | null;
+  /** Автоочистка (раздел 14): настройка админа и итог последней. */
+  auto: { enabled: boolean; percent: number; last: RunnerDiskAutoLast | null };
 };
 
 const HOUR = 3600 * 1000;
@@ -132,6 +141,15 @@ export const createRunnerDiskDemo = (
       receivedAt: t - 40 * 60 * 1000 + 2000,
       cleanup: null,
       measure: null,
+      auto: {
+        enabled: true,
+        percent: 10,
+        last: {
+          ...DISK_AUTO_LAST_DONE,
+          started_at: iso(t - 6 * HOUR - 20 * 60 * 1000),
+          finished_at: iso(t - 6 * HOUR - 18 * 60 * 1000),
+        },
+      },
     };
     switch (profile) {
       case "docker":
@@ -449,6 +467,27 @@ export const createRunnerDiskDemo = (
         scope === "admin" && runner.owner
           ? { id: runner.owner.id, name: runner.owner.name }
           : null,
+      auto: scope === "admin" && !runner.owner ? autoOf(state) : null,
+    };
+  };
+
+  /** Блок «Автоочистка» (14.5): только Docker-раннер новой версии умеет её. */
+  const autoOf = (state: DiskState): RunnerDiskAuto => {
+    const reason: RunnerDiskAutoReason | null = !state.supported
+      ? "outdated"
+      : state.kind === "kubernetes"
+        ? "kubernetes"
+        : state.kind === "desktop"
+          ? "managed_locally"
+          : null;
+    return {
+      supported: reason === null,
+      reason,
+      min_version: DISK_AUTO_MIN_VERSION,
+      enabled: state.auto.enabled,
+      min_free_percent: state.auto.percent,
+      interval_min: 60,
+      last: reason === null ? state.auto.last : null,
     };
   };
 
@@ -518,6 +557,7 @@ export const createRunnerDiskDemo = (
               finished_at: null,
               created_by: { id: actor.id, name: actor.name },
               progress: null,
+              auto: false,
             },
           };
           return demoJson(state.measure.command, 202);
@@ -580,6 +620,7 @@ export const createRunnerDiskDemo = (
             finished_at: null,
             created_by: { id: actor.id, name: actor.name },
             progress: null,
+            auto: false,
           };
           state.cleanup = {
             command,
@@ -588,6 +629,43 @@ export const createRunnerDiskDemo = (
           return demoJson(command, 202);
         },
       },
+      ...(scope === "admin"
+        ? [
+            {
+              method: "PUT" as const,
+              pattern: `${base}/:id/disk/auto`,
+              handler: (req: DemoRequest) => {
+                const found = resolve(req);
+                if ("error" in found) return found.error;
+                if (found.runner.owner) {
+                  return demoError(
+                    403,
+                    "forbidden",
+                    "Automatic cleanup is for shared runners only",
+                  );
+                }
+                const body = (req.body ?? {}) as Record<string, unknown>;
+                const percent = body.min_free_percent;
+                if (
+                  typeof body.enabled !== "boolean" ||
+                  typeof percent !== "number" ||
+                  !Number.isInteger(percent) ||
+                  percent < DISK_AUTO_PERCENT_MIN ||
+                  percent > DISK_AUTO_PERCENT_MAX
+                ) {
+                  return demoError(
+                    422,
+                    "input_invalid",
+                    "min_free_percent must be 1..50",
+                  );
+                }
+                const state = stateOf(found.runner);
+                state.auto = { ...state.auto, enabled: body.enabled, percent };
+                return demoJson(autoOf(state));
+              },
+            },
+          ]
+        : []),
       {
         method: "POST",
         pattern: `${base}/:id/disk/commands/:cid/cancel`,

@@ -7,6 +7,8 @@ import type {
   DiskUnusedImage,
   DockerDisk,
   RunnerCacheDisk,
+  RunnerDiskAuto,
+  RunnerDiskAutoLast,
   RunnerDiskCommand,
   RunnerDiskReport,
   RunnerDiskSummary,
@@ -355,6 +357,13 @@ const withStatuses = (
     return { ...s, status, freed_bytes: freed, error };
   });
 
+/** Цели автоочистки (раздел 14, A2). */
+export const DISK_AUTO_TARGETS: DiskTarget[] = [
+  "dangling_images",
+  "build_cache",
+  "old_versions",
+];
+
 export const makeRunnerDiskCommand = (
   overrides: Partial<RunnerDiskCommand> = {},
 ): RunnerDiskCommand => ({
@@ -367,6 +376,7 @@ export const makeRunnerDiskCommand = (
   finished_at: null,
   created_by: DISK_ADMIN,
   progress: null,
+  auto: false,
   ...overrides,
 });
 
@@ -487,7 +497,50 @@ export const DISK_COMMANDS = {
     kind: "disk.measure",
     targets: [],
   }),
+  /** Автоочистка по порогу места (раздел 14): запустил не человек, цели только безопасные. */
+  auto: makeRunnerDiskCommand({
+    id: "rdc_01hzauto01",
+    state: "running",
+    targets: [...DISK_AUTO_TARGETS],
+    created_at: at(75),
+    created_by: null,
+    auto: true,
+    progress: progress([
+      step("image", `${IMAGE}:0.20.3`, "done", gib(1.08)),
+      step("image", `${IMAGE}:0.19.0`, "running"),
+      step("dangling_images", null, "pending"),
+      step("build_cache", null, "pending"),
+    ]),
+  }),
 } satisfies Record<string, RunnerDiskCommand>;
+
+// Автоочистка общего раннера (14.5).
+
+export const DISK_AUTO_MIN_VERSION = "0.28.0";
+
+/** Последняя автоочистка: шесть часов назад, освобождено 6 ГБ при 8 % свободного. */
+export const DISK_AUTO_LAST_DONE: RunnerDiskAutoLast = {
+  command_id: "rdc_01hzauto00",
+  state: "done",
+  started_at: at(6 * 3600 + 20 * 60),
+  finished_at: at(6 * 3600 + 18 * 60),
+  freed_bytes: gib(6),
+  free_bytes: gib(8),
+  total_bytes: gib(100),
+};
+
+export const makeRunnerDiskAuto = (
+  overrides: Partial<RunnerDiskAuto> = {},
+): RunnerDiskAuto => ({
+  supported: true,
+  reason: null,
+  min_version: DISK_AUTO_MIN_VERSION,
+  enabled: true,
+  min_free_percent: 10,
+  interval_min: 60,
+  last: null,
+  ...overrides,
+});
 
 // Вид диска (ответ GET .../disk).
 
@@ -511,6 +564,7 @@ export const makeRunnerDiskView = (
     can_clean: true,
     can_include_rollback: true,
     personal_owner: null,
+    auto: makeRunnerDiskAuto(),
     ...overrides,
   };
 };
@@ -521,7 +575,9 @@ export const makeRunnerDiskView = (
  */
 export const RUNNER_DISK_STATES = {
   /** Docker-раннер с полным замером. */
-  docker: makeRunnerDiskView(),
+  docker: makeRunnerDiskView({
+    auto: makeRunnerDiskAuto({ last: DISK_AUTO_LAST_DONE }),
+  }),
   /** Нечего освобождать. */
   nothing_to_clean: makeRunnerDiskView({ report: makeCleanDiskReport() }),
   /** Ждём раннер: команда ещё не забрана. */
@@ -568,14 +624,22 @@ export const RUNNER_DISK_STATES = {
   }),
   /** Раннер не на связи: последний замер, очистка и «Обновить» выключены. */
   offline: makeRunnerDiskView({
+    auto: makeRunnerDiskAuto({ min_free_percent: 15 }),
     online: false,
     last_seen_at: at(2 * 3600),
     report: makeRunnerDiskReport({ measured_at: at(3 * 3600) }),
     received_at: at(3 * 3600 - 2),
     can_clean: false,
   }),
-  /** Раннер ещё не прислал замер. */
-  no_report: makeRunnerDiskView({ report: null }),
+  /** Раннер ещё не прислал замер; автоочистку на нём выключили переменной. */
+  no_report: makeRunnerDiskView({
+    report: null,
+    auto: makeRunnerDiskAuto({
+      supported: false,
+      reason: "runner_disabled",
+      enabled: false,
+    }),
+  }),
   /** Замер старше суток. */
   stale: makeRunnerDiskView({
     report: makeRunnerDiskReport({ measured_at: at(30 * 3600) }),
@@ -594,24 +658,45 @@ export const RUNNER_DISK_STATES = {
     report: null,
     can_clean: false,
     can_include_rollback: false,
+    auto: makeRunnerDiskAuto({ supported: false, reason: "outdated" }),
   }),
   kubernetes: makeRunnerDiskView({
     report: makeKubernetesDiskReport(),
     can_include_rollback: false,
+    auto: makeRunnerDiskAuto({ supported: false, reason: "kubernetes" }),
   }),
   desktop: makeRunnerDiskView({
     report: makeDesktopDiskReport(),
     can_include_rollback: false,
+    auto: makeRunnerDiskAuto({ supported: false, reason: "managed_locally" }),
   }),
-  /** Личный раннер глазами админа: плашка владельца, флажка отката нет. */
+  /** Идёт автоочистка: запустил не человек, ручная очистка недоступна. */
+  auto_running: makeRunnerDiskView({
+    command: DISK_COMMANDS.auto,
+    can_clean: false,
+    auto: makeRunnerDiskAuto({
+      last: {
+        ...DISK_AUTO_LAST_DONE,
+        command_id: DISK_COMMANDS.auto.id,
+        state: "delivered",
+        started_at: DISK_COMMANDS.auto.created_at,
+        finished_at: null,
+        freed_bytes: 0,
+        free_bytes: gib(7),
+      },
+    }),
+  }),
+  /** Личный раннер глазами админа: плашка владельца, флажка отката нет, автоочистки нет. */
   personal_admin: makeRunnerDiskView({
     runner_id: "7b8c9d0e1f2a43b4c5d6e7f8a9b0c1d2",
     can_include_rollback: false,
     personal_owner: DISK_OWNER,
+    auto: null,
   }),
-  /** Свой раннер в «Моих раннерах»: флажок отката есть. */
+  /** Свой раннер в «Моих раннерах»: флажок отката есть, блока автоочистки нет. */
   personal_owner: makeRunnerDiskView({
     runner_id: "5e6f7a8b9c0d41e2f3a4b5c6d7e8f9a0",
+    auto: null,
   }),
   /** Свой раннер в «Моих раннерах» после очистки, запущенной админом. */
   personal_owner_done: makeRunnerDiskView({
@@ -619,6 +704,7 @@ export const RUNNER_DISK_STATES = {
     report: makeCleanDiskReport({ measured_at: at(400) }),
     received_at: at(398),
     command: DISK_COMMANDS.done,
+    auto: null,
   }),
 } satisfies Record<string, RunnerDiskView>;
 export type RunnerDiskStateId = keyof typeof RUNNER_DISK_STATES;

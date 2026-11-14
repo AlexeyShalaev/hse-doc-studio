@@ -60,6 +60,10 @@ FEATURE_DISK = "disk"
 # Белый список выходов прежнего сервера отверг бы незнакомый файл всей задачей (`output_not_allowed`), поэтому раннер
 # выгружает его только после согласования, а сервер принимает только от раннера, который её объявил.
 FEATURE_BUILD_ANCHORS = "build_anchors"
+# Автоочистка диска по порогу (storage-cleanup.md, раздел 14): раннер с Docker-частью сообщает свободное место
+# (`POST /control/disk-check`), сервер отвечает командой `disk.cleanup` с `auto`. Старый сервер адреса не знает,
+# а старый раннер флага `auto` не разобрал бы, поэтому обе стороны идут к нему только после согласования.
+FEATURE_DISK_AUTO = "disk_auto"
 SERVER_FEATURES = frozenset(
     {
         FEATURE_ANNOUNCE,
@@ -70,6 +74,7 @@ SERVER_FEATURES = frozenset(
         FEATURE_CONTROL,
         FEATURE_DISK,
         FEATURE_BUILD_ANCHORS,
+        FEATURE_DISK_AUTO,
     }
 )
 
@@ -369,6 +374,27 @@ class RunnerCommandEnvelope:
 
 @dataclass(frozen=True)
 class ControlPollResponse:
+    command: RunnerCommandEnvelope | None = None
+
+
+@dataclass(frozen=True)
+class DiskCheckRequest:
+    """Свободное место тома данных раннера (`shutil.disk_usage(data_dir)`) для решения об автоочистке."""
+
+    free_bytes: int
+    total_bytes: int
+
+    def __post_init__(self) -> None:
+        if self.free_bytes < 0 or self.total_bytes < 0:
+            raise ValueError("sizes must not be negative")
+        if self.free_bytes > self.total_bytes:
+            raise ValueError("free_bytes exceeds total_bytes")
+
+
+@dataclass(frozen=True)
+class DiskCheckResponse:
+    """Автоочистка, которую пора начать (уже `delivered`), или пусто."""
+
     command: RunnerCommandEnvelope | None = None
 
 

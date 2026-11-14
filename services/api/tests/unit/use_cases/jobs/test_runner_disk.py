@@ -21,6 +21,7 @@ from hse_doc_studio.core.jobs.disk import (
     CommandStep,
     CommandStepKind,
     CommandStepStatus,
+    DiskAutoPolicy,
     RunnerCommandKind,
     RunnerCommandState,
     RunnerDiskReport,
@@ -32,8 +33,10 @@ from hse_doc_studio.core.jobs.wire import (
     FEATURE_ANNOUNCE,
     FEATURE_CONTROL,
     FEATURE_DISK,
+    FEATURE_DISK_AUTO,
     CommandProgressRequest,
     ControlPollRequest,
+    DiskCheckRequest,
 )
 from hse_doc_studio.use_cases.jobs.runner_control import RunnerCommandWakeup, RunnerControlService
 from hse_doc_studio.use_cases.jobs.runner_disk import (
@@ -562,3 +565,122 @@ def test__collector__prints_gauge_after_first_refresh_and_counter_by_state() -> 
     assert 'hse_runner_disk_cleanable_bytes{scope="shared"} 10' in lines
     assert 'hse_runner_disk_cleanups_total{state="done"} 2' in lines
     assert "# TYPE hse_runner_disk_cleanups_total counter" in lines
+
+
+# --- автоочистка (раздел 14) ---
+
+_AUTO = _DISK | {FEATURE_DISK_AUTO}
+_LOW = DiskCheckRequest(free_bytes=5 * 1024**3, total_bytes=100 * 1024**3)
+
+
+async def test__view__auto_block_only_for_shared_runners_in_admin() -> None:
+    env = _Env()
+    shared = await env.runner(features=_AUTO)
+    personal = await env.runner(owner="anna", features=_AUTO)
+
+    state = await env.uc.view(_ADMIN, shared.id, scope="admin")
+    assert state.auto is not None
+    assert (state.auto.supported, state.auto.reason, state.auto.policy) == (True, None, DiskAutoPolicy())
+    assert state.auto.last is None
+    assert (await env.uc.view(_ADMIN, personal.id, scope="admin")).auto is None
+    assert (await env.uc.view(_ANNA, personal.id, scope="account")).auto is None
+
+
+@pytest.mark.parametrize(
+    ("version", "report", "reason"),
+    [
+        ("0.27.0", "docker", "outdated"),
+        ("0.28.0", "docker", "runner_disabled"),
+        ("0.28.0", "kubernetes", "kubernetes"),
+        ("0.28.0", "desktop", "managed_locally"),
+    ],
+)
+async def test__view__why_auto_is_unsupported(version: str, report: str, reason: str) -> None:
+    env = _Env()
+    runner = await env.runner(report=report)
+    await env.runners.add(replace(runner, version=version))
+
+    state = await env.uc.view(_ADMIN, runner.id, scope="admin")
+
+    assert state.auto is not None
+    assert (state.auto.supported, state.auto.reason) == (False, reason)
+
+
+async def test__set_auto__saves_policy_and_audits_before_and_after() -> None:
+    env = _Env()
+    runner = await env.runner(features=_AUTO)
+
+    state = await env.uc.set_auto(_ADMIN, runner.id, enabled=False, min_free_percent=25)
+
+    assert state.policy == DiskAutoPolicy(enabled=False, min_free_percent=25)
+    (entry,) = await env.audit.list(action="runner.disk_auto_policy")
+    assert entry.actor_id == "admin"
+    assert entry.target == runner.id
+    assert entry.details == {
+        "enabled": False,
+        "min_free_percent": 25,
+        "was_enabled": True,
+        "was_min_free_percent": 10,
+    }
+    assert (await env.uc.view(_ADMIN, runner.id, scope="admin")).auto.policy.min_free_percent == 25  # type: ignore[union-attr]
+
+
+@pytest.mark.parametrize("percent", [0, 51])
+async def test__set_auto__percent_out_of_range__input_invalid(percent: int) -> None:
+    env = _Env()
+    runner = await env.runner(features=_AUTO)
+
+    with pytest.raises(IdentityError) as exc:
+        await env.uc.set_auto(_ADMIN, runner.id, enabled=True, min_free_percent=percent)
+    assert _code(exc) is IdentityErrorCode.input_invalid
+
+
+async def test__set_auto__personal_runner_forbidden_and_not_admin_not_found() -> None:
+    env = _Env()
+    personal = await env.runner(owner="anna", features=_AUTO)
+    shared = await env.runner(features=_AUTO)
+
+    with pytest.raises(IdentityError) as exc:
+        await env.uc.set_auto(_ADMIN, personal.id, enabled=True, min_free_percent=10)
+    assert _code(exc) is IdentityErrorCode.forbidden
+    with pytest.raises(IdentityError):
+        await env.uc.set_auto(_ANNA, shared.id, enabled=True, min_free_percent=10)
+    with pytest.raises(RunnerNotFoundError):
+        await env.uc.set_auto(_ADMIN, "missing", enabled=True, min_free_percent=10)
+
+
+async def test__auto_cleanup__audited_as_system_without_notification_and_shown_in_view() -> None:
+    env = _Env()
+    runner = await env.runner(features=_AUTO)
+    command = (await env.control.disk_check(runner, _LOW)).command
+    assert command is not None
+
+    state = await env.uc.view(_ADMIN, runner.id, scope="admin")
+    assert state.command is not None
+    assert state.command.auto
+    assert state.command.created_by is None
+    assert not state.can_clean
+    with pytest.raises(IdentityError) as exc:
+        await env.uc.cleanup(_ADMIN, runner.id, ["build_cache"], include_rollback=False, scope="admin")
+    assert _code(exc) is IdentityErrorCode.runner_disk_busy
+
+    step = CommandStep(CommandStepKind.build_cache, None, CommandStepStatus.done, 2048, None)
+    await env.control.progress(
+        runner,
+        command.id,
+        CommandProgressRequest(RunnerCommandState.done, CommandProgress(steps=(step,), freed_bytes=2048, error=None)),
+    )
+
+    (started,) = await env.audit.list(action="runner.disk_auto_cleanup")
+    assert started.actor_id is None
+    assert started.details["targets"] == ["dangling_images", "build_cache", "old_versions"]
+    assert started.details["min_free_percent"] == 10
+    (cleaned,) = await env.audit.list(action="runner.disk_cleaned")
+    assert cleaned.actor_id is None
+    assert cleaned.details["auto"] is True
+    assert cleaned.details["freed_bytes"] == 2048
+    assert env.notifier.sent == []
+    after = await env.uc.view(_ADMIN, runner.id, scope="admin")
+    assert after.auto is not None
+    assert after.auto.last is not None
+    assert (after.auto.last.state, after.auto.last.freed_bytes) == (RunnerCommandState.done, 2048)

@@ -93,6 +93,8 @@
       "runner_disk_cleanup": "Запущена очистка диска раннера",
       "runner_disk_cleanup_cancel": "Остановлена очистка диска раннера",
       "runner_disk_cleaned": "Очистка диска раннера завершена",
+      "runner_disk_auto_cleanup": "Запущена автоочистка диска раннера",
+      "runner_disk_auto_policy": "Изменена автоочистка диска раннера",
       "runner_deregister": "Раннер снял регистрацию",
       "runner_pairing_approve": "Сопряжение раннера подтверждено",
       "runner_pairing_deny": "Сопряжение раннера отклонено",

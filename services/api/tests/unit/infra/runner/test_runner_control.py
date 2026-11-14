@@ -24,7 +24,7 @@ from tests.unit.infra.runner.fake_runner_api import (
     create_fake_app,
     envelope_body,
 )
-from tests.unit.infra.runner.test_runner_disk import _docker, _Probe, _service, _System, _usage
+from tests.unit.infra.runner.test_runner_disk import BASE, _docker, _Probe, _service, _System, _usage
 from tests.unit.infra.runner.test_runner_loop import JOB_A, FakeExecutor, until
 
 CMD_A = "7d3f1a2b-4c5d-4e6f-8a9b-0c1d2e3f4a5b"
@@ -47,11 +47,13 @@ class Rig:
         report_every_s: float = 3600.0,
         stop_timeout_s: float = 2.0,
         keepalive_s: float = 60.0,
+        disk_check_every_s: float = 3600.0,
+        auto_clean: bool = True,
     ) -> None:
         self.state = FakeRunnerState()
         self.transport = SwitchTransport(create_fake_app(self.state))
         self.system = _System()
-        self.disk = _service(tmp_path, _docker(_Probe(_usage()), self.system))
+        self.disk = _service(tmp_path, _docker(_Probe(_usage()), self.system), auto_clean=auto_clean)
         self.executor = FakeExecutor()
         self.client = RunnerClient(
             "http://api",
@@ -73,6 +75,7 @@ class Rig:
                 report_every_s=report_every_s,
                 report_retry_s=3600.0,
                 stop_timeout_s=stop_timeout_s,
+                disk_check_every_s=disk_check_every_s,
                 backoff_factory=fast,
             ),
         )
@@ -388,3 +391,69 @@ async def test__server_drops_the_channel__polling_stops_until_the_next_announce(
     polls = rig.state.control_polls
     await until(lambda: rig.state.control_polls > polls)
     await rig.stop()
+
+
+# --- автоочистка (storage-cleanup.md, раздел 14) ---
+
+
+def _auto_command(command_id: str) -> dict[str, Any]:
+    return {
+        "id": command_id,
+        "kind": "disk.cleanup",
+        "payload": {
+            "targets": ["dangling_images", "build_cache", "old_versions"],
+            "include_rollback": False,
+            "auto": True,
+        },
+        "issued_at": "2026-11-14T09:40:00+00:00",
+    }
+
+
+async def test__auto__old_server__no_disk_checks(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, disk_check_every_s=0.01)
+    rig.start()
+    await until(lambda: rig.state.control_polls > 3)
+    await rig.stop()
+
+    assert "disk_auto" in rig.state.announces[0]["features"]
+    assert "disk_auto" not in rig.client.features
+    assert rig.state.disk_checks == []
+
+
+async def test__auto__switched_off_on_the_runner__not_declared(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, disk_check_every_s=0.01, auto_clean=False)
+    rig.state.server_features.add("disk_auto")
+    rig.start()
+    await until(lambda: rig.state.control_polls > 3)
+    await rig.stop()
+
+    assert "disk_auto" not in rig.state.announces[0]["features"]
+    assert rig.state.disk_checks == []
+
+
+async def test__auto__free_space_sent_and_the_command_runs_once(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, disk_check_every_s=0.01)
+    rig.state.server_features.add("disk_auto")
+    rig.state.auto_commands.append(_auto_command(CMD_A))
+    rig.start()
+    await until(lambda: rig.finished(CMD_A) and len(rig.state.disk_checks) > 2)
+    await rig.stop()
+
+    check = rig.state.disk_checks[0]
+    assert 0 <= check["free_bytes"] <= check["total_bytes"]
+    assert rig.final(CMD_A)["state"] == "done"
+    # Автоочистка не снимает предыдущий тег TeX Live (TL2023 единственный неактивный) и откат Студии (2.4.0).
+    assert "image:texlive/texlive:TL2023-historic" not in rig.system.calls
+    assert not [call for call in rig.system.calls if call.endswith(":2.4.0")]
+    assert {"dangling_images", "build_cache", f"image:{BASE}:2.3.0"} <= set(rig.system.calls)
+
+
+async def test__auto__server_forgets_the_address__checks_stop(tmp_path: Path) -> None:
+    rig = Rig(tmp_path, disk_check_every_s=0.01)
+    rig.state.server_features.add("disk_auto")
+    rig.state.disk_check_status = 409
+    rig.start()
+    await until(lambda: rig.state.control_polls > 10)
+    await rig.stop()
+
+    assert rig.state.disk_checks == []

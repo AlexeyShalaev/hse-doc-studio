@@ -210,6 +210,8 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   RunnerDiskCommand: rd.RunnerDiskCommandSchema,
   RunnerDiskCleanupRequest: rd.RunnerDiskCleanupRequestSchema,
   RunnerDiskSummary: rd.RunnerDiskSummarySchema,
+  RunnerDiskAuto: rd.RunnerDiskAutoSchema,
+  RunnerDiskAutoRequest: rd.RunnerDiskAutoRequestSchema,
   MyRunner: rn.MyRunnerSchema,
   MyRunnerList: rn.MyRunnerListSchema,
   UpdateMyRunnerRequest: rn.UpdateMyRunnerRequestSchema,

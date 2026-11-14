@@ -1107,6 +1107,18 @@ E2E (срез E1): раздел 12.
 время не прочиталось, остаются все теги этого репозитория (осторожность важнее места). `ImageUsage` получает
 `created_at` из `CreatedAt` замера `docker system df -v`.
 
+Уточнено при внедрении:
+
+- Адреса `/control/poll` и `/control/disk-check` отдают ответ с `response_model_exclude_unset`: иначе pydantic-схема
+  дописала бы в нагрузку ручной команды `auto: false` значением по умолчанию, и раннер до `disk_auto` отверг бы
+  незнакомое поле. Это проверяет тест адреса.
+- Решение сервера разбито на `_auto_due` (общий раннер, настройка, порог, нет идущей очистки) и условный
+  `claim_auto`; итог переписывает `disk_auto_last` в `_closed` до наблюдателей, сбой записи итога команду не трогает.
+- Наблюдатель `IRunnerCommandObserver.auto_started` пишет `runner.disk_auto_cleanup`; `runner.disk_cleaned` у
+  автоочистки получает `auto: true` и актор `null`, уведомления нет.
+- Строки «старых версий» сервиса раннер отбирает по `CreatedAt` замера `docker system df -v`
+  (`ImageUsage.created_at`, `parse_created_at`); правило в `previous_service_refs` (`core/docker_disk/old_versions.py`).
+
 ### 14.4 Хранение
 
 Миграция `dk_03_runner_disk_auto` после текущей головы цепочки:

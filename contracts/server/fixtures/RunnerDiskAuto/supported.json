@@ -1,0 +1,17 @@
+{
+  "supported": true,
+  "reason": null,
+  "min_version": "0.28.0",
+  "enabled": true,
+  "min_free_percent": 10,
+  "interval_min": 60,
+  "last": {
+    "command_id": "rdc_01hzauto00",
+    "state": "done",
+    "started_at": "2026-11-11T03:40:00Z",
+    "finished_at": "2026-11-11T03:42:00Z",
+    "freed_bytes": 6442450944,
+    "free_bytes": 8589934592,
+    "total_bytes": 107374182400
+  }
+}

@@ -62,6 +62,7 @@ PHASES = (
     "health",
     "rollback",
     "restore",
+    "cleanup",
     "finish",
 )
 

@@ -34,6 +34,7 @@ from hse_doc_studio.core.runner_install import (
     PreviousRelease,
     ResourceOverrides,
     UpgradeError,
+    UpgradeOutcome,
 )
 from hse_doc_studio.core.runner_install.entities import InstallJobState, InstallStep
 from hse_doc_studio.core.runner_isolation import installed_runner
@@ -276,6 +277,7 @@ class RunnerInstallService:
             after = await self._wait_reconnected(job, actor, runner, restarted)
             # Дальше обновление удалось: сбой записи итога не повод возвращать прежнюю версию.
             previous = None
+            removed = await self._prune_old_images(host, outcome)
             job.state = InstallJobState.succeeded
             await self._record(
                 "runner_install.local.upgrade_succeeded",
@@ -287,6 +289,7 @@ class RunnerInstallService:
                     "to_version": after,
                     "from_image": outcome.old_image,
                     "to_image": outcome.new_image,
+                    "removed_images": removed,
                 },
             )
         except InstallError as exc:
@@ -296,6 +299,16 @@ class RunnerInstallService:
         except Exception:
             logger.exception("runner_upgrade_failed", job=job.id, target=job.target.value)
             await self._fail_upgrade(actor, host, job, runner, previous, "unexpected", "")
+
+    async def _prune_old_images(self, host: ILocalRunnerHost, outcome: UpgradeOutcome) -> list[str]:
+        """Снять образы раннера старше предыдущей версии (storage-cleanup.md, 14.2, A14); сбой не портит обновление."""
+        if not outcome.old_image:
+            return []
+        try:
+            return await host.prune_old_images(outcome.new_image, outcome.old_image)
+        except Exception:
+            logger.warning("runner_upgrade_prune_failed", exc_info=True)
+            return []
 
     async def _wait_reconnected(
         self, job: InstallJob, actor: Actor, runner: Runner | None, since: datetime

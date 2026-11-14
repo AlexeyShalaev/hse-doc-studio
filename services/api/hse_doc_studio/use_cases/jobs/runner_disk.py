@@ -28,15 +28,21 @@ from hse_doc_studio.core.jobs.control import (
     RunnerCommandBusyError,
     RunnerCommandUnsupportedError,
     RunnerControlError,
+    StoredDiskAuto,
     StoredDiskReport,
 )
 from hse_doc_studio.core.jobs.disk import (
+    DISK_AUTO_MIN_RUNNER_VERSION,
+    DISK_AUTO_PERCENT_RANGE,
     DISK_REPORT_STALE_S,
     RECENT_COMMAND_S,
     CommandStepStatus,
+    DiskAutoLast,
+    DiskAutoPolicy,
     DiskCleanupPayload,
     DiskMeasurePayload,
     DiskTarget,
+    DockerDiskReason,
     RunnerCommand,
     RunnerCommandKind,
     RunnerCommandState,
@@ -45,11 +51,15 @@ from hse_doc_studio.core.jobs.enums import RunnerErrorCode
 from hse_doc_studio.core.jobs.errors import RunnerNotFoundError
 from hse_doc_studio.core.jobs.routing import RunnerScope
 from hse_doc_studio.core.jobs.runners import IRunnerRepository, Runner
+from hse_doc_studio.core.jobs.wire import FEATURE_DISK_AUTO
+from hse_doc_studio.core.update.services import parse_version
 from hse_doc_studio.use_cases.admin.users import require_admin
 from hse_doc_studio.use_cases.jobs.runner_control import RunnerControlService, deliverable_kinds
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
 
 DiskScope = Literal["admin", "account"]
+# Почему автоочистка раннеру недоступна (storage-cleanup.md, 14.5).
+DiskAutoReason = Literal["outdated", "kubernetes", "managed_locally", "runner_disabled"]
 # Сколько общих раннеров с наибольшим «можно освободить» показывает блок «Где ещё освободить место».
 SUMMARY_TOP = 3
 
@@ -62,10 +72,25 @@ class PersonName:
 
 @dataclass(frozen=True)
 class DiskCommandView:
-    """Команда для ответа: кто её запустил берётся из пользователей (`null`, если человека уже нет)."""
+    """Команда для ответа: кто её запустил берётся из пользователей (`null`, если человека уже нет или это
+    автоочистка)."""
 
     command: RunnerCommand
     created_by: PersonName | None
+
+    @property
+    def auto(self) -> bool:
+        return is_auto(self.command)
+
+
+@dataclass(frozen=True)
+class RunnerDiskAutoState:
+    """Блок «Автоочистка» в «Диске» общего раннера (`RunnerDiskAuto`, 14.5)."""
+
+    supported: bool
+    reason: DiskAutoReason | None
+    policy: DiskAutoPolicy
+    last: DiskAutoLast | None
 
 
 @dataclass(frozen=True)
@@ -82,6 +107,8 @@ class RunnerDiskState:
     can_clean: bool
     can_include_rollback: bool
     personal_owner: PersonName | None
+    # Только в админке и только у общего раннера.
+    auto: RunnerDiskAutoState | None = None
 
 
 @dataclass(frozen=True)
@@ -133,6 +160,25 @@ def runner_online(runner: Runner, now: datetime, *, personal_enabled: bool) -> b
         return False
     status = runner_status(replace(runner, paused=False), now, personal_enabled=personal_enabled)
     return status in (RunnerStatus.online, RunnerStatus.stale)
+
+
+def is_auto(command: RunnerCommand) -> bool:
+    """Автоочистка, поставленная сервером по порогу места."""
+    return isinstance(command.payload, DiskCleanupPayload) and command.payload.auto
+
+
+def disk_auto_reason(runner: Runner, stored: StoredDiskReport | None) -> DiskAutoReason | None:
+    """Почему раннер не согласовал `disk_auto`: нет Docker-части, старая версия или выключено на самом раннере."""
+    if FEATURE_DISK_AUTO in runner.features:
+        return None
+    reason = stored.report.docker_reason if stored is not None else None
+    if reason is DockerDiskReason.kubernetes:
+        return "kubernetes"
+    if reason is DockerDiskReason.managed_locally:
+        return "managed_locally"
+    if parse_version(runner.version) < parse_version(DISK_AUTO_MIN_RUNNER_VERSION):
+        return "outdated"
+    return "runner_disabled"
 
 
 def _control_error(exc: RunnerControlError) -> IdentityError:
@@ -199,6 +245,9 @@ class RunnerDiskUC:
         owner = None
         if scope == "admin" and runner.scope is RunnerScope.personal and runner.owner_id is not None:
             owner = await self._person(runner.owner_id)
+        auto = None
+        if scope == "admin" and runner.scope is RunnerScope.shared:
+            auto = await self._auto_state(runner, stored)
         return RunnerDiskState(
             runner=runner,
             supported=supported,
@@ -210,7 +259,38 @@ class RunnerDiskUC:
             can_clean=supported and online and stored is not None and cleanup is None,
             can_include_rollback=rollback,
             personal_owner=owner,
+            auto=auto,
         )
+
+    async def set_auto(
+        self, actor: Actor, runner_id: str, *, enabled: bool, min_free_percent: int
+    ) -> RunnerDiskAutoState:
+        """Настройка автоочистки общего раннера (14.5): только админ, у личного раннера `forbidden`."""
+        runner = await self._resolve(actor, runner_id, "admin")
+        if runner.revoked_at is not None:
+            raise RunnerNotFoundError("runner not found")
+        if runner.scope is not RunnerScope.shared:
+            raise IdentityError(IdentityErrorCode.forbidden)
+        low, high = DISK_AUTO_PERCENT_RANGE
+        if not low <= min_free_percent <= high:
+            raise IdentityError(IdentityErrorCode.input_invalid)
+        before = await self._control.disk_auto(runner.id)
+        policy = DiskAutoPolicy(enabled=enabled, min_free_percent=min_free_percent)
+        if not await self._control.set_disk_auto(runner.id, policy):
+            raise RunnerNotFoundError("runner not found")
+        await self._audit.record(
+            "runner.disk_auto_policy",
+            actor_id=actor.id,
+            target=runner.id,
+            details={
+                "enabled": enabled,
+                "min_free_percent": min_free_percent,
+                "was_enabled": before.policy.enabled if before is not None else None,
+                "was_min_free_percent": before.policy.min_free_percent if before is not None else None,
+            },
+        )
+        stored = await self._control.disk(runner.id) if disk_supported(runner) else None
+        return await self._auto_state(runner, stored)
 
     async def refresh(self, actor: Actor, runner_id: str, *, scope: DiskScope) -> DiskCommandView:
         """«Обновить»: `disk.measure`; стоящий замер возвращается тот же, при идущей очистке `runner_disk_busy`."""
@@ -321,6 +401,16 @@ class RunnerDiskUC:
 
     # ---- внутреннее ------------------------------------------------------------------------------------------
 
+    async def _auto_state(self, runner: Runner, stored: StoredDiskReport | None) -> RunnerDiskAutoState:
+        auto: StoredDiskAuto | None = await self._control.disk_auto(runner.id)
+        reason = disk_auto_reason(runner, stored)
+        return RunnerDiskAutoState(
+            supported=reason is None,
+            reason=reason,
+            policy=auto.policy if auto is not None else DiskAutoPolicy(),
+            last=auto.last if auto is not None else None,
+        )
+
     async def _resolve(self, actor: Actor, runner_id: str, scope: DiskScope) -> Runner:
         if scope == "account":
             return await self._registry.my_runner(actor, runner_id)
@@ -367,7 +457,8 @@ class RunnerDiskUC:
         return PersonName(id=user.id, name=user.name) if user is not None else None
 
     async def _command_view(self, command: RunnerCommand) -> DiskCommandView:
-        return DiskCommandView(command=command, created_by=await self._person(command.created_by))
+        person = await self._person(command.created_by) if command.created_by else None
+        return DiskCommandView(command=command, created_by=person)
 
 
 def _open(commands: Iterable[RunnerCommand], kind: RunnerCommandKind) -> RunnerCommand | None:
@@ -422,19 +513,36 @@ class RunnerDiskObserver:
         if progress is not None:
             errors = sum(step.status is CommandStepStatus.error for step in progress.steps)
             errors += progress.error is not None
+        auto = is_auto(command)
+        details: dict[str, object] = {
+            "command_id": str(command.id),
+            "state": command.state.value,
+            "freed_bytes": freed,
+            "errors": errors,
+            "steps": len(progress.steps) if progress is not None else 0,
+        }
+        if auto:
+            details["auto"] = True
         await self._audit.record(
-            "runner.disk_cleaned",
-            actor_id=command.created_by,
+            "runner.disk_cleaned", actor_id=command.created_by or None, target=command.runner_id, details=details
+        )
+        if not auto:
+            await self._notify_owner(command, freed)
+
+    async def auto_started(self, command: RunnerCommand, *, free_bytes: int, total_bytes: int, percent: int) -> None:
+        """Автоочистка поставлена по порогу места: событие в журнале аудита от имени системы (актор `null`)."""
+        await self._audit.record(
+            "runner.disk_auto_cleanup",
+            actor_id=None,
             target=command.runner_id,
             details={
                 "command_id": str(command.id),
-                "state": command.state.value,
-                "freed_bytes": freed,
-                "errors": errors,
-                "steps": len(progress.steps) if progress is not None else 0,
+                "targets": [target.value for target in _cleanup_targets(command)],
+                "free_bytes": free_bytes,
+                "total_bytes": total_bytes,
+                "min_free_percent": percent,
             },
         )
-        await self._notify_owner(command, freed)
 
     async def _notify_owner(self, command: RunnerCommand, freed: int) -> None:
         if command.state not in _NOTIFIED_STATES or command.delivered_at is None:

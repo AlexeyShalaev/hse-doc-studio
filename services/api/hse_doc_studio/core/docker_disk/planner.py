@@ -13,7 +13,7 @@ from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 from typing import Final, Literal, Protocol
 
-from hse_doc_studio.core.docker_disk.old_versions import OldVersions, find_old_versions
+from hse_doc_studio.core.docker_disk.old_versions import OldVersions, find_old_versions, previous_service_refs
 from hse_doc_studio.core.docker_disk.rules import (
     cleanable_bytes,
     ours_only,
@@ -68,6 +68,8 @@ class CleanupPlanRequest:
     containers: Sequence[str] = ()
     # Для цели «old_versions»: убрать и образ отката (последней предыдущей версии).
     include_rollback: bool = False
+    # Для цели «old_versions» в автоочистке: оставить и предыдущий тег каждого образа сервиса (TeX Live и т. п.).
+    keep_previous_service_tags: bool = False
 
 
 class DockerDiskPlanner:
@@ -117,7 +119,8 @@ def plan_steps(snapshot: DockerDiskSnapshot, request: CleanupPlanRequest) -> lis
     old_containers: list[str] = []
     if "old_versions" in targets:
         old = snapshot.old_versions
-        old_images = [i.ref for i in old.items if i.kind != "container"]
+        kept = previous_service_refs(usage, old) if request.keep_previous_service_tags else frozenset()
+        old_images = [i.ref for i in old.items if i.kind != "container" and i.ref not in kept]
         old_containers = [i.ref for i in old.items if i.kind == "container"]
         # Образ отката защищён от общих целей; в план он попадает только по явному флагу.
         if request.include_rollback and old.rollback is not None:

@@ -16,6 +16,7 @@ from hse_doc_studio.api.runner_commands import (
 )
 from hse_doc_studio.api.runner_disk_views import (
     NO_STORE,
+    disk_auto,
     disk_brief,
     disk_command,
     disk_summary,
@@ -46,6 +47,8 @@ from hse_doc_studio.api.schemas.runner_admin import (
     UpdateRunnerRequest,
 )
 from hse_doc_studio.api.schemas.runner_disk import (
+    RunnerDiskAuto,
+    RunnerDiskAutoRequest,
     RunnerDiskCleanupRequest,
     RunnerDiskCommand,
     RunnerDiskSummary,
@@ -346,6 +349,22 @@ async def clean_runner_disk(
         require_actor(), runner_id, body.targets, include_rollback=body.include_rollback, scope="admin"
     )
     return disk_command(command)
+
+
+@router.put("/runners/{runner_id}/disk/auto", response_model=RunnerDiskAuto)
+async def set_runner_disk_auto(
+    runner_id: str, body: RunnerDiskAutoRequest, request: Request, response: Response
+) -> RunnerDiskAuto:
+    """Автоочистка общего раннера по порогу места (storage-cleanup.md, 14.5)."""
+    response.headers.update(NO_STORE)
+    uc = await runner_disk_uc(request)
+    try:
+        state = await uc.set_auto(
+            require_actor(), runner_id, enabled=body.enabled, min_free_percent=body.min_free_percent
+        )
+    except RunnerNotFoundError as exc:
+        raise _not_found(exc) from exc
+    return disk_auto(state)
 
 
 @router.post("/runners/{runner_id}/disk/commands/{command_id}/cancel", response_model=RunnerDiskCommand)

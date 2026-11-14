@@ -1,0 +1,9 @@
+{
+  "supported": false,
+  "reason": "outdated",
+  "min_version": "0.28.0",
+  "enabled": true,
+  "min_free_percent": 20,
+  "interval_min": 60,
+  "last": null
+}
