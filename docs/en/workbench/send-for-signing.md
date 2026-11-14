@@ -136,7 +136,7 @@ If the documents are frozen right when you send and you sign with a Studio key, 
 A template can set a checkpoint's whole route: the order of signers, signatures beyond the checkpoint items and when they are needed, optional signatures, and signature places and date marks on the pages. Then the route is ready the first time you open “Send for signing”: check it, invite the people who are not in the project yet, prepare your own signature and send. The template does not set people: they come from the project.
 
 !!! note "Which templates can do this"
-    A route from the template appears only in projects on a template version that defines one. For the MSc SSE course project (`hse-cs-sse`) the route and the signature places on the template's signature lines come with template version 2026.1.5: a project on an earlier version gets them by updating from the overview card. While the template version defines no route, the screen works as before: the default order, and you place the signatures yourself; there is no “From the template” or “Changed by you”.
+    A route from the template appears only in projects on a template version that defines one. For the MSc SSE course project (`hse-cs-sse`) the route and the signature places on the template's signature lines come with template version 2026.1.5 ([below](#preset-sse)): a project on 2026.1.4 or an earlier version gets them by updating from the overview card ([Updating to 2026.1.5](submit.md#sse-2026-1-5)). While the template version defines no route, the screen works as before: the default order, and you place the signatures yourself; there is no “From the template” or “Changed by you”.
 
     The place marks (“Place from the template”, “Place changed”) show on such versions too. There the template knows only one common place per signature for all documents, usually not on the right line. So “Place changed” on a box you moved onto the signature line is fine: you do not need to reset it.
 
@@ -161,6 +161,8 @@ If the checkpoint already had a route (cancelled or completed), the new route ta
 | next to the “Signature optional” checkbox | “as in the template” | the template set the mark |
 | next to a signature box | “Place from the template” | the place and the date marks are as in the template |
 | next to a signature box | “Place changed” and “Reset place to template” | you moved the box or changed the date marks |
+| next to a signature box | “Placed on the template line” | the place is as in the template and sits on a line of the built document; after a build it follows the line ([Signature places on the template lines](#anchors)) |
+| under the signature | “The built document has no line for this signature…”, “The template place appears after the document is built”, “The uploaded PDF has no template lines…” | there is no place on a line; what to do is in [Signature places on the template lines](#anchors) |
 
 The place marks are on the document's “Signatures” tab too.
 
@@ -176,11 +178,50 @@ Two buttons rather than one, because a place is your work on a specific page whi
 
 **Template update.** New routes take the new version's route right after the update. Places marked “Place from the template”, and places the Studio set itself and you never touched, move to the new version's places. The update preview in the project settings (“Template version”) says how many places will move and how many will not: “Template signature places will be updated: 3”, “Not updated: changed by you 1, on a signing route 2, signed 1”. If no template files change but places do, it says “No files change. Template signature places will be updated: 3”.
 
+If the new version's places sit on the template lines and the lines of the current build are unknown, the preview says “Signature places will follow the template lines after the build: 2”: the places move to the new version right away and land on the lines at the next build.
+
 - Places changed by you, places on documents under a route and on documents whose final PDF carries e-signatures are not updated.
 - The update does not change route compositions or “optional” marks. If a draft's route differs in the new version, the editor shows “The new template version has a different route for this checkpoint”.
 - Undoing the update in the project settings brings the places back too, if you did not touch them after the update.
 
 Over MCP the route from the template is read-only ([MCP](mcp.md)). Sending over MCP (`send_for_signing`) applies the template just like the button.
+
+### MSc SSE course project 2026.1.5 { #preset-sse }
+
+At the “Topic application (SmartLMS)” checkpoint the route is set up by itself as soon as you open “Send for signing”:
+
+1. the author;
+2. the supervisor and the consultant in one step; the consultant only if the project has one (the full name is filled in);
+3. the academic supervisor, only if the supervisor is not from HSE (the “HSE / Not HSE” switch of the supervisor in the project settings).
+
+The template adds the consultant's and the academic supervisor's signatures on the same conditions on which the topic application prints their lines, and does not mark them optional: these are signatures the form asks for. The boxes already sit on the document's lines: on the “Signature” lines of the application and in item 6 of the project description above the date line. The supervisor's date marks sit on the date line of the project description: day and month in words on the Russian page, day and month as numbers on the English one; the template prints the year. At the “Course project defence” checkpoint the author's box and date sit on the “Signature, date” line of the report title page. How the boxes stick to the lines is described below: [Signature places on the template lines](#anchors).
+
+The template does not set people: you still need to invite the supervisor, the consultant and the academic supervisor if they are not in the project yet.
+
+## Signature places on the template lines { #anchors }
+
+A document's layout depends on the project data: the English application is shorter than the Russian one, the consultant line is printed only when the project has one, and a long title or the supervisor's long position pushes the date line of the project description down. A place in millimetres would fit only one layout. So a template can tie a place to a line of the document itself: during the build it records where the “Signature” line or the date line is, and the Studio puts the box on it. These records print nothing on the PDF. The MSc SSE course project works this way from version 2026.1.5.
+
+**Marks next to a signature** in “Where the signatures go” and on the document's “Signatures” tab:
+
+| Mark | What it means | What to do |
+|---|---|---|
+| “Placed on the template line” | the box sits on a line of the built document and follows the line by itself after the next build | nothing |
+| “Place from the template” | a template place in millimetres: the Studio does not know the lines of this build (below), and the box sits on the template's fallback place | build the document; if the box is still off the line, move it |
+| “The built document has no line for this signature. Check the project data or place it manually” | the document has no line for this signature: for example, the academic supervisor is on the route while the supervisor is “HSE” in the project settings, so the application prints no consent line. There is no place, and the earlier template place is switched off so the image does not land on someone else's line | fix the project data and build the document, or place it manually |
+| “The template place appears after the document is built” | the lines are not known yet, and the template has no fallback place for this signature | build the document |
+| “The uploaded PDF has no template lines: place it manually” | the document is replaced with your own PDF | place the box yourself |
+
+**After a build.** Places the Studio set and you never touched land on the lines of each new build. If some places moved, the Studio says “Template signature places moved to the new layout: N”, and the same mark stays on the “Build” tab. A build without edits does not move places. If a line comes back (for example, you set the consultant again), the box lands on it switched off: switch it on yourself or click “Reset to template”.
+
+**What never moves.**
+
+- A manual place: a box you set or moved yourself (“Place changed”). To put it back on the line, click “Reset place to template”.
+- A document under a route. The signers sign the version out for signing, and new builds do not change its place. The places follow the lines of the new build only when you click “Send new version”: the document is signed again then anyway ([Send a new version](#new-version)).
+- A document whose final PDF already carries e-signatures: the place stays where it was signed.
+- Your own uploaded PDF: it has no template lines, you place the box. The template's fallback place does not apply to it either.
+
+**When the lines are unknown.** The Studio knows the lines only of the build that recorded them. They are unknown if the document has not been built yet, if a runner older than 0.27.0 built it, or if the PDF was uploaded to the server from the local Studio. Then a new box goes to the template's fallback place in millimetres (for the course project 2026.1.5 these are the places of the Russian application without the consultant line) marked “Place from the template”, and a place already set is left alone. Date marks have no fallback place: they appear after a build whose lines are known. If signature places do not land on the lines after a build on the server, ask the administrator to update the runners ([Runners](../deploy/runners.md#runner-version)). In the local Studio its own build records the lines; the places it computes reach the server through git sync.
 
 ## How many actions each person has { #actions }
 
@@ -265,7 +306,7 @@ When the built PDF differs from the version for signing, the “Signing” card 
 </figure>
 
 - Unbuilt edits do not count: the changes show up after a build.
-- A LaTeX document rebuilt without edits gives the same PDF, so there is no mark. A document from Word or PowerPoint comes out different on every rebuild, so after any rebuild the card shows changes. You do not have to send a new version in that case.
+- A LaTeX document rebuilt without edits gives the same PDF, so there is no mark (on the server, when a runner 0.27.0 or newer built it, [below](#faq)). A document from Word or PowerPoint comes out different on every rebuild, so after any rebuild the card shows changes. You do not have to send a new version in that case.
 
 ## Send a new version { #new-version }
 
@@ -454,7 +495,7 @@ A route that an earlier Studio version stopped because of a rebuild (“The docu
 - **The “out for signing” banner.** The document was sent for signing and the route is running. You can edit the text and build: the route does not stop, it signs the version taken at sending. The signatures of this document cannot be changed on the “Signatures” tab: cancel the route on the checkpoint page first.
 - **You found a typo while the document is being signed.** Fix and build the document. The route goes on with the old version. When you are ready, click “Send new version”: only this document is approved again, the other signatures stay.
 - **You edited the text after everyone signed.** The signed version does not disappear: the package is built from it with a warning. If you need the corrected text, send a new version, and the changed document is signed again.
-- **You rebuilt without edits, and the card shows changes.** This happens with documents from Word or PowerPoint: their PDF differs on every build. If the text did not change, you do not need to send a new version.
+- **You rebuilt without edits, and the card shows changes.** This happens with documents from Word or PowerPoint: their PDF differs on every build. If the text did not change, you do not need to send a new version. With LaTeX documents this could happen when a runner older than 0.27.0 built them: a document without hyperlinks, such as the topic application, rebuilt in a different minute got a different PDF. A runner 0.27.0 or newer builds such a document byte for byte the same.
 - **A document is replaced with your own PDF, and the signature is already inside the file.** The Studio signs the uploaded PDF but does not see signatures inside it: the route waits for a signature in the slot. Upload the signature as an image or sign on the signing page.
 - **A document has to be signed from the current build without a route.** On the document's “Signatures” tab click “Sign the current build”. Signatures on the old version will no longer match the document.
 - **In a local Studio.** There are no routes there, but the version for signing arrives with the project through git sync. The “Signatures” tab says “Being signed: the version of … (route on the server)”. Local edits and builds do not stop the server route.
@@ -471,5 +512,7 @@ Route emails go out only when email is configured ([Server emails](../deploy/mai
 | `HSE_STUDIO__SIGNING_ROUTE__REMINDER_WAITING_DAYS` | `3` | after how many days of waiting the reminder goes out |
 | `HSE_STUDIO__SIGNING_ROUTE__REMINDER_MAX_AUTO` | `3` | how many automatic reminders a person gets per sending; `0` turns them off |
 | `HSE_STUDIO__SIGNING_ROUTE__SWEEP_INTERVAL_S` | `300` | how often the server checks running routes against the documents, in seconds |
+
+Signature places on the template lines work on the server only when a runner 0.27.0 or newer built the document: an older runner does not send the lines ([Runners](../deploy/runners.md#runner-version)).
 
 The manual “Remind” is limited to once every 12 hours per person, and this is not configurable. All settings: [Environment variables](https://github.com/AlexeyShalaev/hse-doc-studio/blob/master/docs/ru/deploy/env-reference.md).

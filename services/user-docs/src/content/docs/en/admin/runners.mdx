@@ -72,6 +72,22 @@ completely, the runner is already revoked and the install stays in the **Install
 block below the table: remove it again. That block also lists installs whose runner is not in the
 table, for example one that has not connected yet.
 
+## Why update runners to 0.27.0
+
+An older runner works with the new Studio, but two things come only from runners 0.27.0 and newer.
+
+- **Signature places on the template lines.** A template can record during the build where the
+  signature lines are, and the Studio puts the boxes on them (the MSc SSE course project works this
+  way from version 2026.1.5). An older runner does not send these records: boxes go to the
+  template's fallback place in millimetres, date marks are not placed, and after a text edit the
+  places do not follow the lines.
+- **Reproducible PDF.** Before, a document without hyperlinks, such as the topic application,
+  rebuilt without edits in a different minute gave a different PDF, and a document out for signing
+  got a false “There are changes”. A runner 0.27.0 builds such a document byte for byte the same.
+
+Update a runner installed from the admin area with **Update to vX** (above), the others with the
+new image.
+
 ## Runner disk
 
 Images of earlier Studio versions, old TeX Live and service tags and the Docker build cache pile up

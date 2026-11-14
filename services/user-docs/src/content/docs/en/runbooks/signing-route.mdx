@@ -17,7 +17,7 @@ help:
       hint: 'The person menu has **Same step as previous**, **Separate step** and **Remove**. If a person is not in the project, click **Invite**. If several people share a role, pick one in the list. If the template sets the checkpoint route, the top shows “From the template”: the order, the signatures and the places are already set.'
       shot: runbooks/signing-route/step-03
     - text: 'In **Where the signatures go**, for a signature marked “not placed” click **To page N** and drag the frame if needed.'
-      hint: '**Go to placement** in **What blocks sending** leads here too. An optional signature is turned on with **Add signature: …**.'
+      hint: '**Go to placement** in **What blocks sending** leads here too. An optional signature is turned on with **Add signature: …**. The “Placed on the template line” mark means the box already sits on a line of the built document and follows it by itself after a build.'
       shot: runbooks/signing-route/step-04
     - text: 'If you sign yourself, get your signature ready in **Your signature**: an image with **Upload or draw**, or a key for an electronic signature.'
       hint: 'If you are in the first step, sending counts as your approval.'
@@ -27,8 +27,8 @@ help:
       hint: 'The Studio keeps the built PDF of each document: this is the version for signing, and that is what gets signed. The first person in line gets a request in the Inbox and an email, if the server sends email. Follow the progress in the **Signing** card: [Signing progress](/help/en/runbooks/signing-progress/).'
       shot: runbooks/signing-route/step-07
 verified:
-  at: 2026-11-13
-  app_version: '0.25.0'
+  at: 2026-11-14
+  app_version: '0.27.0'
   sources:
     - services/web-app/src/features/signing-route-editor
     - services/web-app/src/entities/signing-route
@@ -75,5 +75,20 @@ on the **Signing** card.
 - **“The route deadline is later than the submission deadline”**: the signers may not finish by
   the checkpoint deadline. Set an earlier deadline or click **Set** next to the checkpoint
   deadline.
+- **MSc SSE course project 2026.1.5**: the topic application route is set up by itself. The
+  author, then the supervisor and the consultant (if the project has one), then the academic
+  supervisor (only if the supervisor is not from HSE). The boxes and date marks already sit on the
+  document lines.
+- **“The built document has no line for this signature”**: the document has no line for this
+  signature, for example the supervisor is “HSE” in the project settings while the academic
+  supervisor is on the route. Fix the project data and build the document, or place it manually.
+- **“The template place appears after the document is built”**: build the document, and the box
+  lands on its line.
+- **“The uploaded PDF has no template lines”**: the document is replaced with your own PDF, place
+  the box yourself.
+- **The boxes do not land on the lines after a build on the server**: a runner older than 0.27.0
+  built the document, and the boxes sit on the template's fallback place. Move them or ask the
+  administrator to update the runners. A rebuild never moves a manual place or documents out for
+  signing.
 - **You need a date next to a signature**: press **Add date** on the signature in the **Where the
   signatures go** block ([Signing date](/help/en/runbooks/signing-dates/)).
