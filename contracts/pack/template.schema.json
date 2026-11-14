@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hse-doc-studio.local/contracts/pack/template.schema.json",
+  "title": "template.yaml",
+  "description": "Шаблон пака вне версий: `templates/<шаблон>/template.yaml`. Правка не требует новой версии.",
+  "type": "object",
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/id" },
+    "name": { "$ref": "common.schema.json#/$defs/localized" },
+    "short_name": { "$ref": "common.schema.json#/$defs/localized" },
+    "description": { "$ref": "common.schema.json#/$defs/localized" },
+    "icon": { "description": "Имя иконки lucide (`NotebookPen`).", "type": "string" },
+    "accent_hue": { "description": "Оттенок OKLCH акцента в интерфейсе.", "type": "integer", "minimum": 0, "maximum": 360 },
+    "default_version": { "$ref": "common.schema.json#/$defs/versionId" },
+    "author_group_placeholder": {
+      "description": "Подсказка в поле «Группа» у авторов; версия может переопределить.",
+      "type": "string"
+    }
+  },
+  "required": ["id"],
+  "additionalProperties": false
+}
