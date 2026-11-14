@@ -27,3 +27,5 @@ YAML-даты (`released_at: 2026-11-14`) перед проверкой прив
 - `test_pack_schema_loader.py`: выборка образцов по самим схемам (hypothesis) проходит лоадер без потерь.
 
 Форму меняют так: сначала схема, затем лоадер, линтер пака и справка `docs/*/reference/pack.md`, тесты в том же коммите.
+
+Копия схем лежит в пакете (`services/api/hse_doc_studio/infra/pack_studio/schemas/`): по ней `hse-doc-studio pack check` проверяет паки в образе. После правки схемы скопируйте её туда; совпадение сверяет `test_pack_schemas_copy.py`.
