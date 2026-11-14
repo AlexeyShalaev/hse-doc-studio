@@ -5,9 +5,11 @@
 строку, `flow_text_lint`). Подписи в документ не печатаются: каждый документ и каждый LaTeX-вариант обеих версий
 собирается с одними данными проекта, и PDF совпадают байт в байт.
 
-Нужны docker и образ TeX в HSE_TEST_TEX_IMAGE:
+Нужны docker и образ TeX в HSE_TEST_TEX_IMAGE. Комплекты ЕСПД `hse-cs-se/coursework` и `vkr` это десятки сборок
+(около получаса), поэтому они собираются только с HSE_TEST_TEX_ALL_PATCHES=1; в CI идут КП магистратуры и PP:
 
-    HSE_TEST_TEX_IMAGE=texlive/texlive:TL2024-historic uv run pytest tests/integration/tex -m tex --no-cov
+    HSE_TEST_TEX_IMAGE=texlive/texlive:TL2024-historic HSE_TEST_TEX_ALL_PATCHES=1 \
+        uv run pytest tests/integration/tex/test_text_patch_same_pdf.py -m tex --no-cov
 """
 
 from __future__ import annotations
@@ -65,12 +67,17 @@ class _Case:
 _CASES = [
     _Case("hse-cs-sse", "coursework", "2026.1.5", "2026.1.6", "ru", ProjectKind.project),
     _Case("hse-cs-sse", "coursework", "2026.1.5", "2026.1.6", "en", ProjectKind.project),
+    _Case("hse-cs-se", "pp", "2026.1", "2026.1.1", "en", ProjectKind.research),
+]
+_ESPD_SETS = [
     _Case("hse-cs-se", "coursework", "2026.1.1", "2026.1.2", "ru", ProjectKind.project),
     _Case("hse-cs-se", "coursework", "2026.1.1", "2026.1.2", "ru", ProjectKind.research),
     _Case("hse-cs-se", "vkr", "2026.1.1", "2026.1.2", "ru", ProjectKind.project),
     _Case("hse-cs-se", "vkr", "2026.1.1", "2026.1.2", "ru", ProjectKind.research),
-    _Case("hse-cs-se", "pp", "2026.1", "2026.1.1", "en", ProjectKind.research),
 ]
+_HEAVY = pytest.mark.skipif(
+    not os.environ.get("HSE_TEST_TEX_ALL_PATCHES"), reason="комплект ЕСПД собирается с HSE_TEST_TEX_ALL_PATCHES=1"
+)
 
 
 @dataclass(frozen=True)
@@ -148,7 +155,10 @@ def repo() -> YamlTemplateRepository:
     return repo
 
 
-@pytest.mark.parametrize("case", _CASES, ids=lambda case: case.key)
+@pytest.mark.parametrize(
+    "case",
+    [*(pytest.param(c, id=c.key) for c in _CASES), *(pytest.param(c, id=c.key, marks=_HEAVY) for c in _ESPD_SETS)],
+)
 def test__text_patch__every_document_builds_the_same_pdf(
     repo: YamlTemplateRepository, tmp_path: Path, case: _Case
 ) -> None:
