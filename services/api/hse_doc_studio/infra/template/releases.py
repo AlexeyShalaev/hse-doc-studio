@@ -101,9 +101,19 @@ def load_releases(template_dir: Path) -> dict[str, ReleaseEntry]:
     if not path.exists():
         return {}
     try:
-        data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    except (OSError, yaml.YAMLError) as exc:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
         logger.warning("releases.yaml read error", path=str(path), exc=str(exc))
+        return {}
+    return parse_releases(text, source=str(path))
+
+
+def parse_releases(text: str, *, source: str = RELEASES_FILE) -> dict[str, ReleaseEntry]:
+    """Реестр выпусков из текста `releases.yaml` (файл на диске или блоб базовой ветки); битый текст даёт пустой."""
+    try:
+        data = yaml.safe_load(text) or {}
+    except yaml.YAMLError as exc:
+        logger.warning("releases.yaml read error", path=source, exc=str(exc))
         return {}
     raw = data.get("releases") if isinstance(data, dict) else None
     if not isinstance(raw, dict):

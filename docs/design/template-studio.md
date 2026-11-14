@@ -450,6 +450,14 @@ MCP: набор тулов `pack_*` в том же слое (`core/agent`, `use_
 
 Коды ошибок в `contracts/pack-studio/error_codes.json`: `version_released`, `not_a_pack_repo`, `pack_id_taken`, `push_denied`, `pr_permission_missing`, `fork_required`, `ci_status_unavailable`, `lint_failed`, `class_softer_than_changes`, `preview_quota`, `workspace_busy`, `yaml_patch_conflict`.
 
+Сделано в T5 (контракт `contracts/pack-studio`, README там же):
+
+- Пути `/api/v1/pack-studio/*` (а не `/api/pack-studio/*`): общая цепочка актора, CSRF, PAT и таблица областей маршрутов `/api/v1`; свой гард `pack_studio_guard` проверяет включение, право и область `packs`. Админка `/api/admin/pack-studio` (включение и право людям и группам).
+- Пространство: `GET/POST /workspaces`, `GET/DELETE /workspaces/{id}`, `POST /workspaces/{id}/refresh` (выборка базы или клон заново), `GET /workspaces/{id}/tree`, `GET/PUT/PATCH/DELETE /workspaces/{id}/files/{path}`. Клон идёт в фоне: карточка в состоянии `cloning`, опрос до `ready` или `failed`, без `operation_id`.
+- `PATCH .../files/{path}` это точечные правки YAML (`set`, `insert`, `delete`, `move` по пути узла), весь набор или ничего. Разобранная модель версии поверх нескольких файлов (`.../versions/{pack}/{tpl}/{v}/model`) остаётся формам (T11 и дальше) и строится на этой правке.
+- Клон без блобов с целой историей коммитов и деревьев (ветке и слиянию с базой в T6 нужна общая история), разреженное дерево только с папкой паков, хранилище вне дерева. Выпущенные версии кешируются после каждой выборки в `base-releases.json` рядом с хранилищем.
+- `releases.yaml` через файлы не меняется (`releases_read_only`): реестр ведёт мастер «Новая версия» (T10).
+
 ## 13. Первый шаг: «Скопировать как пресет шаблона»
 
 Зачем: пресеты `hse-cs-sse` 2026.1.4 (R27) и будущие `hse-cs-se` (девять документов ЕСПД, 15.16) снимаются ровно так: автор ставит рамки на собранном PDF живого проекта, а потом переписывает координаты в `version.yaml` руками. Кнопка убирает переписывание.

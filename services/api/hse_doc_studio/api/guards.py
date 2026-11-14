@@ -25,6 +25,7 @@ from hse_doc_studio.api.git_errors import install_git_error_handlers
 from hse_doc_studio.api.identity_errors import install_identity_error_handlers
 from hse_doc_studio.api.import_errors import install_project_import_error_handlers
 from hse_doc_studio.api.model_server_errors import install_model_server_error_handlers
+from hse_doc_studio.api.pack_studio_errors import install_pack_studio_error_handlers
 from hse_doc_studio.api.quota_errors import install_quota_error_handlers
 from hse_doc_studio.api.review_errors import install_review_error_handlers
 from hse_doc_studio.api.route_actions import RouteRule, route_key, rule_for, scope_for_rule
@@ -328,4 +329,5 @@ def install_exception_handlers(app: FastAPI) -> None:
     install_project_import_error_handlers(app)
     install_runner_error_handlers(app)
     install_ai_relay_error_handlers(app)
+    install_pack_studio_error_handlers(app)
     install_validation_error_handler(app)

@@ -1,0 +1,6 @@
+{
+  "detail": "Правку нельзя применить к текущему тексту файла.",
+  "code": "yaml_patch_conflict",
+  "op": 1,
+  "reason": "path element 'nope' is not in the document"
+}

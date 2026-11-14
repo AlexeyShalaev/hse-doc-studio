@@ -46,6 +46,8 @@ SETTING_SCOPES: dict[str, SettingScope] = {
     "languagetool_image": SettingScope.instance,
     "office_convert_image": SettingScope.instance,
     "office_editor_image": SettingScope.instance,
+    # «Инструменты автора шаблонов» локальной Студии (template-studio.md, D4); на сервере раздел включает админ.
+    "pack_studio_enabled": SettingScope.instance,
 }
 
 

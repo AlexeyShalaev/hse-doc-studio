@@ -39,6 +39,8 @@ class TokenScope(StrEnum):
     mcp_admin = "mcp:admin"
     # Подпись комплекта через MCP своим ключом (docs/design/signature-plan.md, раздел 9): право mcp его не включает.
     sign = "sign"
+    # Студия шаблонов (docs/design/template-studio.md, 3.3): REST `/pack-studio`, CLI и MCP-тулы `pack_*`.
+    packs = "packs"
 
 
 class ApiTokenOrigin(StrEnum):
