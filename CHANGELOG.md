@@ -6,25 +6,12 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.27.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.26.0...v0.27.0) (2026-11-14)
+## [0.27.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.26.0...v0.27.0) - 2026-11-14
 
-
-### Features
-
-* **packs:** hse-cs-sse 2026.1.5 с пресетами маршрутов на якорях (R27) ([7ed0607](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7ed0607b36e0ba6b72197d5402bb2959bb022e19))
-* **packs:** hse-cs-sse coursework 2026.1.5 with anchored signing presets (R27) ([33b3772](https://github.com/AlexeyShalaev/hse-doc-studio/commit/33b37723e3ef18ace2ac6d109b7f273ccd4141db))
-* **signatures:** build anchors from TeX positions file (R31) ([48b41ef](https://github.com/AlexeyShalaev/hse-doc-studio/commit/48b41efbe51894de76870092840c9c2d158a9b46))
-* **signatures:** build anchors from TeX positions file (R31) ([bb3b845](https://github.com/AlexeyShalaev/hse-doc-studio/commit/bb3b845c2d7b221844131355aa287394e2c7edda))
-* **signatures:** signature places on template anchors (R32) ([65379bc](https://github.com/AlexeyShalaev/hse-doc-studio/commit/65379bc7cf2582e929bde6383cc0bb0f5d33fc92))
-* **signatures:** signature places on template anchors (R32) ([ad44f3b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ad44f3bd4e16163bb7e696a25f1c77f36711a826))
-* **web:** signature places on template lines (W17) ([98a073a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/98a073abd1eb5d144393d7b90d662b0f523c85f8))
-* **web:** места подписей по строкам шаблона (W17) ([de35ddf](https://github.com/AlexeyShalaev/hse-doc-studio/commit/de35ddf6783e1e049b156f04fa06a78ce15b06ef))
-
-
-### Bug Fixes
-
-* время в письмах по Москве, склейка marks_edited, подписание в напоминании о сроке ([f3370d5](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f3370d55a7d6310b236568a81f0b00baa297af71))
-* время в письмах по Москве, склейка marks_edited, подписание в напоминании о сроке ([0875c92](https://github.com/AlexeyShalaev/hse-doc-studio/commit/0875c9214a23d6aca86100fdf25b97b42c482b81))
+- Signature places on template lines. A template can mark a signature or date line in LaTeX (an anchor), and after a build the box lands exactly on it. Places follow the layout by themselves: the document language, lines printed by a condition and a long title. The mark reads “Place on a template line”, and when the line is missing from the document the place is turned off. Places set by hand, documents out for signing or with an e-signature and an uploaded PDF never move. After a build the Studio tells how many places it moved.
+- MSc course project template 2026.1.5: a ready route for the topic application. The author, then the supervisor and the consultant (when set), and the academic supervisor only when the supervisor is not from HSE. Signature boxes and dates sit on the lines of the application and the project description, and the author's signature and date on the report title. Checkpoints now hint when the deadline is usually announced. The PDF does not change after updating from 2026.1.4, so documents out for signing do not get “Has changes”.
+- Builds are now reproducible: XeLaTeX no longer writes the build minute into the PDF. Before, a document without hyperref rebuilt without changes in another minute came out different, and a document out for signing could get a false “Has changes”. The fix is in the runner: update runners to 0.27.0 in the admin panel. On an older runner template lines are not detected and places come from the fallback millimetres.
+- Times in emails, reminders, invitations and the AI limit message are now in Moscow time, for example “15 Nov 2026, 23:59 (Moscow time)”. The checkpoint deadline reminder has a signing line: who we are waiting for, finished or not sent. Consecutive date mark edits by one person are merged into one route history event.
 
 ## [0.26.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.25.1...v0.26.0) - 2026-11-13
 
