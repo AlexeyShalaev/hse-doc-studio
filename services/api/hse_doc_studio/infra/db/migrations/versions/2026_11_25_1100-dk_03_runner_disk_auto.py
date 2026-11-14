@@ -4,7 +4,7 @@
 колонки не читает и не пишет (правило expand/contract, docs/ru/deploy/operations.md).
 
 Revision ID: dk_03_runner_disk_auto
-Revises: sr_13_signature_places_moved
+Revises: ml_04_mail_retry
 Create Date: 2026-11-25 10:00:00
 """
 
@@ -15,7 +15,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "dk_03_runner_disk_auto"
-down_revision: str | None = "sr_13_signature_places_moved"
+down_revision: str | None = "ml_04_mail_retry"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
