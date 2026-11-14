@@ -126,6 +126,7 @@ export const MAIL_ORIGINS = [
   "signing_reinvite",
   "signing_auto_reminder",
   "smtp_test",
+  "admin_resend",
 ] as const;
 export type MailOrigin = (typeof MAIL_ORIGINS)[number];
 
@@ -178,6 +179,12 @@ export const MailLogEntrySchema = z.strictObject({
   origin: z.string(),
   project: MailLogProjectSchema.nullable(),
   ref: MailLogRefSchema.nullable(),
+  /** Запланирован автоповтор временного сбоя (14, V6). */
+  next_attempt_at: iso.nullable(),
+  /** Время последней попытки, если их больше одной. */
+  last_attempt_at: iso.nullable(),
+  /** Ручной повтор: исходная строка журнала (V2). */
+  resent_from_id: z.number().int().nullable(),
 });
 
 /** Страница журнала: курсор непрозрачный, оценка числа только без фильтров. */
@@ -190,6 +197,43 @@ export const MailLogPreviewSchema = z.strictObject({
   text: z.string(),
 });
 
+/**
+ * Почему «Отправить ещё раз» недоступно (14.2): общие правила по строке и актуальность объекта.
+ * Сервер может прислать и другой код: тогда показывается общий текст.
+ */
+export const MAIL_RESEND_BLOCKS = [
+  "status",
+  "token_link",
+  "smtp_test",
+  "template_gone",
+  "retrying",
+  "too_old",
+  "already_resent",
+  "smtp_off",
+  "recipient_gone",
+  "recipient_changed",
+  "recipient_blocked",
+  "project_gone",
+  "invitation_done",
+  "request_done",
+  "transfer_done",
+  "route_done",
+  "object_gone",
+] as const;
+export type MailResendBlock = (typeof MAIL_RESEND_BLOCKS)[number];
+
+export const MailLogResendStateSchema = z.strictObject({
+  allowed: z.boolean(),
+  blocked: z.string().nullable(),
+});
+
+/** Ручной повтор строки: новая строка журнала. */
+export const MailLogResentSchema = z.strictObject({
+  id: z.number().int(),
+  at: iso,
+  status: z.enum(MAIL_STATUSES),
+});
+
 export const MailLogDetailSchema = z.strictObject({
   entry: MailLogEntrySchema,
   /** null, если вида письма в этой версии нет. */
@@ -200,6 +244,10 @@ export const MailLogDetailSchema = z.strictObject({
   note_hidden: z.boolean(),
   /** Шаблон менялся с момента отправки (L5). */
   rerendered: z.boolean(),
+  /** Можно ли «Отправить ещё раз» (14, V1..V5). */
+  resend: MailLogResendStateSchema,
+  /** Ручные повторы этой строки, новые первыми. */
+  resent: z.array(MailLogResentSchema),
 });
 
 export const MailLogLastFailureSchema = z.strictObject({
@@ -215,8 +263,39 @@ export const MailLogSummarySchema = z.strictObject({
   failed: z.number().int(),
   not_sent: z.number().int(),
   suppressed: z.number().int(),
+  /** Не ушло, но Студия повторит сама; `failed` без них (V13). */
+  retrying: z.number().int(),
   last_failure: MailLogLastFailureSchema.nullable(),
   retention_days: z.number().int(),
+});
+
+/** Итог «Отправить ещё раз». */
+export const MailLogResendResultSchema = z.strictObject({
+  outcome: z.enum(["sent", "failed", "retrying", "blocked"]),
+  blocked: z.string().nullable(),
+  entry_id: z.number().int().nullable(),
+  reason: z.string().nullable(),
+});
+
+/** Тело «Отправить неушедшие»: фильтры списка без итога и курсора, период как since и until. */
+export const MailLogResendBatchRequestSchema = z.strictObject({
+  template: z.array(z.string()),
+  reason: z.string().nullable(),
+  recipient_id: z.string().nullable(),
+  recipient: z.string().nullable(),
+  project_id: z.string().nullable(),
+  since: iso.nullable(),
+  until: iso.nullable(),
+  q: z.string().nullable(),
+  dry_run: z.boolean(),
+});
+
+/** Сколько писем уйдёт (или ушло в отправку) и сколько пропущено по причинам. */
+export const MailLogResendBatchSchema = z.strictObject({
+  planned: z.number().int(),
+  skipped: z.record(z.string(), z.number().int()),
+  started: z.boolean(),
+  limit: z.number().int(),
 });
 
 export type MailLogPerson = z.infer<typeof MailLogPersonSchema>;
@@ -228,6 +307,12 @@ export type MailLogPage = z.infer<typeof MailLogPageSchema>;
 export type MailLogPreview = z.infer<typeof MailLogPreviewSchema>;
 export type MailLogDetail = z.infer<typeof MailLogDetailSchema>;
 export type MailLogSummary = z.infer<typeof MailLogSummarySchema>;
+export type MailLogResent = z.infer<typeof MailLogResentSchema>;
+export type MailLogResendResult = z.infer<typeof MailLogResendResultSchema>;
+export type MailLogResendBatchRequest = z.infer<
+  typeof MailLogResendBatchRequestSchema
+>;
+export type MailLogResendBatch = z.infer<typeof MailLogResendBatchSchema>;
 
 /**
  * Каталоги contracts/server/fixtures журнала писем -> схема (6.2); те же пары разложены в
@@ -238,4 +323,7 @@ export const MAIL_LOG_CONTRACT_SCHEMAS: Record<string, ZodType> = {
   AdminMailLogPage: MailLogPageSchema,
   AdminMailLogDetail: MailLogDetailSchema,
   AdminMailLogSummary: MailLogSummarySchema,
+  AdminMailLogResendResult: MailLogResendResultSchema,
+  AdminMailLogResendBatch: MailLogResendBatchSchema,
+  AdminMailLogResendBatchRequest: MailLogResendBatchRequestSchema,
 };

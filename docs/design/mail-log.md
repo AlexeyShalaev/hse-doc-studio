@@ -1107,9 +1107,11 @@ E2E (срез E1): раздел 12.
   Если уйти нечему: «Отправлять нечего» и причины.
 
 Самодиагностика: строка «Доставка писем» с текстами `okReason.mail_delivery` («За сутки не ушло {{failed}} из
-{{total}}.»), `reason.mail_failing` («За {{window}} не ушло {{failed}} писем из {{total}} ({{percent}}%).»),
-`reason.mail_last_failed` («Последнее письмо не ушло: {{error}}.») и подсказками, что делать: открыть «Письма» с
-фильтром «Не ушло», по причине в карточке поправить «Почта (SMTP)», после починки нажать «Отправить неушедшие».
+{{total}} писем.»), `reason.mail_failing_hour` и `reason.mail_failing_day` («За последний час не ушло {{failed}}
+писем из {{total}} ({{percent}}%).»), `reason.mail_last_failed` («Последнее письмо не ушло: {{error}}.», где
+`error` это класс и код, например `auth 535`) и подсказками, что делать: открыть «Письма» с фильтром «Не ушло», по
+причине в карточке поправить «Почта (SMTP)», после починки нажать «Отправить неушедшие». Цель строки
+`/admin/mail?status=failed`.
 
 ### 14.4 API
 
@@ -1132,11 +1134,14 @@ AdminMailLogSummary += { retrying: int }             # failed теперь бе�
 AdminMailLogResendResult { outcome: "sent" | "failed" | "retrying" | "blocked", blocked: str | null,
                            entry_id: int | null, reason: str | null }
 AdminMailLogResendBatchRequest { template: str[], reason: str | null, recipient_id, recipient, project_id,
-                                 from, to, q, dry_run: bool }
+                                 since, until, q, dry_run: bool }   # since и until это from и to списка
 AdminMailLogResendBatch { planned: int, skipped: {code: int}, started: bool, limit: 200 }
 ```
 
-`GET /mail-log` получает параметр `retrying` (`true`: только ожидающие повтора, `false`: без них). Новых кодов
+`GET /mail-log` получает параметр `retrying` (`true`: только ожидающие повтора, `false`: без них); «Не ушло» в
+полосе за сутки ставит `status=failed&retrying=false`, «Ждут повтора» ставит `retrying=true`. В теле пачки период
+называется `since` и `until`, а не `from` и `to`: `from` в Python зарезервировано, а псевдоним сломал бы эталон
+контракта. Ключ `skipped` пачки кроме кодов 14.2 знает `over_limit` (не вошли в 200). Новых кодов
 ошибок нет: повтор, который нельзя сделать, отвечает `200` с `outcome: blocked`, а не ошибкой, потому что это
 обычный исход, который карточка показывает текстом. Неизвестный id `404`, как у карточки.
 
@@ -1171,3 +1176,27 @@ AdminMailLogResendBatch { planned: int, skipped: {code: int}, started: bool, lim
 | Массовая отправка задевает лимит провайдера | письма идут по одному, `4xx` лимита встаёт в автоповтор, не больше 200 за раз |
 | Админ шлёт устаревшее уведомление | проверка актуальности V5 и окно 72 часа V4 |
 | Самодиагностика шумит на одном плохом адресе | `recipient_refused` не считается последним ответом, доля считается от 5 попыток |
+
+### 14.7 Как сделано
+
+Один PR после дизайна (`feat/mail-log-v2`): бэкенд, фронтенд, справка.
+
+- Бэкенд: `core/mail/journal.py` (политика повтора, `ResendBlock`, `resend_block`, `resend_request`,
+  `MailRequest.to_json` и `from_json`, `MailRetryJob`, `MailAttempt`), `core/mail/compose.py` (`note_in_inbox`),
+  миграция `ml_04_mail_retry`, ORM `MailRetryRow` в реестре `encrypted_columns`, `SqlMailLogRepository` с шифром,
+  `infra/db/repositories/mail_relevance.py`, `use_cases/mail/dispatch.py` (`retry_due`, аренда, `_drop`),
+  `use_cases/mail/resend.py`, задача лидера `mail_retry` (`api/observability/install_mail.py`, раз в 15 с), ручки
+  `POST /mail-log/{id}/resend` и `POST /mail-log/resend`, метрика `hse_mail_retry_dropped_total`, проверка
+  `mail_delivery` с порогами `mail_failed_*`, поля попыток в MCP.
+- Тесты: политика и сборка письма (`test_mail_retry_policy.py`), диспетчер, повтор и пачка на памяти
+  (`test_mail_retry.py`), API и эталоны (`test_admin_mail_log_api.py`), Postgres: шифртекст очереди, новый
+  контейнер дошлёт письмо, аренда и `SKIP LOCKED`, каскад, запросы журнала и актуальность по объектам
+  (`test_mail_retry_pg.py`), правила самодиагностики.
+- Эталоны: новые поля во всех `AdminMailLog*`, варианты `AdminMailLogEntry/retrying` и `resent_by_admin`,
+  `AdminMailLogDetail/retrying` и `resent`, новые каталоги `AdminMailLogResendResult`, `AdminMailLogResendBatch`,
+  `AdminMailLogResendBatchRequest`. Строки версии 2 (id 1300..1302) в эталоны страниц B1 не входят.
+- Фронтенд: схемы и копия эталонов, метка «Повтор», «Ждут повтора» в полосе, чип фильтра, кнопка и окно «Отправить
+  неушедшие» (`ResendBatchDialog`), «Отправить ещё раз», плашка итога, «Отправлено ещё раз» и «Повтор письма» в
+  карточке, причины в «Что можно сделать», моки демо-мира, галерея (`mail_list_retrying`, `mail_card_retrying`,
+  `mail_card_resend*`, `mail_card_stale`, `mail_card_resent_copy`, группа `admin-mail-batch`), цель самодиагностики,
+  подписи аудита `mail.resent` и `mail.resent_batch`.

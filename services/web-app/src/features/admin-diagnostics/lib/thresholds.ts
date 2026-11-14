@@ -8,6 +8,10 @@ export const THRESHOLD_GROUPS = [
   { id: "stuck", names: ["stuck_job_warn_s", "stuck_job_fail_s"] },
   { id: "tls", names: ["tls_warn_days", "tls_fail_days"] },
   { id: "backups", names: ["backup_warn_hours", "backup_fail_hours"] },
+  {
+    id: "mail",
+    names: ["mail_failed_warn_percent", "mail_failed_fail_percent"],
+  },
   { id: "alerts", names: ["confirm_runs", "repeat_hours"] },
 ] as const;
 

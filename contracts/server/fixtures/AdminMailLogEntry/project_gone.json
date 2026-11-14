@@ -28,5 +28,8 @@
   "ref": {
     "kind": "access_request",
     "id": "c93f5e4a1b0d4e7c"
-  }
+  },
+  "next_attempt_at": null,
+  "last_attempt_at": null,
+  "resent_from_id": null
 }

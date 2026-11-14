@@ -201,6 +201,11 @@ def _mail_row(view: MailLogView) -> dict[str, object]:
         "cause": entry.cause,
         "actor_id": entry.actor_user_id,
         "project_id": entry.project_id,
+        # Версия 2 (mail-log.md, V15): сколько попыток было, ждёт ли письмо автоповтора, ручной повтор чего.
+        "attempts": entry.attempts,
+        "next_attempt_at": entry.next_attempt_at,
+        "last_attempt_at": entry.last_attempt_at,
+        "resent_from_id": entry.resent_from_id,
     }
 
 
@@ -210,7 +215,9 @@ class AdminListMailLogTool(_AdminTool):
         description=(
             "Админ: журнал писем установки, новые первыми. Фильтры: recipient (точный адрес без учёта регистра), "
             "template (вид письма), status (sent, failed, not_sent, suppressed), since (ISO 8601). "
-            "Строка: время, вид, получатель, тема, итог, причина, код SMTP, кто вызвал (cause и actor_id)."
+            "Строка: время, вид, получатель, тема, итог, причина, код SMTP, кто вызвал (cause и actor_id), "
+            "попытки (attempts), следующий автоповтор (next_attempt_at, null: повторов больше не будет), "
+            "время последней попытки и resent_from_id у ручного повтора."
         ),
         parameters={
             "type": "object",

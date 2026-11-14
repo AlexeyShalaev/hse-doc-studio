@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import replace
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from hse_doc_studio.core.backup.protocols import IBackupDestinationRepository
 from hse_doc_studio.core.backup.settings import settings_from
 from hse_doc_studio.core.diagnostics import rules
 from hse_doc_studio.core.diagnostics.entities import CHECK_BY_ID, CheckId, CheckSpec, Verdict
-from hse_doc_studio.core.diagnostics.facts import BackupFacts, DiskFacts
+from hse_doc_studio.core.diagnostics.facts import BackupFacts, DiskFacts, MailDeliveryFacts
 from hse_doc_studio.core.diagnostics.ports import (
     IBackupProbe,
     IDatabaseProbe,
@@ -23,9 +23,10 @@ from hse_doc_studio.core.diagnostics.ports import (
     ITlsProbe,
 )
 from hse_doc_studio.core.diagnostics.thresholds import KEY_LAST_TICK, DiagThresholds
-from hse_doc_studio.core.identity.protocols import IInstanceSettingsRepository
+from hse_doc_studio.core.identity.protocols import IInstanceSettingsRepository, IMailLogRepository, IMailSender
 from hse_doc_studio.core.lifecycle.disk import StorageLevel, effective_thresholds
 from hse_doc_studio.core.lifecycle.ports import ILifecycleRuns
+from hse_doc_studio.core.mail.journal import MailStatus
 from hse_doc_studio.use_cases.lifecycle.engine import LifecycleEngine
 from hse_doc_studio.use_cases.lifecycle.guard import StorageGuard
 
@@ -170,6 +171,36 @@ class SmtpCheck(_Base):
 
     async def run(self, t: DiagThresholds, now: datetime) -> Verdict:
         return rules.judge_smtp(await self._probe.check())
+
+
+class MailDeliveryCheck(_Base):
+    """Доставка писем по журналу (docs/design/mail-log.md, V14): проба SMTP видит только вход, а отказы писем
+    (отправитель не разрешён, лимиты провайдера) видны только по итогам отправки."""
+
+    check_id = CheckId.mail_delivery
+
+    def __init__(self, log: IMailLogRepository, sender: IMailSender) -> None:
+        self._log = log
+        self._sender = sender
+
+    async def run(self, t: DiagThresholds, now: datetime) -> Verdict:
+        if not self._sender.enabled:
+            return rules.judge_mail_delivery(MailDeliveryFacts(configured=False), t)
+        hour = await self._log.summary(now - timedelta(hours=1))
+        day = await self._log.summary(now - timedelta(days=1))
+        last = await self._log.last_attempt()
+        failed = last is not None and last.status is MailStatus.failed
+        facts = MailDeliveryFacts(
+            configured=True,
+            hour_sent=hour.sent,
+            hour_failed=hour.failed + hour.retrying,
+            day_sent=day.sent,
+            day_failed=day.failed + day.retrying,
+            last_failed=failed,
+            last_reason=last.reason if failed and last is not None else None,
+            last_code=last.smtp_code if failed and last is not None else None,
+        )
+        return rules.judge_mail_delivery(facts, t)
 
 
 class SchedulerCheck(_Base):

@@ -273,6 +273,9 @@ _AUDITED_ELSEWHERE: dict[tuple[str, str], str] = {
     ("DELETE", "/api/admin/runner-install/ssh/{id}"): "runner_install.ssh.cancel",
     ("DELETE", "/api/admin/runner-install/ssh/credentials/{id}"): "runner_install.ssh.credentials_delete",
     ("POST", "/api/admin/runner-install/ssh/credentials/{id}/run"): "runner_install.ssh.run_saved",
+    # повтор писем из журнала (mail-log.md, раздел 14): проверяет test_admin_mail_log_api
+    ("POST", "/api/admin/mail-log/{id}/resend"): "mail.resent",
+    ("POST", "/api/admin/mail-log/resend"): "mail.resent_batch",
     # самодиагностика: проверяет test_admin_diagnostics_api
     ("POST", "/api/admin/diagnostics/run"): "diagnostics.run",
     ("PUT", "/api/admin/diagnostics/thresholds"): "settings.diagnostics_update",

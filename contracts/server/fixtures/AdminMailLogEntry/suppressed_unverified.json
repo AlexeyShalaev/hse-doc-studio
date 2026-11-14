@@ -32,5 +32,8 @@
   "ref": {
     "kind": "project_invitation",
     "id": "b82e4d3f0a9c4d6b"
-  }
+  },
+  "next_attempt_at": null,
+  "last_attempt_at": null,
+  "resent_from_id": null
 }

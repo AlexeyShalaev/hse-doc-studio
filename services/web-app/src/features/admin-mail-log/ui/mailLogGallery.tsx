@@ -21,9 +21,15 @@ import {
   type MailLogPageState,
   type MailLogSummaryState,
 } from "../testing/fixtures";
+import { MAIL_LOG_SERVER_RESEND_BATCHES } from "../testing/serverFixtures";
 import { MailLog, MAIL_PARAM } from "./MailLog";
-import { MailLogCardView, type MailLogCardState } from "./MailLogCardView";
+import {
+  MailLogCardView,
+  type MailLogCardState,
+  type MailResendNotice,
+} from "./MailLogCardView";
 import { MailLogView } from "./MailLogView";
+import { ResendBatchView, type ResendBatchState } from "./ResendBatchDialog";
 
 // Галерея «Админка: письма» (docs/design/mail-log.md, 4.4), список (срез W2): состояния на
 // эталонах сервера и своих страницах MAIL_LOG_PAGES и сводках MAIL_LOG_SUMMARIES, телефон и живые
@@ -73,8 +79,8 @@ type ListDemoProps = {
   page?: MailLogPageState;
   summary?: MailLogSummaryState | null;
   status?: "ready" | "loading" | "error";
-  /** Показать вид с выбранными условиями: итог и (или) поиск. */
-  filtered?: { status?: readonly string[]; q?: string };
+  /** Показать вид с выбранными условиями: итог, автоповтор и (или) поиск. */
+  filtered?: { status?: readonly string[]; retrying?: string; q?: string };
   /** Следующая страница не загрузилась. */
   failedMore?: boolean;
 };
@@ -95,11 +101,16 @@ const ListDemo = ({
         filters: {
           ...own.filters,
           status: filtered.status ?? own.filters.status,
+          retrying: filtered.retrying
+            ? [filtered.retrying]
+            : own.filters.retrying,
         },
         filter: (name) =>
           name === "status"
             ? (filtered.status?.[0] ?? own.filter(name))
-            : own.filter(name),
+            : name === "retrying"
+              ? (filtered.retrying ?? own.filter(name))
+              : own.filter(name),
         isFiltered: true,
         searchOnly: filtered.status ? "" : (filtered.q ?? ""),
         activeFilterCount: 1,
@@ -130,6 +141,7 @@ const ListDemo = ({
       onOpen={noop}
       onRefresh={noop}
       onRetry={noop}
+      onResendBatch={noop}
     />
   );
 };
@@ -142,6 +154,9 @@ type CardDemoProps = {
   row?: MailLogEntry | null;
   state?: MailLogCardState;
   phone?: boolean;
+  /** Итог «Отправить ещё раз» плашкой. */
+  notice?: MailResendNotice;
+  resending?: boolean;
 };
 
 /** Карточка на постоянных данных: панель справа или шторка, нарисованная на месте. */
@@ -150,6 +165,8 @@ const CardDemo = ({
   row = null,
   state = "ready",
   phone = false,
+  notice,
+  resending = false,
 }: CardDemoProps) => (
   <div
     className="ml-card"
@@ -166,9 +183,51 @@ const CardDemo = ({
       onClose={noop}
       onShowRecipient={noop}
       onShowProject={noop}
+      onResend={noop}
+      resending={resending}
+      resendNotice={notice ?? null}
+      onOpenEntry={noop}
     />
   </div>
 );
+
+/** Окно «Отправить неушедшие» без затемнения: содержимое как в разделе. */
+const BatchDemo = ({
+  state = "ready",
+  preview = "preview",
+  filtered = false,
+}: {
+  state?: ResendBatchState;
+  preview?: keyof typeof MAIL_LOG_SERVER_RESEND_BATCHES;
+  filtered?: boolean;
+}) => (
+  <div
+    className="modal-panel"
+    data-inline="true"
+    style={{ padding: "1.25rem" }}
+  >
+    <ResendBatchView
+      state={state}
+      preview={
+        state === "ready" ? MAIL_LOG_SERVER_RESEND_BATCHES[preview] : null
+      }
+      filtered={filtered}
+      onRetry={noop}
+    />
+  </div>
+);
+
+const batch = (
+  id: string,
+  title: string,
+  props: Parameters<typeof BatchDemo>[0],
+  extra: Partial<GalleryEntry> = {},
+): GalleryEntry =>
+  entry(id, title, () => <BatchDemo {...props} />, {
+    frame: "plain",
+    width: 520,
+    ...extra,
+  });
 
 const D = MAIL_LOG_DETAILS;
 const R = MAIL_LOG_RECORDS;
@@ -265,6 +324,14 @@ export const getAdminMailLogGallery = (): GalleryGroup[] => [
       ),
       entry("mail_list_more_failed", "Следующая страница не загрузилась", () =>
         list({ page: "day", failedMore: true }),
+      ),
+      entry(
+        "mail_list_retrying",
+        "Ждут автоповтора",
+        () => list({ page: "retrying", filtered: { retrying: "true" } }),
+        {
+          note: "Метка «Повтор» с временем следующей попытки; фильтр ставит «Ждут повтора» в полосе за сутки.",
+        },
       ),
       entry("mail_list_phone", "Телефон: обычный день", () => list(), {
         width: PHONE,
@@ -396,6 +463,46 @@ export const getAdminMailLogGallery = (): GalleryGroup[] => [
         { state: "not_found" },
         { note: "Сервер ответил 404: запись удалена по сроку хранения." },
       ),
+      card(
+        "mail_card_retrying",
+        "Временный сбой: Студия повторит сама",
+        { detail: D.retrying },
+        {
+          note: "Жёлтая метка «Повтор», время следующей попытки и «2 из 5»; кнопки повтора нет.",
+        },
+      ),
+      card(
+        "mail_card_resend",
+        "Пять попыток не помогли: «Отправить ещё раз»",
+        { detail: D.resend_allowed },
+        {
+          note: "Кнопка в итоге: письмо соберётся заново и уйдёт новой строкой.",
+        },
+      ),
+      card("mail_card_resend_sending", "Отправляется ещё раз", {
+        detail: D.resend_allowed,
+        resending: true,
+      }),
+      card("mail_card_resend_sent", "Отправлено ещё раз", {
+        detail: D.resent,
+        notice: { tone: "info", text: "Письмо отправлено ещё раз." },
+      }),
+      card("mail_card_resend_failed", "Не ушло и при повторе", {
+        detail: D.resend_allowed,
+        notice: {
+          tone: "err",
+          text: "Не ушло и в этот раз: SMTP-сервер не ответил вовремя.",
+        },
+      }),
+      card(
+        "mail_card_stale",
+        "Неактуально: маршрут уже подписан",
+        { detail: D.stale_route },
+        { note: "Кнопки нет, причина в «Что можно сделать»." },
+      ),
+      card("mail_card_resent_copy", "Повтор письма из журнала", {
+        detail: D.resent_copy,
+      }),
       card("mail_card_phone", "Телефон: сброс пароля", {
         detail: D.token_link,
         phone: true,
@@ -425,11 +532,30 @@ export const getAdminMailLogGallery = (): GalleryGroup[] => [
         live("admin_ready"),
       ),
       entry(
+        "mail_card_live_resend",
+        "Открыта карточка: можно отправить ещё раз",
+        () => <LiveCard id={R.gave_up.entry.id} />,
+        live("admin_ready"),
+      ),
+      entry(
         "mail_card_live_missing",
         "Письмо удалено по сроку",
         () => <LiveCard id={MAIL_LOG_MISSING_ID} />,
         live("admin_ready"),
       ),
+    ],
+  },
+  {
+    id: "admin-mail-batch",
+    title: "Админка: письма, «Отправить неушедшие»",
+    description:
+      "Окно массового повтора (14, V11): сначала сервер считает, сколько писем уйдёт и сколько пропущено по причинам, затем отправка идёт фоном.",
+    entries: [
+      batch("mail_batch_preview", "Предпросмотр", {}),
+      batch("mail_batch_filtered", "С фильтрами списка", { filtered: true }),
+      batch("mail_batch_nothing", "Отправлять нечего", { preview: "nothing" }),
+      batch("mail_batch_counting", "Считаем письма", { state: "counting" }),
+      batch("mail_batch_failed", "Не удалось посчитать", { state: "failed" }),
     ],
   },
 ];

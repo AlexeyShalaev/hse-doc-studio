@@ -25,5 +25,8 @@
   "ref": {
     "kind": "registration_invite",
     "id": "inv_01hx9q7m2k"
-  }
+  },
+  "next_attempt_at": null,
+  "last_attempt_at": null,
+  "resent_from_id": null
 }

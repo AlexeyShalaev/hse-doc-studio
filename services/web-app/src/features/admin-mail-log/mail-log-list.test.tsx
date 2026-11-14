@@ -327,8 +327,9 @@ describe("раздел на демо-мире", () => {
         within(table).getAllByTestId(/^mail-status-/).length,
       ).toBeGreaterThan(0);
     });
+    // Письмо, которое Студия ещё повторит сама, помечено «Повтор» (14, V13).
     for (const status of within(table).getAllByTestId(/^mail-status-/)) {
-      expect(status).toHaveTextContent("Не ушло");
+      expect(status).toHaveTextContent(/Не ушло|Повтор/);
     }
   }, 20_000);
 

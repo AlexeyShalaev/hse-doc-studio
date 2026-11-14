@@ -21,6 +21,9 @@ import {
   MAIL_LOG_SERVER_DETAILS,
   MAIL_LOG_SERVER_ENTRIES,
   MAIL_LOG_SERVER_PAGES,
+  MAIL_LOG_SERVER_RESEND_BATCHES,
+  MAIL_LOG_SERVER_RESEND_REQUESTS,
+  MAIL_LOG_SERVER_RESEND_RESULTS,
   MAIL_LOG_SERVER_SUMMARIES,
   MAIL_LOG_SUMMARIES,
   makeMailLogDetail,
@@ -56,6 +59,9 @@ const SERVER_COPIES: Record<string, Record<string, unknown>> = {
   AdminMailLogPage: MAIL_LOG_SERVER_PAGES,
   AdminMailLogDetail: MAIL_LOG_SERVER_DETAILS,
   AdminMailLogSummary: MAIL_LOG_SERVER_SUMMARIES,
+  AdminMailLogResendResult: MAIL_LOG_SERVER_RESEND_RESULTS,
+  AdminMailLogResendBatch: MAIL_LOG_SERVER_RESEND_BATCHES,
+  AdminMailLogResendBatchRequest: MAIL_LOG_SERVER_RESEND_REQUESTS,
 };
 const serverFiles = Object.keys(MAIL_LOG_CONTRACT_SCHEMAS).flatMap((schema) =>
   readdirSync(join(FIXTURES, schema))
@@ -188,8 +194,10 @@ describe("журнал писем: состояния галереи", () => {
       smtpConfigured: true,
     });
     expect(day.window_hours).toBe(24);
-    expect(day.sent + day.failed + day.not_sent + day.suppressed).toBe(13);
-    expect(day.failed).toBe(2);
+    expect(day.sent + day.failed + day.not_sent + day.suppressed).toBe(14);
+    // Ждущие автоповтора считаются отдельно (14, V13).
+    expect(day.failed).toBe(3);
+    expect(day.retrying).toBe(1);
     expect(day.not_sent).toBe(0);
     expect(day.last_failure?.reason).toBe("recipient_refused");
     const off = makeMailLogSummary(MAIL_JOURNALS.smtp_off, {

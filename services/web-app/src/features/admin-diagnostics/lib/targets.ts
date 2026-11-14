@@ -18,6 +18,7 @@ export type DiagTargetKey =
   | "backups"
   | "backupDestinations"
   | "smtp"
+  | "mail"
   | "instance";
 
 export const TARGETS: Record<DiagTargetKey, string> = {
@@ -31,6 +32,8 @@ export const TARGETS: Record<DiagTargetKey, string> = {
   backups: "/admin/backups",
   backupDestinations: "/admin/backups#backup-destinations",
   smtp: "/admin/settings#admin-smtp",
+  // Журнал писем с фильтром «Не ушло» (docs/design/mail-log.md, V14).
+  mail: "/admin/mail?status=failed",
   instance: "/admin/instance#admin-instance",
 };
 
@@ -51,6 +54,7 @@ export const CHECK_TARGETS: Record<string, DiagTargetKey | null> = {
   tls_s3: "services",
   backups: "backups",
   smtp: "smtp",
+  mail_delivery: "mail",
 };
 
 /** Причины, которым нужна более точная цель, чем у проверки в целом. */

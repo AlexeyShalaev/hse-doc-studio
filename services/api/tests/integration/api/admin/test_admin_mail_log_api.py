@@ -23,6 +23,8 @@ from hse_doc_studio.api.schemas.mail_log import (
     AdminMailLogDetail,
     AdminMailLogEntry,
     AdminMailLogPage,
+    AdminMailLogResendBatch,
+    AdminMailLogResendResult,
     AdminMailLogSummary,
 )
 from hse_doc_studio.core.access.entities import Actor, ActorSource
@@ -48,12 +50,15 @@ from hse_doc_studio.core.mail.journal import (
     template_digest,
 )
 from hse_doc_studio.core.mode import StudioMode
+from hse_doc_studio.use_cases.mail.dispatch import MailCounters, MailDispatcher
 from hse_doc_studio.use_cases.mail.log import GetMailLogEntryUC, ListMailLogUC, MailLogSummaryUC
+from hse_doc_studio.use_cases.mail.resend import ResendGate, ResendMailBatchUC, ResendMailUC, drain_resend_batches
 from httpx import ASGITransport, AsyncClient
 
 from tests.fakes.identity import InMemoryInstanceSettingsRepository
 from tests.fakes.mail_log import InMemoryMailLogRepository
 from tests.fakes.mail_log_names import InMemoryMailLogNames
+from tests.fakes.mail_relevance import InMemoryMailRelevance
 
 _FIXTURES = Path(__file__).resolve().parents[6] / "contracts" / "server" / "fixtures"
 NOW = datetime(2026, 11, 11, 12, 0, tzinfo=UTC)
@@ -95,6 +100,21 @@ _PARAMS: dict[int, MailParams] = {
             "deadline": "15 Nov 2026, 23:59 (Moscow time)",
         },
     ),
+    **dict.fromkeys(
+        # Версия 2 (раздел 14): ждёт автоповтора, исходная строка ручного повтора и сам повтор.
+        (1300, 1301, 1302),
+        MailParams(
+            link=MailLinkKind.page,
+            link_path=_SIGN,
+            server=_SERVER,
+            values={
+                "actor": "Anna Petrova",
+                "project": "Coursework draft",
+                "profile": "Course project topic application (SmartLMS)",
+                "deadline": "15 Nov 2026, 23:59 (Moscow time)",
+            },
+        ),
+    ),
     1203: MailParams(
         link=MailLinkKind.page,
         link_path="/inbox",
@@ -108,6 +128,8 @@ _PARAMS: dict[int, MailParams] = {
 }
 # Строка 1188 ушла по прежнему шаблону: отпечаток не совпадает с текущим.
 _OLD_DIGEST = "0123456789abcdef"
+# Строки эталонов версии 2: в эталоны страниц B1 они не входят.
+_V2_ROWS = frozenset({1300, 1301, 1302})
 
 
 def _load(kind: str) -> dict[str, Any]:
@@ -154,7 +176,14 @@ def _entry(row: dict[str, Any]) -> MailLogEntry:
         ref_id=row["ref"]["id"] if row["ref"] else None,
         params=_PARAMS[row["id"]],
         template_digest=_OLD_DIGEST if row["id"] == 1188 else digest,
+        next_attempt_at=_moment(row["next_attempt_at"]),
+        last_attempt_at=_moment(row["last_attempt_at"]),
+        resent_from_id=row["resent_from_id"],
     )
+
+
+def _moment(value: str | None) -> datetime | None:
+    return datetime.fromisoformat(value) if value else None
 
 
 class _EstimatedLog(InMemoryMailLogRepository):
@@ -172,6 +201,21 @@ class _EstimatedLog(InMemoryMailLogRepository):
 class _Sender:
     def __init__(self) -> None:
         self.enabled = True
+        self.sent: list[tuple[str, str]] = []
+
+    async def send(self, to: str, subject: str, body: str, *, html: str | None = None) -> str:
+        self.sent.append((to, subject))
+        return f"<{len(self.sent)}@studio.example.org>"
+
+
+class _Audit:
+    def __init__(self) -> None:
+        self.events: list[tuple[str, str | None]] = []
+
+    async def record(
+        self, action: str, *, actor_id: str | None, target: str | None = None, details: Any = None
+    ) -> None:
+        self.events.append((action, target))
 
 
 class _Resolver:
@@ -195,11 +239,13 @@ class _Env:
     names: InMemoryMailLogNames = field(default_factory=InMemoryMailLogNames)
     sender: _Sender = field(default_factory=_Sender)
     settings: InMemoryInstanceSettingsRepository = field(default_factory=InMemoryInstanceSettingsRepository)
+    relevance: InMemoryMailRelevance = field(default_factory=InMemoryMailRelevance)
+    audit: _Audit = field(default_factory=lambda: _Audit())
     client: AsyncClient | None = None
 
-    def seed_fixtures(self) -> None:
+    def seed_fixtures(self, *, v2: bool = True) -> None:
         rows = _fixture_rows()
-        self.log.entries = [_entry(rows[i]) for i in sorted(rows)]
+        self.log.entries = [_entry(rows[i]) for i in sorted(rows) if v2 or i not in _V2_ROWS]
         self.log.estimate = 1207
         for row in rows.values():
             for person in (row["to_user"], row["actor"]):
@@ -229,7 +275,28 @@ class _Provider(Provider):
 
     @provide
     def entry_uc(self) -> GetMailLogEntryUC:
-        return GetMailLogEntryUC(self.e.log, self.e.names)
+        return GetMailLogEntryUC(self.e.log, self.e.names, self.gate())
+
+    def gate(self) -> ResendGate:
+        dispatcher = MailDispatcher(self.e.sender, self.e.log, counters=MailCounters(), clock=lambda: NOW)  # type: ignore[arg-type]
+        return ResendGate(self.e.log, self.e.relevance, dispatcher, clock=lambda: NOW)
+
+    @provide
+    def resend_uc(self) -> ResendMailUC:
+        dispatcher = MailDispatcher(self.e.sender, self.e.log, counters=MailCounters(), clock=lambda: NOW)  # type: ignore[arg-type]
+        return ResendMailUC(self.e.log, self.gate(), dispatcher, self.e.audit, public_url=_SERVER)  # type: ignore[arg-type]
+
+    @provide
+    def resend_batch_uc(self) -> ResendMailBatchUC:
+        dispatcher = MailDispatcher(self.e.sender, self.e.log, counters=MailCounters(), clock=lambda: NOW)  # type: ignore[arg-type]
+        return ResendMailBatchUC(
+            self.e.log,
+            self.gate(),
+            dispatcher,
+            self.e.audit,
+            public_url=_SERVER,
+            clock=lambda: NOW,  # type: ignore[arg-type]
+        )
 
     @provide
     def summary_uc(self) -> MailLogSummaryUC:
@@ -271,7 +338,7 @@ def _without_html(detail: dict[str, Any]) -> dict[str, Any]:
     ],
 )
 async def test__page__matches_the_fixture(env: _Env, variant: str, query: str) -> None:
-    env.seed_fixtures()
+    env.seed_fixtures(v2=False)
 
     response = await env.get(f"/api/admin/mail-log?{query}")
 
@@ -346,6 +413,11 @@ async def test__summary__matches_the_fixture(env: _Env, variant: str) -> None:
         last = datetime.fromisoformat(expected["last_failure"]["at"])
         entries.append(replace(sample[MailStatus.failed], at=last, reason=expected["last_failure"]["reason"]))
         entries.pop(next(i for i, e in enumerate(entries) if e.status is MailStatus.failed))
+    # Ждут автоповтора: в `failed` не входят (V13).
+    entries += [
+        replace(sample[MailStatus.failed], at=NOW - timedelta(hours=23), next_attempt_at=NOW + timedelta(minutes=1))
+        for _ in range(expected["retrying"])
+    ]
     # Строки старше суток в сводку не входят.
     entries.append(replace(sample[MailStatus.failed], at=NOW - timedelta(hours=25)))
     for entry in sorted(entries, key=lambda e: e.at):
@@ -368,7 +440,7 @@ async def test__summary__matches_the_fixture(env: _Env, variant: str) -> None:
 
 
 async def test__page__filters_combine_and_the_cursor_walks_the_whole_log(env: _Env) -> None:
-    env.seed_fixtures()
+    env.seed_fixtures(v2=False)
 
     async def ids(query: str) -> list[int]:
         response = await env.get(f"/api/admin/mail-log?{query}")
@@ -381,7 +453,7 @@ async def test__page__filters_combine_and_the_cursor_walks_the_whole_log(env: _E
         page = (await env.get(f"/api/admin/mail-log?limit=2&cursor={cursor}")).json()
         walked += [item["id"] for item in page["items"]]
         cursor = page["next_cursor"]
-    assert walked == sorted(_fixture_rows(), reverse=True)
+    assert walked == sorted(set(_fixture_rows()) - _V2_ROWS, reverse=True)
     assert await ids("template=signing_request&template=signing_reminder") == [1206, 1204]
     assert await ids("status=not_sent&status=suppressed") == [1203, 1202]
     assert await ids("reason=auth") == [1204]
@@ -562,3 +634,102 @@ async def test__no_response_contains_a_token_a_source_link_or_a_note(env: _Env) 
         assert "?token=" not in body
         assert _NOTE not in body
         assert "8-900" not in body
+
+
+# --- версия 2: повтор писем (раздел 14) ---
+
+
+async def test__resend__sends_a_linked_row_and_answers_by_the_contract(env: _Env) -> None:
+    env.seed_fixtures()
+
+    response = await env.client.post("/api/admin/mail-log/1204/resend", headers=_ADMIN)  # type: ignore[union-attr]
+
+    assert response.status_code == 200, response.text
+    assert response.headers["cache-control"] == "no-store"
+    body = response.json()
+    AdminMailLogResendResult.model_validate(body)
+    assert body["outcome"] == "sent"
+    assert body["blocked"] is None
+    new = await env.log.get(body["entry_id"])
+    assert new is not None
+    assert new.resent_from_id == 1204
+    assert new.origin == MailOrigin.admin_resend.value
+    assert env.audit.events == [("mail.resent", "1204")]
+    detail = (await env.get("/api/admin/mail-log/1204")).json()
+    assert detail["resend"] == {"allowed": False, "blocked": "already_resent"}
+    assert [r["id"] for r in detail["resent"]] == [body["entry_id"]]
+
+
+@pytest.mark.parametrize(("entry_id", "blocked"), [(1207, "status"), (1205, "token_link"), (1300, "retrying")])
+async def test__resend__blocked_answers_200_with_the_reason(env: _Env, entry_id: int, blocked: str) -> None:
+    env.seed_fixtures()
+
+    response = await env.client.post(f"/api/admin/mail-log/{entry_id}/resend", headers=_ADMIN)  # type: ignore[union-attr]
+
+    assert response.status_code == 200, response.text
+    assert response.json() == {"outcome": "blocked", "blocked": blocked, "entry_id": None, "reason": None}
+    assert env.sender.sent == []
+
+
+async def test__resend__rights_and_missing_entry(env: _Env) -> None:
+    env.seed_fixtures()
+    client = env.client
+    assert client is not None
+
+    assert (
+        await client.post("/api/admin/mail-log/1204/resend", headers={"Authorization": "Bearer user"})
+    ).status_code == 404
+    assert (await client.post("/api/admin/mail-log/1204/resend")).status_code == 401
+    assert (await client.post("/api/admin/mail-log/99999/resend", headers=_ADMIN)).status_code == 404
+    assert (
+        await client.post("/api/admin/mail-log/resend", json={}, headers={"Authorization": "Bearer user"})
+    ).status_code == 404
+
+
+async def test__resend_batch__preview_then_start(env: _Env) -> None:
+    env.seed_fixtures()
+    client = env.client
+    assert client is not None
+
+    preview = await client.post("/api/admin/mail-log/resend", json={"dry_run": True}, headers=_ADMIN)
+
+    assert preview.status_code == 200, preview.text
+    body = preview.json()
+    AdminMailLogResendBatch.model_validate(body)
+    # 1204 уйдёт; 1301 уже повторено, 1205 и 1202 с токеном; 1300 ждёт автоповтора и в кандидаты не входит.
+    assert body["planned"] == 1
+    assert body["skipped"] == {"already_resent": 1, "token_link": 2}
+    assert body["started"] is False
+
+    started = await client.post(
+        "/api/admin/mail-log/resend", json={"dry_run": False, "template": ["signing_reminder"]}, headers=_ADMIN
+    )
+    await drain_resend_batches()
+
+    assert started.json()["started"] is True
+    assert len(env.sender.sent) == 1
+    assert env.audit.events[-1][0] == "mail.resent_batch"
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [{"since": "2026-11-12T00:00:00Z", "until": "2026-11-11T00:00:00Z"}, {"status": ["failed"]}, {"template": ["Bad"]}],
+)
+async def test__resend_batch__bad_body_is_422(env: _Env, payload: dict[str, Any]) -> None:
+    client = env.client
+    assert client is not None
+
+    response = await client.post("/api/admin/mail-log/resend", json=payload, headers=_ADMIN)
+
+    assert response.status_code == 422
+
+
+async def test__page__retrying_filter(env: _Env) -> None:
+    env.seed_fixtures()
+
+    waiting = (await env.get("/api/admin/mail-log?retrying=true")).json()
+    final = (await env.get("/api/admin/mail-log?status=failed&retrying=false")).json()
+
+    assert [item["id"] for item in waiting["items"]] == [1300]
+    assert 1300 not in [item["id"] for item in final["items"]]
+    assert 1204 in [item["id"] for item in final["items"]]
