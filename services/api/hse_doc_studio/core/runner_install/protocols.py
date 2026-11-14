@@ -54,6 +54,12 @@ class ILocalRunnerHost(Protocol):
         версия поднялась. Не вышло: `InstallError` с причиной."""
         ...
 
+    async def prune_old_images(self, image: str, previous_image: str) -> list[str]:
+        """После удачного обновления снять теги репозитория `image` ниже `min(прежняя, новая)` версии и вернуть их
+        (storage-cleanup.md, 14.2, A14). Хост без своего Docker (кластер) ничего не делает. Без исключений: сбой
+        чистки не портит обновление."""
+        ...
+
     async def remove(self, name: str) -> bool:
         """Убрать установленное из админки; False, если такого нет. Сбой на середине: `InstallError("remove_failed")`,
         повторное удаление доделывает начатое."""

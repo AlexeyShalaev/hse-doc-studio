@@ -25,6 +25,8 @@ from hse_doc_studio.core.jobs.wire import (
     CompleteResponse,
     ControlPollRequest,
     ControlPollResponse,
+    DiskCheckRequest,
+    DiskCheckResponse,
     HeartbeatRequest,
     HeartbeatResponse,
     LogBatch,
@@ -267,6 +269,18 @@ class RunnerClient:
             timeout_s=_CONTROL_TIMEOUT_S,
         )
         return decode(CommandProgressResponse, _json_object(response))
+
+    async def disk_check(self, request: DiskCheckRequest) -> DiskCheckResponse:
+        """Свободное место для автоочистки (`disk_auto`); в ответе команда, если её пора начать. Без повторов: следующая
+        проверка через 5 минут. Команда, которую раннер не может разобрать, даёт `RunnerCommandRejected`."""
+        response = await self._send(
+            "POST", "/control/disk-check", json=encode(request), retries=0, timeout_s=_CONTROL_TIMEOUT_S
+        )
+        body = _json_object(response)
+        try:
+            return decode(DiskCheckResponse, body)
+        except (TypeError, ValueError, KeyError) as exc:
+            raise RunnerCommandRejected(_command_id_of(body), f"unsupported command: {exc}") from exc
 
     async def report_disk(self, report: RunnerDiskReport) -> None:
         """Замер диска (`disk`); отчёт уже ужат до 64 КБ (`RunnerDiskService.measure`)."""

@@ -68,6 +68,11 @@ const STATES: [RunnerDiskStateId, string, string?][] = [
   ["kubernetes", "Раннер в Kubernetes", "Только кэш раннера и том данных."],
   ["desktop", "Локальная Студия", "Docker этого компьютера чистится в Студии."],
   [
+    "auto_running",
+    "Идёт автоочистка",
+    "Запустил сервер по порогу места; ручная очистка ждёт её конца.",
+  ],
+  [
     "personal_admin",
     "Личный раннер глазами админа",
     "Плашка владельца, отката нет.",
@@ -133,6 +138,28 @@ export const runnerDiskGalleryEntries = (): GalleryEntry[] => [
     "Подтверждение кэша раннера в Kubernetes",
     "kubernetes",
     { initialConfirm: "runner_cache" },
+  ),
+  runnerDiskGalleryEntry(
+    "disk_auto_editable",
+    "Автоочистка: правка порога",
+    "docker",
+    { onSaveAuto: noop },
+    {
+      note: "Блок внизу окна у общего раннера в админке: переключатель, порог в процентах, последний запуск.",
+    },
+  ),
+  runnerDiskGalleryEntry(
+    "disk_auto_runner_disabled",
+    "Автоочистка выключена на раннере",
+    "no_report",
+    { onSaveAuto: noop },
+  ),
+  runnerDiskGalleryEntry(
+    "disk_phone_auto",
+    "Телефон: автоочистка",
+    "docker",
+    { onSaveAuto: noop },
+    { width: PHONE },
   ),
   runnerDiskGalleryEntry(
     "disk_phone_docker",

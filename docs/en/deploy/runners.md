@@ -262,8 +262,11 @@ The minimum runner version for "Disk" is 0.22.0. Update older runners: one insta
 | `HSE_RUNNER__CACHE_MAX_BYTES` | file cache limit (2 GiB); the runner evicts the excess by itself |
 | `HSE_RUNNER__WORKSPACES_MAX_BYTES` | working copies limit (20 GiB); the runner removes long-unused ones by itself |
 | `HSE_RUNNER__DATA_DIR` | the data volume; "Disk" shows its free space |
+| `HSE_RUNNER__DISK_AUTO_CLEAN` | `false` forbids the threshold-based automatic cleanup on this runner, whatever the admin area says (default `true`: the admin sets the threshold and the switch in the "Disk" window). The automatic cleanup removes dangling layers, the build cache and old image versions, keeping the current and the previous one |
 
 Metrics in `/metrics`: `hse_runner_disk_cleanable_bytes{scope="shared"|"personal"}` (what can be freed by the latest measurements) and `hse_runner_disk_cleanups_total{state}`. Design and decisions: `docs/design/storage-cleanup.md`.
+
+After a successful update the server updater removes Studio image tags below the previous version by itself; `HSE_UPDATER__PRUNE_OLD_IMAGES=false` turns this off. A "Docker next to the Studio" runner update from the admin area does the same for runner images.
 
 ## When there are no runners
 

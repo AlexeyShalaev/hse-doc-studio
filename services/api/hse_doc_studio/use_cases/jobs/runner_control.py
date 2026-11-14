@@ -25,12 +25,18 @@ from hse_doc_studio.core.jobs.control import (
     RunnerCommandBusyError,
     RunnerCommandUnsupportedError,
     RunnerControlError,
+    StoredDiskAuto,
     StoredDiskBrief,
     StoredDiskReport,
 )
 from hse_doc_studio.core.jobs.disk import (
     COMMAND_PICKUP_TIMEOUT_S,
     COMMAND_SILENCE_TIMEOUT_S,
+    DISK_AUTO_MIN_INTERVAL_S,
+    DISK_AUTO_TARGETS,
+    DiskAutoLast,
+    DiskAutoPolicy,
+    DiskCleanupPayload,
     RunnerCommand,
     RunnerCommandKind,
     RunnerCommandPayload,
@@ -40,14 +46,18 @@ from hse_doc_studio.core.jobs.disk import (
 )
 from hse_doc_studio.core.jobs.enums import RunnerErrorCode
 from hse_doc_studio.core.jobs.errors import RunnerAuthError
+from hse_doc_studio.core.jobs.routing import RunnerScope
 from hse_doc_studio.core.jobs.runners import IRunnerRepository, Runner
 from hse_doc_studio.core.jobs.wire import (
     FEATURE_CONTROL,
     FEATURE_DISK,
+    FEATURE_DISK_AUTO,
     CommandProgressRequest,
     CommandProgressResponse,
     ControlPollRequest,
     ControlPollResponse,
+    DiskCheckRequest,
+    DiskCheckResponse,
     RunnerCommandEnvelope,
 )
 from hse_doc_studio.use_cases.jobs.wakeup import JobWakeup
@@ -169,6 +179,12 @@ class RunnerControlService:
     async def disk(self, runner_id: str) -> StoredDiskReport | None:
         return await self._disks.get_disk(runner_id)
 
+    async def disk_auto(self, runner_id: str) -> StoredDiskAuto | None:
+        return await self._disks.get_auto(runner_id)
+
+    async def set_disk_auto(self, runner_id: str, policy: DiskAutoPolicy) -> bool:
+        return await self._disks.set_auto_policy(runner_id, policy)
+
     async def disks(self) -> dict[str, StoredDiskReport]:
         return await self._disks.list_disks()
 
@@ -251,10 +267,111 @@ class RunnerControlService:
         if not await self._disks.set_disk(runner.id, report, self._clock()):
             raise RunnerAuthError(RunnerErrorCode.runner_unauthorized)
 
+    async def disk_check(self, runner: Runner, request: DiskCheckRequest) -> DiskCheckResponse:
+        """Автоочистка по порогу места (storage-cleanup.md, 14.3): команда, если её пора начать, иначе пусто.
+
+        Пора, если раннер общий, автоочистка у него включена, свободно меньше порога, очистка не идёт и прошлая
+        автоочистка началась не меньше часа назад. Команда вставляется сразу `delivered`: раннер получает её в ответе.
+        """
+        _require(runner, FEATURE_DISK_AUTO)
+        policy = await self._auto_due(runner, request)
+        if policy is None:
+            return DiskCheckResponse()
+        now = self._clock()
+        not_after = now - timedelta(seconds=DISK_AUTO_MIN_INTERVAL_S)
+        if not await self._disks.claim_auto(runner.id, now=now, not_after=not_after):
+            return DiskCheckResponse()
+        command = RunnerCommand(
+            id=uuid4(),
+            runner_id=runner.id,
+            kind=RunnerCommandKind.disk_cleanup,
+            payload=DiskCleanupPayload(targets=DISK_AUTO_TARGETS, auto=True),
+            state=RunnerCommandState.delivered,
+            # Запустил не человек: в «Диске» подпись «Автоочистка», в аудите актор `null`.
+            created_by="",
+            created_at=now,
+            updated_at=now,
+            delivered_at=now,
+        )
+        if not await self._commands.add(command, keep=COMMANDS_KEPT_PER_RUNNER):
+            # Ручная очистка успела раньше: интервал потрачен, следующая проверка через час.
+            return DiskCheckResponse()
+        await self._auto_started(command, request, policy)
+        return DiskCheckResponse(
+            command=RunnerCommandEnvelope(
+                id=command.id, kind=command.kind, payload=command.payload, issued_at=command.created_at
+            )
+        )
+
+    async def _auto_due(self, runner: Runner, request: DiskCheckRequest) -> DiskAutoPolicy | None:
+        """Настройка раннера, если автоочистку пора начать по месту и занятости (интервал проверяет `claim_auto`)."""
+        if runner.scope is not RunnerScope.shared or not {FEATURE_CONTROL, FEATURE_DISK} <= runner.features:
+            return None
+        stored = await self._disks.get_auto(runner.id)
+        if stored is None or not stored.policy.enabled:
+            return None
+        if not stored.policy.below(request.free_bytes, request.total_bytes):
+            return None
+        await self.settle(runner.id)
+        if await self._commands.find_open(runner.id, RunnerCommandKind.disk_cleanup) is not None:
+            return None
+        return stored.policy
+
+    async def _auto_started(self, command: RunnerCommand, request: DiskCheckRequest, policy: DiskAutoPolicy) -> None:
+        last = DiskAutoLast(
+            command_id=command.id,
+            state=command.state,
+            started_at=command.created_at,
+            finished_at=None,
+            freed_bytes=0,
+            free_bytes=request.free_bytes,
+            total_bytes=request.total_bytes,
+        )
+        await self._disks.set_auto_last(command.runner_id, last)
+        logger.info(
+            "runner %s: disk auto cleanup %s, %d of %d bytes free",
+            command.runner_id,
+            command.id,
+            request.free_bytes,
+            request.total_bytes,
+        )
+        for observer in self._observers:
+            try:
+                await observer.auto_started(
+                    command,
+                    free_bytes=request.free_bytes,
+                    total_bytes=request.total_bytes,
+                    percent=policy.min_free_percent,
+                )
+            except Exception:
+                logger.exception("runner command observer failed on auto start %s", command.id)
+
+    async def _auto_finished(self, command: RunnerCommand) -> None:
+        """Итог автоочистки переписывает `disk_auto_last`, если там ещё она (а не начало следующей)."""
+        stored = await self._disks.get_auto(command.runner_id)
+        if stored is None or stored.last is None or stored.last.command_id != command.id:
+            return
+        progress = command.progress
+        last = DiskAutoLast(
+            command_id=command.id,
+            state=command.state,
+            started_at=stored.last.started_at,
+            finished_at=command.finished_at,
+            freed_bytes=progress.freed_bytes if progress is not None else 0,
+            free_bytes=stored.last.free_bytes,
+            total_bytes=stored.last.total_bytes,
+        )
+        await self._disks.set_auto_last(command.runner_id, last, only_command=command.id)
+
     async def _closed(self, commands: Sequence[RunnerCommand]) -> None:
         for command in commands:
             if not command.state.finished:
                 continue
+            if isinstance(command.payload, DiskCleanupPayload) and command.payload.auto:
+                try:
+                    await self._auto_finished(command)
+                except Exception:
+                    logger.exception("runner %s: auto cleanup result not saved", command.runner_id)
             for observer in self._observers:
                 try:
                     await observer.command_finished(command)

@@ -46,6 +46,9 @@ class FakeLocalHost:
         # Что сделать, когда прежняя версия поднялась (например, раннер выходит на связь с прежней версией).
         self.on_rolled_back: Callable[[], Awaitable[None]] | None = None
         self.remove_fail_with: InstallError | None = None
+        # Что вернёт чистка старых образов после удачного обновления и чем она упадёт.
+        self.pruned: list[str] = []
+        self.prune_fail_with: Exception | None = None
         # Порядок действий хоста для проверок «что раньше»: общий список можно отдать и другим подменам.
         self.events: list[str] = []
 
@@ -84,6 +87,12 @@ class FakeLocalHost:
         if self.on_upgraded is not None:
             await self.on_upgraded()
         return UpgradeOutcome(old_image=old, new_image=image, previous=PreviousRelease(old) if old else None)
+
+    async def prune_old_images(self, image: str, previous_image: str) -> list[str]:
+        self.events.append(f"prune {image} {previous_image}")
+        if self.prune_fail_with is not None:
+            raise self.prune_fail_with
+        return list(self.pruned)
 
     async def rollback(self, name: str, previous: PreviousRelease) -> None:
         self.events.append(f"rollback {name}")

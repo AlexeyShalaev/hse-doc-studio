@@ -10,6 +10,7 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
+from hse_doc_studio.core.docker_disk.prune import listed_tags, stale_version_tags
 from hse_doc_studio.core.runner_install import (
     Capability,
     InstallError,
@@ -30,6 +31,7 @@ INSTALL_LABEL = "hse-doc-studio.runner-install"
 DOCKER_SOCK = "/var/run/docker.sock"
 _PULL_TIMEOUT_S = 900.0
 _RUN_TIMEOUT_S = 60.0
+_PRUNE_TIMEOUT_S = 120.0
 # Остановка при обновлении: раннер доделывает сборки до 30 с (drain), потом прерывает их; docker ждёт с запасом.
 _STOP_GRACE_S = 60
 _STOP_TIMEOUT_S = 120.0
@@ -177,6 +179,27 @@ class DockerLocalHost:
             raise UpgradeError("container_start_failed", detail, previous=previous)
         await report("recreate", InstallStepState.done, "")
         return UpgradeOutcome(old_image=old_image, new_image=image, previous=previous)
+
+    async def prune_old_images(self, image: str, previous_image: str) -> list[str]:
+        """Снять теги образа раннера ниже `min(прежняя, новая)`: обе версии остаются для отката (A14).
+
+        `image rm` без `--force`: образ под контейнером (в том числе api Студии на том же Docker) не удаляется, тег
+        `rollback-prev` апдейтера и теги без номера версии не трогаются (`stale_version_tags`).
+        """
+        repo, _, current = image.rpartition(":")
+        prev_repo, _, previous = previous_image.rpartition(":")
+        if not repo or "/" in current or prev_repo != repo:
+            return []
+        code, out, _ = await run_docker(["image", "ls", "--format", "{{json .}}", repo], timeout=_PRUNE_TIMEOUT_S)
+        if code != 0:
+            return []
+        removed: list[str] = []
+        for tag in stale_version_tags(listed_tags(out, repo), current=current, previous=previous):
+            # Занятый образ Docker не отдаст (ненулевой код): он просто остаётся.
+            code, _, _ = await run_docker(["image", "rm", f"{repo}:{tag}"], timeout=_PRUNE_TIMEOUT_S)
+            if code == 0:
+                removed.append(f"{repo}:{tag}")
+        return removed
 
     async def rollback(self, name: str, previous: PreviousRelease) -> None:
         """Контейнер с прежним образом и прежним окружением раннера: тем же `docker run`, что и при обновлении."""

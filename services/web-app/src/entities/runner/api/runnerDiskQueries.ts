@@ -13,6 +13,7 @@ import {
   isRunnerDiskBusy,
 } from "../lib/runnerDiskLib";
 import type {
+  RunnerDiskAutoRequest,
   RunnerDiskCleanupRequest,
   RunnerDiskCommand,
   RunnerDiskView,
@@ -156,3 +157,18 @@ export const useRunnerDiskSummary = (options: { enabled?: boolean } = {}) =>
     enabled: options.enabled ?? true,
     staleTime: 30_000,
   });
+
+/** Сохранить автоочистку общего раннера (только админка): ответ сразу в кэш вида. */
+export const useSetRunnerDiskAuto = (runnerId: string) => {
+  const client = useQueryClient();
+  const key = runnerDiskKeys.view("admin", runnerId);
+  return useMutation({
+    mutationFn: (body: RunnerDiskAutoRequest) =>
+      adminRunnerDiskApi.setAuto(runnerId, body),
+    onSuccess: (auto) => {
+      client.setQueryData<RunnerDiskView>(key, (view) =>
+        view ? { ...view, auto } : view,
+      );
+    },
+  });
+};

@@ -28,6 +28,7 @@ from hse_doc_studio.core.jobs.wire import (
     FEATURE_CONTROL,
     FEATURE_DEPLOYMENT,
     FEATURE_DISK,
+    FEATURE_DISK_AUTO,
     FEATURE_OFFLINE,
     MAX_POLL_WAIT_S,
     RUNNER_PROTOCOL_VERSION,
@@ -195,6 +196,8 @@ class RunnerLoop:
             features.add(FEATURE_DEPLOYMENT)
         if self._control is not None:
             features |= _CONTROL_FEATURES
+            if self._control.disk_auto:
+                features.add(FEATURE_DISK_AUTO)
         tags = set(cfg.tags) | ({RELAY_TAG} if relay else set())
         return RunnerAnnounceRequest(
             name=cfg.name,
@@ -236,6 +239,7 @@ class RunnerLoop:
         if self._client.features >= _CONTROL_FEATURES:
             if control.running:
                 control.request_report()
+                control.sync_auto()
             else:
                 control.start()
         elif control.running:

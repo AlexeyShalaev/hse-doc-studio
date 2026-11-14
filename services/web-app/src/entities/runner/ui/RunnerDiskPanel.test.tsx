@@ -317,6 +317,91 @@ describe("RunnerDiskPanel", () => {
   });
 });
 
+describe("автоочистка (storage-cleanup.md, 14.6)", () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage("ru");
+  });
+  afterEach(cleanup);
+
+  it("у общего раннера: настройка и последний запуск", () => {
+    renderPanel("docker", { onSaveAuto: vi.fn() });
+    const block = screen.getByTestId("runner-disk-auto");
+    expect(block).toHaveTextContent("Автоочистка");
+    expect(block).toHaveTextContent("Не чаще раза в 60 мин.");
+    expect(screen.getByTestId("runner-disk-auto-last")).toHaveTextContent(
+      /^Автоочистка: последний раз .+, освобождено 6\.00 GB \(свободно было 8 %\)$/,
+    );
+    expect(screen.getByTestId("runner-disk-auto-enabled")).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(screen.getByTestId("runner-disk-auto-percent")).toHaveValue(10);
+    expect(screen.getByTestId("runner-disk-auto-save")).toBeDisabled();
+  });
+
+  it("сохранение шлёт новый порог и переключатель", async () => {
+    const user = userEvent.setup();
+    const onSaveAuto = vi.fn();
+    renderPanel("docker", { onSaveAuto });
+    const percent = screen.getByTestId("runner-disk-auto-percent");
+    await user.clear(percent);
+    await user.type(percent, "15");
+    await user.click(screen.getByTestId("runner-disk-auto-save"));
+    expect(onSaveAuto).toHaveBeenCalledWith({
+      enabled: true,
+      min_free_percent: 15,
+    });
+    await user.click(screen.getByTestId("runner-disk-auto-enabled"));
+    await user.click(screen.getByTestId("runner-disk-auto-save"));
+    expect(onSaveAuto).toHaveBeenLastCalledWith({
+      enabled: false,
+      min_free_percent: 15,
+    });
+  });
+
+  it("порог вне 1..50: подсказка и кнопка выключена", async () => {
+    const user = userEvent.setup();
+    renderPanel("docker", { onSaveAuto: vi.fn() });
+    const percent = screen.getByTestId("runner-disk-auto-percent");
+    await user.clear(percent);
+    await user.type(percent, "70");
+    expect(screen.getByTestId("runner-disk-auto-invalid")).toHaveTextContent(
+      "Порог от 1 до 50 %",
+    );
+    expect(screen.getByTestId("runner-disk-auto-save")).toBeDisabled();
+  });
+
+  it("без права менять (или в «Моих раннерах») блок только показывает", () => {
+    renderPanel("docker");
+    expect(screen.getByTestId("runner-disk-auto")).toBeInTheDocument();
+    expect(screen.queryByTestId("runner-disk-auto-save")).toBeNull();
+    cleanup();
+    renderPanel("personal_owner", { onSaveAuto: vi.fn() });
+    expect(screen.queryByTestId("runner-disk-auto")).toBeNull();
+  });
+
+  it.each([
+    ["kubernetes", "образы на узлах чистит Kubernetes"],
+    ["desktop", "это локальная Студия"],
+    ["no_report", "HSE_RUNNER__DISK_AUTO_CLEAN=false"],
+  ] as const)("%s: причина вместо настройки", (state, text) => {
+    renderPanel(state, { onSaveAuto: vi.fn() });
+    expect(screen.getByTestId("runner-disk-auto")).toHaveTextContent(text);
+    expect(screen.queryByTestId("runner-disk-auto-save")).toBeNull();
+  });
+
+  it("идущая автоочистка подписана и не даёт ручной", () => {
+    renderPanel("auto_running", { onSaveAuto: vi.fn() });
+    expect(screen.getByTestId("runner-disk-job")).toHaveTextContent(
+      "Запустила автоочистка",
+    );
+    expect(screen.getByTestId("runner-disk-auto-last")).toHaveTextContent(
+      "Автоочистка: идёт с",
+    );
+    expect(screen.queryByTestId("runner-disk-clean-all")).toBeNull();
+  });
+});
+
 describe("галерея «Раннеры: диск»", () => {
   afterEach(cleanup);
 
@@ -341,7 +426,7 @@ describe("галерея «Раннеры: диск»", () => {
       for (const entry of runnerDiskGalleryEntries()) {
         const { container, unmount } = render(<>{entry.render()}</>);
         expect(container.textContent).not.toMatch(
-          /(?<!\s)\b(job|old|unused|cache|dangling|stopped|runnerCache|volumes|confirm|outdated|kubernetes|desktop|category|failure)\.[a-z]+[A-Za-z.]*/,
+          /(?<!\s)\b(job|old|unused|cache|dangling|stopped|runnerCache|volumes|confirm|outdated|kubernetes|desktop|category|failure|auto)\.[a-z]+[A-Za-z.]*/,
         );
         unmount();
       }

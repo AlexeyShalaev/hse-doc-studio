@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -160,6 +161,65 @@ async def test__success__migrates_swaps_images_and_reports_revisions(tmp_path: P
     phases = [e["phase"] for e in rig.api.events]
     assert phases.index("snapshot") < phases.index("pull") < phases.index("stop") < phases.index("migrate")
     assert phases.index("migrate") < phases.index("restart") < phases.index("health")
+
+
+def _old_tags(host: FakeHost) -> None:
+    """Прежние выпуски на хосте: 0.1.0 и 0.2.0 (отдельные образы), 0.2.5 под остановленным чужим контейнером."""
+    for tag, image_id in (("0.1.0", "sha256:v010"), ("0.2.0", "sha256:v020"), ("0.2.5", "sha256:v025")):
+        host.images[image_id] = host._image(image_id, "r0", [])  # noqa: SLF001
+        host.refs[f"{REPO}:{tag}"] = image_id
+    host.refs[f"{REPO}:latest"] = "sha256:old"
+    host.services["other"] = {**host.services["runner"], "name": "hse-other-1", "image_id": "sha256:v025"}
+
+
+async def test__success__removes_images_older_than_the_previous_version(tmp_path: Path, host: FakeHost) -> None:
+    _old_tags(host)
+    rig = Rig(tmp_path, make(current="0.3.1"), host)
+    spec = await rig.request()
+
+    rig.engine.execute(spec)
+    run = await rig.final(spec)
+
+    assert run.status is RunStatus.succeeded
+    # Текущая (0.4.0), предыдущая (0.3.1), `latest` и `rollback-prev` остаются; 0.2.5 занят и тоже остаётся.
+    assert {ref.rsplit(":", 1)[1] for ref in host.refs if "@" not in ref} == {
+        "0.4.0",
+        "0.3.1",
+        "0.2.5",
+        "latest",
+        "rollback-prev",
+    }
+    cleanup = [e for e in rig.api.events if e["phase"] == "cleanup"]
+    assert [e["level"] for e in cleanup] == ["info", "info"]
+    assert "0.1.0, 0.2.0" in cleanup[0]["message"]
+    assert "0.2.5" in cleanup[1]["message"]
+    assert rig.api.events[-1]["phase"] == "finish"
+
+
+async def test__success__prune_off_keeps_every_image(tmp_path: Path, host: FakeHost) -> None:
+    _old_tags(host)
+    rig = Rig(tmp_path, make(current="0.3.1"), host)
+    rig.config = replace(rig.config, prune_old_images=False)
+    rig.engine = rig._engine()  # noqa: SLF001
+    spec = await rig.request()
+
+    rig.engine.execute(spec)
+    await rig.final(spec)
+
+    assert f"{REPO}:0.1.0" in host.refs
+    assert not [e for e in rig.api.events if e["phase"] == "cleanup"]
+
+
+async def test__rolled_back_update_removes_nothing(tmp_path: Path, host: FakeHost) -> None:
+    _old_tags(host)
+    host.new_image_healthy = False
+    rig = Rig(tmp_path, make(current="0.3.1"), host)
+    spec = await rig.request()
+
+    rig.engine.execute(spec)
+    await rig.final(spec)
+
+    assert {f"{REPO}:0.1.0", f"{REPO}:0.2.0"} <= set(host.refs)
 
 
 async def test__unhealthy_new_version_with_schema_change_restores_snapshot_and_rolls_back(

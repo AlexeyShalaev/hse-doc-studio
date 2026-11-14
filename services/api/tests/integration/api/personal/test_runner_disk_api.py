@@ -193,3 +193,75 @@ async def test__lists_carry_disk_brief_and_summary_counts_shared_runners(stand: 
     assert admin.get(f"/api/admin/runners/{runner_id}/disk").status_code == 404
     (gone,) = [r for r in admin.get("/api/admin/runners").json()["items"] if r["id"] == runner_id]
     assert gone["disk"] is None
+
+
+# --- автоочистка (storage-cleanup.md, раздел 14) ---
+
+
+def _shared_runner(stand: Stand) -> tuple[dict[str, str], str]:
+    admin = stand.admin()
+    token = admin.post("/api/admin/runner-tokens", json={"label": "shared"})
+    assert token.status_code == 201, token.text
+    runner = stand.register(token.json()["secret"], "shared")
+    runner_id = runner.pop("X-Runner-Id")
+    _announce(stand, runner, ["control", "disk", "disk_auto"])
+    sent = stand.client.post(f"{_RUNNER_API}/disk", json=_report(), headers=runner)
+    assert sent.status_code == 204, sent.text
+    return runner, runner_id
+
+
+async def test__auto__policy_check_cleanup_and_result_on_postgres(stand: Stand) -> None:
+    anna = await stand.person("anna")
+    runner, runner_id = _shared_runner(stand)
+    _, personal_id = _disk_runner(stand, anna)
+    admin = stand.admin()
+    url = f"/api/admin/runners/{runner_id}/disk/auto"
+
+    view = admin.get(f"/api/admin/runners/{runner_id}/disk").json()["auto"]
+    assert (view["supported"], view["enabled"], view["min_free_percent"], view["last"]) == (True, True, 10, None)
+    assert admin.get(f"/api/admin/runners/{personal_id}/disk").json()["auto"] is None
+    assert (
+        admin.put(f"/api/admin/runners/{personal_id}/disk/auto", json={"enabled": True, "min_free_percent": 10}).json()[
+            "code"
+        ]
+        == "forbidden"
+    )
+    assert admin.put(url, json={"enabled": True, "min_free_percent": 60}).status_code == 422
+    assert (
+        stand.client.put(url, json={"enabled": True, "min_free_percent": 20}, headers=anna.headers).status_code == 404
+    )
+
+    saved = admin.put(url, json={"enabled": True, "min_free_percent": 20})
+    assert saved.status_code == 200, saved.text
+    assert saved.json()["min_free_percent"] == 20
+    (policy,) = await _audit(stand, "runner.disk_auto_policy")
+    assert policy["details"]["was_min_free_percent"] == 10
+
+    # 15 % свободно: ниже нового порога 20 %.
+    check = {"free_bytes": 15, "total_bytes": 100}
+    first = stand.client.post(f"{_RUNNER_API}/control/disk-check", json=check, headers=runner).json()
+    second = stand.client.post(f"{_RUNNER_API}/control/disk-check", json=check, headers=runner).json()
+    assert first["command"]["payload"]["auto"] is True
+    assert second["command"] is None
+    running = admin.get(f"/api/admin/runners/{runner_id}/disk").json()
+    assert running["command"]["auto"] is True
+    assert running["command"]["created_by"] is None
+    assert running["auto"]["last"]["finished_at"] is None
+
+    progress = {
+        "steps": [{"kind": "build_cache", "ref": None, "status": "done", "freed_bytes": 4096, "error": None}],
+        "freed_bytes": 4096,
+        "error": None,
+    }
+    done = stand.client.post(
+        f"{_RUNNER_API}/control/{first['command']['id']}/progress",
+        json={"state": "done", "progress": progress},
+        headers=runner,
+    )
+    assert done.status_code == 200, done.text
+    last = admin.get(f"/api/admin/runners/{runner_id}/disk").json()["auto"]["last"]
+    assert (last["state"], last["freed_bytes"], last["free_bytes"], last["total_bytes"]) == ("done", 4096, 15, 100)
+    (started,) = await _audit(stand, "runner.disk_auto_cleanup")
+    assert started["actor_id"] is None
+    (cleaned,) = await _audit(stand, "runner.disk_cleaned")
+    assert (cleaned["actor_id"], cleaned["details"]["auto"]) == (None, True)

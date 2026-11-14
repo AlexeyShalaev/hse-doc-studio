@@ -142,6 +142,8 @@ class FakeHost:
         if cmd == "tag":
             self.refs[a[2]] = a[1]
             return Result(0)
+        if cmd == "image":
+            return self._image_cmd(a)
         if cmd == "pull":
             if not self.pull_ok or a[1] not in self.registry:
                 return Result(1, "", "manifest unknown")
@@ -152,6 +154,30 @@ class FakeHost:
             return Result(0 if self.cosign_ok else 1, "", "" if self.cosign_ok else "no signatures found")
         if cmd == "run" and "--rm" in a:
             return self._oneshot(a)
+        return Result(1, "", f"unsupported: {a}")
+
+    def _image_cmd(self, a: list[str]) -> Result:
+        """`image ls --format {{json .}} <repo>` и `image rm <ref>` без `--force`: как Docker, последний тег
+        образа под контейнером не снимается."""
+        if a[1] == "ls":
+            repo = a[-1]
+            rows = [
+                {"Repository": ref.rsplit(":", 1)[0], "Tag": ref.rsplit(":", 1)[1], "ID": image_id}
+                for ref, image_id in self.refs.items()
+                if "@" not in ref and ref.rsplit(":", 1)[0] == repo
+            ]
+            return Result(0, "".join(json.dumps(row) + "\n" for row in rows))
+        if a[1] == "rm":
+            ref = a[-1]
+            image_id = self.refs.get(ref)
+            if image_id is None:
+                return Result(1, "", "no such image")
+            other_tags = [r for r, i in self.refs.items() if i == image_id and r != ref and "@" not in r]
+            used = any(s["image_id"] == image_id and not s.get("removed") for s in self.services.values())
+            if used and not other_tags:
+                return Result(1, "", "image is being used by running container")
+            del self.refs[ref]
+            return Result(0)
         return Result(1, "", f"unsupported: {a}")
 
     def _recreate(self, a: list[str]) -> Result:

@@ -6,10 +6,28 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 
 DANGLING_CATEGORY = "dangling"
 OTHER_CATEGORY = "other"
+
+# `CreatedAt` образа в выводе docker: `2024-05-01 12:34:56 +0000 UTC` (бывает и ISO с `T` и долями секунды).
+_CREATED_AT = re.compile(r"^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})(?:\.\d+)?\s*(Z|[+-]\d{2}:?\d{2})?")
+
+
+def parse_created_at(text: str) -> datetime | None:
+    """Время сборки образа из `CreatedAt`; без пояса считается UTC, мусор даёт None."""
+    match = _CREATED_AT.match(text.strip())
+    if match is None:
+        return None
+    day, clock, zone = match.groups()
+    offset = "+0000" if zone in (None, "Z") else zone.replace(":", "")
+    try:
+        return datetime.strptime(f"{day} {clock} {offset}", "%Y-%m-%d %H:%M:%S %z").astimezone(UTC)
+    except ValueError:
+        return None
 
 
 @dataclass(frozen=True)
@@ -24,6 +42,8 @@ class ImageUsage:
     category: str
     dangling: bool
     protected: bool
+    # Когда образ собран (`CreatedAt` замера); None, если Docker не сообщил или время не разобралось.
+    created_at: datetime | None = None
 
 
 @dataclass(frozen=True)

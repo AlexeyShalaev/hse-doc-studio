@@ -8,10 +8,17 @@ from datetime import datetime
 from uuid import UUID
 
 from hse_doc_studio.core.identity.protocols import IAuditLog
-from hse_doc_studio.core.jobs.control import COMMANDS_KEPT_PER_RUNNER, StoredDiskBrief, StoredDiskReport
+from hse_doc_studio.core.jobs.control import (
+    COMMANDS_KEPT_PER_RUNNER,
+    StoredDiskAuto,
+    StoredDiskBrief,
+    StoredDiskReport,
+)
 from hse_doc_studio.core.jobs.disk import (
     COMMAND_OPEN_STATES,
     CommandProgress,
+    DiskAutoLast,
+    DiskAutoPolicy,
     RunnerCommand,
     RunnerCommandKind,
     RunnerCommandState,
@@ -140,6 +147,7 @@ class InMemoryRunnerDiskStore:
     def __init__(self, runners: InMemoryRunnerRepository) -> None:
         self._runners = runners
         self._items: dict[str, StoredDiskReport] = {}
+        self._auto: dict[str, StoredDiskAuto] = {}
 
     async def set_disk(self, runner_id: str, report: RunnerDiskReport, now: datetime) -> bool:
         runner = await self._runners.get(runner_id)
@@ -164,6 +172,40 @@ class InMemoryRunnerDiskStore:
             for runner_id, stored in self._items.items()
             if runner_ids is None or runner_id in runner_ids
         }
+
+    async def get_auto(self, runner_id: str) -> StoredDiskAuto | None:
+        if await self._runners.get(runner_id) is None:
+            return None
+        return self._auto.get(runner_id, StoredDiskAuto(policy=DiskAutoPolicy(), started_at=None, last=None))
+
+    async def _live(self, runner_id: str) -> StoredDiskAuto | None:
+        runner = await self._runners.get(runner_id)
+        if runner is None or runner.revoked_at is not None:
+            return None
+        return await self.get_auto(runner_id)
+
+    async def set_auto_policy(self, runner_id: str, policy: DiskAutoPolicy) -> bool:
+        current = await self._live(runner_id)
+        if current is None:
+            return False
+        self._auto[runner_id] = replace(current, policy=policy)
+        return True
+
+    async def claim_auto(self, runner_id: str, *, now: datetime, not_after: datetime) -> bool:
+        current = await self._live(runner_id)
+        if current is None or (current.started_at is not None and current.started_at > not_after):
+            return False
+        self._auto[runner_id] = replace(current, started_at=now)
+        return True
+
+    async def set_auto_last(self, runner_id: str, last: DiskAutoLast, *, only_command: UUID | None = None) -> bool:
+        current = await self.get_auto(runner_id)
+        if current is None:
+            return False
+        if only_command is not None and (current.last is None or current.last.command_id != only_command):
+            return False
+        self._auto[runner_id] = replace(current, last=last)
+        return True
 
 
 def in_memory_runner_disk_uc(

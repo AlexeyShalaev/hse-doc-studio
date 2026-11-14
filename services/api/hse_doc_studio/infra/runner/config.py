@@ -144,6 +144,13 @@ class RunnerConfig(BaseSettings):
             "узнаёт образы Студии и её старые версии. Образы другого репозитория раннер не видит и не удаляет."
         ),
     )
+    disk_auto_clean: bool = Field(
+        default=True,
+        description=(
+            "Автоочистка диска по порогу, который задаёт админ в окне «Диск» раннера: висячие слои, кэш сборки "
+            "Docker и старые версии образов. false запрещает её на этом раннере, что бы ни было в админке."
+        ),
+    )
     tex_idle_timeout_s: float = Field(default=DEFAULT_IDLE_TIMEOUT_S, gt=0, description="Тишина сборки до убийства.")
     fonts_dir: Path | None = Field(
         default=None,

@@ -138,5 +138,14 @@
   "measuring": false,
   "can_clean": false,
   "can_include_rollback": true,
-  "personal_owner": null
+  "personal_owner": null,
+  "auto": {
+    "supported": true,
+    "reason": null,
+    "min_version": "0.28.0",
+    "enabled": true,
+    "min_free_percent": 15,
+    "interval_min": 60,
+    "last": null
+  }
 }

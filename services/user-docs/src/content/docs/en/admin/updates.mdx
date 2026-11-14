@@ -48,6 +48,15 @@ needed, the database.
 
 <Steps />
 
+## Old images after an update
+
+After a successful update the updater removes Studio images older than the previous version by
+itself. The current and the previous versions stay: you can roll back to the previous one without
+downloading it again. An image used by any container is not removed. What was removed is shown in
+**Log** at the “old image cleanup” step. A failed update and a rollback remove nothing. To turn
+the cleanup off, set the updater variable `HSE_UPDATER__PRUNE_OLD_IMAGES=false`. The updater in
+Kubernetes does not touch images: Kubernetes removes them on the nodes itself.
+
 ## If something goes wrong
 
 - **“The updater service does not answer”**: the update buttons do not work until it runs. Run

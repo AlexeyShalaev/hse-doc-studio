@@ -12,5 +12,14 @@
   "measuring": false,
   "can_clean": true,
   "can_include_rollback": true,
-  "personal_owner": null
+  "personal_owner": null,
+  "auto": {
+    "supported": false,
+    "reason": "runner_disabled",
+    "min_version": "0.28.0",
+    "enabled": false,
+    "min_free_percent": 10,
+    "interval_min": 60,
+    "last": null
+  }
 }

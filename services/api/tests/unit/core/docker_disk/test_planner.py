@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from datetime import UTC, datetime
 
 import pytest
 from hse_doc_studio.core.docker_disk.categories import studio_protected_refs
@@ -12,7 +13,13 @@ from hse_doc_studio.core.docker_disk.planner import (
     DockerUnavailableError,
 )
 from hse_doc_studio.core.docker_disk.rules import category_breakdown
-from hse_doc_studio.core.docker_disk.usage import ContainerUsage, DockerDiskUsage, ImageUsage, VolumeUsage
+from hse_doc_studio.core.docker_disk.usage import (
+    ContainerUsage,
+    DockerDiskUsage,
+    ImageUsage,
+    VolumeUsage,
+    parse_created_at,
+)
 
 BASE = "ghcr.io/example/studio"
 RUNNER_VERSION = "2.5.0"
@@ -197,3 +204,62 @@ async def test__category_breakdown__mirrors_the_frontend_bar() -> None:
     )
 
     assert category_breakdown(usage) == [("compile", 20), ("app", 10), ("cache", 6), ("runtime", 12)]
+
+
+def _with_old_tex(*dates: datetime | None) -> DockerDiskUsage:
+    """Замер раннера с несколькими неактивными тегами TeX Live; время сборки по порядку тегов TL2020.."""
+    usage = _runner_usage()
+    old = [i for i in usage.images if i.reference != "texlive/texlive:TL2023-historic"]
+    tex = [
+        replace(_image(f"texlive/texlive:TL{2020 + n}-historic", "compile", size=4000), created_at=created)
+        for n, created in enumerate(dates)
+    ]
+    return replace(usage, images=[*old, *tex])
+
+
+async def test__plan__auto_keeps_the_newest_inactive_service_tag() -> None:
+    usage = _with_old_tex(
+        datetime(2020, 5, 1, tzinfo=UTC), datetime(2022, 5, 1, tzinfo=UTC), datetime(2021, 5, 1, tzinfo=UTC)
+    )
+    planner = _runner_planner(_Probe(usage))
+
+    steps = await planner.plan(CleanupPlanRequest(targets=["old_versions"], keep_previous_service_tags=True))
+
+    refs = [s.ref for s in steps]
+    assert "texlive/texlive:TL2021-historic" not in refs  # собран позже всех неактивных: предыдущий, остаётся
+    assert {"texlive/texlive:TL2020-historic", "texlive/texlive:TL2022-historic"} <= set(refs)
+    # Образ отката Студии автоочистка не берёт, как и ручная без флага.
+    assert f"{BASE}:2.4.0" not in refs
+    assert f"{BASE}:2.3.0" in refs
+
+
+async def test__plan__auto_keeps_every_tag_of_a_repo_with_unknown_build_time() -> None:
+    usage = _with_old_tex(datetime(2020, 5, 1, tzinfo=UTC), None)
+    planner = _runner_planner(_Probe(usage))
+
+    steps = await planner.plan(CleanupPlanRequest(targets=["old_versions"], keep_previous_service_tags=True))
+
+    assert not any((s.ref or "").startswith("texlive/") for s in steps)
+
+
+async def test__plan__manual_old_versions_still_takes_every_inactive_service_tag() -> None:
+    usage = _with_old_tex(datetime(2020, 5, 1, tzinfo=UTC), datetime(2021, 5, 1, tzinfo=UTC))
+    steps = await _runner_planner(_Probe(usage)).plan(CleanupPlanRequest(targets=["old_versions"]))
+
+    assert {"texlive/texlive:TL2020-historic", "texlive/texlive:TL2021-historic"} <= {s.ref for s in steps}
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("2024-05-01 12:34:56 +0000 UTC", datetime(2024, 5, 1, 12, 34, 56, tzinfo=UTC)),
+        ("2024-05-01 15:34:56 +0300 MSK", datetime(2024, 5, 1, 12, 34, 56, tzinfo=UTC)),
+        ("2024-05-01T12:34:56.123Z", datetime(2024, 5, 1, 12, 34, 56, tzinfo=UTC)),
+        ("2024-05-01T12:34:56+02:00", datetime(2024, 5, 1, 10, 34, 56, tzinfo=UTC)),
+        ("2 weeks ago", None),
+        ("", None),
+        ("2024-13-01 00:00:00 +0000 UTC", None),
+    ],
+)
+def test__parse_created_at(raw: str, expected: datetime | None) -> None:
+    assert parse_created_at(raw) == expected

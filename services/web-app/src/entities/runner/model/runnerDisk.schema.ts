@@ -205,11 +205,63 @@ export const RunnerDiskCommandSchema = z.strictObject({
   include_rollback: z.boolean(),
   created_at: iso,
   finished_at: iso.nullable(),
-  /** Кто запустил; null, если человека уже нет в установке. */
+  /** Кто запустил; null, если человека уже нет в установке или это автоочистка. */
   created_by: PersonRefSchema.nullable(),
   progress: CommandProgressSchema.nullable(),
+  /** Автоочистка по порогу места (storage-cleanup.md, раздел 14). */
+  auto: z.boolean(),
 });
 export type RunnerDiskCommand = z.infer<typeof RunnerDiskCommandSchema>;
+
+// Автоочистка общего раннера по порогу места (storage-cleanup.md, 14.5): только админка.
+
+export const DISK_AUTO_PERCENT_MIN = 1;
+export const DISK_AUTO_PERCENT_MAX = 50;
+
+/** Почему автоочистки нет: старая версия, Kubernetes, локальная Студия или выключено на самом раннере. */
+export const RunnerDiskAutoReasonSchema = z.enum([
+  "outdated",
+  "kubernetes",
+  "managed_locally",
+  "runner_disabled",
+]);
+export type RunnerDiskAutoReason = z.infer<typeof RunnerDiskAutoReasonSchema>;
+
+export const RunnerDiskAutoLastSchema = z.strictObject({
+  command_id: z.string(),
+  state: RunnerDiskCommandStateSchema,
+  started_at: iso,
+  /** null, пока идёт. */
+  finished_at: iso.nullable(),
+  freed_bytes: bytes,
+  /** Свободно и всего на томе данных в момент проверки. */
+  free_bytes: bytes,
+  total_bytes: bytes,
+});
+export type RunnerDiskAutoLast = z.infer<typeof RunnerDiskAutoLastSchema>;
+
+export const RunnerDiskAutoSchema = z.strictObject({
+  supported: z.boolean(),
+  reason: RunnerDiskAutoReasonSchema.nullable(),
+  /** С какой версии раннер умеет автоочистку. */
+  min_version: z.string(),
+  enabled: z.boolean(),
+  min_free_percent: z
+    .number()
+    .int()
+    .min(DISK_AUTO_PERCENT_MIN)
+    .max(DISK_AUTO_PERCENT_MAX),
+  /** Не чаще раза в столько минут (только для текста). */
+  interval_min: count,
+  last: RunnerDiskAutoLastSchema.nullable(),
+});
+export type RunnerDiskAuto = z.infer<typeof RunnerDiskAutoSchema>;
+
+export const RunnerDiskAutoRequestSchema = z.strictObject({
+  enabled: z.boolean(),
+  min_free_percent: z.number().int(),
+});
+export type RunnerDiskAutoRequest = z.infer<typeof RunnerDiskAutoRequestSchema>;
 
 // Ответы админки и «Моих раннеров» (9.1).
 
@@ -238,6 +290,8 @@ export const RunnerDiskViewSchema = z.strictObject({
   can_include_rollback: z.boolean(),
   /** Владелец личного раннера: только в админке и только у личного раннера. */
   personal_owner: PersonRefSchema.nullable(),
+  /** Автоочистка: только в админке и только у общего раннера. */
+  auto: RunnerDiskAutoSchema.nullable(),
 });
 export type RunnerDiskView = z.infer<typeof RunnerDiskViewSchema>;
 

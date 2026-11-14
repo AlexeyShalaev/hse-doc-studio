@@ -176,7 +176,7 @@ async def _fetch(_sha256: str) -> bytes:
     raise AssertionError("not expected")
 
 
-def _service(tmp_path: Path, docker: RunnerDocker | DockerDiskReason) -> RunnerDiskService:
+def _service(tmp_path: Path, docker: RunnerDocker | DockerDiskReason, *, auto_clean: bool = True) -> RunnerDiskService:
     cache = BlobCache(tmp_path, _fetch)
     return RunnerDiskService(
         cache=cache,
@@ -186,6 +186,7 @@ def _service(tmp_path: Path, docker: RunnerDocker | DockerDiskReason) -> RunnerD
         workspaces_limit_bytes=4096,
         docker=docker,
         clock=lambda: NOW,
+        auto_clean=auto_clean,
     )
 
 

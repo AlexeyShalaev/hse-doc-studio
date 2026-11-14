@@ -180,6 +180,7 @@ class RunnerRow(Base):
         CheckConstraint(_OWNER_CHECK, name="owner"),
         CheckConstraint("ai_concurrency >= 0", name="ai_concurrency"),
         CheckConstraint("paused_by IS NULL OR paused_by IN ('owner', 'admin')", name="paused_by"),
+        CheckConstraint("disk_auto_min_free_percent BETWEEN 1 AND 50", name="disk_auto_min_free_percent"),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
@@ -213,6 +214,12 @@ class RunnerRow(Base):
     # запрос протокола, а замер нужен только экрану «Диск».
     disk: Mapped[dict[str, Any] | None] = deferred(mapped_column(JSONB))
     disk_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Автоочистка по порогу места (storage-cleanup.md, раздел 14): настройка админа, начало последней (интервал) и
+    # её итог. Итог отдельно от `runner_commands`: оттуда он вытесняется пределом 20 команд на раннер.
+    disk_auto_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("true"))
+    disk_auto_min_free_percent: Mapped[int] = mapped_column(SmallInteger, nullable=False, server_default="10")
+    disk_auto_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    disk_auto_last: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
 
 _COMMAND_OPEN = "('queued', 'delivered', 'running', 'cancelling')"

@@ -25,7 +25,13 @@ from hse_doc_studio.core.jobs.codec import (
     encode_poll_response,
 )
 from hse_doc_studio.core.jobs.deployment import RunnerDeployment
-from hse_doc_studio.core.jobs.disk import MAX_DISK_REPORT_BYTES, MAX_LISTED_ITEMS, RunnerCommandKind, RunnerDiskReport
+from hse_doc_studio.core.jobs.disk import (
+    MAX_DISK_REPORT_BYTES,
+    MAX_LISTED_ITEMS,
+    DiskCleanupPayload,
+    RunnerCommandKind,
+    RunnerDiskReport,
+)
 from hse_doc_studio.core.jobs.enums import JobKind, RunnerErrorCode
 from hse_doc_studio.core.jobs.files import ArtifactRef, ManifestFile
 from pydantic import BaseModel
@@ -106,6 +112,8 @@ _WIRE: dict[str, tuple[Callable[[Any], Any], Callable[[Any], Any]] | None] = {
     "CommandProgressRequestBody": (lambda d: decode(wire.CommandProgressRequest, d), encode),
     "CommandProgressResponseBody": (lambda d: decode(wire.CommandProgressResponse, d), encode),
     "RunnerDiskReportBody": (lambda d: decode(RunnerDiskReport, d), encode),
+    "DiskCheckRequestBody": (lambda d: decode(wire.DiskCheckRequest, d), encode),
+    "DiskCheckResponseBody": (lambda d: decode(wire.DiskCheckResponse, d), encode),
 }
 
 
@@ -267,6 +275,7 @@ def test__wire__server_features_are_the_documented_capabilities() -> None:
         wire.FEATURE_CONTROL,
         wire.FEATURE_DISK,
         wire.FEATURE_BUILD_ANCHORS,
+        wire.FEATURE_DISK_AUTO,
     } == wire.SERVER_FEATURES
 
 
@@ -400,3 +409,26 @@ def test__models__step_ref_only_for_images_and_containers() -> None:
         schemas.CommandProgressRequestBody.model_validate(body)
     with pytest.raises((TypeError, ValueError), match="ref"):
         decode(wire.CommandProgressRequest, body)
+
+
+def test__wire__auto_flag_is_omitted_until_set() -> None:
+    """Флаг `auto` не едет в ручной команде: раннер до `disk_auto` отверг бы незнакомое поле."""
+    manual = _fixture("RunnerCommandEnvelopeBody", "cleanup")
+    assert "auto" not in encode(decode(wire.RunnerCommandEnvelope, manual))["payload"]
+    auto = _fixture("RunnerCommandEnvelopeBody", "auto")
+    assert encode(decode(wire.RunnerCommandEnvelope, auto))["payload"]["auto"] is True
+
+
+def test__models__auto_cleanup_never_takes_the_rollback() -> None:
+    payload = {"targets": ["old_versions"], "include_rollback": True, "auto": True}
+    with pytest.raises(ValueError, match="rollback"):
+        schemas.DiskCleanupPayloadBody.model_validate(payload)
+    with pytest.raises(ValueError, match="rollback"):
+        decode(DiskCleanupPayload, payload)
+
+
+def test__models__disk_check_free_within_total() -> None:
+    with pytest.raises(ValueError, match="exceeds"):
+        schemas.DiskCheckRequestBody.model_validate({"free_bytes": 2, "total_bytes": 1})
+    with pytest.raises(ValueError, match="exceeds"):
+        wire.DiskCheckRequest(free_bytes=2, total_bytes=1)

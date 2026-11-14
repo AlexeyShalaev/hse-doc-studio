@@ -1,9 +1,12 @@
 import type { AxiosInstance } from "axios";
 import { adminClient, apiClient, parseResp } from "@shared/api";
 import {
+  RunnerDiskAutoSchema,
   RunnerDiskCommandSchema,
   RunnerDiskSummarySchema,
   RunnerDiskViewSchema,
+  type RunnerDiskAuto,
+  type RunnerDiskAutoRequest,
   type RunnerDiskCleanupRequest,
   type RunnerDiskCommand,
   type RunnerDiskSummary,
@@ -58,6 +61,10 @@ const makeRunnerDiskApi = (
 /** Админка: /api/admin/runners/{id}/disk*. */
 export const adminRunnerDiskApi: RunnerDiskApi & {
   summary: () => Promise<RunnerDiskSummary>;
+  setAuto: (
+    runnerId: string,
+    body: RunnerDiskAutoRequest,
+  ) => Promise<RunnerDiskAuto>;
 } = {
   ...makeRunnerDiskApi(adminClient, "/runners"),
   /** Сводка общих раннеров для «Хранилища». */
@@ -65,6 +72,11 @@ export const adminRunnerDiskApi: RunnerDiskApi & {
     adminClient
       .get("/runners/disk-summary", quiet)
       .then(parseResp(RunnerDiskSummarySchema)),
+  /** Автоочистка общего раннера по порогу места (14.5). */
+  setAuto: (runnerId, body) =>
+    adminClient
+      .put(`/runners/${enc(runnerId)}/disk/auto`, body, quiet)
+      .then(parseResp(RunnerDiskAutoSchema)),
 };
 
 /** «Мои раннеры»: /api/v1/account/runners/{id}/disk*. */

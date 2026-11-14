@@ -960,6 +960,23 @@ async def test__runner_upgrade__keeps_the_runner_and_records_versions(stack: _St
     assert (done.details["from_version"], done.details["to_version"]) == ("1.0.0", "1.2.3")
     assert done.details["from_image"] == "registry.example/hds:1.0.0"
     assert done.details["to_image"] == "registry.example/hds:1.2.3"
+    # После успеха хост снимает теги старше предыдущей версии (storage-cleanup.md, 14.2, A14).
+    assert "prune registry.example/hds:1.2.3 registry.example/hds:1.0.0" in stack.install_host.events
+    assert done.details["removed_images"] == []
+
+
+async def test__runner_upgrade__prune_failure_does_not_fail_the_upgrade(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    runner_id = await _installed_runner(stack)
+    _comes_back(stack, runner_id)
+    stack.install_host.prune_fail_with = RuntimeError("docker went away")
+
+    started = await stack.client.post("/api/admin/runner-install/local/docker/hse-runner-abc123/upgrade", headers=boss)
+    job = await _finished(stack, started.json()["id"], boss)
+
+    assert job["state"] == "succeeded", job
+    events = {e.action: e for e in await stack.users.audit.list()}
+    assert events["runner_install.local.upgrade_succeeded"].details["removed_images"] == []
 
 
 async def test__runner_upgrade__same_version_is_allowed_and_not_outdated(stack: _Stack) -> None:

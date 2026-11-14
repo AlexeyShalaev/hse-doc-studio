@@ -21,6 +21,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from hse_doc_studio.core.docker_disk.prune import listed_tags, stale_version_tags
 from hse_doc_studio.infra.update.server_updater import plan
 from hse_doc_studio.infra.update.server_updater.client import IApi
 from hse_doc_studio.infra.update.server_updater.config import UpdaterConfig
@@ -403,6 +404,7 @@ class Engine(Reporter):
         run = self._j.run or {}
         self._write_env_tag(spec["to_version"])
         self._prune_snapshots(keep=run.get("snapshot"))
+        self._prune_old_images(str(run.get("repo") or ""), spec["from_version"], spec["to_version"])
         last_ok = {
             "to_version": spec["to_version"],
             "from_version": spec["from_version"],
@@ -612,6 +614,32 @@ class Engine(Reporter):
             path.write_text(plan.set_env_tag(path.read_text(encoding="utf-8"), version), encoding="utf-8")
         except OSError as exc:
             self.emit("finish", f".env was not updated (TAG={version}): {exc}", level="warn")
+
+    def _prune_old_images(self, repo: str, previous: str, current: str) -> None:
+        """Снять теги образа Студии ниже `min(previous, current)`: текущая и предыдущая версии остаются для отката.
+
+        `image rm` без `--force`: образ, на котором стоит контейнер, Docker не отдаст, это не ошибка. Тег
+        `rollback-prev` и теги без номера версии не трогаются (`stale_version_tags`). Сбой чистки обновление не
+        портит: событие с уровнем `warn` (storage-cleanup.md, 14.7).
+        """
+        if not self._c.prune_old_images or not repo:
+            return
+        listed = self._d.run(["image", "ls", "--format", "{{json .}}", repo], 60.0)
+        if not listed.ok:
+            self.emit("cleanup", f"old images were not listed: {listed.err.strip()[-300:]}", level="warn")
+            return
+        removed: list[str] = []
+        kept: list[str] = []
+        for tag in stale_version_tags(listed_tags(listed.out, repo), current=current, previous=previous):
+            ref = f"{repo}:{tag}"
+            if self._d.run(["image", "rm", ref], 120.0).ok:
+                removed.append(tag)
+            else:
+                kept.append(tag)
+        if removed:
+            self.emit("cleanup", f"removed old images of {repo}: {', '.join(removed)}")
+        if kept:
+            self.emit("cleanup", f"old images in use, kept: {', '.join(kept)}")
 
     def _prune_snapshots(self, keep: str | None) -> None:
         folder = self._c.data_dir / SNAP_DIR

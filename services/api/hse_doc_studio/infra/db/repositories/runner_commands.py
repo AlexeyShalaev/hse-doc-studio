@@ -12,10 +12,17 @@ from sqlalchemy import BigInteger, ColumnElement, case, cast, delete, func, or_,
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from hse_doc_studio.core.jobs.codec import decode, encode
-from hse_doc_studio.core.jobs.control import COMMANDS_KEPT_PER_RUNNER, StoredDiskBrief, StoredDiskReport
+from hse_doc_studio.core.jobs.control import (
+    COMMANDS_KEPT_PER_RUNNER,
+    StoredDiskAuto,
+    StoredDiskBrief,
+    StoredDiskReport,
+)
 from hse_doc_studio.core.jobs.disk import (
     COMMAND_OPEN_STATES,
     CommandProgress,
+    DiskAutoLast,
+    DiskAutoPolicy,
     DiskCleanupPayload,
     DiskMeasurePayload,
     RunnerCommand,
@@ -329,6 +336,73 @@ class SqlRunnerDiskStore:
                     cleanable_bytes=max(int(row.cleanable or 0), 0), measured_at=measured, received_at=row.disk_at
                 )
         return found
+
+    async def get_auto(self, runner_id: str) -> StoredDiskAuto | None:
+        stmt = select(
+            RunnerRow.disk_auto_enabled,
+            RunnerRow.disk_auto_min_free_percent,
+            RunnerRow.disk_auto_at,
+            RunnerRow.disk_auto_last,
+        ).where(RunnerRow.id == runner_id)
+        async with self._sessions.use() as db:
+            row = (await db.execute(stmt)).first()
+        if row is None:
+            return None
+        return StoredDiskAuto(
+            policy=_auto_policy(row.disk_auto_enabled, row.disk_auto_min_free_percent),
+            started_at=row.disk_auto_at,
+            last=_auto_last(row.disk_auto_last),
+        )
+
+    async def set_auto_policy(self, runner_id: str, policy: DiskAutoPolicy) -> bool:
+        stmt = (
+            update(RunnerRow)
+            .where(RunnerRow.id == runner_id, RunnerRow.revoked_at.is_(None))
+            .values(disk_auto_enabled=policy.enabled, disk_auto_min_free_percent=policy.min_free_percent)
+            .execution_options(synchronize_session=False)
+        )
+        async with self._sessions.use() as db:
+            return (await db.execute(stmt)).rowcount > 0  # type: ignore[attr-defined]
+
+    async def claim_auto(self, runner_id: str, *, now: datetime, not_after: datetime) -> bool:
+        stmt = (
+            update(RunnerRow)
+            .where(
+                RunnerRow.id == runner_id,
+                RunnerRow.revoked_at.is_(None),
+                or_(RunnerRow.disk_auto_at.is_(None), RunnerRow.disk_auto_at <= not_after),
+            )
+            .values(disk_auto_at=now)
+            .execution_options(synchronize_session=False)
+        )
+        async with self._sessions.use() as db:
+            return (await db.execute(stmt)).rowcount > 0  # type: ignore[attr-defined]
+
+    async def set_auto_last(self, runner_id: str, last: DiskAutoLast, *, only_command: UUID | None = None) -> bool:
+        stmt = update(RunnerRow).where(RunnerRow.id == runner_id)
+        if only_command is not None:
+            stmt = stmt.where(RunnerRow.disk_auto_last["command_id"].astext == str(only_command))
+        stmt = stmt.values(disk_auto_last=encode(last)).execution_options(synchronize_session=False)
+        async with self._sessions.use() as db:
+            return (await db.execute(stmt)).rowcount > 0  # type: ignore[attr-defined]
+
+
+def _auto_policy(enabled: bool, percent: int) -> DiskAutoPolicy:  # noqa: FBT001 — колонки строки
+    # Граница в базе та же (check), поэтому неверного процента быть не может; на всякий случай умолчание.
+    try:
+        return DiskAutoPolicy(enabled=enabled, min_free_percent=percent)
+    except ValueError:
+        return DiskAutoPolicy(enabled=enabled)
+
+
+def _auto_last(raw: dict[str, Any] | None) -> DiskAutoLast | None:
+    # Итог пишет только сервер; запись другой версии формы читается как «автоочистки не было».
+    if not raw:
+        return None
+    try:
+        return decode(DiskAutoLast, raw)
+    except (TypeError, ValueError, KeyError):
+        return None
 
 
 def _moment(value: str | None) -> datetime | None:

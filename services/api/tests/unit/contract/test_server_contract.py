@@ -151,6 +151,9 @@ _SCHEMAS: dict[str, Any] = {
     "RunnerDiskCommand": rd.RunnerDiskCommand,
     "RunnerDiskCleanupRequest": rd.RunnerDiskCleanupRequest,
     "RunnerDiskSummary": rd.RunnerDiskSummary,
+    # Автоочистка (storage-cleanup.md, 14.5): только админка.
+    "RunnerDiskAuto": rd.RunnerDiskAuto,
+    "RunnerDiskAutoRequest": rd.RunnerDiskAutoRequest,
     "AdminJobPage": ops.AdminJobPage,
     "AdminJobBatchCancelled": ops.AdminJobBatchCancelled,
     "AdminQueueSummary": ops.AdminQueueSummary,

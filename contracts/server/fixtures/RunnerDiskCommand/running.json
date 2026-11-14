@@ -85,5 +85,6 @@
     ],
     "freed_bytes": 1209972818,
     "error": null
-  }
+  },
+  "auto": false
 }

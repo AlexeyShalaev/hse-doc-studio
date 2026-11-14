@@ -332,6 +332,8 @@ class DiskMeasurePayloadBody(StrictModel):
 class DiskCleanupPayloadBody(StrictModel):
     targets: list[DiskTargetName] = Field(min_length=1, max_length=6)
     include_rollback: bool
+    # Автоочистку поставил сервер по порогу места (`disk_auto`); едет только когда `true`.
+    auto: bool = False
 
     @model_validator(mode="after")
     def _unique_targets(self) -> DiskCleanupPayloadBody:
@@ -339,6 +341,8 @@ class DiskCleanupPayloadBody(StrictModel):
             raise ValueError("targets must be unique")
         if self.include_rollback and "old_versions" not in self.targets:
             raise ValueError("include_rollback needs the old_versions target")
+        if self.auto and self.include_rollback:
+            raise ValueError("an automatic cleanup never removes the rollback image")
         return self
 
 
@@ -357,6 +361,21 @@ class RunnerCommandEnvelopeBody(StrictModel):
 
 
 class ControlPollResponseBody(StrictModel):
+    command: RunnerCommandEnvelopeBody | None
+
+
+class DiskCheckRequestBody(StrictModel):
+    free_bytes: int = _BYTES
+    total_bytes: int = _BYTES
+
+    @model_validator(mode="after")
+    def _free_within_total(self) -> DiskCheckRequestBody:
+        if self.free_bytes > self.total_bytes:
+            raise ValueError("free_bytes exceeds total_bytes")
+        return self
+
+
+class DiskCheckResponseBody(StrictModel):
     command: RunnerCommandEnvelopeBody | None
 
 

@@ -37,6 +37,9 @@ class KubeSettings:
         )
 
 
+_OFF = frozenset({"0", "false", "no", "off"})
+
+
 @dataclass(frozen=True)
 class UpdaterConfig:
     api_url: str
@@ -57,6 +60,8 @@ class UpdaterConfig:
     migrate_timeout_s: float = 3600.0
     min_free_bytes: int = 1024**3
     keep_snapshots: int = 2
+    # После удачного обновления снять теги образа Студии ниже предыдущей версии (storage-cleanup.md, 14.7).
+    prune_old_images: bool = True
     version: str = ""
     kube: KubeSettings | None = None  # задан значит исполнитель kubernetes, иначе compose
 
@@ -82,6 +87,7 @@ class UpdaterConfig:
             health_token=e.get("HSE_UPDATER__HEALTH_TOKEN", ""),
             poll_s=float(e.get("HSE_UPDATER__POLL_S", "15")),
             health_timeout_s=float(e.get("HSE_UPDATER__HEALTH_TIMEOUT_S", "300")),
+            prune_old_images=e.get("HSE_UPDATER__PRUNE_OLD_IMAGES", "true").strip().lower() not in _OFF,
             version=version,
             kube=kube,
         )

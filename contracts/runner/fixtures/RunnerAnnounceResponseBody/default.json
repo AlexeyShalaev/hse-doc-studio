@@ -8,6 +8,7 @@
     "control",
     "deployment_info",
     "disk",
+    "disk_auto",
     "offline"
   ],
   "owner_kind": "user",
