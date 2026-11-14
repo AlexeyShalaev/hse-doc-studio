@@ -1,0 +1,69 @@
+# packs/hse-cs-se/templates/vkr/versions/2026.1/checks/typography-ru.yaml
+# Русская типографика — детерминированные автофиксы (без ИИ).
+# Каждое замечание несёт один клик «Исправить» (search → replace).
+
+# label — короткая подпись группы в UI; ref — полная ссылка на документ.
+label:
+  ru: Русская типографика
+  en: Russian typography
+ref:
+  ru: Правила русской типографики (ГОСТ 7.32, типографские нормы)
+  en: Russian typography rules (GOST 7.32, typographic conventions)
+source:
+  ru: Оформление текста ВКР по ГОСТ и нормам русской типографики.
+
+rules:
+  - id: typography-ru/quotes
+    title:       { ru: Кавычки-ёлочки, en: "Guillemets («»)" }
+    description: { ru: "В русском тексте используются кавычки-ёлочки «…». Прямые кавычки заменяются автоматически.", en: "Russian text uses guillemet quotes «…». Straight quotes are replaced automatically." }
+    category:    formatting
+    applies_to:  [thesis]
+    default_severity: info
+    engine: typography
+    params:
+      check: quotes
+      file_glob: "thesis/**/*.tex"
+
+  - id: typography-ru/dash
+    title:       { ru: Тире вместо дефиса, en: "Em-dash instead of a hyphen" }
+    description: { ru: "Между словами ставится тире «—», а не дефис «-» с пробелами.", en: "Between words an em-dash «—» is used, not a hyphen «-» surrounded by spaces." }
+    category:    formatting
+    applies_to:  [thesis]
+    default_severity: info
+    engine: typography
+    params:
+      check: dash
+      file_glob: "thesis/**/*.tex"
+
+  - id: typography-ru/ellipsis
+    title:       { ru: Многоточие, en: "Ellipsis" }
+    description: { ru: "Три точки заменяются символом многоточия «…».", en: "Three dots are replaced with the ellipsis character «…»." }
+    category:    formatting
+    applies_to:  [thesis]
+    default_severity: info
+    engine: typography
+    params:
+      check: ellipsis
+      file_glob: "thesis/**/*.tex"
+
+  - id: typography-ru/initials
+    title:       { ru: Неразрывные пробелы в инициалах, en: "Non-breaking spaces in initials" }
+    description: { ru: "Инициалы не должны разрываться переносом строки: «И.~И.~Иванов».", en: "Initials must not be split by a line break: «И.~И.~Иванов»." }
+    category:    formatting
+    applies_to:  [thesis]
+    default_severity: info
+    engine: typography
+    params:
+      check: initials
+      file_glob: "thesis/**/*.tex"
+
+  - id: typography-ru/percent
+    title:       { ru: Неразрывный пробел перед знаком процента, en: "Non-breaking space before the percent sign" }
+    description: { ru: "Число и знак процента соединяются неразрывным пробелом: «10~%».", en: "A number and the percent sign are joined with a non-breaking space: «10~%»." }
+    category:    formatting
+    applies_to:  [thesis]
+    default_severity: info
+    engine: typography
+    params:
+      check: percent
+      file_glob: "thesis/**/*.tex"

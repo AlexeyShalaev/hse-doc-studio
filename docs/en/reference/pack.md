@@ -244,3 +244,13 @@ The usual course: `pack new-version`, edits and `changes` notes, `pack classify`
 The release class in `releases.yaml` is `--kind`, else `release.kind`, else the class of the number. It cannot be softer than the class of the number. A schema error in a released version is a warning: only a new version fixes such a version.
 
 `--json` prints one JSON object to stdout, `--strict` makes `lint` and `check` treat warnings as errors too. Exit codes: 0 all fine; 1 errors found, the number is softer than the class or the command refused; 2 wrong arguments, a directory not found or a git ref not resolved. The old `python -m hse_doc_studio.infra.template.pack_lint` works as `pack lint`.
+
+## For pack authors: one-line texts { #flow-texts }
+
+In a one-line YAML mapping an unquoted comma ends the value. `{ ru: Моноширинный шрифт (код, листинги), en: Monospace font }` gives the label “Моноширинный шрифт (код” and a stray key “листинги)”, and the interface shows the truncated label. Quote a text with a comma:
+
+```yaml
+label: { ru: "Моноширинный шрифт (код, листинги)", en: Monospace font }
+```
+
+The linter checks `version.yaml`, `checks/*.yaml` and the documents' `doc.yaml`. In a mapping with `ru` or `en`, a key that is not a language code or has no value, and an unquoted `ru`/`en` value with an unpaired bracket, are errors. As with the version class, the linter checks a version that is not released and the last one entered in `releases.yaml`; for older released versions this is a warning, and the fix ships as a new patch version (as `hse-cs-sse/coursework` 2026.1.6, `hse-cs-se/coursework` and `vkr` 2026.1.2, `hse-cs-se/pp` 2026.1.1 did). The classifier treats the quoting fix as a text edit, which is a patch.

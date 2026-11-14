@@ -39,6 +39,10 @@ r"""Линтер пака (bundle-раскладка v2): превращает �
     каталоге версии и похожие на секреты строки (`ghp_`, `github_pat_`,
     `glpat-`, закрытые ключи PEM) это ошибки; `-shell-escape` во
     `engine.flags` предупреждение (Студия флаги пака при сборке не использует).
+  * тексты `{ ru, en }` в однострочных словарях YAML (модуль `flow_text_lint`):
+    запятая без кавычек режет строку на обрезанное значение и лишний ключ.
+    Ошибка для невыпущенной и последней выпущенной версии шаблона, у прежних
+    выпущенных (каталог неизменен) предупреждение;
   * класс невыпущенной версии (template-studio.md, 7.2, `core/template_diff`):
     номер и `release.kind` не мягче минимума по жёстким правилам относительно
     предыдущей выпущенной версии шаблона, `release.kind` не мягче номера;
@@ -77,6 +81,7 @@ from hse_doc_studio.infra.project_init.template_renderer import (
     collect_sources_suffixed,
 )
 from hse_doc_studio.infra.template.anchor_lint import lint_anchors
+from hse_doc_studio.infra.template.flow_text_lint import lint_flow_texts
 from hse_doc_studio.infra.template.jinja_sandbox import pack_environment
 from hse_doc_studio.infra.template.releases import RELEASES_FILE, load_releases
 from hse_doc_studio.infra.template.yaml_template_repository import (
@@ -608,6 +613,24 @@ def class_base(version_dir: Path) -> str | None:
     return max(earlier, key=lambda v: released[v]) if earlier else None
 
 
+def _released_history(version_dir: Path) -> bool:
+    """Версия внесена в `releases.yaml` шаблона и после неё выпущена более новая: каталог неизменен, правка только
+    новой версией. Последняя внесённая проверяется наравне с невыпущенной (как класс версии, `_class_base`)."""
+    template_dir = version_dir.parent.parent
+    if version_dir.parent.name != "versions" or not (template_dir / RELEASES_FILE).is_file():
+        return False
+    released = [k for v in load_releases(template_dir) if (k := parse_version_key(v)) is not None]
+    key = parse_version_key(version_dir.name)
+    return key is not None and version_dir.name in load_releases(template_dir) and key != max(released)
+
+
+def _lint_flow_texts(version_dir: Path) -> tuple[list[str], list[str]]:
+    problems = lint_flow_texts(version_dir)
+    if _released_history(version_dir):
+        return [], [f"{p} (выпущенная версия неизменна, исправьте в новой)" for p in problems]
+    return problems, []
+
+
 def _reasons_text(reasons: tuple[Any, ...]) -> str:
     return "; ".join(reason.message("ru") for reason in reasons[:5]) + ("; ..." if len(reasons) > 5 else "")  # noqa: PLR2004
 
@@ -702,6 +725,7 @@ def lint_version_dir(version_dir: Path) -> LintReport:  # noqa: C901, PLR0912, P
         _lint_plate_room(manifest),
         _lint_safety(version_dir, manifest),
         lint_anchors(version_dir, manifest),
+        _lint_flow_texts(version_dir),
         _lint_release_class(version_dir, manifest),
     ):
         report.errors.extend(errors)

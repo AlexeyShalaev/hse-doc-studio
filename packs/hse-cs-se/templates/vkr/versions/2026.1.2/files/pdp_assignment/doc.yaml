@@ -1,0 +1,26 @@
+# Манифест документа (bundle-раскладка v2): всё про документ — в этой папке.
+# «Индивидуальное задание на ПДП» (ИЗ) — официальная форма; вместе с Рабочим
+# планом загружается в «Заявление на ПДП» (СмартЛМС, ~12 апреля) с подписями
+# студента и руководителя(-ей) практики. Форма русская — документ один для
+# всех языков проекта.
+name:
+  ru: Индивидуальное задание на ПДП
+  en: Practice individual assignment
+code:
+  ru: ИЗ
+  en: IA
+source_file: pdp_assignment/pdp_assignment.tex
+output_file: pdp_assignment/pdp_assignment.pdf
+output_name:
+  ru: Индивидуальное задание ПДП.pdf
+  en: Practice individual assignment.pdf
+required: false
+supported_langs:
+- ru
+scope: personal
+checks:
+  disabled_categories:
+  - structure
+  - formatting
+# Визуальный блок навигации — дивайдер рисуется на смене группы.
+group: pdp

@@ -1,0 +1,23 @@
+# Манифест документа (bundle-раскладка v2): всё про документ — в этой папке.
+# id = имя папки; языковые редакции — файлы-соседи <stem>.<код>.<ext>,
+# файл без кода — единственная форма для всех языков. Пути source_file —
+# в проектном пространстве (без суффиксов). Файл doc.yaml в проект не копируется.
+name:
+  ru: Выпускная квалификационная работа
+  en: Thesis
+code:
+  ru: ВКР
+  en: Thesis
+source_file: thesis/thesis.tex
+output_file: thesis/thesis.pdf
+output_name:
+  ru: Выпускная квалификационная работа.pdf
+  en: Thesis.pdf
+gost_ref: gost-7.32-2017
+required: true
+supported_langs:
+- ru
+- en
+scope: personal
+# Визуальный блок навигации — дивайдер рисуется на смене группы.
+group: work

@@ -1,0 +1,629 @@
+# packs/hse-cs-se/templates/pp/versions/2026.1/checks/hse-pp-2026.yaml
+# Требования к Project Proposal ОП «Программная инженерия» НИУ ВШЭ 2026:
+# структура статьи, объёмы, IEEE-оформление, английский язык.
+
+# label — короткая подпись группы в UI; ref — полная ссылка на документ.
+label:
+  ru: Project Proposal ОП ПИ
+  en: Project Proposal (SE)
+ref:
+  ru: Project Proposal 2026 — требования ОП «Программная инженерия» НИУ ВШЭ
+  en: Project Proposal 2026 — HSE SE programme requirements
+source:
+  ru: Методические материалы ОП ПИ ФКН НИУ ВШЭ (Project Proposal 2026)
+  url: https://cs.hse.ru/se/
+
+rules:
+  # ── Вёрстка: IEEE conference (две колонки) ──────────────────────────
+  - id: hse-pp-2026/ieee-conference-class
+    title:       { ru: Класс IEEEtran (conference), en: IEEEtran conference class }
+    description: { ru: "PP оформляется как статья IEEE conference: класс IEEEtran с опцией conference даёт требуемые две колонки и стиль заголовков.", en: "The PP is formatted as an IEEE conference paper: the IEEEtran class with the conference option provides the required two-column layout and heading style." }
+    category:    formatting
+    applies_to:  [project_proposal]
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "project_proposal/*.tex"
+      pattern: '\\documentclass\[[^\]]*conference[^\]]*\]\{IEEEtran\}'
+      negate: false
+      message: { ru: "Документ не использует класс IEEEtran (conference) — требуется двухколоночная вёрстка IEEE.", en: "The document does not use the IEEEtran (conference) class — the IEEE two-column layout is required." }
+
+  - id: hse-pp-2026/title-block
+    title:       { ru: Заголовок и автор (IEEE), en: Title and author block (IEEE) }
+    description: { ru: "Статья должна начинаться с \\title, блока автора и \\maketitle.", en: "The paper must start with \\title, the author block and \\maketitle." }
+    category:    structure
+    applies_to:  [project_proposal]
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "project_proposal/*.tex"
+      pattern: '\\maketitle'
+      negate: false
+      message: { ru: "В статье нет \\maketitle — заголовок и блок автора не печатаются.", en: "The paper has no \\maketitle — the title and author block are not printed." }
+
+  # ── Обязательные части статьи ───────────────────────────────────────
+  - id: hse-pp-2026/abstract
+    title:       { ru: Abstract, en: Abstract }
+    description: { ru: "PP начинается с Abstract (100–150 слов, в общий объём не входит).", en: "The PP opens with an Abstract (100–150 words, excluded from the word count)." }
+    category:    structure
+    applies_to:  [project_proposal]
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "project_proposal/*.tex"
+      pattern: '\\begin\{abstract\}'
+      negate: false
+      message: { ru: "В статье отсутствует Abstract.", en: "The paper is missing the Abstract." }
+
+  - id: hse-pp-2026/keywords
+    title:       { ru: Keywords, en: Keywords }
+    description: { ru: "После Abstract идут Keywords: 5–10 ключевых слов в алфавитном порядке.", en: "The Abstract is followed by Keywords: 5–10 keywords in alphabetical order." }
+    category:    structure
+    applies_to:  [project_proposal]
+    default_severity: warn
+    engine: regex
+    params:
+      file_glob: "project_proposal/*.tex"
+      pattern: '\\begin\{IEEEkeywords\}'
+      negate: false
+      message: { ru: "В статье отсутствует блок Keywords (IEEEkeywords).", en: "The paper is missing the Keywords (IEEEkeywords) block." }
+
+  - id: hse-pp-2026/section-introduction
+    title:       { ru: Раздел Introduction, en: Introduction section }
+    description: { ru: "Introduction (~300 слов): область, проблема, подход, новизна, ожидаемые результаты, организация статьи.", en: "Introduction (~300 words): area, problem, approach, novelty, expected results, paper organization." }
+    category:    structure
+    applies_to:  [project_proposal]
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "project_proposal/*.tex"
+      pattern: '(?i)\\section\*?\{[^}]*introduction'
+      negate: false
+      message: { ru: "В статье отсутствует раздел Introduction.", en: "The paper is missing the Introduction section." }
+
+  - id: hse-pp-2026/literature-review
+    title:       { ru: Обзор литературы, en: Literature review }
+    description: { ru: "Main Body должен содержать обзор литературы/существующих решений (Literature Review / Related Work / Review of Existing Solutions).", en: "The main body must contain a literature/solutions review (Literature Review / Related Work / Review of Existing Solutions)." }
+    category:    structure
+    applies_to:  [project_proposal]
+    default_severity: warn
+    engine: regex
+    params:
+      file_glob: "project_proposal/*.tex"
+      pattern: '(?i)\\(?:section|subsection)\*?\{[^}]*(literature|review|related work|existing solutions)'
+      negate: false
+      message: { ru: "В статье не найден раздел с обзором литературы (Literature Review / Related Work).", en: "No literature review section (Literature Review / Related Work) found in the paper." }
+
+  - id: hse-pp-2026/section-methodology
+    title:       { ru: Раздел Methodology, en: Methodology section }
+    description: { ru: "Main Body должен описывать методологию: гипотезы, дизайн эксперимента, метрики, стек, анализ данных.", en: "The main body must describe the methodology: hypotheses, experiment design, metrics, stack, data analysis." }
+    category:    structure
+    applies_to:  [project_proposal]
+    default_severity: warn
+    engine: regex
+    params:
+      file_glob: "project_proposal/*.tex"
+      pattern: '(?i)\\(?:section|subsection)\*?\{[^}]*methodolog'
+      negate: false
+      message: { ru: "В статье не найден раздел Methodology.", en: "No Methodology section found in the paper." }
+
+  - id: hse-pp-2026/section-results
+    title:       { ru: Раздел Results, en: Results section }
+    description: { ru: "Main Body завершают (ожидаемые) результаты — около 100 слов.", en: "The main body ends with the (expected) results — about 100 words." }
+    category:    structure
+    applies_to:  [project_proposal]
+    default_severity: info
+    engine: regex
+    params:
+      file_glob: "project_proposal/*.tex"
+      pattern: '(?i)\\(?:section|subsection)\*?\{[^}]*result'
+      negate: false
+      message: { ru: "В статье не найден раздел Results / Expected Results.", en: "No Results / Expected Results section found in the paper." }
+
+  - id: hse-pp-2026/section-conclusion
+    title:       { ru: Раздел Conclusion, en: Conclusion section }
+    description: { ru: "Conclusion (~200 слов): главные положения, значимость, рекомендации для будущей работы.", en: "Conclusion (~200 words): key points, significance, recommendations for future work." }
+    category:    structure
+    applies_to:  [project_proposal]
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "project_proposal/*.tex"
+      pattern: '(?i)\\section\*?\{[^}]*conclusion'
+      negate: false
+      message: { ru: "В статье отсутствует раздел Conclusion.", en: "The paper is missing the Conclusion section." }
+
+  # ── Библиография ────────────────────────────────────────────────────
+  - id: hse-pp-2026/bibliography
+    title:       { ru: Список источников (IEEE), en: References (IEEE) }
+    description: { ru: "Статья должна содержать список источников в стиле IEEE (квадратные скобки).", en: "The paper must contain an IEEE-style reference list (square brackets)." }
+    category:    bibliography
+    applies_to:  [project_proposal]
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "project_proposal/*.tex"
+      pattern: '\\begin\{thebibliography\}|\\bibliography\{'
+      negate: false
+      message: { ru: "В статье отсутствует список источников.", en: "The paper is missing the reference list." }
+
+  - id: hse-pp-2026/bibliography-count
+    title:       { ru: Количество источников (не менее 10), en: Number of references (at least 10) }
+    description: { ru: "Минимум 10 источников, из них не менее 8 на английском языке.", en: "At least 10 sources, of which at least 8 must be in English." }
+    category:    bibliography
+    applies_to:  [project_proposal]
+    default_severity: warn
+    engine: tex_command_count
+    params:
+      command: bibitem
+      file_glob: "project_proposal/*.tex"
+      min: 10
+
+  - id: hse-pp-2026/dangling-refs
+    title:       { ru: Висячие \ref на несуществующие \label, en: Dangling \ref to missing \label }
+    description: { ru: "Каждая команда \\ref должна указывать на существующую метку \\label — битые ссылки превращаются в `??` в PDF.", en: "Every \\ref must point to an existing \\label — broken references turn into `??` in the PDF." }
+    category:    references
+    applies_to:  [project_proposal]
+    default_severity: warn
+    engine: reference_check
+    params:
+      mode: refs
+      file_glob: "**/*.tex"
+      message: { ru: "Ссылка \\ref{{{key}}} не имеет соответствующего \\label{{{key}}}.", en: "Reference \\ref{{{key}}} has no matching \\label{{{key}}}." }
+
+  - id: hse-pp-2026/dangling-cites
+    title:       { ru: Цитирования без записи в библиографии, en: Citations without a bibliography entry }
+    description: { ru: "Каждое \\cite{key} должно соответствовать \\bibitem{key} в списке источников.", en: "Every \\cite{key} must correspond to a \\bibitem{key} in the reference list." }
+    category:    bibliography
+    applies_to:  [project_proposal]
+    default_severity: warn
+    engine: reference_check
+    params:
+      mode: cites
+      file_glob: "**/*.tex"
+      message: { ru: "Цитирование \\cite{{{key}}} не определено в списке источников.", en: "Citation \\cite{{{key}}} is not defined in the reference list." }
+
+  # ── Объёмы ──────────────────────────────────────────────────────────
+  - id: hse-pp-2026/abstract-length
+    title:       { ru: Объём Abstract (100–150 слов), en: Abstract length (100–150 words) }
+    description: { ru: "Abstract должен содержать 100–150 слов.", en: "The Abstract must contain 100–150 words." }
+    category:    content
+    applies_to:  [project_proposal]
+    default_severity: warn
+    engine: python
+    params:
+      code: |
+        text = ctx.read('project_proposal/project_proposal.tex')
+        if not text:
+            ctx.ok()
+        else:
+            m = re.search(r'\\begin\{abstract\}(.*?)\\end\{abstract\}', text, re.DOTALL)
+            if not m:
+                ctx.ok()  # отсутствие Abstract ловится структурным правилом
+            else:
+                body = re.sub(r'%.*', '', m.group(1))
+                body = re.sub(r'\\[a-zA-Z]+\*?(\[[^\]]*\])?', ' ', body)
+                words = re.findall(r"[A-Za-z][A-Za-z'’-]*", body)
+                n = len(words)
+                if n < 100:
+                    ctx.violation(
+                        f'Abstract содержит {n} слов — по требованиям нужно 100–150.',
+                        file='project_proposal/project_proposal.tex',
+                    )
+                elif n > 150:
+                    ctx.violation(
+                        f'Abstract содержит {n} слов — по требованиям нужно 100–150.',
+                        file='project_proposal/project_proposal.tex',
+                    )
+
+  - id: hse-pp-2026/word-count
+    title:       { ru: Объём статьи (1500–3000 слов), en: Paper length (1500–3000 words) }
+    description: { ru: "Объём PP — 1500–3000 слов без учёта Abstract, Keywords и библиографии.", en: "The PP must be 1500–3000 words excluding the Abstract, Keywords and references." }
+    category:    content
+    applies_to:  [project_proposal]
+    default_severity: info
+    engine: python
+    params:
+      code: |
+        text = ctx.read('project_proposal/project_proposal.tex')
+        if not text:
+            ctx.ok()
+        else:
+            m = re.search(r'\\begin\{document\}(.*)', text, re.DOTALL)
+            body = m.group(1) if m else text
+            # Библиография, Abstract и Keywords в объём не входят.
+            body = re.split(r'\\begin\{thebibliography\}', body)[0]
+            # Приложения (если есть) в объём не входят.
+            body = re.split(r'\\appendix\b|\\begin\{appendices\}', body)[0]
+            body = re.sub(r'\\begin\{abstract\}.*?\\end\{abstract\}', ' ', body, flags=re.DOTALL)
+            body = re.sub(r'\\begin\{IEEEkeywords\}.*?\\end\{IEEEkeywords\}', ' ', body, flags=re.DOTALL)
+            # Сноски (в т.ч. декларация об использовании ИИ) и литеральный
+            # \title в подсчёт слов не входят.
+            body = re.sub(r'\\(?:footnote|thanks)\s*\{(?:[^{}]|\{[^{}]*\})*\}', ' ', body)
+            body = re.sub(r'\\title\s*\{[^}]*\}', ' ', body)
+            body = re.sub(r'%.*', '', body)
+            body = re.sub(r'\\[a-zA-Z]+\*?(\[[^\]]*\])?', ' ', body)
+            words = re.findall(r"[A-Za-z][A-Za-z'’-]*", body)
+            n = len(words)
+            if n < 1500:
+                ctx.violation(
+                    f'Статья содержит примерно {n} слов — по требованиям нужно 1500–3000 (без Abstract, Keywords и источников).',
+                    file='project_proposal/project_proposal.tex',
+                )
+            elif n > 3000:
+                ctx.violation(
+                    f'Статья содержит примерно {n} слов — по требованиям нужно 1500–3000 (без Abstract, Keywords и источников).',
+                    file='project_proposal/project_proposal.tex',
+                )
+
+  - id: hse-pp-2026/keywords-alphabetical
+    title:       { ru: Keywords по алфавиту, en: Keywords in alphabetical order }
+    description: { ru: "Ключевые слова перечисляются в алфавитном порядке (требование методички PP).", en: "Keywords must be listed in alphabetical order (PP guideline requirement)." }
+    category:    content
+    applies_to:  [project_proposal]
+    default_severity: info
+    engine: python
+    params:
+      code: |
+        text = ctx.read('project_proposal/project_proposal.tex')
+        if text:
+            m = re.search(r'\\begin\{IEEEkeywords\}(.*?)\\end\{IEEEkeywords\}', text, re.DOTALL)
+            if m:
+                body = m.group(1)
+                if 'hseFill' not in body:
+                    body = re.sub(r'%.*', '', body)
+                    body = re.sub(r'\\[a-zA-Z]+\*?', ' ', body)
+                    body = body.replace('{', ' ').replace('}', ' ')
+                    words = [w.strip() for w in body.split(',') if w.strip()]
+                    lowered = [w.lower() for w in words]
+                    if len(words) >= 2 and lowered != sorted(lowered):
+                        ctx.violation(
+                            'Ключевые слова идут не по алфавиту: ' + ', '.join(words)
+                            + '. Отсортируйте их (требование методички).',
+                            file='project_proposal/project_proposal.tex',
+                        )
+                    if 2 <= len(words) < 5:
+                        ctx.violation(
+                            'Ключевых слов меньше пяти — на встрече рекомендовали 5–10 '
+                            '(жёсткий минимум методички — 3).',
+                            file='project_proposal/project_proposal.tex',
+                        )
+
+  # ── Язык ────────────────────────────────────────────────────────────
+  - id: hse-pp-2026/english-only
+    title:       { ru: Только английский язык, en: English-only text }
+    description: { ru: "Project Proposal пишется и защищается только на английском: кириллица в тексте статьи недопустима (комментарии в исходнике не считаются).", en: "The Project Proposal is written and defended in English only: Cyrillic characters must not appear in the paper body (source comments do not count)." }
+    category:    content
+    applies_to:  [project_proposal]
+    default_severity: warn
+    engine: python
+    params:
+      code: |
+        cyr = re.compile(r'[А-Яа-яЁё]')
+        for file in ctx.files('project_proposal/*.tex'):
+            in_bib = False
+            for lineno, line in enumerate(ctx.lines(file), start=1):
+                # Список источников: регламент допускает до 2 неанглоязычных
+                # (например, русских) источников — кириллица в нём не нарушение.
+                if '\\begin{thebibliography}' in line:
+                    in_bib = True
+                    continue
+                if '\\end{thebibliography}' in line:
+                    in_bib = False
+                    continue
+                if in_bib:
+                    continue
+                stripped = line.strip()
+                if not stripped or stripped.startswith('%'):
+                    continue
+                # Кириллица в хвостовом комментарии допустима.
+                visible = re.split(r'(?<!\\)%', line)[0]
+                if cyr.search(visible):
+                    ctx.violation(
+                        'Кириллица в тексте статьи — PP пишется только на английском.',
+                        file=file,
+                        line=lineno,
+                    )
+
+  # ── Черновиковые маркеры и типографика исходника ────────────────────
+  - id: hse-pp-2026/no-todo-markers
+    title:       { ru: Маркеры TODO/FIXME в тексте, en: TODO/FIXME markers in body text }
+    description: { ru: "Перед сдачей в исходнике статьи не должно остаться `% TODO`, `% FIXME` или \\todo{...}.", en: "Before submission no `% TODO`, `% FIXME` or \\todo{...} should remain in the paper source." }
+    category:    content
+    applies_to:  [project_proposal]
+    default_severity: info
+    engine: python
+    params:
+      code: |
+        patterns = [
+            (r'^\s*%\s*TODO\b',       'TODO-комментарий'),
+            (r'^\s*%\s*FIXME\b',      'FIXME-комментарий'),
+            (r'\\todo\s*(\[[^\]]*\])?\s*\{', '\\todo{} макрос'),
+        ]
+        for pattern, label in patterns:
+            for file, line, text in ctx.find(pattern, '**/*.tex'):
+                # Слайды (pres/) несут свои \todo-заглушки по дизайну.
+                if '/presentation/' in '/' + file.replace('\\', '/'):
+                    continue
+                snippet = text.strip()[:80]
+                ctx.violation(f'{label}: {snippet}', file=file, line=line)
+
+  - id: hse-pp-2026/double-spaces
+    title:       { ru: Двойные пробелы в тексте, en: Double spaces in body text }
+    description: { ru: "Двойные пробелы внутри строки — артефакт копипаста; LaTeX их схлопывает, но они мешают редактуре.", en: "Double spaces inside a line are a copy-paste artifact; LaTeX collapses them, but they hinder editing." }
+    category:    content
+    applies_to:  [project_proposal]
+    default_severity: info
+    engine: python
+    params:
+      code: |
+        for file, line, text in ctx.find(r'\S  +(?!%)\S', '**/*.tex'):
+            if '/presentation/' in '/' + file.replace('\\', '/'):
+                continue
+            if '&' in text or text.lstrip().startswith('%'):
+                continue
+            ctx.violation('Двойные пробелы в строке.', file=file, line=line)
+
+  # ── Шрифт ───────────────────────────────────────────────────────────
+  - id: hse-pp-2026/font-times-new-roman
+    title:       { ru: Шрифт Times New Roman, en: Times New Roman font }
+    description: { ru: "Методичка PP рекомендует Times New Roman. Шрифт задаётся в настройках проекта и подставляется в common/fonts.tex.", en: "The PP guidelines recommend Times New Roman. The font is set in the project settings and rendered into common/fonts.tex." }
+    category:    formatting
+    applies_to:  [project_proposal]
+    default_severity: warn
+    engine: regex
+    params:
+      file_glob: "**/fonts.tex"
+      pattern: '\\setmainfont\{Times New Roman\}'
+      negate: false
+      message: { ru: "Основной шрифт не Times New Roman — методичка PP рекомендует именно его; при необходимости смените шрифт в настройках проекта.", en: "The main font is not Times New Roman — the PP guidelines recommend it; change the font in the project settings if this is unintended." }
+
+  # ── После компиляции ────────────────────────────────────────────────
+  - id: hse-pp-2026/overfull-hbox
+    title:       { ru: Выход текста за колонку (overfull hbox), en: Text overflows the column (overfull hbox) }
+    description: { ru: "Текст выходит за границу колонки — обычно длинный URL или неразрывная конструкция. Требует ручной правки.", en: "Text overflows the column boundary — usually a long URL or an unbreakable construct. Requires a manual fix." }
+    category:    formatting
+    applies_to:  [project_proposal]
+    default_severity: info
+    engine: log_parse
+    params:
+      pattern: "Overfull \\\\hbox \\((\\d+\\.\\d+)pt too wide\\)"
+      message_template: { ru: "Переполнение строки на {0} pt — проверьте переносы (обычно длинный URL).", en: "Line overflow by {0} pt — check hyphenation (usually a long URL)." }
+
+  # ── Ключевые слова: количество ──────────────────────────────────────
+  - id: hse-pp-2026/keywords-count
+    title:       { ru: Число ключевых слов (3–10), en: Number of keywords (3–10) }
+    description: { ru: "Ключевых слов должно быть 3–10 (методичка); на встрече рекомендовали 5–10.", en: "There must be 3–10 keywords (guideline); the info meeting recommended 5–10." }
+    category:    content
+    applies_to:  [project_proposal]
+    default_severity: warn
+    engine: python
+    params:
+      code: |
+        text = ctx.read('project_proposal/project_proposal.tex')
+        if text:
+            m = re.search(r'\\begin\{IEEEkeywords\}(.*?)\\end\{IEEEkeywords\}', text, re.DOTALL)
+            if m and 'hseFill' not in m.group(1):
+                body = re.sub(r'%.*', '', m.group(1))
+                body = re.sub(r'\\[a-zA-Z]+\*?', ' ', body)
+                body = body.replace('{', ' ').replace('}', ' ')
+                words = [w.strip() for w in body.split(',') if w.strip()]
+                n = len(words)
+                if n and (n < 3 or n > 10):
+                    ctx.violation(
+                        f'Ключевых слов: {n}. По методичке нужно 3–10 (рекомендуется 5–10).',
+                        file='project_proposal/project_proposal.tex',
+                    )
+
+  # ── Шапка: блок автора ──────────────────────────────────────────────
+  - id: hse-pp-2026/author-block
+    title:       { ru: Блок автора (IEEE), en: Author block (IEEE) }
+    description: { ru: "Шапка статьи должна содержать блок автора (\\IEEEauthorblockN / \\IEEEauthorblockA) с именем, аффилиацией, городом и e-mail. Значения приходят из настроек проекта.", en: "The paper header must contain the author block (\\IEEEauthorblockN / \\IEEEauthorblockA) with name, affiliation, city and e-mail. Values come from the project settings." }
+    category:    structure
+    applies_to:  [project_proposal]
+    default_severity: warn
+    engine: regex
+    params:
+      file_glob: "project_proposal/*.tex"
+      pattern: '\\IEEEauthorblockA'
+      negate: false
+      message: { ru: "В шапке статьи нет блока автора (\\IEEEauthorblockA) — не печатаются аффилиация, город и e-mail.", en: "The paper header has no author block (\\IEEEauthorblockA) — affiliation, city and e-mail are not printed." }
+
+  # ── Библиография: доля английских источников ────────────────────────
+  - id: hse-pp-2026/bibliography-english-count
+    title:       { ru: Английские источники (не менее 8), en: English sources (at least 8) }
+    description: { ru: "Из минимум 10 источников не менее 8 должны быть на английском; допускается до 2 неанглоязычных.", en: "Of the 10+ sources at least 8 must be in English; up to 2 non-English are allowed." }
+    category:    bibliography
+    applies_to:  [project_proposal]
+    default_severity: warn
+    engine: python
+    params:
+      code: |
+        text = ctx.read('project_proposal/project_proposal.tex')
+        m = re.search(r'\\begin\{thebibliography\}(.*?)\\end\{thebibliography\}', text, re.DOTALL)
+        if m and 'hseFill' not in m.group(0):
+            items = re.split(r'\\bibitem', m.group(1))[1:]
+            total = len(items)
+            # Неанглоязычным считаем источник с кириллицей в записи.
+            # Комментарии-пояснения (в т.ч. русские) в счёт не идут.
+            def _no_comments(s):
+                return re.sub(r'(?<!\\)%.*', '', s)
+            non_en = sum(1 for it in items if re.search(r'[А-Яа-яЁё]', _no_comments(it)))
+            en = total - non_en
+            # Проверяем только когда источников уже набрано достаточно (>=10);
+            # нехватку самих источников ловит правило bibliography-count.
+            if total >= 10 and en < 8:
+                ctx.violation(
+                    f'Из {total} источников на английском только {en} — по требованиям нужно не менее 8.',
+                    file='project_proposal/project_proposal.tex',
+                )
+
+  # ── Библиография: только цитируемые источники ───────────────────────
+  - id: hse-pp-2026/bibliography-uncited
+    title:       { ru: Нецитируемые источники, en: Uncited sources }
+    description: { ru: "В список источников включаются только те, на которые есть \\cite в тексте (стиль IEEE).", en: "The reference list must contain only sources actually \\cite-d in the text (IEEE style)." }
+    category:    bibliography
+    applies_to:  [project_proposal]
+    default_severity: info
+    engine: python
+    params:
+      code: |
+        text = ctx.read('project_proposal/project_proposal.tex')
+        cited = set()
+        for mt in re.finditer(r'\\cite[a-zA-Z]*\s*(?:\[[^\]]*\])?\s*\{([^}]+)\}', text):
+            for key in mt.group(1).split(','):
+                cited.add(key.strip())
+        for mt in re.finditer(r'\\bibitem\s*(?:\[[^\]]*\])?\s*\{([^}]+)\}', text):
+            key = mt.group(1).strip()
+            if key and key not in cited:
+                ctx.violation(
+                    f'Источник `{key}` есть в списке литературы, но на него нет ссылки \\cite в тексте.',
+                    file='project_proposal/project_proposal.tex',
+                )
+
+  # ── Кегль 10 pt ─────────────────────────────────────────────────────
+  - id: hse-pp-2026/font-size
+    title:       { ru: Кегль 10 pt (IEEEtran), en: 10 pt body size (IEEEtran) }
+    description: { ru: "Методичка рекомендует кегль 10 pt. Класс IEEEtran(conference) уже даёт 10 pt — явные 9/11/12 pt не нужны.", en: "The guideline recommends a 10 pt body. IEEEtran(conference) already yields 10 pt — an explicit 9/11/12pt option is unnecessary." }
+    category:    formatting
+    applies_to:  [project_proposal]
+    default_severity: warn
+    engine: regex
+    params:
+      file_glob: "project_proposal/*.tex"
+      pattern: '\\documentclass\[[^\]]*\b(?:9pt|11pt|12pt)\b[^\]]*\]\{IEEEtran\}'
+      negate: true
+      message: { ru: "Указан кегль 9/11/12 pt — методичка рекомендует 10 pt; уберите опцию размера, IEEEtran(conference) даёт 10 pt по умолчанию.", en: "A 9/11/12pt size is set — the guideline recommends 10 pt; drop the size option, IEEEtran(conference) defaults to 10 pt." }
+
+  # ── Указано число слов ──────────────────────────────────────────────
+  - id: hse-pp-2026/word-count-stated
+    title:       { ru: Указано число слов, en: Word count stated }
+    description: { ru: "В конце статьи должно быть указано число слов (например, «Word Count 1640») — берётся из тулбара «Превью».", en: "The word count must be stated at the end (e.g. “Word Count 1640”), taken from the Preview toolbar." }
+    category:    formatting
+    applies_to:  [project_proposal]
+    default_severity: info
+    engine: regex
+    params:
+      file_glob: "project_proposal/*.tex"
+      pattern: 'Word\s+Count\s+\d+'
+      negate: false
+      message: { ru: "В конце статьи не указано число слов — впишите его (например, «Word Count 1640»); значение показывает тулбар «Превью».", en: "The word count is not stated at the end — add it (e.g. “Word Count 1640”); the Preview toolbar shows the value." }
+
+  # ── Объёмы разделов (ориентиры методички) ───────────────────────────
+  - id: hse-pp-2026/section-lengths
+    title:       { ru: Объёмы разделов (ориентиры), en: Per-section lengths (targets) }
+    description: { ru: "Ориентиры методички: Introduction ~300 слов, Main Body 1200–1500, Conclusion ~200. Замечание — только при заметном отклонении; пустые разделы-заглушки пропускаются.", en: "Guideline targets: Introduction ~300 words, Main Body 1200–1500, Conclusion ~200. Flagged only on a large deviation; unfilled placeholder sections are skipped." }
+    category:    content
+    applies_to:  [project_proposal]
+    default_severity: info
+    engine: python
+    params:
+      code: |
+        text = ctx.read('project_proposal/project_proposal.tex')
+        m = re.search(r'\\begin\{document\}(.*)', text, re.DOTALL)
+        body_all = re.split(r'\\begin\{thebibliography\}', m.group(1) if m else text)[0]
+        secs = [(mt.start(), mt.group(1)) for mt in re.finditer(r'\\section\*?\{([^}]*)\}', body_all)]
+        def wc(chunk):
+            chunk = re.sub(r'%.*', '', chunk)
+            chunk = re.sub(r'\\[a-zA-Z]+\*?(\[[^\]]*\])?', ' ', chunk)
+            return len(re.findall(r"[A-Za-z][A-Za-z'’-]*", chunk))
+        ranges = []
+        for i, (pos, name) in enumerate(secs):
+            end = secs[i + 1][0] if i + 1 < len(secs) else len(body_all)
+            ranges.append((name, body_all[pos:end]))
+        def find_idx(pat):
+            return next((i for i, (nm, _) in enumerate(ranges) if re.search(pat, nm, re.I)), None)
+        ii = find_idx(r'introduction')
+        ci = find_idx(r'conclusion')
+        if ii is not None:
+            chunk = ranges[ii][1]
+            if 'hseFill' not in chunk:
+                n = wc(chunk)
+                if n and (n < 150 or n > 500):
+                    ctx.violation(f'Introduction содержит ~{n} слов — методичка ориентирует на ~300.', file='project_proposal/project_proposal.tex')
+        if ci is not None:
+            chunk = ranges[ci][1]
+            if 'hseFill' not in chunk:
+                n = wc(chunk)
+                if n and (n < 120 or n > 400):
+                    ctx.violation(f'Conclusion содержит ~{n} слов — методичка ориентирует на ~200.', file='project_proposal/project_proposal.tex')
+        if ii is not None and ci is not None and ci > ii + 1:
+            mid = ''.join(chunk for nm, chunk in ranges[ii + 1:ci])
+            if 'hseFill' not in mid:
+                n = wc(mid)
+                if n and (n < 1000 or n > 1800):
+                    ctx.violation(f'Main Body (разделы между Introduction и Conclusion) содержит ~{n} слов — методичка ориентирует на 1200–1500.', file='project_proposal/project_proposal.tex')
+
+  # ── Научный стиль: без первого лица ─────────────────────────────────
+  - id: hse-pp-2026/no-first-person
+    title:       { ru: Первое лицо (I/we), en: First person (I/we) }
+    description: { ru: "Методичка требует научный стиль: избегайте первого лица (I/we/our), используйте пассив и безличные конструкции.", en: "The guideline requires scientific style: avoid the first person (I/we/our), prefer passive and impersonal constructions." }
+    category:    content
+    applies_to:  [project_proposal]
+    default_severity: info
+    engine: python
+    params:
+      code: |
+        pron = re.compile(r'\b(?:we|our|ours|my|mine)\b', re.I)
+        pron_us = re.compile(r'\bus\b')
+        text = ctx.read('project_proposal/project_proposal.tex')
+        text = re.split(r'\\begin\{thebibliography\}', text)[0]
+        for lineno, raw in enumerate(text.splitlines(), start=1):
+            line = re.split(r'(?<!\\)%', raw)[0]
+            if not line.strip():
+                continue
+            # содержимое плейсхолдеров \hseFill/\hseOptional — не авторский текст
+            line = re.sub(r'\\hse(?:Fill|Optional)\s*\{[^}]*\}', ' ', line)
+            if pron.search(line) or pron_us.search(line):
+                ctx.violation(
+                    'Первое лицо (I/we/our) — методичка требует научный стиль: пассив и безличные конструкции.',
+                    file='project_proposal/project_proposal.tex',
+                    line=lineno,
+                )
+
+  # ── Центрирование рисунков и таблиц ─────────────────────────────────
+  - id: hse-pp-2026/float-centering
+    title:       { ru: Центрирование рисунков и таблиц, en: Figure/table centering }
+    description: { ru: "Рисунки и таблицы центрируются в колонке (\\centering) — требование вёрстки IEEE.", en: "Figures and tables must be centered in the column (\\centering) per IEEE layout." }
+    category:    formatting
+    applies_to:  [project_proposal]
+    default_severity: info
+    engine: python
+    params:
+      code: |
+        for file in ctx.files('project_proposal/*.tex'):
+            text = ctx.read(file)
+            for env in ('figure', 'table'):
+                for mt in re.finditer(r'\\begin\{' + env + r'\*?\}(.*?)\\end\{' + env + r'\*?\}', text, re.DOTALL):
+                    inner = mt.group(1)
+                    if '\\centering' not in inner and '\\begin{center}' not in inner:
+                        line = text[:mt.start()].count('\n') + 1
+                        ctx.violation(
+                            f'Окружение {env} без \\centering — по вёрстке IEEE рисунки и таблицы центрируются в колонке.',
+                            file=file,
+                            line=line,
+                        )
+
+  # ── Слайды защиты: только английский ────────────────────────────────
+  - id: hse-pp-2026/english-only-pres
+    title:       { ru: Слайды только на английском, en: Slides in English only }
+    description: { ru: "Защита PP идёт на английском — кириллица в тексте слайдов недопустима (комментарии в исходнике не считаются).", en: "The PP defence is in English — Cyrillic must not appear in slide text (source comments do not count)." }
+    category:    content
+    applies_to:  [presentation]
+    default_severity: warn
+    engine: python
+    params:
+      code: |
+        cyr = re.compile(r'[А-Яа-яЁё]')
+        for file in ctx.files('presentation/**/*.tex'):
+            for lineno, line in enumerate(ctx.lines(file), start=1):
+                stripped = line.strip()
+                if not stripped or stripped.startswith('%'):
+                    continue
+                visible = re.split(r'(?<!\\)%', line)[0]
+                if cyr.search(visible):
+                    ctx.violation(
+                        'Кириллица в тексте слайда — защита PP идёт на английском.',
+                        file=file,
+                        line=lineno,
+                    )

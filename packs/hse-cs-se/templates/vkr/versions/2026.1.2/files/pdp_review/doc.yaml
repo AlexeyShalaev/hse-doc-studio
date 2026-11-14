@@ -1,0 +1,26 @@
+# Манифест документа (bundle-раскладка v2): всё про документ — в этой папке.
+# «Отзыв руководителя ПДП» — официальная форма; отзыв с оценкой ОБЯЗАТЕЛЕН
+# и загружается в «Отчёт о ПДП». Пишет и подписывает РУКОВОДИТЕЛЬ практики
+# (= руководитель ВКР); документ в паке — ПРОЕКТ отзыва для согласования.
+# Форма русская — документ один для всех языков проекта.
+name:
+  ru: Отзыв руководителя ПДП
+  en: Practice supervisor's review
+code:
+  ru: ОТЗ
+  en: REV
+source_file: pdp_review/pdp_review.tex
+output_file: pdp_review/pdp_review.pdf
+output_name:
+  ru: Отзыв руководителя ПДП.pdf
+  en: Practice supervisor review.pdf
+required: false
+supported_langs:
+- ru
+scope: personal
+checks:
+  disabled_categories:
+  - structure
+  - formatting
+# Визуальный блок навигации — дивайдер рисуется на смене группы.
+group: pdp

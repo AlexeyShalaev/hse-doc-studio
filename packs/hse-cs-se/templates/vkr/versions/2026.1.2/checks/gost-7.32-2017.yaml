@@ -1,0 +1,241 @@
+# packs/hse-cs-se/templates/vkr/versions/2026.1/checks/gost-7.32-2017.yaml
+# ГОСТ 7.32-2017 — Отчёт о научно-исследовательской работе. Структура и правила оформления.
+# Применяется к документу ВКР.
+
+# label — короткая подпись группы в UI; ref — полная ссылка на документ.
+label:
+  ru: ГОСТ 7.32-2017
+  en: GOST 7.32-2017
+ref:
+  ru: ГОСТ 7.32-2017 §6
+  en: GOST 7.32-2017 §6
+source:
+  ru: Отчёт о научно-исследовательской работе. Структура и правила оформления.
+  url: https://docs.cntd.ru/document/1200157208
+
+rules:
+  # ── Геометрия страницы ──
+  - id: gost-7.32-2017/page-margins
+    title:       { ru: Поля страницы, en: Page margins }
+    description: { ru: "Левое поле 30 мм, правое 15 мм, верхнее и нижнее по 20 мм (форма ВКР ОП ПИ).", en: "Left margin 30 mm, right 15 mm, top and bottom 20 mm each (HSE SE thesis form)." }
+    category:    formatting
+    applies_to:  [thesis]
+    default_severity: warn
+    engine: structural
+    params:
+      check: page_geometry
+      expected: { left_mm: 30, right_mm: 15, top_mm: 20, bottom_mm: 20 }
+      tolerance_mm: 1
+
+  # ── Межстрочный интервал ──
+  - id: gost-7.32-2017/line-spacing
+    title:       { ru: Межстрочный интервал 1.5, en: Line spacing 1.5 }
+    description: { ru: "ГОСТ 7.32-2017 §6.1.2: текст следует печатать с межстрочным интервалом 1,5.", en: "ГОСТ 7.32-2017 §6.1.2: the text shall be printed with 1.5 line spacing." }
+    category:    formatting
+    applies_to:  [thesis]
+    default_severity: warn
+    engine: structural
+    params:
+      check: line_spacing
+      expected: 1.5
+
+  # ── Размер шрифта ──
+  - id: gost-7.32-2017/font-size
+    title:       { ru: Размер шрифта 12pt, en: Font size 12pt }
+    description: { ru: "ГОСТ 7.32-2017 §6.1.2: шрифт Times New Roman, размер 12–14 пт. В ВКР ОП ПИ применяется 12 пт.", en: "ГОСТ 7.32-2017 §6.1.2: Times New Roman font, size 12–14 pt. The HSE SE thesis uses 12 pt." }
+    category:    formatting
+    applies_to:  [thesis]
+    default_severity: info
+    engine: structural
+    params:
+      check: font_size
+      expected: 12
+      allowed: [12, 14]
+
+  # ── Отступ первой строки ──
+  - id: gost-7.32-2017/paragraph-indent
+    title:       { ru: Абзацный отступ 1.25 см, en: Paragraph indent 1.25 cm }
+    description: { ru: "ГОСТ 7.32-2017 §6.1.3: абзацный отступ должен быть одинаковым и равным 1,25 см.", en: "ГОСТ 7.32-2017 §6.1.3: the paragraph indent shall be uniform and equal to 1.25 cm." }
+    category:    formatting
+    applies_to:  [thesis]
+    default_severity: info
+    engine: structural
+    params:
+      check: paragraph_indent
+      expected_cm: 1.25
+      tolerance_cm: 0.1
+
+  # ── Обязательные разделы: Введение ──
+  - id: gost-7.32-2017/section-introduction
+    title:       { ru: Раздел «Введение», en: "«Introduction» section" }
+    description: { ru: "ГОСТ 7.32-2017 §5.2: отчёт должен содержать раздел «Введение».", en: "ГОСТ 7.32-2017 §5.2: the report shall contain an «Introduction» section." }
+    category:    structure
+    applies_to:  [thesis]
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "thesis/*.tex"
+      pattern: '(?i)\\(?:section|chapter)\*?\{[^}]*(?:[Вв]ведени|introduction)'
+      negate: false
+      message: { ru: "В документе ВКР отсутствует раздел «Введение».", en: "The graduation thesis is missing an «Introduction» section." }
+
+  # ── Обязательные разделы: Заключение ──
+  - id: gost-7.32-2017/section-conclusion
+    title:       { ru: Раздел «Заключение», en: "«Conclusion» section" }
+    description: { ru: "ГОСТ 7.32-2017 §5.2: отчёт должен содержать раздел «Заключение».", en: "ГОСТ 7.32-2017 §5.2: the report shall contain a «Conclusion» section." }
+    category:    structure
+    applies_to:  [thesis]
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "thesis/*.tex"
+      pattern: '(?i)\\(?:section|chapter)\*?\{[^}]*(?:[Зз]аключени|conclusion)'
+      negate: false
+      message: { ru: "В документе ВКР отсутствует раздел «Заключение».", en: "The graduation thesis is missing a «Conclusion» section." }
+
+  # ── Список использованных источников ──
+  - id: gost-7.32-2017/bibliography-section
+    title:       { ru: Список использованных источников, en: List of references }
+    description: { ru: "ГОСТ 7.32-2017 §5.5: отчёт должен содержать список использованных источников.", en: "ГОСТ 7.32-2017 §5.5: the report shall contain a list of references." }
+    category:    structure
+    applies_to:  [thesis]
+    default_severity: err
+    engine: regex
+    params:
+      file_glob: "thesis/*.tex"
+      pattern: '\\(bibliography|begin\{thebibliography\}|printbibliography)'
+      negate: false
+      message: { ru: "В документе ВКР отсутствует список использованных источников.", en: "The graduation thesis is missing a list of references." }
+
+  # Минимальный объём ВКР НЕ проверяется здесь: ГОСТ 7.32-2017 объём не
+  # нормирует — требование «не менее 40 страниц» задаёт методичка ОП ПИ
+  # (правило hse-pi-methodology-2026/vkr-min-pages).
+
+  # ── Формат подписи к рисунку ──
+  # Слово «Рисунок»/«Figure» и номер подставляются автоматически (\figurename +
+  # captionsetup labelsep). Проверка source-level формата «Рисунок N —» внутри
+  # \caption{} была неверной (ложно срабатывала на КАЖДОЙ подписи, т.к. в
+  # исходнике там только название). Теперь ловим ОБРАТНУЮ ошибку — ручной
+  # префикс «Рисунок/Figure N» внутри \caption (двойная подпись).
+  - id: gost-7.32-2017/figure-caption-format
+    title:       { ru: Ручной префикс в подписи к рисунку, en: Manual prefix in figure caption }
+    description: { ru: "ГОСТ 7.32-2017 §6.3.6: слово «Рисунок» и номер подставляются автоматически. В \\caption{…} должно быть только название — без ручного префикса «Рисунок N —».", en: "GOST 7.32-2017 §6.3.6: the «Рисунок»/«Figure» word and number are added automatically. \\caption{…} must contain only the title — without a manual «Figure N —» prefix." }
+    category:    references
+    applies_to:  [thesis, test_program_and_methodology, shared_test_program_and_methodology]
+    default_severity: warn
+    engine: regex
+    params:
+      file_glob: "**/*.tex"
+      pattern: '\\caption\{\s*(?:[Рр]исунок|Figure)\s*\d'
+      flags: [multiline]
+      # Паттерн описывает ЗАПРЕЩЁННУЮ конструкцию, поэтому negate обязателен.
+      # Без него движок трактует паттерн как ОБЯЗАТЕЛЬНЫЙ и ругается ровно тогда,
+      # когда подписи оформлены правильно, — правило срабатывало на всех чистых
+      # шаблонах и показывало находку в первом попавшемся файле глоба.
+      negate: true
+      message: { ru: "Не добавляйте «Рисунок N» вручную в \\caption — слово и номер подставляются автоматически; оставьте только название.", en: "Do not add «Figure N» manually inside \\caption — the word and number are added automatically; keep only the title." }
+
+  # ── Формат подписи к таблице ──
+  # Аналогично рисункам: «Таблица»/«Table» и номер подставляются автоматически.
+  # Ловим ручной префикс «Таблица/Table N» внутри \caption (двойная подпись).
+  - id: gost-7.32-2017/table-caption-format
+    title:       { ru: Ручной префикс в заголовке таблицы, en: Manual prefix in table heading }
+    description: { ru: "ГОСТ 7.32-2017 §6.3.1: слово «Таблица» и номер подставляются автоматически. В \\caption{…} таблицы должно быть только название — без ручного префикса «Таблица N —».", en: "GOST 7.32-2017 §6.3.1: the «Таблица»/«Table» word and number are added automatically. The table \\caption{…} must contain only the title — without a manual «Table N —» prefix." }
+    category:    references
+    applies_to:  [thesis, test_program_and_methodology, shared_test_program_and_methodology]
+    default_severity: warn
+    engine: regex
+    params:
+      file_glob: "**/*.tex"
+      pattern: '\\caption\{\s*(?:[Тт]аблица|Table)\s*\d'
+      flags: [multiline]
+      # Как и у подписи к рисунку: конструкция запрещённая, а не обязательная.
+      negate: true
+      message: { ru: "Не добавляйте «Таблица N» вручную в \\caption — слово и номер подставляются автоматически; оставьте только название.", en: "Do not add «Table N» manually inside \\caption — the word and number are added automatically; keep only the title." }
+
+  # ── Каждый рисунок/таблица упомянут в тексте ──
+  - id: gost-7.32-2017/float-orphans
+    title:       { ru: Ссылки на рисунки и таблицы, en: References to figures and tables }
+    description: { ru: "ГОСТ 7.32-2017 §6.5.7, §6.6.4: на каждый рисунок и таблицу должна быть ссылка в тексте; объект без \\label сослаться нельзя.", en: "ГОСТ 7.32-2017 §6.5.7, §6.6.4: every figure and table must be referenced in the text; an object without a \\label cannot be referenced." }
+    category:    references
+    applies_to:  [thesis]
+    default_severity: warn
+    engine: structural
+    params:
+      check: float_orphans
+
+  # ── Нумерация рисунков сквозная ──
+  - id: gost-7.32-2017/figure-numbering
+    title:       { ru: Сквозная нумерация рисунков, en: Continuous figure numbering }
+    description: { ru: "ГОСТ 7.32-2017 §6.3.5: рисунки следует нумеровать арабскими цифрами сквозной нумерацией в пределах всего отчёта.", en: "ГОСТ 7.32-2017 §6.3.5: figures shall be numbered with Arabic numerals using continuous numbering throughout the report." }
+    category:    references
+    applies_to:  [thesis]
+    default_severity: info
+    engine: structural
+    params:
+      check: figure_numbering
+      mode: continuous
+
+  # ── Неиспользованные источники ──
+  - id: gost-7.32-2017/unused-sources
+    title:       { ru: Неиспользованные источники, en: Unused sources }
+    description: { ru: "ГОСТ 7.32-2017 §6.10.2: список использованных источников должен включать только источники, на которые есть ссылки в тексте.", en: "ГОСТ 7.32-2017 §6.10.2: the list of references shall include only sources that are cited in the text." }
+    category:    bibliography
+    applies_to:  [thesis]
+    default_severity: info
+    engine: reference_check
+    params:
+      mode: unused
+      file_glob: "**/*.tex"
+      bib_glob: "**/*.bib"
+
+  # ── Неразрешённые цитаты из лога ──
+  - id: gost-7.32-2017/dangling-cite
+    title:       { ru: Неразрешённая библиографическая ссылка, en: Unresolved bibliographic citation }
+    description: { ru: "После компиляции: ссылка на источник не найдена в .bib-файле.", en: "After compilation: the cited source was not found in the .bib file." }
+    category:    bibliography
+    applies_to:  [thesis]
+    default_severity: warn
+    engine: log_parse
+    params:
+      pattern: "Citation `([^'`]+)' on page (\\d+) undefined"
+      message_template: { ru: "Ссылка `{0}` на странице {1} не определена в .bib-файле.", en: "Citation `{0}` on page {1} is undefined in the .bib file." }
+
+  # ── Висячий абзац в конце страницы (overfull/underfull hbox) ──
+  - id: gost-7.32-2017/overfull-hbox
+    title:       { ru: Выход текста за поля (overfull hbox), en: Text overflows margins (overfull hbox) }
+    description: { ru: "Текст выходит за правое поле страницы. Требует ручной правки переноса или формулировки.", en: "Text overflows the right page margin. Requires a manual fix to hyphenation or wording." }
+    category:    formatting
+    applies_to:  [thesis]
+    default_severity: info
+    engine: log_parse
+    params:
+      pattern: "Overfull \\\\hbox \\((\\d+\\.\\d+)pt too wide\\)"
+      message_template: { ru: "Переполнение строки на {0} pt. Проверьте переносы слов.", en: "Line overflow by {0} pt. Check word hyphenation." }
+
+  # ── Списки: оформление по ГОСТ ──
+  # Срабатывает только когда itemize-списки реально используются, а маркер-тире
+  # не настроен в преамбуле (шаблон настраивает его через \setlist).
+  - id: gost-7.32-2017/list-style
+    title:       { ru: Оформление списков, en: List formatting }
+    description: { ru: "ГОСТ 7.32-2017 §6.5: маркер перечисления — тире. Правило срабатывает, если в документе используются itemize-списки, а маркер-тире не настроен в преамбуле.", en: "ГОСТ 7.32-2017 §6.5: the list marker is a dash. Fires when itemize lists are used but the dash marker is not configured in the preamble." }
+    category:    formatting
+    applies_to:  [thesis]
+    default_severity: info
+    engine: python
+    params:
+      code: |
+        # Маркированные списки допустимы, когда маркер — тире (настройка
+        # \setlist[itemize]{label=--} или переопределение \labelitemi).
+        uses = ctx.count(r'\\begin\s*\{itemize\}', 'thesis/**/*.tex')
+        if uses:
+            dash_configured = ctx.count(
+                r'(?:\\setlist\[[^\]]*itemize[^\]]*\]\{[^}]*label\s*=\s*(?:--|—|\\textendash))'
+                r'|(?:\\renewcommand\{?\\labelitemi\}?\s*\{[^}]*(?:--|—|\\textendash))',
+                '**/*.tex',
+            )
+            if not dash_configured:
+                ctx.violation(
+                    'Используются itemize-списки, но маркер-тире не настроен: '
+                    'добавьте \\setlist[itemize,1]{label=--} в преамбулу.'
+                )
