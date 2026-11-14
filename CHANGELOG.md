@@ -6,6 +6,26 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.27.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.26.0...v0.27.0) (2026-11-14)
+
+
+### Features
+
+* **packs:** hse-cs-sse 2026.1.5 с пресетами маршрутов на якорях (R27) ([7ed0607](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7ed0607b36e0ba6b72197d5402bb2959bb022e19))
+* **packs:** hse-cs-sse coursework 2026.1.5 with anchored signing presets (R27) ([33b3772](https://github.com/AlexeyShalaev/hse-doc-studio/commit/33b37723e3ef18ace2ac6d109b7f273ccd4141db))
+* **signatures:** build anchors from TeX positions file (R31) ([48b41ef](https://github.com/AlexeyShalaev/hse-doc-studio/commit/48b41efbe51894de76870092840c9c2d158a9b46))
+* **signatures:** build anchors from TeX positions file (R31) ([bb3b845](https://github.com/AlexeyShalaev/hse-doc-studio/commit/bb3b845c2d7b221844131355aa287394e2c7edda))
+* **signatures:** signature places on template anchors (R32) ([65379bc](https://github.com/AlexeyShalaev/hse-doc-studio/commit/65379bc7cf2582e929bde6383cc0bb0f5d33fc92))
+* **signatures:** signature places on template anchors (R32) ([ad44f3b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ad44f3bd4e16163bb7e696a25f1c77f36711a826))
+* **web:** signature places on template lines (W17) ([98a073a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/98a073abd1eb5d144393d7b90d662b0f523c85f8))
+* **web:** места подписей по строкам шаблона (W17) ([de35ddf](https://github.com/AlexeyShalaev/hse-doc-studio/commit/de35ddf6783e1e049b156f04fa06a78ce15b06ef))
+
+
+### Bug Fixes
+
+* время в письмах по Москве, склейка marks_edited, подписание в напоминании о сроке ([f3370d5](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f3370d55a7d6310b236568a81f0b00baa297af71))
+* время в письмах по Москве, склейка marks_edited, подписание в напоминании о сроке ([0875c92](https://github.com/AlexeyShalaev/hse-doc-studio/commit/0875c9214a23d6aca86100fdf25b97b42c482b81))
+
 ## [0.26.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.25.1...v0.26.0) - 2026-11-13
 
 - Checkpoint deadlines. Each submission checkpoint in a project can have a deadline, date and time in Moscow time. The template does not set it, it only hints when it is usually announced. The checkpoint shows “in N days”, “today”, “package built” or “overdue”, and the project list marks the nearest deadline. MCP reads it and sets it with set_checkpoint_deadline.
