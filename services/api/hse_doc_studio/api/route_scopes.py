@@ -379,6 +379,8 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/api/admin/mail-log"): _ADM,
     ("GET", "/api/admin/mail-log/summary"): _ADM,
     ("GET", "/api/admin/mail-log/{entry_id}"): _ADM,
+    ("POST", "/api/admin/mail-log/resend"): _ADM,
+    ("POST", "/api/admin/mail-log/{entry_id}/resend"): _ADM,
     ("GET", "/api/admin/invitations"): _ADM,
     ("GET", "/api/admin/oidc-providers"): _ADM,
     ("GET", "/api/admin/oidc-providers/{provider_id}"): _ADM,

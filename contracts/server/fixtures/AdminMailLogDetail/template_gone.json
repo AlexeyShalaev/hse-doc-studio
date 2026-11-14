@@ -23,10 +23,18 @@
     "task": "weekly_digest",
     "origin": "notification",
     "project": null,
-    "ref": null
+    "ref": null,
+    "next_attempt_at": null,
+    "last_attempt_at": null,
+    "resent_from_id": null
   },
   "preview": null,
   "link_hidden": false,
   "note_hidden": false,
-  "rerendered": false
+  "rerendered": false,
+  "resend": {
+    "allowed": false,
+    "blocked": "status"
+  },
+  "resent": []
 }

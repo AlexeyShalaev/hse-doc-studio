@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hse-doc-studio.local/contracts/pack/doc.schema.json",
+  "title": "doc.yaml",
+  "description": "Документ версии в bundle-раскладке: `files/<id>/doc.yaml`. В манифесте старого вида (v1) та же запись стоит прямо в `documents` версии, тогда с обязательным `id`.",
+  "type": "object",
+  "properties": {
+    "id": {
+      "description": "Необязателен; если указан, совпадает с именем папки документа.",
+      "$ref": "common.schema.json#/$defs/id"
+    },
+    "name": { "$ref": "common.schema.json#/$defs/localized" },
+    "code": { "$ref": "common.schema.json#/$defs/localized" },
+    "source_file": { "type": "string" },
+    "output_file": { "type": "string" },
+    "output_name": { "$ref": "common.schema.json#/$defs/localized" },
+    "gost_ref": {
+      "description": "Имя файла проверок версии (`checks/<gost_ref>.yaml`), по которому документ проверяется.",
+      "type": "string"
+    },
+    "required": { "type": "boolean" },
+    "checks": { "$ref": "common.schema.json#/$defs/checksOverride" },
+    "supported_langs": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/langCode" } },
+    "variants": { "type": "array", "items": { "$ref": "#/$defs/variant" } },
+    "scope": {
+      "description": "`shared`: один документ на проект; `personal`: у каждого автора командного проекта свой.",
+      "enum": ["shared", "personal"]
+    },
+    "supported_staffing": { "$ref": "common.schema.json#/$defs/staffing" },
+    "supported_kinds": { "$ref": "common.schema.json#/$defs/kinds" },
+    "group": { "description": "Группа навигации документа.", "type": "string" }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "variant": {
+      "description": "Вариант формата документа (beamer, pptx, ...).",
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/id" },
+        "label": { "$ref": "common.schema.json#/$defs/localized" },
+        "source_file": { "type": "string" },
+        "output_file": { "type": "string" },
+        "output_name": { "$ref": "common.schema.json#/$defs/localized" },
+        "engine": {
+          "description": "Движок сборки варианта; `none`: вариант не собирается TeX.",
+          "anyOf": [{ "$ref": "common.schema.json#/$defs/engine" }, { "const": "none" }]
+        },
+        "supported_langs": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/langCode" } }
+      },
+      "required": ["id"],
+      "additionalProperties": false
+    }
+  }
+}

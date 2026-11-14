@@ -37,6 +37,7 @@ class CheckId(StrEnum):
     tls_s3 = "tls_s3"
     backups = "backups"
     smtp = "smtp"
+    mail_delivery = "mail_delivery"
     scheduler = "scheduler"
 
 
@@ -59,6 +60,7 @@ CHECKS: tuple[CheckSpec, ...] = (
     CheckSpec(CheckId.tls_s3, CheckGroup.security),
     CheckSpec(CheckId.backups, CheckGroup.operations),
     CheckSpec(CheckId.smtp, CheckGroup.operations),
+    CheckSpec(CheckId.mail_delivery, CheckGroup.operations),
 )
 CHECK_BY_ID: dict[str, CheckSpec] = {spec.id.value: spec for spec in CHECKS}
 

@@ -24,7 +24,10 @@
       "task": null,
       "origin": "forgot_password",
       "project": null,
-      "ref": null
+      "ref": null,
+      "next_attempt_at": null,
+      "last_attempt_at": null,
+      "resent_from_id": null
     },
     {
       "id": 1206,
@@ -60,7 +63,10 @@
       "ref": {
         "kind": "signing_route",
         "id": "0d1e2f30-4152-4637-8899-aabbccddeeff"
-      }
+      },
+      "next_attempt_at": null,
+      "last_attempt_at": null,
+      "resent_from_id": null
     },
     {
       "id": 1205,
@@ -95,7 +101,10 @@
       "ref": {
         "kind": "project_invitation",
         "id": "a71f3c2e9d8b4c5a"
-      }
+      },
+      "next_attempt_at": null,
+      "last_attempt_at": null,
+      "resent_from_id": null
     },
     {
       "id": 1204,
@@ -130,7 +139,10 @@
       "ref": {
         "kind": "signing_route",
         "id": "0d1e2f30-4152-4637-8899-aabbccddeeff"
-      }
+      },
+      "next_attempt_at": null,
+      "last_attempt_at": null,
+      "resent_from_id": null
     },
     {
       "id": 1203,
@@ -166,7 +178,10 @@
       "ref": {
         "kind": "project_invitation",
         "id": "b82e4d3f0a9c4d6b"
-      }
+      },
+      "next_attempt_at": null,
+      "last_attempt_at": null,
+      "resent_from_id": null
     },
     {
       "id": 1202,
@@ -195,7 +210,10 @@
       "ref": {
         "kind": "registration_invite",
         "id": "inv_01hx9q7m2k"
-      }
+      },
+      "next_attempt_at": null,
+      "last_attempt_at": null,
+      "resent_from_id": null
     }
   ],
   "next_cursor": "azoxMjAy",

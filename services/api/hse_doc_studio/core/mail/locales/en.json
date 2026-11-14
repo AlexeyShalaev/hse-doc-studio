@@ -29,7 +29,8 @@
     "unknown_person": "A Studio user",
     "unnamed_project": "an untitled project",
     "link_hidden": "[link hidden]",
-    "note_hidden": "[message not kept in the log]"
+    "note_hidden": "[message not kept in the log]",
+    "note_in_inbox": "The sender's message is in your Studio Inbox."
   },
   "roles": {
     "reader": "Reader",

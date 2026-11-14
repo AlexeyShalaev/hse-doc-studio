@@ -14,7 +14,9 @@
     "sent": "Sent {{n}}",
     "failed": "Failed {{n}}",
     "failedShow": "Show emails that failed in the last 24 hours",
-    "skipped": "Not sent {{n}}"
+    "skipped": "Not sent {{n}}",
+    "retrying": "Waiting for retry {{n}}",
+    "retryingShow": "Show emails the Studio will retry on its own"
   },
   "hint": {
     "auth": "The SMTP server rejects the sign-in. Check the username and password in Mail (SMTP).",
@@ -33,7 +35,8 @@
     "address": "Address",
     "project": "Project",
     "projectSearch": "Project name",
-    "period": "Period"
+    "period": "Period",
+    "retrying": "Automatic retry"
   },
   "group": {
     "account": "Sign-in and account",
@@ -58,7 +61,8 @@
     "sent": "Sent",
     "failed": "Failed",
     "not_sent": "Not sent",
-    "suppressed": "Not sent"
+    "suppressed": "Not sent",
+    "retrying": "Retrying"
   },
   "reason": {
     "smtp_off": "mail not set up",
@@ -82,7 +86,8 @@
     "system": "Background task",
     "userGone": "Deleted user",
     "task": {
-      "signing_reminders": "signing route auto-reminders"
+      "signing_reminders": "signing route auto-reminders",
+      "checkpoint_reminders": "checkpoint deadline reminders"
     }
   },
   "templateGone": "Removed type: {{template}}",
@@ -110,7 +115,8 @@
     "project_invite_resend": "Project invitation resent",
     "signing_reinvite": "Invitation resent from a signing route",
     "signing_auto_reminder": "Signing route auto-reminder",
-    "smtp_test": "Test email"
+    "smtp_test": "Test email",
+    "admin_resend": "Resent from the log"
   },
   "ref": {
     "signing_route": "Signing route",
@@ -170,9 +176,72 @@
       "notice": "This is a notice about an account action: the action itself is done, there is no need to repeat the email.",
       "smtp_test": "Send the test email again in the Mail (SMTP) block.",
       "checkSmtp": "Check the mail settings first",
-      "smtpOff": "Mail was not set up, so the email was not sent. It will not go out by itself after setup either.",
+      "smtpOff": "Mail was not set up, so the email did not go out. It will not go out on its own; once mail works, an email without a token link can be sent again.",
       "setupSmtp": "Set up mail",
-      "suppressed": "The email was not sent: {{reason}}. This is not a failure, the Studio works this way."
+      "suppressed": "The email was not sent: {{reason}}. This is not a failure, the Studio works this way.",
+      "stale": "There is no need to send it again: {{reason}}.",
+      "retrying": "Nothing to do: the Studio will retry on its own."
+    },
+    "retryPlanned": "The Studio will retry {{when}}. Attempt {{next}} of {{max}}.",
+    "gaveUp": "The Studio tried {{n}} times, the email never went out.",
+    "attemptsOf": "{{n}} of {{max}}",
+    "lastAttempt": "Last attempt",
+    "resentFrom": "Resend of",
+    "resentFromOpen": "Open the original email",
+    "resent": "Sent again",
+    "resentItem": "{{when}}, {{status}}"
+  },
+  "retryingFilter": {
+    "true": "waiting for retry",
+    "false": "not waiting for retry"
+  },
+  "retryAt": "at {{time}}",
+  "resend": {
+    "button": "Send again",
+    "hint": "The email is rebuilt with the current template and goes out as a new log row.",
+    "done": {
+      "sent": "The email was sent again.",
+      "failed": "It did not go out this time either: {{reason}}.",
+      "retrying": "The email did not go out, the Studio will retry on its own.",
+      "blocked": "There is no need to send it again: {{reason}}."
+    },
+    "failed": "Could not send the email again. Try later.",
+    "blocked": {
+      "status": "the email was sent or was not meant to be sent",
+      "token_link": "the email had a link with a token, such emails are not resent",
+      "smtp_test": "send the test email again from the Mail (SMTP) block",
+      "template_gone": "this kind of email no longer exists in this version",
+      "retrying": "the Studio is still retrying it",
+      "too_old": "the email is older than 3 days and is out of date",
+      "already_resent": "the email has already been resent and went out",
+      "smtp_off": "mail is not set up",
+      "recipient_gone": "the recipient no longer exists",
+      "recipient_changed": "the recipient has a different address now",
+      "recipient_blocked": "the recipient cannot sign in or has not confirmed their email",
+      "project_gone": "the project was deleted",
+      "invitation_done": "the invitation was already accepted, declined, revoked or has expired",
+      "request_done": "the access request was already decided",
+      "transfer_done": "the project transfer was already decided",
+      "route_done": "the route is already signed or stopped, or this person no longer signs",
+      "object_gone": "the object of the email no longer exists",
+      "over_limit": "did not fit into this run: at most {{limit}} emails at a time",
+      "unknown": "the email is out of date ({{code}})"
     }
+  },
+  "batch": {
+    "button": "Send unsent",
+    "title": "Send unsent emails",
+    "lead": "The Studio will send again the emails that did not go out in the last 3 days, if they are still relevant. Emails with token links are not resent.",
+    "filtered": "The list filters apply.",
+    "counting": "Counting emails",
+    "planned": "Emails to send: {{n}}.",
+    "nothing": "Nothing to send.",
+    "skippedTitle": "Skipped",
+    "skipped": "{{reason}}: {{n}}",
+    "submit": "Send {{n}}",
+    "cancel": "Cancel",
+    "started": "Sending: the emails will appear in the log.",
+    "failed": "Could not count the emails. Try again.",
+    "smtpOff": "Mail is not set up: set it up first."
   }
 }

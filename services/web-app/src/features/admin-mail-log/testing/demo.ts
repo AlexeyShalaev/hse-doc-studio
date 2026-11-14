@@ -2,11 +2,13 @@ import { demoError, demoJson } from "@shared/api/demo";
 import type { DemoRequest, DemoResponse, DemoRoute } from "@shared/api/demo";
 import { MAIL_STATUSES, type MailStatus } from "../api/schemas";
 import {
+  MAIL_RESEND_WINDOW_HOURS,
   makeMailJournal,
   makeMailLogDetail,
   makeMailLogRecord,
   makeMailLogSummary,
   mailDraftsOf,
+  mailResendBlockOf,
   type MailDraft,
   type MailJournalProfile,
   type MailLogRecord,
@@ -49,6 +51,7 @@ const PARAMS = new Set([
   "template",
   "status",
   "reason",
+  "retrying",
   "recipient_id",
   "recipient",
   "project_id",
@@ -58,6 +61,8 @@ const PARAMS = new Set([
   "cursor",
   "limit",
 ]);
+/** «Отправить неушедшие» за раз (14, V11). */
+const RESEND_BATCH_LIMIT = 200;
 
 const invalid = (): DemoResponse =>
   demoError(422, "input_invalid", "Invalid query parameters");
@@ -75,6 +80,7 @@ const one = (req: DemoRequest, key: string): string | null => {
 /** Параметры, которые повторять нельзя. */
 const SINGLE = [
   "reason",
+  "retrying",
   "recipient_id",
   "recipient",
   "project_id",
@@ -137,6 +143,16 @@ const parseFilters = (
   if (reason !== null) {
     filters.push((r) => r.entry.reason === reason);
   }
+  const retrying = one(req, "retrying");
+  if (retrying !== null) {
+    if (retrying !== "true" && retrying !== "false") return null;
+    const wanted = retrying === "true";
+    filters.push(
+      (r) =>
+        (r.entry.status === "failed" && r.entry.next_attempt_at !== null) ===
+        wanted,
+    );
+  }
   if (recipientId !== null) {
     if (recipientId.length > ID_MAX) return null;
     filters.push((r) => r.entry.to_user?.id === recipientId);
@@ -182,6 +198,70 @@ const parseFilters = (
   return { filters, cursor, limit };
 };
 
+const text = (body: Record<string, unknown>, key: string): string | null => {
+  const value = body[key];
+  return typeof value === "string" && value.trim() !== "" ? value : null;
+};
+
+/** Фильтры тела «Отправить неушедшие» (14.4); null при неверном теле (422). */
+const batchFilters = (
+  raw: unknown,
+): { filters: Filter[]; dryRun: boolean } | null => {
+  if (typeof raw !== "object" || raw === null) return null;
+  const body = raw as Record<string, unknown>;
+  const known = new Set([
+    "template",
+    "reason",
+    "recipient_id",
+    "recipient",
+    "project_id",
+    "since",
+    "until",
+    "q",
+    "dry_run",
+  ]);
+  if (Object.keys(body).some((key) => !known.has(key))) return null;
+  const filters: Filter[] = [];
+  const templates = Array.isArray(body.template) ? body.template : [];
+  if (templates.some((t) => typeof t !== "string" || !TEMPLATE_RE.test(t))) {
+    return null;
+  }
+  if (templates.length > 0) {
+    filters.push((r) => (templates as string[]).includes(r.entry.template));
+  }
+  const reason = text(body, "reason");
+  if (reason !== null) filters.push((r) => r.entry.reason === reason);
+  const recipientId = text(body, "recipient_id");
+  if (recipientId !== null) {
+    filters.push((r) => r.entry.to_user?.id === recipientId);
+  }
+  const recipient = text(body, "recipient");
+  if (recipient !== null) {
+    const wanted = recipient.trim().toLowerCase();
+    filters.push((r) => r.entry.to_email.toLowerCase() === wanted);
+  }
+  const projectId = text(body, "project_id");
+  if (projectId !== null)
+    filters.push((r) => r.entry.project?.id === projectId);
+  const q = text(body, "q")?.toLowerCase() ?? null;
+  if (q !== null) {
+    filters.push(
+      (r) =>
+        r.entry.to_email.toLowerCase().includes(q) ||
+        r.entry.subject.toLowerCase().includes(q),
+    );
+  }
+  const since = text(body, "since");
+  const until = text(body, "until");
+  const from = since === null ? null : Date.parse(since);
+  const to = until === null ? null : Date.parse(until);
+  if (Number.isNaN(from) || Number.isNaN(to)) return null;
+  if (from !== null && to !== null && from > to) return null;
+  if (from !== null) filters.push((r) => Date.parse(r.entry.at) >= from);
+  if (to !== null) filters.push((r) => Date.parse(r.entry.at) < to);
+  return { filters, dryRun: body.dry_run !== false };
+};
+
 export const createMailLogDemo = (options: MailLogDemoOptions): MailLogDemo => {
   const now = options.now ?? Date.now;
   let journal: MailLogRecord[] | null = null;
@@ -189,6 +269,83 @@ export const createMailLogDemo = (options: MailLogDemoOptions): MailLogDemo => {
   const rows = (): MailLogRecord[] => {
     journal ??= makeMailJournal(mailDraftsOf(options.profile()), now());
     return journal;
+  };
+
+  const context = () => ({
+    journal: rows(),
+    nowMs: now(),
+    smtpConfigured: options.smtpConfigured(),
+  });
+
+  /** Новая строка журнала: повтор письма от имени вошедшего админа; в демо письмо доходит. */
+  const resend = (record: MailLogRecord): MailLogRecord => {
+    const actor = options.getActor();
+    const { entry } = record;
+    return append({
+      template: entry.template,
+      lang: entry.lang,
+      to: entry.to_user ?? entry.to_email,
+      to_email: entry.to_email,
+      subject: entry.subject,
+      status: "sent",
+      cause: "user",
+      ...(actor
+        ? { actor: { id: actor.id, name: actor.name, email: null } }
+        : {}),
+      origin: "admin_resend",
+      ...(entry.project ? { project: entry.project } : {}),
+      ...(entry.ref ? { ref: entry.ref } : {}),
+      link: record.link,
+      ...(record.link_path ? { link_path: record.link_path } : {}),
+      values: { ...record.values },
+      resent_from_id: entry.id,
+    });
+  };
+
+  /** Строки для «Отправить неушедшие»: не ушло окончательно или почта не была настроена, за 72 часа. */
+  const candidates = (filters: Filter[]): MailLogRecord[] => {
+    const since = now() - MAIL_RESEND_WINDOW_HOURS * 3600 * 1000;
+    return rows()
+      .filter(
+        (r) =>
+          (r.entry.status === "not_sent" ||
+            (r.entry.status === "failed" &&
+              r.entry.next_attempt_at === null)) &&
+          Date.parse(r.entry.at) >= since &&
+          filters.every((accept) => accept(r)),
+      )
+      .reverse();
+  };
+
+  const batch = (req: DemoRequest): DemoResponse => {
+    const parsed = batchFilters(req.body);
+    if (!parsed) return invalid();
+    const ready: MailLogRecord[] = [];
+    const skipped: Record<string, number> = {};
+    for (const record of candidates(parsed.filters)) {
+      const block =
+        ready.length >= RESEND_BATCH_LIMIT
+          ? "over_limit"
+          : mailResendBlockOf(record, context());
+      if (block === null) ready.push(record);
+      else skipped[block] = (skipped[block] ?? 0) + 1;
+    }
+    const started = !parsed.dryRun && ready.length > 0;
+    if (started) for (const record of ready) resend(record);
+    return demoJson({
+      planned: ready.length,
+      skipped,
+      started,
+      limit: RESEND_BATCH_LIMIT,
+    });
+  };
+
+  const append = (draft: Omit<MailDraft, "ago">): MailLogRecord => {
+    const current = rows();
+    const id = (current[0]?.entry.id ?? 0) + 1;
+    const record = makeMailLogRecord({ ...draft, ago: 0 }, id, now());
+    current.unshift(record);
+    return record;
   };
 
   const guard = (): DemoResponse | null => {
@@ -252,20 +409,50 @@ export const createMailLogDemo = (options: MailLogDemoOptions): MailLogDemo => {
         if (!/^\d{1,15}$/.test(raw)) return invalid();
         const id = Number(raw);
         const record = rows().find((r) => r.entry.id === id);
-        return record ? demoJson(makeMailLogDetail(record)) : notFound();
+        return record
+          ? demoJson(makeMailLogDetail(record, context()))
+          : notFound();
+      },
+    },
+    // Раньше повтора одного письма: «resend» не должен уйти в /mail-log/:id/resend.
+    {
+      method: "POST",
+      pattern: "/mail-log/resend",
+      handler: (req) => guard() ?? batch(req),
+    },
+    {
+      method: "POST",
+      pattern: "/mail-log/:id/resend",
+      handler: (req) => {
+        const refused = guard();
+        if (refused) return refused;
+        const raw = req.params.id ?? "";
+        if (!/^\d{1,15}$/.test(raw)) return invalid();
+        const record = rows().find((r) => r.entry.id === Number(raw));
+        if (!record) return notFound();
+        const blocked = mailResendBlockOf(record, context());
+        if (blocked !== null) {
+          return demoJson({
+            outcome: "blocked",
+            blocked,
+            entry_id: null,
+            reason: null,
+          });
+        }
+        const copy = resend(record);
+        return demoJson({
+          outcome: "sent",
+          blocked: null,
+          entry_id: copy.entry.id,
+          reason: null,
+        });
       },
     },
   ];
 
   return {
     routes,
-    record: (draft) => {
-      const current = rows();
-      const id = (current[0]?.entry.id ?? 0) + 1;
-      const record = makeMailLogRecord({ ...draft, ago: 0 }, id, now());
-      current.unshift(record);
-      return record;
-    },
+    record: append,
     journal: () => rows(),
     reset: () => {
       journal = null;

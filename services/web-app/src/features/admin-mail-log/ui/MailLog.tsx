@@ -12,6 +12,7 @@ import { parseMailId } from "../lib/mailLog";
 import { useMinuteNow } from "../lib/when";
 import { MailLogCard } from "./MailLogCard";
 import { MailLogView } from "./MailLogView";
+import { ResendBatchDialog } from "./ResendBatchDialog";
 
 /** Параметр адреса с открытым письмом: ссылку на карточку можно переслать другому админу. */
 export const MAIL_PARAM = "mail";
@@ -28,6 +29,7 @@ export const MailLog = () => {
   const [params, setParams] = useSearchParams();
   const openId = parseMailId(params.get(MAIL_PARAM));
   const [refreshing, setRefreshing] = useState(false);
+  const [batchOpen, setBatchOpen] = useState(false);
   const now = useMinuteNow();
 
   const setOpenId = useCallback(
@@ -81,6 +83,9 @@ export const MailLog = () => {
           void log.refetch();
         }}
         onRetryMore={log.loadMore}
+        onResendBatch={() => {
+          setBatchOpen(true);
+        }}
       />
       <MailLogCard
         id={openId}
@@ -88,6 +93,15 @@ export const MailLog = () => {
         onClose={() => {
           setOpenId(null);
         }}
+        onOpen={setOpenId}
+      />
+      <ResendBatchDialog
+        open={batchOpen}
+        onClose={() => {
+          setBatchOpen(false);
+        }}
+        params={state.params}
+        filtered={state.isFiltered}
       />
     </>
   );

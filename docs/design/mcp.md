@@ -155,7 +155,7 @@
 | admin | `admin_queue_summary` | R S A | instance admin | новый |
 | admin | `admin_runner_summary` | R S A | instance admin | новый |
 | admin | `admin_list_audit` | R S A | instance admin | новый |
-| admin | `admin_list_mail_log` | R S A | instance admin | новый: `ListMailLogUC`, фильтры `recipient`, `template`, `status`, `since`, `limit` до 50; только id людей и проекта, без превью (mail-log.md, 6.4) |
+| admin | `admin_list_mail_log` | R S A | instance admin | новый: `ListMailLogUC`, фильтры `recipient`, `template`, `status`, `since`, `limit` до 50; только id людей и проекта, без превью (mail-log.md, 6.4); с версии 2 попытки и автоповтор (V15), повтора через MCP нет |
 | admin | `admin_disable_user` | W ! S A | instance admin | новый |
 | admin | `admin_enable_user` | W S A | instance admin | новый |
 | admin | `admin_cancel_job` | X ! S A | instance admin | новый |

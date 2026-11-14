@@ -21,11 +21,14 @@ from hse_doc_studio.core.mail.journal import (
     MailLogCounts,
     MailLogEntry,
     MailLogQuery,
+    MailStatus,
+    ResendBlock,
     rerender,
     rerendered,
 )
 from hse_doc_studio.core.mail.ports import IMailLogNames, MailPerson
 from hse_doc_studio.use_cases.admin.users import require_admin
+from hse_doc_studio.use_cases.mail.resend import ResendGate
 
 # Окно сводки (L14): полоса «за сутки» и счётчик меню.
 SUMMARY_WINDOW = timedelta(hours=24)
@@ -59,6 +62,10 @@ class MailLogDetail:
     link_hidden: bool
     note_hidden: bool
     rerendered: bool
+    # Почему «Отправить ещё раз» недоступно; None: можно (раздел 14, V1..V5).
+    resend_block: ResendBlock | None = None
+    # Ручные повторы этой строки, новые первыми.
+    resent: tuple[MailLogEntry, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -103,9 +110,10 @@ class ListMailLogUC:
 
 
 class GetMailLogEntryUC:
-    def __init__(self, log: IMailLogRepository, names: IMailLogNames) -> None:
+    def __init__(self, log: IMailLogRepository, names: IMailLogNames, gate: ResendGate) -> None:
         self._log = log
         self._names = names
+        self._gate = gate
 
     async def execute(self, actor: Actor, entry_id: int) -> MailLogDetail | None:
         """Карточка письма; None, если строки нет (удалена по сроку или не было). Просмотр не аудируется (L10)."""
@@ -114,12 +122,16 @@ class GetMailLogEntryUC:
         if entry is None:
             return None
         (view,) = await _views(self._names, (entry,))
+        resent = await self._log.resends_of(entry_id)
+        ok = any(r.status is MailStatus.sent for r in resent)
         return MailLogDetail(
             view=view,
             preview=rerender(entry),
             link_hidden=entry.params.link is MailLinkKind.token,
             note_hidden=entry.params.note_len > 0,
             rerendered=rerendered(entry),
+            resend_block=await self._gate.block(entry, resent=ok),
+            resent=tuple(resent),
         )
 
 

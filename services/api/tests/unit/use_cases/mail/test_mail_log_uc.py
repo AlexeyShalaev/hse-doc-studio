@@ -18,18 +18,22 @@ from hse_doc_studio.core.mail.journal import (
     MailLogQuery,
     MailParams,
     MailStatus,
+    ResendBlock,
 )
 from hse_doc_studio.core.mail.ports import MailPerson
+from hse_doc_studio.use_cases.mail.dispatch import MailDispatcher
 from hse_doc_studio.use_cases.mail.log import (
     SUMMARY_WINDOW,
     GetMailLogEntryUC,
     ListMailLogUC,
     MailLogSummaryUC,
 )
+from hse_doc_studio.use_cases.mail.resend import ResendGate
 
 from tests.fakes.identity import InMemoryInstanceSettingsRepository
 from tests.fakes.mail_log import InMemoryMailLogRepository
 from tests.fakes.mail_log_names import InMemoryMailLogNames
+from tests.fakes.mail_relevance import InMemoryMailRelevance
 
 NOW = datetime(2026, 11, 11, 12, 0, tzinfo=UTC)
 ADMIN = Actor.user("boss", is_instance_admin=True, source=ActorSource.session)
@@ -75,11 +79,15 @@ class _Sender:
     enabled = False
 
 
+def _gate(log: InMemoryMailLogRepository) -> ResendGate:
+    return ResendGate(log, InMemoryMailRelevance(), MailDispatcher(_Sender(), log), clock=lambda: NOW)  # type: ignore[arg-type]
+
+
 async def test__every_use_case__is_for_the_instance_admin_only() -> None:
     log, names = _Spy(), InMemoryMailLogNames()
     calls = [
         ListMailLogUC(log, names).execute(USER, MailLogQuery()),
-        GetMailLogEntryUC(log, names).execute(USER, 1),
+        GetMailLogEntryUC(log, names, _gate(log)).execute(USER, 1),
         MailLogSummaryUC(log, _Sender(), InMemoryInstanceSettingsRepository()).execute(USER),
     ]
     for call in calls:
@@ -130,7 +138,7 @@ async def test__list__names_people_and_projects_and_skips_lookup_without_ids() -
 async def test__entry__missing_row_is_none_and_flags_follow_the_params() -> None:
     log, names = _Spy(), InMemoryMailLogNames()
     await log.add(_entry())
-    uc = GetMailLogEntryUC(log, names)
+    uc = GetMailLogEntryUC(log, names, _gate(log))
 
     detail = await uc.execute(ADMIN, 1)
 
@@ -141,6 +149,9 @@ async def test__entry__missing_row_is_none_and_flags_follow_the_params() -> None
     # Отпечаток из строки не совпадает с текущим шаблоном: письмо перерисовано.
     assert detail.rerendered is True
     assert detail.preview is not None
+    # Письмо с токеном повторить нельзя (V1), повторов у строки нет.
+    assert detail.resend_block is ResendBlock.token_link
+    assert detail.resent == ()
 
 
 async def test__summary__window_is_a_day_back_and_mail_is_not_configured() -> None:

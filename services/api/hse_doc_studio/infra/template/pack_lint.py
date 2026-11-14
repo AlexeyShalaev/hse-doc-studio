@@ -34,7 +34,12 @@ r"""Линтер пака (bundle-раскладка v2): превращает �
     `anchor_lint`): вызов якоря или обёртки из `anchor_macros` в исходнике
     документа или в `common/`, файл макросов `common/anchors.tex` подключён,
     `default_placement` на якоре с запасным местом в мм; предупреждения: имя
-    якоря в исходнике не id слота каталога, одно имя дважды в файле.
+    якоря в исходнике не id слота каталога, одно имя дважды в файле;
+  * класс невыпущенной версии (template-studio.md, 7.2, `core/template_diff`):
+    номер и `release.kind` не мягче минимума по жёстким правилам относительно
+    предыдущей выпущенной версии шаблона, `release.kind` не мягче номера;
+    предупреждение, если мягкие правила предлагают больше, а объяснения в
+    `release.note` нет.
 
 Запуск: `python -m hse_doc_studio.infra.template.pack_lint <version_dir>…`
 (exit code 1 при ошибках). Roster ↔ doc.yaml проверяется fail-fast самим
@@ -55,14 +60,18 @@ from jinja2 import Environment, TemplateSyntaxError
 
 from hse_doc_studio.core.catalog import AnchorPlace
 from hse_doc_studio.core.checkpoint_deadlines import parse_deadline_hint
+from hse_doc_studio.core.enums import TemplateUpdateClass
 from hse_doc_studio.core.signatures.route_order import BUILTIN_ROUTE
 from hse_doc_studio.core.signatures.stamps import PLATE_MIN_WIDTH_MM
+from hse_doc_studio.core.template_diff import ChangeReport, classify_change
+from hse_doc_studio.core.template_versions import classify_update, is_softer, parse_version_key, stricter
 from hse_doc_studio.infra.project_init.template_renderer import (
     PACK_DOC_MANIFEST,
     _split_lang_qualifier,
     collect_sources_suffixed,
 )
 from hse_doc_studio.infra.template.anchor_lint import lint_anchors
+from hse_doc_studio.infra.template.releases import RELEASES_FILE, load_releases
 from hse_doc_studio.infra.template.yaml_template_repository import (
     parse_default_dates,
     parse_signing_route,
@@ -508,6 +517,99 @@ def _lint_changes(manifest: dict[str, Any]) -> list[str]:
     return errors
 
 
+def _release_block(manifest: dict[str, Any]) -> tuple[TemplateUpdateClass | None, list[str]]:
+    """`release.kind` манифеста и ошибки блока `release` (`kind` из списка, `note` непустой строкой)."""
+    release = manifest.get("release")
+    if release is None:
+        return None, []
+    if not isinstance(release, dict):
+        return None, ["version.yaml: `release` должен быть словарём {kind, note}"]
+    errors: list[str] = []
+    kind: TemplateUpdateClass | None = None
+    if release.get("kind") is not None:
+        try:
+            kind = TemplateUpdateClass(str(release["kind"]))
+        except ValueError:
+            errors.append(f"version.yaml: `release.kind` {release['kind']!r} не из patch, minor, major")
+    note = release.get("note")
+    if note is not None and (not isinstance(note, str) or not note.strip()):
+        errors.append("version.yaml: `release.note` должен быть непустой строкой (объяснение класса для PR)")
+    return kind, errors
+
+
+def _class_base(version_dir: Path) -> str | None:
+    """Версия, с которой сверяется класс `version_dir`; None, если сверять не нужно.
+
+    Сверяется версия, которой нет в `releases.yaml`, и последняя внесённая: выпуск вносит версию в реестр в том же
+    PR (`releases freeze`), а выпущенной она станет только после слияния (template-studio.md, D10). Более старые
+    выпущенные версии задним числом не проверяются (2026.1.3 сузила `methods` patch-версией). База это предыдущая
+    выпущенная версия того же шаблона.
+    """
+    template_dir = version_dir.parent.parent
+    if version_dir.parent.name != "versions" or not (template_dir / RELEASES_FILE).is_file():
+        return None
+    key = parse_version_key(version_dir.name)
+    released = {v: k for v in load_releases(template_dir) if (k := parse_version_key(v)) is not None}
+    if key is None:
+        return None
+    if version_dir.name in released and key != max(released.values()):
+        return None
+    earlier = [v for v, k in released.items() if k < key and (template_dir / "versions" / v).is_dir()]
+    return max(earlier, key=lambda v: released[v]) if earlier else None
+
+
+def _reasons_text(reasons: tuple[Any, ...]) -> str:
+    return "; ".join(reason.message("ru") for reason in reasons[:5]) + ("; ..." if len(reasons) > 5 else "")  # noqa: PLR2004
+
+
+def _class_errors(
+    report: ChangeReport, base: str, version: str, declared: TemplateUpdateClass | None
+) -> tuple[list[str], list[str]]:
+    number = classify_update(base, version)
+    if number is None:
+        return [], []
+    errors: list[str] = []
+    minimum = report.minimum
+    if is_softer(number, minimum):
+        errors.append(
+            f"release: номер {version} после {base} это {number.value}, а изменения требуют не меньше "
+            f"{minimum.value}: {_reasons_text(report.above(number))}"
+        )
+    if declared is not None and is_softer(declared, stricter(number, minimum) or number):
+        errors.append(
+            f"release: `release.kind: {declared.value}` мягче класса версии {version} "
+            f"({(stricter(number, minimum) or number).value}); строже можно, мягче нельзя"
+        )
+    effective = stricter(number, declared) or number
+    warnings: list[str] = []
+    softer = report.suggested_above(effective)
+    if softer and not errors:
+        warnings.append(
+            f"release: мягкие правила предлагают {report.suggested.value} для {version} ({effective.value}): "
+            f"{_reasons_text(softer)}. Оставить {effective.value} можно, объяснив выбор в `release.note`"
+        )
+    return errors, warnings
+
+
+def _lint_release_class(version_dir: Path, manifest: dict[str, Any]) -> tuple[list[str], list[str]]:
+    """Класс невыпущенной версии по содержимому (template-studio.md, 7.2): номер и `release.kind` не мягче минимума."""
+    declared, errors = _release_block(manifest)
+    base = _class_base(version_dir)
+    if base is None:
+        return errors, []
+    try:
+        report = classify_change(version_dir.parent / base, version_dir)
+    except (TypeError, ValueError) as exc:
+        return [*errors, f"release: класс версии не посчитан ({exc})"], []
+    class_errors, warnings = _class_errors(report, base, version_dir.name, declared)
+    release = manifest.get("release")
+    explained = isinstance(release, dict) and isinstance(release.get("note"), str) and bool(release["note"].strip())
+    # Внесённой в реестр версии объяснение уже не добавить: мягкие правила для неё молчат.
+    if explained or version_dir.name in load_releases(version_dir.parent.parent):
+        warnings = []
+    return [*errors, *class_errors], warnings
+
+
 def lint_version_dir(version_dir: Path) -> LintReport:  # noqa: C901, PLR0912, PLR0915
     report = LintReport()
     files_dir = version_dir / "files"
@@ -549,6 +651,7 @@ def lint_version_dir(version_dir: Path) -> LintReport:  # noqa: C901, PLR0912, P
         _lint_signing_slots(manifest),
         _lint_plate_room(manifest),
         lint_anchors(version_dir, manifest),
+        _lint_release_class(version_dir, manifest),
     ):
         report.errors.extend(errors)
         report.warnings.extend(warnings)

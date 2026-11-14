@@ -1,18 +1,31 @@
 import { useState, type ComponentType, type ReactNode } from "react";
-import { Cpu, Filter, Globe, Mail, MailX, User, X } from "lucide-react";
+import {
+  Cpu,
+  Filter,
+  Globe,
+  Mail,
+  MailX,
+  RotateCw,
+  User,
+  X,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { localeTag } from "@shared/lib";
 import {
   Badge,
+  Button,
   CopyField,
   EmptyState,
   ErrorState,
   Notice,
   Spinner,
+  type NoticeTone,
 } from "@shared/ui";
 import type { MailLogDetail, MailLogEntry } from "../api/schemas";
 import {
+  MAIL_MAX_ATTEMPTS,
+  isMailRetrying,
   isSmtpSettingsFailure,
   mailDuration,
   mailFailureOf,
@@ -20,7 +33,12 @@ import {
   type MailNextStep,
 } from "../lib/mailLog";
 import { mailWhen } from "../lib/when";
-import { STATUS_BADGE, useReasonText, useTemplateLabel } from "./labels";
+import {
+  statusBadgeOf,
+  useBlockedText,
+  useReasonText,
+  useTemplateLabel,
+} from "./labels";
 import { SMTP_SETTINGS_PATH } from "./MailLogView";
 import "./mailLog.css";
 
@@ -44,7 +62,18 @@ export type MailLogCardViewProps = {
   onShowProject: (projectId: string) => void;
   /** Заголовок окна: в панели это Dialog.Title, в галерее обычный h2. */
   Title?: ComponentType<{ className?: string; children?: ReactNode }>;
+  /** «Отправить ещё раз» (14, V1); без обработчика кнопки нет. */
+  onResend?: (() => void) | undefined;
+  /** Идёт повтор письма. */
+  resending?: boolean | undefined;
+  /** Итог последнего повтора плашкой над сведениями. */
+  resendNotice?: MailResendNotice | null | undefined;
+  /** Открыть другое письмо журнала: исходное или его повтор. */
+  onOpenEntry?: ((id: number) => void) | undefined;
 };
+
+/** Итог «Отправить ещё раз» для плашки карточки. */
+export type MailResendNotice = { tone: NoticeTone; text: string };
 
 const PlainTitle = ({
   className,
@@ -76,6 +105,10 @@ export const MailLogCardView = ({
   onShowRecipient,
   onShowProject,
   Title = PlainTitle,
+  onResend,
+  resending = false,
+  resendNotice = null,
+  onOpenEntry,
 }: MailLogCardViewProps) => {
   const { t } = useTranslation("adminMail");
   const templateLabel = useTemplateLabel();
@@ -129,6 +162,8 @@ export const MailLogCardView = ({
 
   const when = mailWhen(entry.at, now, localeTag());
   const full = when?.full ?? entry.at;
+  const badge = statusBadgeOf(entry);
+  const canResend = detail?.resend.allowed === true && onResend !== undefined;
 
   return (
     <>
@@ -143,8 +178,8 @@ export const MailLogCardView = ({
           </p>
           <Title className="ml-card-title">{entry.subject}</Title>
           <div className="ml-card-badges">
-            <Badge variant={STATUS_BADGE[entry.status]}>
-              {t(`status.${entry.status}`)}
+            <Badge variant={badge.variant} data-testid="mail-card-badge">
+              {t(badge.key)}
             </Badge>
             <time
               className="ml-card-when"
@@ -160,11 +195,45 @@ export const MailLogCardView = ({
         {close}
       </div>
       <div className="ml-card-body">
-        {entry.status !== "sent" && <Outcome entry={entry} />}
+        {resendNotice && (
+          <div data-testid="mail-card-resend-notice">
+            <Notice tone={resendNotice.tone} text={resendNotice.text} />
+          </div>
+        )}
+        {entry.status !== "sent" && (
+          <Outcome
+            entry={entry}
+            now={now}
+            resend={
+              canResend ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  type="button"
+                  className="ml-card-settings"
+                  disabled={resending}
+                  title={t("resend.hint")}
+                  onClick={onResend}
+                  data-testid="mail-card-resend"
+                >
+                  {resending ? (
+                    <Spinner size="sm" />
+                  ) : (
+                    <RotateCw size="0.8125rem" aria-hidden="true" />
+                  )}
+                  {t("resend.button")}
+                </Button>
+              ) : null
+            }
+          />
+        )}
         <Facts
           entry={entry}
+          detail={detail}
+          now={now}
           onShowRecipient={onShowRecipient}
           onShowProject={onShowProject}
+          onOpenEntry={onOpenEntry}
         />
         <Preview
           detail={detail}
@@ -172,14 +241,22 @@ export const MailLogCardView = ({
           retrying={retrying}
           onRetry={onRetry}
         />
-        <NextSteps entry={entry} />
+        <NextSteps entry={entry} blocked={detail?.resend.blocked ?? null} />
       </div>
     </>
   );
 };
 
-/** Итог сбоя или пропуска: причина, ответ SMTP, ссылка в настройки почты. */
-const Outcome = ({ entry }: { entry: MailLogEntry }) => {
+/** Итог сбоя или пропуска: причина, ответ SMTP, автоповтор, ссылка в настройки почты, повтор. */
+const Outcome = ({
+  entry,
+  now,
+  resend,
+}: {
+  entry: MailLogEntry;
+  now: number;
+  resend: ReactNode;
+}) => {
   const { t } = useTranslation("adminMail");
   const reasonText = useReasonText();
   const failed = entry.status === "failed";
@@ -198,6 +275,19 @@ const Outcome = ({ entry }: { entry: MailLogEntry }) => {
         .filter((part): part is string => part !== null && part !== "")
         .join(" ")
     : "";
+  const retrying = isMailRetrying(entry);
+  const next = entry.next_attempt_at
+    ? mailWhen(entry.next_attempt_at, now, localeTag())
+    : null;
+  const retry = retrying
+    ? t("card.retryPlanned", {
+        when: next ? t("retryAt", { time: next.time }) : entry.next_attempt_at,
+        next: entry.attempts + 1,
+        max: MAIL_MAX_ATTEMPTS,
+      })
+    : failed && entry.attempts > 1
+      ? t("card.gaveUp", { n: entry.attempts })
+      : null;
   return (
     <section
       className="ml-card-section"
@@ -205,7 +295,10 @@ const Outcome = ({ entry }: { entry: MailLogEntry }) => {
       data-status={entry.status}
     >
       <h3 className="ml-card-caption">{t("card.outcome")}</h3>
-      <div className="ml-card-outcome" data-tone={failed ? "err" : "muted"}>
+      <div
+        className="ml-card-outcome"
+        data-tone={retrying ? "warn" : failed ? "err" : "muted"}
+      >
         {why && (
           <p className="ml-card-why" data-testid="mail-card-reason">
             {why}
@@ -223,6 +316,11 @@ const Outcome = ({ entry }: { entry: MailLogEntry }) => {
             />
           </div>
         )}
+        {retry && (
+          <p className="ml-card-retry" data-testid="mail-card-retry">
+            {retry}
+          </p>
+        )}
         {failed && isSmtpSettingsFailure(entry.reason) && (
           <Link
             to={SMTP_SETTINGS_PATH}
@@ -232,6 +330,7 @@ const Outcome = ({ entry }: { entry: MailLogEntry }) => {
             {t("hint.open")}
           </Link>
         )}
+        {resend}
       </div>
     </section>
   );
@@ -240,12 +339,18 @@ const Outcome = ({ entry }: { entry: MailLogEntry }) => {
 /** Сведения: кому, вид, язык, кто вызвал, сценарий, проект и объект, Message-ID. */
 const Facts = ({
   entry,
+  detail,
+  now,
   onShowRecipient,
   onShowProject,
+  onOpenEntry,
 }: {
   entry: MailLogEntry;
+  detail: MailLogDetail | null;
+  now: number;
   onShowRecipient: (entry: MailLogEntry) => void;
   onShowProject: (projectId: string) => void;
+  onOpenEntry: ((id: number) => void) | undefined;
 }) => {
   const { t, i18n } = useTranslation("adminMail");
   const templateLabel = useTemplateLabel();
@@ -255,6 +360,24 @@ const Facts = ({
       : code;
   const duration = mailDuration(entry.duration_ms);
   const n = duration.value.toLocaleString(localeTag());
+  const fullAt = (iso: string): string =>
+    mailWhen(iso, now, localeTag())?.full ?? iso;
+  const entryLink = (id: number, text: string, testId: string): ReactNode =>
+    onOpenEntry ? (
+      <button
+        type="button"
+        className="ml-card-linkish"
+        data-testid={testId}
+        onClick={() => {
+          onOpenEntry(id);
+        }}
+      >
+        {text}
+      </button>
+    ) : (
+      <span data-testid={testId}>{text}</span>
+    );
+  const resent = detail?.resent ?? [];
 
   const cause = (() => {
     if (entry.cause === "user" && entry.actor) {
@@ -367,7 +490,55 @@ const Facts = ({
           </>
         )}
         <dt>{t("card.attempts")}</dt>
-        <dd className="ml-num">{entry.attempts}</dd>
+        <dd className="ml-num" data-testid="mail-card-attempts">
+          {isMailRetrying(entry)
+            ? t("card.attemptsOf", {
+                n: entry.attempts,
+                max: MAIL_MAX_ATTEMPTS,
+              })
+            : entry.attempts}
+        </dd>
+        {entry.last_attempt_at && (
+          <>
+            <dt>{t("card.lastAttempt")}</dt>
+            <dd data-testid="mail-card-last-attempt">
+              {fullAt(entry.last_attempt_at)}
+            </dd>
+          </>
+        )}
+        {entry.resent_from_id !== null && (
+          <>
+            <dt>{t("card.resentFrom")}</dt>
+            <dd>
+              {entryLink(
+                entry.resent_from_id,
+                `№ ${String(entry.resent_from_id)}`,
+                "mail-card-resent-from",
+              )}
+            </dd>
+          </>
+        )}
+        {resent.length > 0 && (
+          <>
+            <dt>{t("card.resent")}</dt>
+            <dd>
+              <ul className="ml-card-resent" data-testid="mail-card-resent">
+                {resent.map((r) => (
+                  <li key={r.id}>
+                    {entryLink(
+                      r.id,
+                      t("card.resentItem", {
+                        when: fullAt(r.at),
+                        status: t(`status.${r.status}`).toLowerCase(),
+                      }),
+                      `mail-card-resent-${String(r.id)}`,
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </dd>
+          </>
+        )}
         <dt>{t("card.duration")}</dt>
         <dd className="ml-num">
           {duration.unit === "ms"
@@ -473,13 +644,24 @@ const Preview = ({
 };
 
 /** «Что можно сделать» по итогу и виду письма (4.2, L6). */
-const NextSteps = ({ entry }: { entry: MailLogEntry }) => {
+const NextSteps = ({
+  entry,
+  blocked,
+}: {
+  entry: MailLogEntry;
+  blocked: string | null;
+}) => {
   const { t } = useTranslation("adminMail");
   const reasonText = useReasonText();
-  const steps = mailNextSteps(entry);
+  const blockedText = useBlockedText();
+  const steps = mailNextSteps(entry, blocked);
   if (steps.length === 0) return null;
   const line = (step: MailNextStep): ReactNode => {
     switch (step.kind) {
+      case "retrying":
+        return t("card.next.retrying");
+      case "stale":
+        return t("card.next.stale", { reason: blockedText(step.code) });
       case "checkSmtp":
         return (
           <Link
@@ -514,7 +696,13 @@ const NextSteps = ({ entry }: { entry: MailLogEntry }) => {
         {steps.map((step) => (
           <li
             key={step.kind === "template" ? step.key : step.kind}
-            data-step={step.kind === "template" ? step.key : step.kind}
+            data-step={
+              step.kind === "template"
+                ? step.key
+                : step.kind === "stale"
+                  ? `stale:${step.code}`
+                  : step.kind
+            }
           >
             {line(step)}
           </li>

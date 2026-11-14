@@ -2,6 +2,9 @@ import type {
   MailLogDetail,
   MailLogEntry,
   MailLogPage,
+  MailLogResendBatch,
+  MailLogResendBatchRequest,
+  MailLogResendResult,
   MailLogSummary,
 } from "../api/schemas";
 // Эталоны сервера contracts/server/fixtures/AdminMailLog* (срез B1) как состояния галереи и тестов.
@@ -44,6 +47,9 @@ export const MAIL_LOG_SERVER_ENTRIES = {
       kind: "signing_route",
       id: "0d1e2f30-4152-4637-8899-aabbccddeeff",
     },
+    next_attempt_at: null,
+    last_attempt_at: null,
+    resent_from_id: null,
   },
   failed_recipient: {
     id: 1205,
@@ -79,6 +85,9 @@ export const MAIL_LOG_SERVER_ENTRIES = {
       kind: "project_invitation",
       id: "a71f3c2e9d8b4c5a",
     },
+    next_attempt_at: null,
+    last_attempt_at: null,
+    resent_from_id: null,
   },
   not_sent_smtp_off: {
     id: 1202,
@@ -108,6 +117,9 @@ export const MAIL_LOG_SERVER_ENTRIES = {
       kind: "registration_invite",
       id: "inv_01hx9q7m2k",
     },
+    next_attempt_at: null,
+    last_attempt_at: null,
+    resent_from_id: null,
   },
   project_gone: {
     id: 1101,
@@ -140,6 +152,86 @@ export const MAIL_LOG_SERVER_ENTRIES = {
       kind: "access_request",
       id: "c93f5e4a1b0d4e7c",
     },
+    next_attempt_at: null,
+    last_attempt_at: null,
+    resent_from_id: null,
+  },
+  resent_by_admin: {
+    id: 1302,
+    at: "2026-11-11T11:55:31Z",
+    template: "signing_reminder",
+    template_known: true,
+    lang: "en",
+    to_email: "john.smith@example.org",
+    to_user: {
+      id: "7d2c9a1e3b4f4e6a8c0d2b1a9e8f7c65",
+      name: "John Smith",
+      email: "john.smith@example.org",
+    },
+    subject: "Reminder: Course project topic application (SmartLMS)",
+    status: "sent",
+    reason: null,
+    failure: null,
+    message_id: "<173131833101.42.9911223344556677889@studio.example.org>",
+    attempts: 1,
+    duration_ms: 640,
+    cause: "user",
+    actor: {
+      id: "a1b2c3d4e5f60718293a4b5c6d7e8f90",
+      name: "Мария Админова",
+      email: "admin@example.org",
+    },
+    task: null,
+    origin: "admin_resend",
+    project: {
+      id: "5b0c1d2e-3f40-4152-8364-758697a8b9c0",
+      name: "Курсовая работа по ГОСТ",
+    },
+    ref: {
+      kind: "signing_route",
+      id: "0d1e2f30-4152-4637-8899-aabbccddeeff",
+    },
+    next_attempt_at: null,
+    last_attempt_at: null,
+    resent_from_id: 1301,
+  },
+  retrying: {
+    id: 1300,
+    at: "2026-11-11T11:40:00Z",
+    template: "signing_reminder",
+    template_known: true,
+    lang: "en",
+    to_email: "john.smith@example.org",
+    to_user: {
+      id: "7d2c9a1e3b4f4e6a8c0d2b1a9e8f7c65",
+      name: "John Smith",
+      email: "john.smith@example.org",
+    },
+    subject: "Reminder: Course project topic application (SmartLMS)",
+    status: "failed",
+    reason: "connect",
+    failure: {
+      smtp_code: null,
+      text: "OSError: [Errno 111] Connection refused",
+    },
+    message_id: null,
+    attempts: 2,
+    duration_ms: 12,
+    cause: "system",
+    actor: null,
+    task: "signing_reminders",
+    origin: "signing_auto_reminder",
+    project: {
+      id: "5b0c1d2e-3f40-4152-8364-758697a8b9c0",
+      name: "Курсовая работа по ГОСТ",
+    },
+    ref: {
+      kind: "signing_route",
+      id: "0d1e2f30-4152-4637-8899-aabbccddeeff",
+    },
+    next_attempt_at: "2026-11-11T11:46:00Z",
+    last_attempt_at: "2026-11-11T11:41:00Z",
+    resent_from_id: null,
   },
   sent_page_user: {
     id: 1206,
@@ -176,6 +268,9 @@ export const MAIL_LOG_SERVER_ENTRIES = {
       kind: "signing_route",
       id: "0d1e2f30-4152-4637-8899-aabbccddeeff",
     },
+    next_attempt_at: null,
+    last_attempt_at: null,
+    resent_from_id: null,
   },
   sent_token_anonymous: {
     id: 1207,
@@ -202,6 +297,9 @@ export const MAIL_LOG_SERVER_ENTRIES = {
     origin: "forgot_password",
     project: null,
     ref: null,
+    next_attempt_at: null,
+    last_attempt_at: null,
+    resent_from_id: null,
   },
   suppressed_unverified: {
     id: 1203,
@@ -238,6 +336,9 @@ export const MAIL_LOG_SERVER_ENTRIES = {
       kind: "project_invitation",
       id: "b82e4d3f0a9c4d6b",
     },
+    next_attempt_at: null,
+    last_attempt_at: null,
+    resent_from_id: null,
   },
   template_gone: {
     id: 1042,
@@ -264,6 +365,9 @@ export const MAIL_LOG_SERVER_ENTRIES = {
     origin: "notification",
     project: null,
     ref: null,
+    next_attempt_at: null,
+    last_attempt_at: null,
+    resent_from_id: null,
   },
 } satisfies Record<string, MailLogEntry>;
 
@@ -296,6 +400,9 @@ export const MAIL_LOG_SERVER_PAGES = {
         origin: "forgot_password",
         project: null,
         ref: null,
+        next_attempt_at: null,
+        last_attempt_at: null,
+        resent_from_id: null,
       },
       {
         id: 1206,
@@ -332,6 +439,9 @@ export const MAIL_LOG_SERVER_PAGES = {
           kind: "signing_route",
           id: "0d1e2f30-4152-4637-8899-aabbccddeeff",
         },
+        next_attempt_at: null,
+        last_attempt_at: null,
+        resent_from_id: null,
       },
       {
         id: 1205,
@@ -367,6 +477,9 @@ export const MAIL_LOG_SERVER_PAGES = {
           kind: "project_invitation",
           id: "a71f3c2e9d8b4c5a",
         },
+        next_attempt_at: null,
+        last_attempt_at: null,
+        resent_from_id: null,
       },
       {
         id: 1204,
@@ -402,6 +515,9 @@ export const MAIL_LOG_SERVER_PAGES = {
           kind: "signing_route",
           id: "0d1e2f30-4152-4637-8899-aabbccddeeff",
         },
+        next_attempt_at: null,
+        last_attempt_at: null,
+        resent_from_id: null,
       },
       {
         id: 1203,
@@ -438,6 +554,9 @@ export const MAIL_LOG_SERVER_PAGES = {
           kind: "project_invitation",
           id: "b82e4d3f0a9c4d6b",
         },
+        next_attempt_at: null,
+        last_attempt_at: null,
+        resent_from_id: null,
       },
       {
         id: 1202,
@@ -467,6 +586,9 @@ export const MAIL_LOG_SERVER_PAGES = {
           kind: "registration_invite",
           id: "inv_01hx9q7m2k",
         },
+        next_attempt_at: null,
+        last_attempt_at: null,
+        resent_from_id: null,
       },
     ],
     next_cursor: "azoxMjAy",
@@ -513,6 +635,9 @@ export const MAIL_LOG_SERVER_PAGES = {
           kind: "project_invitation",
           id: "a71f3c2e9d8b4c5a",
         },
+        next_attempt_at: null,
+        last_attempt_at: null,
+        resent_from_id: null,
       },
       {
         id: 1204,
@@ -548,6 +673,9 @@ export const MAIL_LOG_SERVER_PAGES = {
           kind: "signing_route",
           id: "0d1e2f30-4152-4637-8899-aabbccddeeff",
         },
+        next_attempt_at: null,
+        last_attempt_at: null,
+        resent_from_id: null,
       },
     ],
     next_cursor: null,
@@ -576,6 +704,9 @@ export const MAIL_LOG_SERVER_PAGES = {
         origin: "register",
         project: null,
         ref: null,
+        next_attempt_at: null,
+        last_attempt_at: null,
+        resent_from_id: null,
       },
       {
         id: 1101,
@@ -608,6 +739,9 @@ export const MAIL_LOG_SERVER_PAGES = {
           kind: "access_request",
           id: "c93f5e4a1b0d4e7c",
         },
+        next_attempt_at: null,
+        last_attempt_at: null,
+        resent_from_id: null,
       },
       {
         id: 1042,
@@ -634,6 +768,9 @@ export const MAIL_LOG_SERVER_PAGES = {
         origin: "notification",
         project: null,
         ref: null,
+        next_attempt_at: null,
+        last_attempt_at: null,
+        resent_from_id: null,
       },
     ],
     next_cursor: null,
@@ -678,6 +815,9 @@ export const MAIL_LOG_SERVER_DETAILS = {
         kind: "signing_route",
         id: "0d1e2f30-4152-4637-8899-aabbccddeeff",
       },
+      next_attempt_at: null,
+      last_attempt_at: null,
+      resent_from_id: null,
     },
     preview: {
       subject: "Reminder: Course project topic application (SmartLMS)",
@@ -687,6 +827,11 @@ export const MAIL_LOG_SERVER_DETAILS = {
     link_hidden: false,
     note_hidden: false,
     rerendered: false,
+    resend: {
+      allowed: true,
+      blocked: null,
+    },
+    resent: [],
   },
   failed_with_note: {
     entry: {
@@ -723,6 +868,9 @@ export const MAIL_LOG_SERVER_DETAILS = {
         kind: "project_invitation",
         id: "a71f3c2e9d8b4c5a",
       },
+      next_attempt_at: null,
+      last_attempt_at: null,
+      resent_from_id: null,
     },
     preview: {
       subject: "Анна Петрова приглашает вас в «Курсовая работа по ГОСТ»",
@@ -732,6 +880,11 @@ export const MAIL_LOG_SERVER_DETAILS = {
     link_hidden: true,
     note_hidden: true,
     rerendered: false,
+    resend: {
+      allowed: false,
+      blocked: "token_link",
+    },
+    resent: [],
   },
   not_sent: {
     entry: {
@@ -762,6 +915,9 @@ export const MAIL_LOG_SERVER_DETAILS = {
         kind: "registration_invite",
         id: "inv_01hx9q7m2k",
       },
+      next_attempt_at: null,
+      last_attempt_at: null,
+      resent_from_id: null,
     },
     preview: {
       subject: "Приглашение в Студию",
@@ -771,6 +927,11 @@ export const MAIL_LOG_SERVER_DETAILS = {
     link_hidden: true,
     note_hidden: false,
     rerendered: false,
+    resend: {
+      allowed: false,
+      blocked: "token_link",
+    },
+    resent: [],
   },
   page_link: {
     entry: {
@@ -808,6 +969,9 @@ export const MAIL_LOG_SERVER_DETAILS = {
         kind: "signing_route",
         id: "0d1e2f30-4152-4637-8899-aabbccddeeff",
       },
+      next_attempt_at: null,
+      last_attempt_at: null,
+      resent_from_id: null,
     },
     preview: {
       subject: "Анна Петрова просит подписать: Заявка на тему КП (SmartLMS)",
@@ -817,6 +981,11 @@ export const MAIL_LOG_SERVER_DETAILS = {
     link_hidden: false,
     note_hidden: false,
     rerendered: false,
+    resend: {
+      allowed: false,
+      blocked: "status",
+    },
+    resent: [],
   },
   rerendered: {
     entry: {
@@ -840,6 +1009,9 @@ export const MAIL_LOG_SERVER_DETAILS = {
       origin: "register",
       project: null,
       ref: null,
+      next_attempt_at: null,
+      last_attempt_at: null,
+      resent_from_id: null,
     },
     preview: {
       subject: "Подтвердите e-mail",
@@ -849,6 +1021,123 @@ export const MAIL_LOG_SERVER_DETAILS = {
     link_hidden: true,
     note_hidden: false,
     rerendered: true,
+    resend: {
+      allowed: false,
+      blocked: "status",
+    },
+    resent: [],
+  },
+  resent: {
+    entry: {
+      id: 1301,
+      at: "2026-11-11T09:00:02Z",
+      template: "signing_reminder",
+      template_known: true,
+      lang: "en",
+      to_email: "john.smith@example.org",
+      to_user: {
+        id: "7d2c9a1e3b4f4e6a8c0d2b1a9e8f7c65",
+        name: "John Smith",
+        email: "john.smith@example.org",
+      },
+      subject: "Reminder: Course project topic application (SmartLMS)",
+      status: "failed",
+      reason: "auth",
+      failure: {
+        smtp_code: 535,
+        text: "5.7.8 Authentication credentials invalid for [скрыто]",
+      },
+      message_id: null,
+      attempts: 1,
+      duration_ms: 1840,
+      cause: "system",
+      actor: null,
+      task: "signing_reminders",
+      origin: "signing_auto_reminder",
+      project: {
+        id: "5b0c1d2e-3f40-4152-8364-758697a8b9c0",
+        name: "Курсовая работа по ГОСТ",
+      },
+      ref: {
+        kind: "signing_route",
+        id: "0d1e2f30-4152-4637-8899-aabbccddeeff",
+      },
+      next_attempt_at: null,
+      last_attempt_at: null,
+      resent_from_id: null,
+    },
+    preview: {
+      subject: "Reminder: Course project topic application (SmartLMS)",
+      html: '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Reminder: documents to sign</title></head><body style="margin:0;background:#f4f5f7;font-family:Arial,sans-serif"><table role="presentation" width="100%"><tr><td align="center"><h1 style="font-size:22px;color:#111827">Reminder: documents to sign</h1><span style="display:inline-block;padding:12px 24px;border-radius:8px;background:#1f4fd8;color:#ffffff">Open the signing page</span><p style="font-size:13px;color:#6b7280">/sign/5b0c1d2e-3f40-4152-8364-758697a8b9c0/0d1e2f30-4152-4637-8899-aabbccddeeff</p></td></tr></table></body></html>',
+      text: "HSE Doc Studio\n\nDocuments are waiting for your signature\n\nThe documents “Course project topic application (SmartLMS)” in the project “Coursework draft” are still waiting for your signature.\n\nProject: Coursework draft\nCheckpoint: Course project topic application (SmartLMS)\nRequested by: Anna Petrova\nDeadline: 15 Nov 2026, 23:59 (Moscow time)\n\nOpen the signing page:\n/sign/5b0c1d2e-3f40-4152-8364-758697a8b9c0/0d1e2f30-4152-4637-8899-aabbccddeeff\n\nWhy you received this email\nYou are on the signing route of a project on the server studio.example.org. This email was sent to john.smith@example.org.\n\nSecurity\nThe signing page opens only after you sign in to your account: a forwarded email does not let anyone sign for you.\n\n--\nServer: https://studio.example.org\nThis email was sent to john.smith@example.org.\nThis is an automated message, please do not reply.\n",
+    },
+    link_hidden: false,
+    note_hidden: false,
+    rerendered: false,
+    resend: {
+      allowed: false,
+      blocked: "already_resent",
+    },
+    resent: [
+      {
+        id: 1302,
+        at: "2026-11-11T11:55:31Z",
+        status: "sent",
+      },
+    ],
+  },
+  retrying: {
+    entry: {
+      id: 1300,
+      at: "2026-11-11T11:40:00Z",
+      template: "signing_reminder",
+      template_known: true,
+      lang: "en",
+      to_email: "john.smith@example.org",
+      to_user: {
+        id: "7d2c9a1e3b4f4e6a8c0d2b1a9e8f7c65",
+        name: "John Smith",
+        email: "john.smith@example.org",
+      },
+      subject: "Reminder: Course project topic application (SmartLMS)",
+      status: "failed",
+      reason: "connect",
+      failure: {
+        smtp_code: null,
+        text: "OSError: [Errno 111] Connection refused",
+      },
+      message_id: null,
+      attempts: 2,
+      duration_ms: 12,
+      cause: "system",
+      actor: null,
+      task: "signing_reminders",
+      origin: "signing_auto_reminder",
+      project: {
+        id: "5b0c1d2e-3f40-4152-8364-758697a8b9c0",
+        name: "Курсовая работа по ГОСТ",
+      },
+      ref: {
+        kind: "signing_route",
+        id: "0d1e2f30-4152-4637-8899-aabbccddeeff",
+      },
+      next_attempt_at: "2026-11-11T11:46:00Z",
+      last_attempt_at: "2026-11-11T11:41:00Z",
+      resent_from_id: null,
+    },
+    preview: {
+      subject: "Reminder: Course project topic application (SmartLMS)",
+      html: '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Reminder: documents to sign</title></head><body style="margin:0;background:#f4f5f7;font-family:Arial,sans-serif"><table role="presentation" width="100%"><tr><td align="center"><h1 style="font-size:22px;color:#111827">Reminder: documents to sign</h1><span style="display:inline-block;padding:12px 24px;border-radius:8px;background:#1f4fd8;color:#ffffff">Open the signing page</span><p style="font-size:13px;color:#6b7280">/sign/5b0c1d2e-3f40-4152-8364-758697a8b9c0/0d1e2f30-4152-4637-8899-aabbccddeeff</p></td></tr></table></body></html>',
+      text: "HSE Doc Studio\n\nDocuments are waiting for your signature\n\nThe documents “Course project topic application (SmartLMS)” in the project “Coursework draft” are still waiting for your signature.\n\nProject: Coursework draft\nCheckpoint: Course project topic application (SmartLMS)\nRequested by: Anna Petrova\nDeadline: 15 Nov 2026, 23:59 (Moscow time)\n\nOpen the signing page:\n/sign/5b0c1d2e-3f40-4152-8364-758697a8b9c0/0d1e2f30-4152-4637-8899-aabbccddeeff\n\nWhy you received this email\nYou are on the signing route of a project on the server studio.example.org. This email was sent to john.smith@example.org.\n\nSecurity\nThe signing page opens only after you sign in to your account: a forwarded email does not let anyone sign for you.\n\n--\nServer: https://studio.example.org\nThis email was sent to john.smith@example.org.\nThis is an automated message, please do not reply.\n",
+    },
+    link_hidden: false,
+    note_hidden: false,
+    rerendered: false,
+    resend: {
+      allowed: false,
+      blocked: "retrying",
+    },
+    resent: [],
   },
   suppressed: {
     entry: {
@@ -886,6 +1175,9 @@ export const MAIL_LOG_SERVER_DETAILS = {
         kind: "project_invitation",
         id: "b82e4d3f0a9c4d6b",
       },
+      next_attempt_at: null,
+      last_attempt_at: null,
+      resent_from_id: null,
     },
     preview: {
       subject: "Анна Петрова приглашает вас в «Курсовая работа по ГОСТ»",
@@ -895,6 +1187,11 @@ export const MAIL_LOG_SERVER_DETAILS = {
     link_hidden: false,
     note_hidden: false,
     rerendered: false,
+    resend: {
+      allowed: false,
+      blocked: "status",
+    },
+    resent: [],
   },
   template_gone: {
     entry: {
@@ -922,11 +1219,19 @@ export const MAIL_LOG_SERVER_DETAILS = {
       origin: "notification",
       project: null,
       ref: null,
+      next_attempt_at: null,
+      last_attempt_at: null,
+      resent_from_id: null,
     },
     preview: null,
     link_hidden: false,
     note_hidden: false,
     rerendered: false,
+    resend: {
+      allowed: false,
+      blocked: "status",
+    },
+    resent: [],
   },
   token_link: {
     entry: {
@@ -954,6 +1259,9 @@ export const MAIL_LOG_SERVER_DETAILS = {
       origin: "forgot_password",
       project: null,
       ref: null,
+      next_attempt_at: null,
+      last_attempt_at: null,
+      resent_from_id: null,
     },
     preview: {
       subject: "Сброс пароля",
@@ -963,6 +1271,11 @@ export const MAIL_LOG_SERVER_DETAILS = {
     link_hidden: true,
     note_hidden: false,
     rerendered: false,
+    resend: {
+      allowed: false,
+      blocked: "status",
+    },
+    resent: [],
   },
 } satisfies Record<string, MailLogDetail>;
 
@@ -975,6 +1288,7 @@ export const MAIL_LOG_SERVER_SUMMARIES = {
     failed: 37,
     not_sent: 0,
     suppressed: 1,
+    retrying: 0,
     last_failure: {
       at: "2026-11-11T09:00:02Z",
       reason: "auth",
@@ -988,6 +1302,7 @@ export const MAIL_LOG_SERVER_SUMMARIES = {
     failed: 2,
     not_sent: 0,
     suppressed: 3,
+    retrying: 2,
     last_failure: {
       at: "2026-11-11T10:58:13Z",
       reason: "recipient_refused",
@@ -1001,6 +1316,7 @@ export const MAIL_LOG_SERVER_SUMMARIES = {
     failed: 0,
     not_sent: 0,
     suppressed: 0,
+    retrying: 0,
     last_failure: null,
     retention_days: 30,
   },
@@ -1011,7 +1327,94 @@ export const MAIL_LOG_SERVER_SUMMARIES = {
     failed: 0,
     not_sent: 14,
     suppressed: 0,
+    retrying: 0,
     last_failure: null,
     retention_days: 90,
   },
 } satisfies Record<string, MailLogSummary>;
+
+/** AdminMailLogResendResult: варианты по именам файлов. */
+export const MAIL_LOG_SERVER_RESEND_RESULTS = {
+  blocked: {
+    outcome: "blocked",
+    blocked: "route_done",
+    entry_id: null,
+    reason: null,
+  },
+  failed: {
+    outcome: "failed",
+    blocked: null,
+    entry_id: 1212,
+    reason: "recipient_refused",
+  },
+  retrying: {
+    outcome: "retrying",
+    blocked: null,
+    entry_id: 1211,
+    reason: "connect",
+  },
+  sent: {
+    outcome: "sent",
+    blocked: null,
+    entry_id: 1302,
+    reason: null,
+  },
+} satisfies Record<string, MailLogResendResult>;
+
+/** AdminMailLogResendBatch: варианты по именам файлов. */
+export const MAIL_LOG_SERVER_RESEND_BATCHES = {
+  nothing: {
+    planned: 0,
+    skipped: {
+      token_link: 2,
+    },
+    started: false,
+    limit: 200,
+  },
+  preview: {
+    planned: 14,
+    skipped: {
+      token_link: 3,
+      route_done: 2,
+      already_resent: 1,
+    },
+    started: false,
+    limit: 200,
+  },
+  started: {
+    planned: 14,
+    skipped: {
+      token_link: 3,
+      route_done: 2,
+      already_resent: 1,
+    },
+    started: true,
+    limit: 200,
+  },
+} satisfies Record<string, MailLogResendBatch>;
+
+/** AdminMailLogResendBatchRequest: варианты по именам файлов. */
+export const MAIL_LOG_SERVER_RESEND_REQUESTS = {
+  all: {
+    template: [],
+    reason: null,
+    recipient_id: null,
+    recipient: null,
+    project_id: null,
+    since: null,
+    until: null,
+    q: null,
+    dry_run: true,
+  },
+  filtered: {
+    template: ["signing_request", "signing_reminder"],
+    reason: "connect",
+    recipient_id: null,
+    recipient: null,
+    project_id: "5b0c1d2e-3f40-4152-8364-758697a8b9c0",
+    since: "2026-11-10T00:00:00Z",
+    until: null,
+    q: null,
+    dry_run: false,
+  },
+} satisfies Record<string, MailLogResendBatchRequest>;

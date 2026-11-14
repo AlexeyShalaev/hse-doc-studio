@@ -4717,7 +4717,7 @@ MCP, только чтение: `get_signature_plan` у слота `place_source
 
 - версия: `hse-cs-sse/coursework` 2026.1.5, копия замороженной 2026.1.4, `release.kind: patch`, `default_version`,
   `releases freeze`. Что diff к 2026.1.4 укладывается в исключение 15.10, проверяет юнит-тест
-  `tests/unit/infra/template/test_sse_patch_2026_1_5.py`: манифест без ключей исключения (`placements`,
+  `tests/unit/infra/template/test_template_diff_packs.py` (до T1 отдельный `test_sse_patch_2026_1_5.py`, теперь через классификатор `core/template_diff.py`): манифест без ключей исключения (`placements`,
   `default_dates`, `default_placement` слотов, `anchor_macros`, `signing_slots`, `signing_route`, `deadline_hint`,
   плюс `id`, `released_at`, `changes`) равен манифесту 2026.1.4, а файлы отличаются только новым
   `common/anchors.tex` (копия эталона) и восемью файлами с якорями. Подсказка поля научрука («его подпись добавьте в

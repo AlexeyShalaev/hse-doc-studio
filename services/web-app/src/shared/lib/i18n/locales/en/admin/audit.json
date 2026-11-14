@@ -122,6 +122,8 @@
       "autoscale_scaled": "Autoscaling changed the runner count",
       "settings_signing_policy_update": "Signing key policy changed",
       "settings_smtp_test": "Email check",
+      "mail_resent": "Email sent again from the log",
+      "mail_resent_batch": "Sending of unsent emails started",
       "settings_smtp_update": "Email settings changed",
       "setup_admin_created": "First administrator created",
       "setup_admin_bootstrapped": "First administrator created",

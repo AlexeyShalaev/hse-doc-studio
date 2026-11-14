@@ -1,15 +1,22 @@
-import { useCallback, type ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
+import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 import { useIsPhoneWidth } from "@shared/lib";
 import {
   MAIL_LOG_LIST,
   isMailLogNotFound,
   useMailLogEntry,
+  useResendMail,
 } from "../api/mailLogQueries";
 import type { MailLogEntry } from "../api/schemas";
 import { useMinuteNow } from "../lib/when";
-import { MailLogCardView, type MailLogCardState } from "./MailLogCardView";
+import {
+  MailLogCardView,
+  type MailLogCardState,
+  type MailResendNotice,
+} from "./MailLogCardView";
+import { useBlockedText, useReasonText } from "./labels";
 import "./mailLog.css";
 
 export type MailLogCardProps = {
@@ -19,6 +26,8 @@ export type MailLogCardProps = {
   row: MailLogEntry | null;
   /** Закрыть карточку: убирает `?mail` из адреса. */
   onClose: () => void;
+  /** Открыть другое письмо журнала (исходное или повтор). */
+  onOpen?: ((id: number) => void) | undefined;
 };
 
 /** Параметры журнала в адресе: переход из карточки к новому условию снимает все прежние. */
@@ -32,8 +41,55 @@ export const MailLogCard = ({
   id,
   row,
   onClose,
+  onOpen,
 }: MailLogCardProps): ReactNode => {
+  const { t } = useTranslation("adminMail");
   const query = useMailLogEntry(id);
+  const resend = useResendMail();
+  const reasonText = useReasonText();
+  const blockedText = useBlockedText();
+  // Плашка итога относится к одному письму: другое письмо открывается без неё.
+  const [result, setResult] = useState<{
+    id: number;
+    notice: MailResendNotice;
+  } | null>(null);
+  const notice = result !== null && result.id === id ? result.notice : null;
+  const setNotice = useCallback(
+    (next: MailResendNotice) => {
+      if (id !== null) setResult({ id, notice: next });
+    },
+    [id],
+  );
+
+  const doResend = useCallback(() => {
+    if (id === null) return;
+    resend.mutate(id, {
+      onSuccess: (result) => {
+        if (result.outcome === "sent") {
+          setNotice({ tone: "info", text: t("resend.done.sent") });
+        } else if (result.outcome === "retrying") {
+          setNotice({ tone: "warn", text: t("resend.done.retrying") });
+        } else if (result.outcome === "failed") {
+          setNotice({
+            tone: "err",
+            text: t("resend.done.failed", {
+              reason: result.reason ? reasonText(result.reason) : "",
+            }),
+          });
+        } else {
+          setNotice({
+            tone: "warn",
+            text: t("resend.done.blocked", {
+              reason: blockedText(result.blocked ?? "unknown"),
+            }),
+          });
+        }
+      },
+      onError: () => {
+        setNotice({ tone: "err", text: t("resend.failed") });
+      },
+    });
+  }, [id, resend, t, reasonText, blockedText, setNotice]);
   const phone = useIsPhoneWidth();
   const now = useMinuteNow();
   const [, setParams] = useSearchParams();
@@ -99,6 +155,10 @@ export const MailLogCard = ({
                 showOnly({ project_id: projectId });
               }}
               Title={Dialog.Title}
+              onResend={doResend}
+              resending={resend.isPending}
+              resendNotice={notice}
+              onOpenEntry={onOpen}
             />
           )}
         </Dialog.Content>

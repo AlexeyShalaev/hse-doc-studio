@@ -1,0 +1,53 @@
+{
+  "entry": {
+    "id": 1300,
+    "at": "2026-11-11T11:40:00Z",
+    "template": "signing_reminder",
+    "template_known": true,
+    "lang": "en",
+    "to_email": "john.smith@example.org",
+    "to_user": {
+      "id": "7d2c9a1e3b4f4e6a8c0d2b1a9e8f7c65",
+      "name": "John Smith",
+      "email": "john.smith@example.org"
+    },
+    "subject": "Reminder: Course project topic application (SmartLMS)",
+    "status": "failed",
+    "reason": "connect",
+    "failure": {
+      "smtp_code": null,
+      "text": "OSError: [Errno 111] Connection refused"
+    },
+    "message_id": null,
+    "attempts": 2,
+    "duration_ms": 12,
+    "cause": "system",
+    "actor": null,
+    "task": "signing_reminders",
+    "origin": "signing_auto_reminder",
+    "project": {
+      "id": "5b0c1d2e-3f40-4152-8364-758697a8b9c0",
+      "name": "Курсовая работа по ГОСТ"
+    },
+    "ref": {
+      "kind": "signing_route",
+      "id": "0d1e2f30-4152-4637-8899-aabbccddeeff"
+    },
+    "next_attempt_at": "2026-11-11T11:46:00Z",
+    "last_attempt_at": "2026-11-11T11:41:00Z",
+    "resent_from_id": null
+  },
+  "preview": {
+    "subject": "Reminder: Course project topic application (SmartLMS)",
+    "html": "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>Reminder: documents to sign</title></head><body style=\"margin:0;background:#f4f5f7;font-family:Arial,sans-serif\"><table role=\"presentation\" width=\"100%\"><tr><td align=\"center\"><h1 style=\"font-size:22px;color:#111827\">Reminder: documents to sign</h1><span style=\"display:inline-block;padding:12px 24px;border-radius:8px;background:#1f4fd8;color:#ffffff\">Open the signing page</span><p style=\"font-size:13px;color:#6b7280\">/sign/5b0c1d2e-3f40-4152-8364-758697a8b9c0/0d1e2f30-4152-4637-8899-aabbccddeeff</p></td></tr></table></body></html>",
+    "text": "HSE Doc Studio\n\nDocuments are waiting for your signature\n\nThe documents “Course project topic application (SmartLMS)” in the project “Coursework draft” are still waiting for your signature.\n\nProject: Coursework draft\nCheckpoint: Course project topic application (SmartLMS)\nRequested by: Anna Petrova\nDeadline: 15 Nov 2026, 23:59 (Moscow time)\n\nOpen the signing page:\n/sign/5b0c1d2e-3f40-4152-8364-758697a8b9c0/0d1e2f30-4152-4637-8899-aabbccddeeff\n\nWhy you received this email\nYou are on the signing route of a project on the server studio.example.org. This email was sent to john.smith@example.org.\n\nSecurity\nThe signing page opens only after you sign in to your account: a forwarded email does not let anyone sign for you.\n\n--\nServer: https://studio.example.org\nThis email was sent to john.smith@example.org.\nThis is an automated message, please do not reply.\n"
+  },
+  "link_hidden": false,
+  "note_hidden": false,
+  "rerendered": false,
+  "resend": {
+    "allowed": false,
+    "blocked": "retrying"
+  },
+  "resent": []
+}

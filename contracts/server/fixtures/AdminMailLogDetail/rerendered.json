@@ -19,7 +19,10 @@
     "task": null,
     "origin": "register",
     "project": null,
-    "ref": null
+    "ref": null,
+    "next_attempt_at": null,
+    "last_attempt_at": null,
+    "resent_from_id": null
   },
   "preview": {
     "subject": "Подтвердите e-mail",
@@ -28,5 +31,10 @@
   },
   "link_hidden": true,
   "note_hidden": false,
-  "rerendered": true
+  "rerendered": true,
+  "resend": {
+    "allowed": false,
+    "blocked": "status"
+  },
+  "resent": []
 }

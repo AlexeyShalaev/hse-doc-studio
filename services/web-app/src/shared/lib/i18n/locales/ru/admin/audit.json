@@ -122,6 +122,8 @@
       "autoscale_scaled": "Автомасштабирование изменило число раннеров",
       "settings_signing_policy_update": "Изменена политика ключей подписи",
       "settings_smtp_test": "Проверка почты",
+      "mail_resent": "Письмо отправлено ещё раз из журнала",
+      "mail_resent_batch": "Запущена отправка неушедших писем",
       "settings_smtp_update": "Изменены настройки почты",
       "setup_admin_created": "Создан первый администратор",
       "setup_admin_bootstrapped": "Создан первый администратор",
