@@ -62,8 +62,25 @@ def _codes(report: ChangeReport) -> set[str]:
             PATCH,
             {"text", "optional_field_added", "file_changed"},
         ),
+        # Кавычки у текстов `{ ru, en }`, разрезанных запятой (flow_text_lint): только тексты, файлы те же.
+        (SSE, "2026.1.5", "2026.1.6", PATCH, {"text"}),
+        (PACKS / "hse-cs-se" / "templates" / "coursework", "2026.1.1", "2026.1.2", PATCH, {"text"}),
+        (PACKS / "hse-cs-se" / "templates" / "vkr", "2026.1.1", "2026.1.2", PATCH, {"text"}),
+        (PACKS / "hse-cs-se" / "templates" / "pp", "2026.1", "2026.1.1", PATCH, {"text"}),
     ],
-    ids=["sse-1.1", "sse-1.2", "sse-1.3", "sse-1.4", "sse-1.5", "se-coursework-1.1", "se-vkr-1.1"],
+    ids=[
+        "sse-1.1",
+        "sse-1.2",
+        "sse-1.3",
+        "sse-1.4",
+        "sse-1.5",
+        "se-coursework-1.1",
+        "se-vkr-1.1",
+        "sse-1.6",
+        "se-coursework-1.2",
+        "se-vkr-1.2",
+        "se-pp-1.1",
+    ],
 )
 def test__real_chains__give_the_expected_reasons(
     template: Path, base: str, new: str, suggested: TemplateUpdateClass, codes: set[str]
@@ -79,13 +96,14 @@ def test__real_chains__give_the_expected_reasons(
 # ── R27: 2026.1.5 к 2026.1.4 укладывается в исключение patch ──
 
 
-def test__sse_2026_1_5__released_as_a_patch_of_2026_1_4_and_default() -> None:
+def test__sse_2026_1_5__released_as_a_patch_of_2026_1_4() -> None:
     manifest = yaml.safe_load((SSE / "versions" / "2026.1.5" / "version.yaml").read_text(encoding="utf-8"))
     template = yaml.safe_load((SSE / "template.yaml").read_text(encoding="utf-8"))
 
     assert load_releases(SSE)["2026.1.5"].kind is PATCH
     assert manifest["release"] == {"kind": "patch"}
-    assert template["default_version"] == "2026.1.5"
+    # По умолчанию следующая patch-версия 2026.1.6 (кавычки у текстов), пресеты в ней те же.
+    assert template["default_version"] == "2026.1.6"
 
 
 def test__sse_2026_1_5__manifest_differs_only_in_signing_presets_and_deadline_hints() -> None:
