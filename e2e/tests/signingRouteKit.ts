@@ -216,7 +216,15 @@ export const register = async (
     }),
     201,
   );
-  const client = await newClient();
+  // Клиент API и браузер человека делят одну сессию: запросы контекста и его страницы держат общие cookie, вход
+  // один на человека. Регистрация и вход идут в лимит входа по IP (AUTH_IP), а все люди стенда приходят с одного
+  // адреса: второй вход на человека съедал этот лимит, и вход проекта signing-route ловил 429.
+  const context = await browser.newContext({
+    baseURL,
+    locale: "ru-RU",
+    viewport: { width: 1440, height: 960 },
+  });
+  const client = new Client(context.request, ORIGIN);
   await client.json(
     await client.post("/api/v1/auth/register", {
       email: who.email,
@@ -227,17 +235,6 @@ export const register = async (
     200,
   );
   const user = await client.login(who.email, PASSWORD);
-  // Браузер того же человека: вход через API, cookie остаётся в контексте.
-  const context = await browser.newContext({
-    baseURL,
-    locale: "ru-RU",
-    viewport: { width: 1440, height: 960 },
-  });
-  const login = await context.request.post("/api/v1/auth/login", {
-    data: { email: who.email, password: PASSWORD },
-    headers: { Origin: ORIGIN },
-  });
-  expect(login.status(), await login.text()).toBe(200);
   // «Скопировать ссылку» кладёт адрес в буфер обмена.
   await context.grantPermissions(["clipboard-read", "clipboard-write"], {
     origin: ORIGIN,
