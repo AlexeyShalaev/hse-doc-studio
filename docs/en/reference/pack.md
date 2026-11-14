@@ -226,3 +226,13 @@ release:
 ```
 
 The linter checks a version that is not in `releases.yaml` and the last one entered there: a release enters the version in the same PR. Older released versions are not checked after the fact.
+
+## For pack authors: one-line texts { #flow-texts }
+
+In a one-line YAML mapping an unquoted comma ends the value. `{ ru: Моноширинный шрифт (код, листинги), en: Monospace font }` gives the label “Моноширинный шрифт (код” and a stray key “листинги)”, and the interface shows the truncated label. Quote a text with a comma:
+
+```yaml
+label: { ru: "Моноширинный шрифт (код, листинги)", en: Monospace font }
+```
+
+The linter checks `version.yaml`, `checks/*.yaml` and the documents' `doc.yaml`. In a mapping with `ru` or `en`, a key that is not a language code or has no value, and an unquoted `ru`/`en` value with an unpaired bracket, are errors. As with the version class, the linter checks a version that is not released and the last one entered in `releases.yaml`; for older released versions this is a warning, and the fix ships as a new patch version (as `hse-cs-sse/coursework` 2026.1.6, `hse-cs-se/coursework` and `vkr` 2026.1.2, `hse-cs-se/pp` 2026.1.1 did). The classifier treats the quoting fix as a text edit, which is a patch.

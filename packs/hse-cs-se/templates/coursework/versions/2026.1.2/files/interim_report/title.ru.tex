@@ -1,0 +1,86 @@
+% ============================================================
+% interim_report/title.tex — титульный лист Промежуточного отчёта
+% исследовательского курсового проекта ОП «Программная инженерия» (КТ1).
+%
+% Обязательной формы титула для промежуточного отчёта Программа практики
+% не задаёт; используется форма Отчёта ОП ПИ без блоков подписей — на
+% КТ1/КТ2 документация сдаётся БЕЗ подписей (зачёт/незачёт). УДК на
+% титуле обязателен (§2.3.2.4). Данные — из макросов \hse… (common/meta).
+% ============================================================
+\begin{titlepage}
+\thispagestyle{empty}
+\singlespacing
+\footnotesize
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+
+
+\begin{center}
+\textbf{ПРАВИТЕЛЬСТВО РОССИЙСКОЙ ФЕДЕРАЦИИ}\\
+\textbf{ФЕДЕРАЛЬНОЕ ГОСУДАРСТВЕННОЕ АВТОНОМНОЕ}\\
+\textbf{ОБРАЗОВАТЕЛЬНОЕ УЧРЕЖДЕНИЕ ВЫСШЕГО ОБРАЗОВАНИЯ}\\
+\textbf{НАЦИОНАЛЬНЫЙ ИССЛЕДОВАТЕЛЬСКИЙ УНИВЕРСИТЕТ}\\
+\textbf{«ВЫСШАЯ ШКОЛА ЭКОНОМИКИ»}
+
+\vspace{0.35cm}
+\hseFaculty\\
+Образовательная программа «\hseSpecialization»
+\end{center}
+
+\vspace{0.25cm}
+\noindent
+УДК~\hseUDC
+
+\vspace{1.6cm}
+\begin{center}
+\textbf{\normalsize Промежуточный отчёт}
+
+\vspace{0.12cm}
+\textbf{\normalsize по исследовательскому курсовому проекту}
+
+\vspace{0.12cm}
+(контрольная точка 1)
+
+\vspace{0.35cm}
+на тему
+\underline{\makebox[0.8\textwidth][c]{\hseProjectName}}
+
+\vspace{0.3cm}
+по направлению подготовки бакалавров \hseProgramCode\ «\hseSpecialization»
+\end{center}
+
+\vspace{1.4cm}
+\noindent\hfill
+\begin{minipage}[t]{0.52\textwidth}
+\raggedright
+Выполнил\\
+студент группы \hseGroup\\
+\hseCourse{} курса \hseDegreeLevel\\
+образовательной программы\\
+«\hseSpecialization»
+
+\vspace{0.25cm}
+\strut\hseAuthorName
+\end{minipage}
+
+\vspace{0.7cm}
+\noindent\hfill
+\begin{minipage}[t]{0.52\textwidth}
+\raggedright
+Руководитель курсового проекта
+
+\vspace{0.15cm}
+\strut\hseSupervisorName\\
+\strut\hseSupervisorTitle
+\end{minipage}
+
+\vfill
+\begin{center}
+\textbf{\hseCity{} \hseYear}
+\end{center}
+
+\end{titlepage}
+
+% Титульный лист — страница 1 (без номера); нумерация со 2-й.
+\setcounter{page}{2}
+\clearpage

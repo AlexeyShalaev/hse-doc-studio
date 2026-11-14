@@ -1,0 +1,27 @@
+# Манифест документа (bundle-раскладка v2): всё про документ — в этой папке.
+# id = имя папки; языковые редакции — файлы-соседи <stem>.<код>.<ext>,
+# файл без кода — единственная форма для всех языков. Пути source_file —
+# в проектном пространстве (без суффиксов). Файл doc.yaml в проект не копируется.
+name:
+  ru: Общая аннотация
+  en: Shared Annotation
+code:
+  ru: ОАНН
+  en: ANN
+source_file: shared_annotation/shared_annotation.tex
+output_file: shared_annotation/shared_annotation.pdf
+output_name:
+  ru: Общая аннотация.pdf
+  en: Shared Annotation.pdf
+gost_ref: gost-7.32-2017
+required: true
+supported_langs:
+- ru
+- en
+scope: shared
+supported_staffing:
+- team
+supported_kinds:
+- research
+# Визуальный блок навигации — дивайдер рисуется на смене группы.
+group: report

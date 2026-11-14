@@ -299,6 +299,21 @@ def test__texts__are_a_hard_patch_with_one_reason_per_text(tmp_path: Path, mutat
     assert report.suggested is PATCH
 
 
+def test__text_split_by_an_unquoted_comma__fixed_with_quotes_is_a_text_patch(tmp_path: Path) -> None:
+    # `{ ru: Шрифт (код, листинги), en: Mono }`: YAML дал ru «Шрифт (код» и ключ «листинги)» без значения.
+    base = _Version()
+    base.manifest["meta_fields"]["year"]["label"] = {"ru": "Шрифт (код", "листинги)": None, "en": "Mono"}
+    base.write(tmp_path / "versions" / "2026.1.0")
+    new = _Version()
+    new.manifest["id"] = "2026.1.1"
+    new.manifest["meta_fields"]["year"]["label"] = {"ru": "Шрифт (код, листинги)", "en": "Mono"}
+
+    report = classify_change(tmp_path / "versions" / "2026.1.0", new.write(tmp_path / "versions" / "2026.1.1"))
+
+    assert [(r.code, r.path) for r in report.reasons] == [("text", "meta_fields.year.label")]
+    assert report.minimum is PATCH
+
+
 # ── новая поверхность: minor (жёсткое) ──
 
 

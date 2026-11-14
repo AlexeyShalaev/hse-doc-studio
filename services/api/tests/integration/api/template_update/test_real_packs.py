@@ -74,7 +74,7 @@ async def test__real_coursework__existing_project_is_offered_the_patch_2026_1_1(
 
     status = (await test_app.get(base)).json()
     assert status["current_version"] == "2026.1"
-    assert status["recommended"]["version"]["version"] == "2026.1.5"
+    assert status["recommended"]["version"]["version"] == "2026.1.6"
     assert status["recommended"]["update_class"] == "patch"
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.1"})).json()
@@ -102,7 +102,7 @@ async def test__real_coursework__2026_1_1_project_is_offered_the_patch_2026_1_2(
 
     status = (await test_app.get(base)).json()
     assert status["current_version"] == "2026.1.1"
-    assert status["recommended"]["version"]["version"] == "2026.1.5"
+    assert status["recommended"]["version"]["version"] == "2026.1.6"
     assert status["recommended"]["update_class"] == "patch"
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.2"})).json()
@@ -136,7 +136,7 @@ async def test__real_coursework__2026_1_2_project_gets_sign_methods_in_patch_202
 
     status = (await test_app.get(base)).json()
     assert status["current_version"] == "2026.1.2"
-    assert status["recommended"]["version"]["version"] == "2026.1.5"
+    assert status["recommended"]["version"]["version"] == "2026.1.6"
     assert status["recommended"]["update_class"] == "patch"
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.3"})).json()
@@ -182,7 +182,7 @@ async def test__real_coursework__2026_1_3_project_gets_form_fixes_in_patch_2026_
 
     status = (await test_app.get(base)).json()
     assert status["current_version"] == "2026.1.3"
-    assert status["recommended"]["version"]["version"] == "2026.1.5"
+    assert status["recommended"]["version"]["version"] == "2026.1.6"
     assert status["recommended"]["update_class"] == "patch"
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.4"})).json()
@@ -221,7 +221,7 @@ async def test__real_coursework__2026_1_4_project_gets_anchors_and_presets_in_pa
 
     status = (await test_app.get(base)).json()
     assert status["current_version"] == "2026.1.4"
-    assert status["recommended"]["version"]["version"] == "2026.1.5"
+    assert status["recommended"]["version"]["version"] == "2026.1.6"
     assert status["recommended"]["update_class"] == "patch"
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.5"})).json()
@@ -241,3 +241,41 @@ async def test__real_coursework__2026_1_4_project_gets_anchors_and_presets_in_pa
     application = (folder / "topic_application" / "topic_application.tex").read_text(encoding="utf-8")
     assert "\\hseSignField[supervisor]" in application
     assert (folder / "common" / "anchors.tex").is_file()
+
+
+@pytest.mark.parametrize(
+    ("pack_id", "template_id", "current", "patched", "lang"),
+    [
+        ("hse-cs-sse", "coursework", "2026.1.5", "2026.1.6", "ru"),
+        ("hse-cs-se", "coursework", "2026.1.1", "2026.1.2", "ru"),
+        ("hse-cs-se", "vkr", "2026.1.1", "2026.1.2", "ru"),
+        ("hse-cs-se", "pp", "2026.1", "2026.1.1", "en"),
+    ],
+)
+async def test__real_template__quoted_texts_patch_changes_no_project_files(
+    test_app: AsyncClient, tmp_path: Path, pack_id: str, template_id: str, current: str, patched: str, lang: str
+) -> None:
+    """Кавычки у текстов `{ ru, en }` (запятая резала подписи полей и названия проверок): patch без правок файлов."""
+    folder = tmp_path / template_id
+    folder.mkdir()
+    payload = {
+        **project_api_payload(str(folder)),
+        "pack_id": pack_id,
+        "template_id": template_id,
+        "version": current,
+        "lang": lang,
+    }
+    created = await test_app.post("/api/v1/projects", json=payload)
+    assert created.status_code == 201, created.text
+    base = f"/api/v1/projects/{created.json()['id']}/template-update"
+
+    status = (await test_app.get(base)).json()
+    assert status["recommended"]["version"]["version"] == patched
+    assert status["recommended"]["update_class"] == "patch"
+
+    plan = (await test_app.post(f"{base}/plan", json={"to_version": patched})).json()
+    assert {f["path"] for f in plan["files"] if f["action"] != "unchanged"} == set()
+    applied = await test_app.post(
+        f"{base}/apply", json={"to_version": patched, "fingerprint": plan["fingerprint"], "resolutions": {}}
+    )
+    assert applied.status_code == 200, applied.text

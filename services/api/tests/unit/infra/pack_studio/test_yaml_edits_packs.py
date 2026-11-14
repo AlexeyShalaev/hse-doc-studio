@@ -25,7 +25,7 @@ from yaml.nodes import MappingNode, Node, ScalarNode, SequenceNode
 # .../services/api/tests/unit/infra/pack_studio/<this> -> корень репозитория.
 PACKS_ROOT = Path(__file__).resolve().parents[6] / "packs"
 PACK_FILES = sorted(PACKS_ROOT.rglob("*.yaml"))
-SSE_VERSION = PACKS_ROOT / "hse-cs-sse" / "templates" / "coursework" / "versions" / "2026.1.5"
+SSE_VERSION = PACKS_ROOT / "hse-cs-sse" / "templates" / "coursework" / "versions" / "2026.1.6"
 
 _LOADER: Any = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 
@@ -193,7 +193,7 @@ def test_delete_touches_only_the_entry(pack_file: tuple[str, Node]) -> None:
 
 def test_patch_edits_pass_loader_and_lint(tmp_path: Path) -> None:
     """Правки исключения patch (signing-route.md, 15.10) на копии версии: файл остаётся паком."""
-    version_dir = tmp_path / "2026.1.5"
+    version_dir = tmp_path / "2026.1.6"
     shutil.copytree(SSE_VERSION, version_dir)
     manifest = version_dir / "version.yaml"
     text = manifest.read_text(encoding="utf-8")

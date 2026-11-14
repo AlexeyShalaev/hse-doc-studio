@@ -1,0 +1,82 @@
+% ((# ============================================================ #))
+% ((# common/meta.tex — АВТОГЕНЕРИРУЕМЫЙ ФАЙЛ. НЕ РЕДАКТИРОВАТЬ.    #))
+% ((#                                                              #))
+% ((# Тул перегенерирует его из .hse-studio/project.json ПЕРЕД      #))
+% ((# каждой сборкой. Project Proposal пишется ТОЛЬКО на английском,#))
+% ((# поэтому все макросы — англоязычные значения. Документы        #))
+% ((# используют макросы вместо литералов: правка данных в          #))
+% ((# настройках сразу попадает в PDF.                              #))
+% ((#                                                              #))
+% ((# Источник: common/meta.tex.j2 (см. dynamic_includes в         #))
+% ((# version.yaml). Двухстрочная форма \newcommand{..}{%<NL>val}   #))
+% ((# нужна, чтобы избежать последовательности «{{{» — её Jinja     #))
+% ((# принял бы за открытие выражения.                              #))
+% ((# ============================================================ #))
+
+% ── Тема работы (английское название) ───────────────────────
+% Название проекта и есть тема Project Proposal — по-английски.
+\newcommand{\hseTitle}{%
+{{ project.name | texesc }}}
+
+% ── Автор ───────────────────────────────────────────────────
+% \hseAuthorNameEn — имя латиницей для шапки IEEE (мета author_name_en);
+% пока не заполнено — жёлтый плейсхолдер прямо в PDF.
+\newcommand{\hseAuthorName}{%
+((* if author.name *)){{ author.name | texesc }}((* elif project.authors *)){{ project.authors[0].name | texesc }}((* endif *))}
+\newcommand{\hseAuthorNameEn}{%
+((* if project.meta.author_name_en *)){{ project.meta.author_name_en | texesc }}((* else *))\hseFill{your name in English, e.g. Ivan I. Ivanov}((* endif *))}
+\newcommand{\hseAuthorEmail}{%
+((* if author.email *)){{ author.email | texesc }}((* elif project.authors and project.authors[0].email *)){{ project.authors[0].email | texesc }}((* else *))\hseFill{your corporate e-mail}((* endif *))}
+\newcommand{\hseGroup}{%
+((* if author.group *)){{ author.group | texesc }}((* elif project.authors *)){{ project.authors[0].group | default('') | texesc }}((* endif *))}
+
+% ── Учебные метаданные (английские значения) ────────────────
+\newcommand{\hseYear}{%
+{{ project.meta.year | default('') | texesc }}}
+\newcommand{\hseFacultyEn}{%
+{{ project.meta.faculty_en | default('Faculty of Computer Science') | texesc }}}
+\newcommand{\hseUniversityEn}{%
+{{ project.meta.university_en | default('HSE University') | texesc }}}
+\newcommand{\hseCityEn}{%
+{{ project.meta.city_en | default('Moscow, Russia') | texesc }}}
+
+% ── Руководитель (для слайдов защиты; в тексте PP не печатается) ─
+\newcommand{\hseSupervisorName}{%
+{{ project.supervisor.name | default('') | texesc }}}
+\newcommand{\hseSupervisorTitle}{%
+{{ project.supervisor.title | default('') | texesc }}}
+
+% ── Плейсхолдер «заполните сами» ────────────────────────────
+% Жёлтая подсветка мест, которые студент заменяет своим содержимым:
+%   \hseFill{describe your methodology}
+% Печатается как <текст> на жёлтом фоне — сразу видно, что дописать.
+% Каждое слово в своём \colorbox, между ними обычные пробелы — длинный
+% плейсхолдер переносится по словам и не вылезает за колонку.
+\ExplSyntaxOn
+\ProvideDocumentCommand{\hseFill}{m}
+ {
+  \group_begin:
+  \setlength{\fboxsep}{1.5pt}
+  \seq_set_split:Nnn \l_tmpa_seq { ~ } { <#1> }
+  \seq_set_map:NNn \l_tmpb_seq \l_tmpa_seq { \colorbox{yellow!50}{##1} }
+  \seq_use:Nn \l_tmpb_seq { ~ }
+  \group_end:
+ }
+% \hseOptional{…} — та же подсветка, но без угловых скобок: готовый текст,
+% который оставляют как есть или удаляют, если к проекту не относится.
+\ProvideDocumentCommand{\hseOptional}{m}
+ {
+  \group_begin:
+  \setlength{\fboxsep}{1.5pt}
+  \seq_set_split:Nnn \l_tmpa_seq { ~ } { #1 }
+  \seq_set_map:NNn \l_tmpb_seq \l_tmpa_seq { \colorbox{yellow!50}{##1} }
+  \seq_use:Nn \l_tmpb_seq { ~ }
+  \group_end:
+ }
+\ExplSyntaxOff
+
+% ── Булевы флаги для условной печати ────────────────────────
+\newif\ifhseHasSupervisor
+((* if project.supervisor.name *))\hseHasSupervisortrue((* else *))\hseHasSupervisorfalse((* endif *))
+\newif\ifhseHasAuthorEmail
+((* if author.email or (project.authors and project.authors[0].email) *))\hseHasAuthorEmailtrue((* else *))\hseHasAuthorEmailfalse((* endif *))
