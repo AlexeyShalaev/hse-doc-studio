@@ -5,6 +5,7 @@
   "failed": 0,
   "not_sent": 14,
   "suppressed": 0,
+  "retrying": 0,
   "last_failure": null,
   "retention_days": 90
 }

@@ -33,7 +33,10 @@
       "ref": {
         "kind": "project_invitation",
         "id": "a71f3c2e9d8b4c5a"
-      }
+      },
+      "next_attempt_at": null,
+      "last_attempt_at": null,
+      "resent_from_id": null
     },
     {
       "id": 1204,
@@ -68,7 +71,10 @@
       "ref": {
         "kind": "signing_route",
         "id": "0d1e2f30-4152-4637-8899-aabbccddeeff"
-      }
+      },
+      "next_attempt_at": null,
+      "last_attempt_at": null,
+      "resent_from_id": null
     }
   ],
   "next_cursor": null,

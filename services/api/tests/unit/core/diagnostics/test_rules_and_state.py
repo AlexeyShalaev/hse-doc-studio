@@ -12,6 +12,7 @@ from hse_doc_studio.core.diagnostics.facts import (
     DbFacts,
     DiskFacts,
     JobFacts,
+    MailDeliveryFacts,
     MigrationFacts,
     ObjectFacts,
     RunnerFacts,
@@ -247,3 +248,83 @@ def test__result__hint_only_when_not_ok() -> None:
     assert _result(OK, reason="ok").hint is None
     assert _result(WARN, reason="disk_warning").hint == "disk_warning"
     assert _result(OK, reason="not_configured").applicable is False
+
+
+@pytest.mark.parametrize(
+    ("facts", "status", "reason", "values"),
+    [
+        (MailDeliveryFacts(configured=False, day_failed=50), OK, "not_configured", {}),
+        (MailDeliveryFacts(configured=True, day_sent=90, day_failed=10), OK, "ok", {"failed": 10, "total": 100}),
+        # Меньше пяти попыток в окне: доля не считается.
+        (MailDeliveryFacts(configured=True, hour_sent=1, hour_failed=3, day_sent=96, day_failed=4), OK, "ok", None),
+        (
+            MailDeliveryFacts(configured=True, hour_sent=6, hour_failed=4, day_sent=96, day_failed=4),
+            WARN,
+            "mail_failing_hour",
+            {"failed": 4, "total": 10, "percent": 40},
+        ),
+        (
+            MailDeliveryFacts(configured=True, hour_sent=2, hour_failed=8, day_sent=40, day_failed=60),
+            FAIL,
+            "mail_failing_hour",
+            {"failed": 8, "total": 10, "percent": 80},
+        ),
+        (
+            MailDeliveryFacts(configured=True, day_sent=40, day_failed=60),
+            FAIL,
+            "mail_failing_day",
+            {"failed": 60, "total": 100, "percent": 60},
+        ),
+        (
+            MailDeliveryFacts(
+                configured=True, day_sent=99, day_failed=1, last_failed=True, last_reason="auth", last_code=535
+            ),
+            WARN,
+            "mail_last_failed",
+            {"error": "auth 535"},
+        ),
+        (
+            MailDeliveryFacts(configured=True, day_sent=9, day_failed=1, last_failed=True, last_reason="connect"),
+            WARN,
+            "mail_last_failed",
+            {"error": "connect"},
+        ),
+        # Один отказ адресу не значит, что почта сломана.
+        (
+            MailDeliveryFacts(
+                configured=True,
+                day_sent=99,
+                day_failed=1,
+                last_failed=True,
+                last_reason="recipient_refused",
+                last_code=550,
+            ),
+            OK,
+            "ok",
+            None,
+        ),
+    ],
+)
+def test__mail_delivery__verdict(
+    facts: MailDeliveryFacts, status: DiagStatus, reason: str, values: dict[str, object] | None
+) -> None:
+    verdict = rules.judge_mail_delivery(facts, T)
+
+    assert (verdict.status, verdict.reason) == (status, reason)
+    if values is not None:
+        assert dict(verdict.values) == values
+
+
+def test__mail_delivery__thresholds_are_admin_editable() -> None:
+    stored = {KEY_PREFIX + "mail_failed_warn_percent": 5, KEY_PREFIX + "mail_failed_fail_percent": 10}
+    edited = thresholds_from(stored)
+    facts = MailDeliveryFacts(configured=True, day_sent=92, day_failed=8)
+
+    assert (edited.mail_failed_warn_percent, edited.mail_failed_fail_percent) == (5, 10)
+    assert rules.judge_mail_delivery(facts, edited).status is WARN
+    assert rules.judge_mail_delivery(facts, T).status is OK
+    # Предупреждение позже сбоя: пара возвращается к умолчаниям.
+    swapped = thresholds_from(
+        {KEY_PREFIX + "mail_failed_warn_percent": 60, KEY_PREFIX + "mail_failed_fail_percent": 30}
+    )
+    assert (swapped.mail_failed_warn_percent, swapped.mail_failed_fail_percent) == (20, 50)

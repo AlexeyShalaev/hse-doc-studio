@@ -22,7 +22,7 @@ from hse_doc_studio.core.jobs.admin import IAdminProjectPicker, IJobAdminReader,
 from hse_doc_studio.core.jobs.queue import IJobQueue
 from hse_doc_studio.core.jobs.quotas import IQuotaOverrideRepository
 from hse_doc_studio.core.jobs.runners import IRunnerRepository
-from hse_doc_studio.core.mail.ports import IMailLogNames
+from hse_doc_studio.core.mail.ports import IMailLogNames, IMailRelevance
 from hse_doc_studio.core.model_servers import (
     Engine,
     IContainerRuntime,
@@ -111,7 +111,9 @@ from hse_doc_studio.use_cases.identity.smtp_settings import SmtpSettingsService
 from hse_doc_studio.use_cases.jobs.personal_settings import InstancePersonalRunnerSettings
 from hse_doc_studio.use_cases.jobs.queue_service import JobQueueService
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
+from hse_doc_studio.use_cases.mail.dispatch import MailDispatcher
 from hse_doc_studio.use_cases.mail.log import GetMailLogEntryUC, ListMailLogUC, MailLogSummaryUC
+from hse_doc_studio.use_cases.mail.resend import ResendGate, ResendMailBatchUC, ResendMailUC
 from hse_doc_studio.use_cases.runner_install import (
     InstallJobStore,
     RunnerInstallService,
@@ -196,8 +198,28 @@ class ServerAdminOpsProvider(Provider):
         return ListMailLogUC(log, names)
 
     @provide
-    def get_mail_log_entry_uc(self, log: IMailLogRepository, names: IMailLogNames) -> GetMailLogEntryUC:
-        return GetMailLogEntryUC(log, names)
+    def get_mail_log_entry_uc(
+        self, log: IMailLogRepository, names: IMailLogNames, gate: ResendGate
+    ) -> GetMailLogEntryUC:
+        return GetMailLogEntryUC(log, names, gate)
+
+    @provide
+    def get_resend_gate(
+        self, log: IMailLogRepository, relevance: IMailRelevance, dispatcher: MailDispatcher
+    ) -> ResendGate:
+        return ResendGate(log, relevance, dispatcher)
+
+    @provide
+    def get_resend_mail_uc(
+        self, log: IMailLogRepository, gate: ResendGate, dispatcher: MailDispatcher, audit: IAuditLog
+    ) -> ResendMailUC:
+        return ResendMailUC(log, gate, dispatcher, audit, public_url=settings.auth.public_url)
+
+    @provide
+    def get_resend_mail_batch_uc(
+        self, log: IMailLogRepository, gate: ResendGate, dispatcher: MailDispatcher, audit: IAuditLog
+    ) -> ResendMailBatchUC:
+        return ResendMailBatchUC(log, gate, dispatcher, audit, public_url=settings.auth.public_url)
 
     @provide
     def get_mail_log_summary_uc(

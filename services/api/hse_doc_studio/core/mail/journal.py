@@ -121,6 +121,8 @@ class MailOrigin(StrEnum):
     signing_reinvite = "signing_reinvite"
     signing_auto_reminder = "signing_auto_reminder"
     smtp_test = "smtp_test"
+    # Повтор из журнала («Отправить ещё раз», «Отправить неушедшие»), раздел 14, V2.
+    admin_resend = "admin_resend"
 
 
 class MailRefKind(StrEnum):
@@ -194,8 +196,12 @@ class MailRequest:
     project_id: str | None = None
     ref_kind: MailRefKind | None = None
     ref_id: str | None = None
+    # Повтор из журнала (V3): сообщения человека нет, в письме строка «сообщение есть во «Входящих»».
+    note_in_inbox: bool = False
 
     def __post_init__(self) -> None:
+        if self.note_in_inbox and self.note:
+            raise ValueError("note_in_inbox replaces the note")
         if self.link_kind is MailLinkKind.token and not self.link:
             raise ValueError("a token link mail needs the link")
         if self.link_kind is MailLinkKind.none and (self.link or fixed_path(self.template)):
@@ -217,7 +223,67 @@ class MailRequest:
             expires_at=self.expires_at,
             values=self.values,
             note=self.note,
+            note_in_inbox=self.note_in_inbox,
         )
+
+    def to_json(self) -> dict[str, object]:
+        """Запрос целиком для очереди автоповтора (V8): со ссылкой и сообщением, поэтому только шифртекстом."""
+        return {
+            "template": self.template.value,
+            "lang": self.lang.value,
+            "to": self.to,
+            "server_url": self.server_url,
+            "origin": self.origin.value,
+            "link_kind": self.link_kind.value,
+            "link": self.link,
+            "ttl_s": int(self.ttl.total_seconds()) if self.ttl is not None else None,
+            "expires_at": self.expires_at.isoformat() if self.expires_at else None,
+            "values": {str(k): _json_value(v) for k, v in self.values.items() if v is not None},
+            "note": self.note,
+            "to_user_id": self.to_user_id,
+            "project_id": self.project_id,
+            "ref_kind": self.ref_kind.value if self.ref_kind else None,
+            "ref_id": self.ref_id,
+            "note_in_inbox": self.note_in_inbox,
+        }
+
+    @classmethod
+    def from_json(cls, data: Mapping[str, object]) -> MailRequest:
+        """Обратно из очереди; ValueError, если вида письма или сценария в этой версии нет."""
+
+        def text(key: str) -> str | None:
+            value = data.get(key)
+            return value if isinstance(value, str) else None
+
+        ttl_s = data.get("ttl_s")
+        expires = text("expires_at")
+        raw_values = data.get("values")
+        ref_kind = text("ref_kind")
+        return cls(
+            template=MailTemplate(str(data["template"])),
+            lang=Lang(str(data["lang"])),
+            to=str(data["to"]),
+            server_url=text("server_url"),
+            origin=MailOrigin(str(data["origin"])),
+            link_kind=MailLinkKind(str(data.get("link_kind", MailLinkKind.none.value))),
+            link=text("link"),
+            ttl=timedelta(seconds=ttl_s) if isinstance(ttl_s, int) and not isinstance(ttl_s, bool) else None,
+            expires_at=datetime.fromisoformat(expires) if expires else None,
+            values={str(k): v for k, v in raw_values.items()} if isinstance(raw_values, Mapping) else {},
+            note=text("note"),
+            to_user_id=text("to_user_id"),
+            project_id=text("project_id"),
+            ref_kind=MailRefKind(ref_kind) if ref_kind else None,
+            ref_id=text("ref_id"),
+            note_in_inbox=data.get("note_in_inbox") is True,
+        )
+
+
+def _json_value(value: object) -> object:
+    """Значение шаблона для очереди: числа как есть, остальное строкой (так его и подставит письмо)."""
+    if isinstance(value, int | float) and not isinstance(value, bool):
+        return value
+    return str(value)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -232,9 +298,12 @@ class MailParams:
     note_len: int = 0
     # Публичный адрес установки на момент отправки (`server_origin`); null, если он не задан.
     server: str | None = None
+    # Повтор из журнала: на месте сообщения строка «сообщение есть во «Входящих»» (V3).
+    note_in_inbox: bool = False
 
     def to_json(self) -> dict[str, object]:
-        return {
+        extra: dict[str, object] = {"note_in_inbox": True} if self.note_in_inbox else {}
+        return extra | {
             "values": dict(self.values),
             "link": self.link.value,
             "link_path": self.link_path,
@@ -268,6 +337,7 @@ class MailParams:
             expires_at=datetime.fromisoformat(expires) if isinstance(expires, str) else None,
             note_len=note_len if isinstance(note_len, int) and not isinstance(note_len, bool) else 0,
             server=server if isinstance(server, str) else None,
+            note_in_inbox=data.get("note_in_inbox") is True,
         )
 
 
@@ -292,6 +362,7 @@ def safe_params(request: MailRequest) -> MailParams:
         expires_at=request.expires_at,
         note_len=len(clean_note(request.note)) if request.note else 0,
         server=server_origin(request.server_url),
+        note_in_inbox=request.note_in_inbox,
     )
 
 
@@ -379,6 +450,11 @@ class MailLogEntry:
     project_id: str | None = None
     ref_kind: str | None = None
     ref_id: str | None = None
+    # Версия 2 (раздел 14): запланированный автоповтор (V7), время последней попытки, если их больше одной,
+    # и исходная строка ручного повтора (V2).
+    next_attempt_at: datetime | None = None
+    last_attempt_at: datetime | None = None
+    resent_from_id: int | None = None
     id: int | None = None
 
     def __post_init__(self) -> None:
@@ -389,6 +465,16 @@ class MailLogEntry:
     @property
     def template_known(self) -> bool:
         return known_template(self.template) is not None
+
+    @property
+    def retrying(self) -> bool:
+        """Письмо не ушло, но Студия ещё повторит отправку сама (V6)."""
+        return self.status is MailStatus.failed and self.next_attempt_at is not None
+
+    @property
+    def tried_at(self) -> datetime:
+        """Время последней попытки: у строки с одной попыткой это `at`."""
+        return self.last_attempt_at or self.at
 
 
 @dataclass(frozen=True)
@@ -404,6 +490,8 @@ class MailLogQuery:
     since: datetime | None = None
     until: datetime | None = None
     q: str | None = None
+    # True: только ждущие автоповтора, False: без них, None: все (V13).
+    retrying: bool | None = None
     before_id: int | None = None
     limit: int = 50
 
@@ -420,6 +508,7 @@ class MailLogQuery:
                 self.since,
                 self.until,
                 self.q,
+                self.retrying is not None,
             )
         )
 
@@ -437,9 +526,12 @@ class MailLogCounts:
     """Итоги за окно сводки (L14) и последний сбой в этом окне."""
 
     sent: int = 0
+    # Окончательные сбои: повторов больше не будет (V13).
     failed: int = 0
     not_sent: int = 0
     suppressed: int = 0
+    # Не ушло, но Студия ещё повторит отправку сама.
+    retrying: int = 0
     last_failure_at: datetime | None = None
     last_failure_reason: str | None = None
 
@@ -495,6 +587,7 @@ def rerender(entry: MailLogEntry) -> RenderedMail | None:
             page_path=params.link_path if params.link is MailLinkKind.page else None,
             note=params.note_len > 0,
         ),
+        note_in_inbox=params.note_in_inbox and params.note_len == 0,
     )
 
 
@@ -506,3 +599,151 @@ def rerendered(entry: MailLogEntry) -> bool:
     if template is None or lang is None:
         return False
     return entry.template_digest != template_digest(template, lang)
+
+
+# Автоповтор временных сбоев (раздел 14, V6): паузы перед 2..5-й попыткой.
+RETRY_DELAYS: tuple[timedelta, ...] = (
+    timedelta(minutes=1),
+    timedelta(minutes=5),
+    timedelta(minutes=15),
+    timedelta(minutes=30),
+)
+MAX_ATTEMPTS = len(RETRY_DELAYS) + 1
+# Сбои без кода SMTP, после которых сервер стоит попросить ещё раз: соединение не установилось или оборвалось.
+_TRANSIENT_CLASSES = frozenset({MailFailureClass.connect, MailFailureClass.timeout, MailFailureClass.disconnected})
+_SMTP_TEMPORARY = range(400, 500)
+
+
+def is_transient(failure: MailFailure) -> bool:
+    """Временный сбой (V6): ответ SMTP `4xx` любого класса или обрыв, таймаут, отказ в соединении без кода.
+
+    Ответ `5xx` постоянный, как и сбой без кода других классов (`tls`, `smtp_off`, `other`)."""
+    if failure.smtp_code is not None:
+        return failure.smtp_code in _SMTP_TEMPORARY
+    return failure.reason in _TRANSIENT_CLASSES
+
+
+def next_retry_at(attempts: int, tried_at: datetime) -> datetime | None:
+    """Когда повторить после `attempts` попыток (последняя в `tried_at`); None, если попытки кончились."""
+    if attempts < 1 or attempts >= MAX_ATTEMPTS:
+        return None
+    return tried_at + RETRY_DELAYS[attempts - 1]
+
+
+def link_expired(request: MailRequest, first_at: datetime, now: datetime) -> bool:
+    """Ссылка с токеном уже не действует: слать письмо с ней незачем (V9)."""
+    if request.link_kind is not MailLinkKind.token:
+        return False
+    expiry = request.expires_at or (first_at + request.ttl if request.ttl is not None else None)
+    return expiry is not None and expiry <= now
+
+
+# Окно ручного повтора от первой попытки (V4).
+RESEND_WINDOW = timedelta(hours=72)
+# Сколько писем за раз уходит по «Отправить неушедшие» (V11).
+RESEND_BATCH_LIMIT = 200
+_RESENDABLE = frozenset({MailStatus.failed, MailStatus.not_sent})
+
+
+class ResendBlock(StrEnum):
+    """Почему письмо нельзя отправить ещё раз (V1, V4, V5; таблица 14.2). Подписи `adminMail:resend.blocked.*`."""
+
+    status = "status"
+    token_link = "token_link"  # noqa: S105 — код причины, не токен
+    smtp_test = "smtp_test"
+    template_gone = "template_gone"
+    retrying = "retrying"
+    too_old = "too_old"
+    already_resent = "already_resent"
+    smtp_off = "smtp_off"
+    recipient_gone = "recipient_gone"
+    recipient_changed = "recipient_changed"
+    recipient_blocked = "recipient_blocked"
+    project_gone = "project_gone"
+    invitation_done = "invitation_done"
+    request_done = "request_done"
+    transfer_done = "transfer_done"
+    route_done = "route_done"
+    object_gone = "object_gone"
+
+
+def resend_block(entry: MailLogEntry, *, now: datetime, smtp_enabled: bool, resent: bool) -> ResendBlock | None:
+    """Общие правила ручного повтора по самой строке (14.2), без обращения к объекту письма.
+
+    `resent`: у строки уже есть успешный ручной повтор."""
+    rules = (
+        (entry.status not in _RESENDABLE, ResendBlock.status),
+        (known_template(entry.template) is None or _lang(entry.lang) is None, ResendBlock.template_gone),
+        (entry.params.link is MailLinkKind.token, ResendBlock.token_link),
+        (entry.template == MailTemplate.smtp_test.value, ResendBlock.smtp_test),
+        (entry.retrying, ResendBlock.retrying),
+        (entry.at < now - RESEND_WINDOW, ResendBlock.too_old),
+        (resent, ResendBlock.already_resent),
+        (not smtp_enabled, ResendBlock.smtp_off),
+    )
+    return next((block for broken, block in rules if broken), None)
+
+
+_REF_KINDS: Mapping[str, MailRefKind] = MappingProxyType({kind.value: kind for kind in MailRefKind})
+
+
+def resend_request(entry: MailLogEntry, server_url: str | None) -> MailRequest:
+    """Письмо ручного повтора из строки журнала (V3): те же значения белого списка, ссылка на страницу по пути на
+    текущем адресе установки, на месте сообщения человека строка «сообщение есть во «Входящих»».
+
+    Только для строк, прошедших `resend_block`: у вида есть шаблон, ссылки с токеном нет."""
+    template = known_template(entry.template)
+    lang = _lang(entry.lang)
+    if template is None or lang is None or entry.params.link is MailLinkKind.token:
+        raise ValueError("this mail cannot be rebuilt from the log")
+    params = entry.params
+    link: str | None = None
+    if params.link is MailLinkKind.page and fixed_path(template) is None:
+        origin = server_origin(server_url)
+        link = f"{origin}{params.link_path}" if origin and params.link_path else None
+    link_kind = MailLinkKind.page if link or fixed_path(template) else MailLinkKind.none
+    ref_kind = _REF_KINDS.get(entry.ref_kind) if entry.ref_kind else None
+    return MailRequest(
+        template=template,
+        lang=lang,
+        to=entry.to_email,
+        server_url=server_url,
+        origin=MailOrigin.admin_resend,
+        link_kind=link_kind,
+        link=link,
+        ttl=timedelta(seconds=params.ttl_s) if params.ttl_s is not None else None,
+        expires_at=params.expires_at,
+        # Подстановка, которой у старой строки нет (шаблон обновился), не роняет письмо, как и в карточке.
+        values=dict.fromkeys(_required_values(template, lang), MISSING_VALUE) | dict(params.values),
+        to_user_id=entry.to_user_id,
+        project_id=entry.project_id,
+        ref_kind=ref_kind,
+        ref_id=entry.ref_id if ref_kind is not None else None,
+        note_in_inbox=params.note_len > 0 or params.note_in_inbox,
+    )
+
+
+@dataclass(frozen=True)
+class MailRetryJob:
+    """Созревший автоповтор из очереди (V9). `request` None, если шифртекст не открылся или запрос не читается
+    этой версией: повтор тогда прекращается."""
+
+    entry_id: int
+    attempts: int
+    first_at: datetime
+    request: MailRequest | None
+
+
+@dataclass(frozen=True, kw_only=True)
+class MailAttempt:
+    """Исход очередной попытки для той же строки журнала (V7). `next_attempt_at` None: повторов больше не будет."""
+
+    status: MailStatus
+    attempts: int
+    tried_at: datetime
+    duration_ms: int
+    reason: str | None = None
+    smtp_code: int | None = None
+    error_text: str | None = None
+    message_id: str | None = None
+    next_attempt_at: datetime | None = None

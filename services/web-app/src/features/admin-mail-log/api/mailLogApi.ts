@@ -3,9 +3,14 @@ import type { ListRequestParams } from "@shared/lib";
 import {
   MailLogDetailSchema,
   MailLogPageSchema,
+  MailLogResendBatchSchema,
+  MailLogResendResultSchema,
   MailLogSummarySchema,
   type MailLogDetail,
   type MailLogPage,
+  type MailLogResendBatch,
+  type MailLogResendBatchRequest,
+  type MailLogResendResult,
   type MailLogSummary,
 } from "./schemas";
 
@@ -38,4 +43,17 @@ export const mailLogApi = {
     adminClient
       .get("/mail-log/summary", opts(signal))
       .then(parseResp(MailLogSummarySchema)),
+  /**
+   * «Отправить ещё раз» (14, V1..V5): неактуальное письмо отвечает 200 с `outcome: blocked` и
+   * причиной, а не ошибкой. Сбой запроса показывает карточка.
+   */
+  resend: (id: number): Promise<MailLogResendResult> =>
+    adminClient
+      .post(`/mail-log/${String(id)}/resend`, undefined, quiet)
+      .then(parseResp(MailLogResendResultSchema)),
+  /** «Отправить неушедшие» (V11): с `dry_run` только считает, иначе запускает отправку фоном. */
+  resendBatch: (body: MailLogResendBatchRequest): Promise<MailLogResendBatch> =>
+    adminClient
+      .post("/mail-log/resend", body, quiet)
+      .then(parseResp(MailLogResendBatchSchema)),
 };

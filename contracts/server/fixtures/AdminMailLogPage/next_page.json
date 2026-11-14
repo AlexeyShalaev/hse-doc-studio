@@ -20,7 +20,10 @@
       "task": null,
       "origin": "register",
       "project": null,
-      "ref": null
+      "ref": null,
+      "next_attempt_at": null,
+      "last_attempt_at": null,
+      "resent_from_id": null
     },
     {
       "id": 1101,
@@ -52,7 +55,10 @@
       "ref": {
         "kind": "access_request",
         "id": "c93f5e4a1b0d4e7c"
-      }
+      },
+      "next_attempt_at": null,
+      "last_attempt_at": null,
+      "resent_from_id": null
     },
     {
       "id": 1042,
@@ -78,7 +84,10 @@
       "task": "weekly_digest",
       "origin": "notification",
       "project": null,
-      "ref": null
+      "ref": null,
+      "next_attempt_at": null,
+      "last_attempt_at": null,
+      "resent_from_id": null
     }
   ],
   "next_cursor": null,

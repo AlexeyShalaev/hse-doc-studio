@@ -49,6 +49,10 @@ _ROW_KEYS = {
     "cause",
     "actor_id",
     "project_id",
+    "attempts",
+    "next_attempt_at",
+    "last_attempt_at",
+    "resent_from_id",
 }
 
 
@@ -142,6 +146,10 @@ async def test__handle__row__only_compact_fields_without_names_links_or_error_te
         "cause": "user",
         "actor_id": "boss",
         "project_id": PROJECT_ID,
+        "attempts": 1,
+        "next_attempt_at": None,
+        "last_attempt_at": None,
+        "resent_from_id": None,
     }
     text = json.dumps(row, ensure_ascii=False)
     assert "Анна" not in text
@@ -246,3 +254,21 @@ async def test__handle__not_an_admin__refused_by_the_use_case() -> None:
     with pytest.raises(IdentityError):
         await tool.handle(_ctx(), {})
     assert not log.queries
+
+
+async def test__handle__row__shows_attempts_and_the_planned_retry() -> None:
+    retry_at = NOW + timedelta(minutes=4)
+    tried_at = NOW - timedelta(minutes=1)
+    tool, _ = _setup(
+        _entry(attempts=2, next_attempt_at=retry_at, last_attempt_at=tried_at),
+        _entry(
+            status=MailStatus.sent, reason=None, smtp_code=None, error_text=None, message_id="<m@x>", resent_from_id=1
+        ),
+    )
+
+    resent, retrying = await _rows(tool, {})
+
+    assert retrying["attempts"] == 2
+    assert retrying["next_attempt_at"] == retry_at.isoformat()
+    assert retrying["last_attempt_at"] == tried_at.isoformat()
+    assert resent["resent_from_id"] == 1

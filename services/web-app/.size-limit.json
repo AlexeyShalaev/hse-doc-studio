@@ -51,13 +51,13 @@
     "name": "Словарь админки: audit",
     "path": "dist/assets/locale-admin-audit-*.js",
     "gzip": true,
-    "limit": "10.5 kB"
+    "limit": "10.6 kB"
   },
   {
     "name": "Словарь админки: mail",
     "path": "dist/assets/locale-admin-mail-*.js",
     "gzip": true,
-    "limit": "6.4 kB"
+    "limit": "8.4 kB"
   },
   {
     "name": "Словарь админки: ops",
@@ -135,7 +135,7 @@
     "name": "Словарь админки: diagnostics",
     "path": "dist/assets/locale-admin-diagnostics-*.js",
     "gzip": true,
-    "limit": "10.9 kB"
+    "limit": "11.6 kB"
   },
   {
     "name": "Словарь админки: mcp",

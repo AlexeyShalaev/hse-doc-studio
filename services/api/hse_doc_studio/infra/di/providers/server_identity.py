@@ -48,6 +48,7 @@ from hse_doc_studio.core.identity.protocols import (
 from hse_doc_studio.core.identity.session_policy import SessionPolicy
 from hse_doc_studio.core.identity.smtp_settings import SmtpEnv, SmtpParams
 from hse_doc_studio.core.jobs.routing import IPersonalRunnerSettings
+from hse_doc_studio.core.mail.ports import IMailRelevance
 from hse_doc_studio.core.onboarding.protocols import IExistingUserProbe, IOnboardingRepository
 from hse_doc_studio.core.orgs.protocols import IGroupRepository, IOrgRepository
 from hse_doc_studio.core.repositories import ISettingsRepository
@@ -71,6 +72,7 @@ from hse_doc_studio.infra.db.repositories.identity import (
 )
 from hse_doc_studio.infra.db.repositories.lifecycle import SqlUserLifecycle
 from hse_doc_studio.infra.db.repositories.mail_log import SqlMailLogRepository
+from hse_doc_studio.infra.db.repositories.mail_relevance import SqlMailRelevance
 from hse_doc_studio.infra.db.repositories.onboarding import MigratedExistingUserProbe, SqlOnboardingRepository
 from hse_doc_studio.infra.db.repositories.orgs import SqlGroupRepository, SqlOrgRepository
 from hse_doc_studio.infra.db.repositories.settings import PostgresSettingsRepository
@@ -464,8 +466,8 @@ class ServerIdentityProvider(Provider):
         return SqlRegistrationInviteRepository(sessions)
 
     @provide
-    def get_mail_log(self, sessions: SessionProvider) -> IMailLogRepository:
-        return SqlMailLogRepository(sessions)
+    def get_mail_log(self, sessions: SessionProvider, cipher: ISecretCipher) -> IMailLogRepository:
+        return SqlMailLogRepository(sessions, cipher)
 
     @provide
     def get_auth_cleanup_service(
@@ -526,8 +528,14 @@ class ServerIdentityProvider(Provider):
         return GetSmtpSettingsUC(service)
 
     @provide
-    def get_mail_dispatcher(self, sender: IMailSender, log: IMailLogRepository) -> MailDispatcher:
-        return MailDispatcher(sender, log)
+    def get_mail_relevance(self, sessions: SessionProvider) -> IMailRelevance:
+        return SqlMailRelevance(sessions)
+
+    @provide
+    def get_mail_dispatcher(
+        self, sender: IMailSender, log: IMailLogRepository, relevance: IMailRelevance
+    ) -> MailDispatcher:
+        return MailDispatcher(sender, log, relevance=relevance)
 
     @provide
     def get_send_test_mail_uc(self, mail: MailDispatcher, users: IUserRepository, audit: IAuditLog) -> SendTestMailUC:

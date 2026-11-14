@@ -22,8 +22,8 @@ help:
     - text: 'Keep **Notify admins** on: an inbox message arrives when a check turns into a warning or failure, and when it recovers.'
       hint: '**Status confirmation** sets how many passes in a row a status must hold before a notification: a single failure bothers nobody.'
 verified:
-  at: 2026-11-03
-  app_version: '0.3.0'
+  at: 2026-11-14
+  app_version: '0.27.0'
   sources:
     - services/web-app/src/features/admin-diagnostics
     - services/api/hse_doc_studio/core/diagnostics
@@ -58,6 +58,13 @@ Checks are grouped: **Data**, **Builds and background jobs**, **Certificates**, 
   [Backups](/help/en/admin/backups/) and look at the run history.
 - **Background jobs**, “No background-job leader found”: restart api; if that does not help, check
   the database connection.
+- **Email delivery**, “… of … emails did not go out in the last hour” or “The last email did not go
+  out”: the check looks at the mail log, not only at the sign-in to SMTP. Open the row: it leads to
+  [Mail](/help/en/admin/mail/) with the Failed filter. Fix the **Mail (SMTP)** block by the reason in
+  the email card, send a test email and click **Send unsent**. The share is counted for the last
+  hour and day when the window has at least five emails; the **Unsent emails** thresholds (20% and
+  50% by default) are edited in **Thresholds and notifications**. A single refusal for one address
+  (code 550) does not trip the check by itself.
 
 ## Accept a warning on purpose
 

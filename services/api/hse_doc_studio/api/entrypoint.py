@@ -44,6 +44,7 @@ from hse_doc_studio.api.observability.install import (
 )
 from hse_doc_studio.api.observability.install_diagnostics import install_diagnostics
 from hse_doc_studio.api.observability.install_lifecycle import install_data_lifecycle
+from hse_doc_studio.api.observability.install_mail import install_mail_retry
 from hse_doc_studio.api.observability.install_signing import (
     install_checkpoint_reminders,
     install_signing_reminders,
@@ -251,6 +252,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
         install_signing_route_sweep(app, container, settings)
         install_signing_route_migration(app, container, settings)
         install_checkpoint_reminders(app, container, settings)
+        install_mail_retry(app, container)
 
         @app.on_event("startup")
         async def _register_runner_bootstrap_token() -> None:

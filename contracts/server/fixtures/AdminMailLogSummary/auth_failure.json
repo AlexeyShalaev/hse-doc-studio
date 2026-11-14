@@ -5,6 +5,7 @@
   "failed": 37,
   "not_sent": 0,
   "suppressed": 1,
+  "retrying": 0,
   "last_failure": {
     "at": "2026-11-11T09:00:02Z",
     "reason": "auth"

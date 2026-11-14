@@ -27,6 +27,9 @@ class DiagThresholds:
     tls_fail_days: int = 7
     backup_warn_hours: int = 36
     backup_fail_hours: int = 96
+    # Доля неушедших писем за час или сутки (mail-log.md, V14).
+    mail_failed_warn_percent: int = 20
+    mail_failed_fail_percent: int = 50
     # Антидребезг уведомлений: сколько проверок подряд статус должен продержаться и как часто напоминать.
     confirm_runs: int = 2
     repeat_hours: int = 24
@@ -46,6 +49,8 @@ BOUNDS: dict[str, tuple[int, int]] = {
     "tls_fail_days": (1, 60),
     "backup_warn_hours": (1, 720),
     "backup_fail_hours": (2, 2160),
+    "mail_failed_warn_percent": (1, 99),
+    "mail_failed_fail_percent": (2, 100),
     "confirm_runs": (1, 10),
     "repeat_hours": (1, 168),
 }
@@ -56,6 +61,7 @@ PAIRS: tuple[tuple[str, str], ...] = (
     ("queue_wait_warn_s", "queue_wait_fail_s"),
     ("stuck_job_warn_s", "stuck_job_fail_s"),
     ("backup_warn_hours", "backup_fail_hours"),
+    ("mail_failed_warn_percent", "mail_failed_fail_percent"),
 )
 TLS_PAIR = ("tls_warn_days", "tls_fail_days")
 DEFAULTS = DiagThresholds()

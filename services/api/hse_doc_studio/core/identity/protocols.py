@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Collection, Mapping
 from datetime import datetime, timedelta
 from typing import Protocol
 
@@ -30,7 +30,15 @@ from hse_doc_studio.core.identity.entities import (
     UserQuery,
 )
 from hse_doc_studio.core.listing import Found, Picked
-from hse_doc_studio.core.mail.journal import MailLogCounts, MailLogEntry, MailLogPage, MailLogQuery
+from hse_doc_studio.core.mail.journal import (
+    MailAttempt,
+    MailLogCounts,
+    MailLogEntry,
+    MailLogPage,
+    MailLogQuery,
+    MailRequest,
+    MailRetryJob,
+)
 
 
 class IUserRepository(Protocol):
@@ -253,12 +261,16 @@ class IMailSender(Protocol):
 
 
 class IMailLogRepository(Protocol):
-    """Журнал писем (docs/design/mail-log.md, 5.1). Строка не меняется после записи; удаляют её только срок
-    хранения (источник `mail_log` движка жизненного цикла) и стирание человека (`IUserLifecycle.erase`)."""
+    """Журнал писем (docs/design/mail-log.md, 5.1). Удаляют строку только срок хранения (источник `mail_log` движка
+    жизненного цикла) и стирание человека (`IUserLifecycle.erase`); меняются в ней только поля исхода автоповтора
+    (раздел 14, V7) и `actor_user_id` при стирании."""
 
-    async def add(self, entry: MailLogEntry) -> int:
+    async def add(self, entry: MailLogEntry, retry: MailRequest | None = None) -> int:
         """Записывает строку в своей короткой транзакции, мимо ambient (L15): откат запроса вызывающего не стирает
-        факт отправки. `entry.id` игнорируется; возвращает выданный id."""
+        факт отправки. `entry.id` игнорируется; возвращает выданный id.
+
+        `retry`: временный сбой (V8), в той же транзакции запрос ставится в очередь автоповтора на
+        `entry.next_attempt_at` шифртекстом. Если зашифровать нечем, строка пишется без повтора."""
         ...
 
     async def page(self, query: MailLogQuery) -> MailLogPage:
@@ -272,7 +284,34 @@ class IMailLogRepository(Protocol):
     async def get(self, entry_id: int) -> MailLogEntry | None: ...
 
     async def summary(self, since: datetime) -> MailLogCounts:
-        """Итоги строк с `at >= since` и последний `failed` среди них."""
+        """Итоги строк с `at >= since` и последний `failed` среди них; ждущие повтора отдельно (`retrying`)."""
+        ...
+
+    async def claim_retries(self, now: datetime, lease: timedelta, limit: int) -> list[MailRetryJob]:
+        """Созревшие автоповторы (`due_at <= now`), старые первыми; их срок сдвигается на `lease` до исхода, так что
+        другой экземпляр или следующий проход их не возьмёт, а упавший процесс их не потеряет (V9)."""
+        ...
+
+    async def finish_attempt(self, entry_id: int, attempt: MailAttempt) -> None:
+        """Исход попытки в ту же строку (V7). С `next_attempt_at` очередь ждёт следующей попытки, без него строка
+        очереди удаляется."""
+        ...
+
+    async def resends_of(self, entry_id: int) -> list[MailLogEntry]:
+        """Ручные повторы строки (`resent_from_id`), новые первыми."""
+        ...
+
+    async def resent_ok(self, entry_ids: Collection[int]) -> set[int]:
+        """Из этих строк те, у которых есть ручной повтор с итогом `sent`."""
+        ...
+
+    async def resend_candidates(self, query: MailLogQuery, since: datetime, limit: int) -> list[MailLogEntry]:
+        """Строки для «Отправить неушедшие» (V11): фильтры `query` (кроме итога и ключа страницы), итог `failed` без
+        запланированного повтора или `not_sent`, первая попытка не раньше `since`; старые первыми."""
+        ...
+
+    async def last_attempt(self) -> MailLogEntry | None:
+        """Строка с последней попыткой отправки (`sent` или `failed`) для самодиагностики (V14)."""
         ...
 
 

@@ -492,3 +492,79 @@
 .ml-card[data-form="sheet"] .ml-copy > button {
   align-self: flex-start;
 }
+
+/* Версия 2 (docs/design/mail-log.md, раздел 14): автоповтор и ручные повторы в карточке. */
+.ml-card-outcome[data-tone="warn"] {
+  border-color: color-mix(in oklch, var(--c-warn) 45%, var(--border));
+  background: var(--c-warn-soft);
+}
+.ml-card-retry {
+  margin: 0;
+  font-size: 0.78125rem;
+  color: var(--fg-1);
+}
+.ml-card-resent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ml-day-retrying {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.125rem 0.375rem;
+  margin: -0.125rem -0.375rem;
+  border-radius: var(--r-1);
+  color: var(--c-warn);
+  cursor: pointer;
+}
+.ml-day-retrying:hover {
+  background: var(--c-warn-soft);
+  text-decoration: underline;
+}
+.ml-day-retrying:focus-visible {
+  outline: 2px solid var(--accent);
+}
+.ml-dot[data-tone="warn"] {
+  background: var(--c-warn);
+}
+
+/* «Отправить неушедшие»: предпросмотр в окне. */
+.ml-batch {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  font-size: 0.8125rem;
+}
+.ml-batch-lead,
+.ml-batch-planned {
+  margin: 0;
+  color: var(--fg-1);
+}
+.ml-batch-planned {
+  font-weight: 500;
+  color: var(--fg-0);
+}
+.ml-batch-skipped {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.ml-batch-skipped ul {
+  margin: 0;
+  padding: 0 0 0 1.125rem;
+  color: var(--fg-1);
+  line-height: 1.5;
+}
+.ml-batch-state {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 0;
+  color: var(--fg-2);
+  font-size: 0.8125rem;
+}

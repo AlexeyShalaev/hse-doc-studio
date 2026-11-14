@@ -8,6 +8,7 @@ from hse_doc_studio.core.diagnostics.facts import (
     DbFacts,
     DiskFacts,
     JobFacts,
+    MailDeliveryFacts,
     MigrationFacts,
     ObjectFacts,
     RunnerFacts,
@@ -154,6 +155,32 @@ def judge_smtp(f: SmtpFacts) -> Verdict:
     if f.error is not None:
         return Verdict(_WARN, "smtp_unreachable", {"error": f.error})
     return Verdict(_OK, "ok", {"latency_ms": round(f.latency_ms or 0)})
+
+
+# Окно доли неушедших писем считается, только если попыток в нём не меньше: одно письмо из одного не тревога.
+MAIL_MIN_ATTEMPTS = 5
+# Отказ одному адресу не значит, что почта сломана (V14): последним ответом он не считается.
+_MAIL_ONE_ADDRESS = "recipient_refused"
+
+
+def judge_mail_delivery(f: MailDeliveryFacts, t: DiagThresholds) -> Verdict:
+    if not f.configured:
+        return Verdict(_OK, "not_configured")
+    worst: tuple[DiagStatus, str, dict[str, str | int | float]] = (_OK, "ok", {})
+    for window, sent, failed in (("hour", f.hour_sent, f.hour_failed), ("day", f.day_sent, f.day_failed)):
+        total = sent + failed
+        if total < MAIL_MIN_ATTEMPTS:
+            continue
+        percent = round(failed * 100 / total)
+        status = _by_level(percent, t.mail_failed_warn_percent, t.mail_failed_fail_percent)
+        if status > worst[0]:
+            worst = (status, f"mail_failing_{window}", {"failed": failed, "total": total, "percent": percent})
+    if worst[0] is not _OK:
+        return Verdict(*worst)
+    if f.last_failed and f.last_reason != _MAIL_ONE_ADDRESS:
+        error = " ".join(str(part) for part in (f.last_reason or "other", f.last_code) if part is not None)
+        return Verdict(_WARN, "mail_last_failed", {"error": error})
+    return Verdict(_OK, "ok", {"failed": f.day_failed, "total": f.day_sent + f.day_failed})
 
 
 def _task_problems(f: SchedulerFacts) -> tuple[list[str], list[str]]:
