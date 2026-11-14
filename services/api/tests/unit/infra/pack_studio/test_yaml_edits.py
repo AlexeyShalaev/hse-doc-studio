@@ -116,6 +116,17 @@ def test_new_entry_in_a_blank_separated_block_gets_a_blank_line() -> None:
     assert delete(edited, ("fields", "udc")) == DOC
 
 
+def test_new_key_after_a_sibling() -> None:
+    edited = set_value(DOC, ("release",), {"kind": "patch"}, after="status")
+    assert "status: stable   # хвостовой комментарий\nrelease: { kind: patch }\ntitle:" in edited
+    assert delete(edited, ("release",)) == DOC
+    flow = set_value(DOC, ("fields", "city", "label", "de"), "Stadt", after="ru")
+    assert "label:       { ru: Город, de: Stadt, en: City }" in flow
+    # Ключ уже есть или соседа нет: `after` ничего не меняет.
+    assert set_value(DOC, ("status",), "beta", after="title") == DOC.replace("status: stable", "status: beta")
+    assert set_value(DOC, ("zz",), 1, after="nope").endswith("zz: 1\n")
+
+
 def test_new_key_in_flow_mapping() -> None:
     edited = set_value(DOC, ("fields", "city", "label", "de"), "Stadt")
     assert "label:       { ru: Город, en: City, de: Stadt }" in edited

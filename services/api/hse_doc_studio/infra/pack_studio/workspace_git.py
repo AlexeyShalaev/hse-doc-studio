@@ -19,6 +19,8 @@ import asyncio
 import shutil
 from pathlib import Path
 
+import yaml
+
 from hse_doc_studio.api.config import GitConfig
 from hse_doc_studio.core.git_sync.entities import RemoteTarget
 from hse_doc_studio.core.git_sync.error_classifier import GitOp
@@ -149,7 +151,11 @@ class PackWorkspaceGit:
             if text is None:
                 continue
             pack, _, template, _ = rel.split("/")
-            templates[template_key(pack, template)] = {v: e.digest for v, e in parse_releases(text).items()}
+            try:
+                entries = parse_releases(text)
+            except yaml.YAMLError:
+                entries = {}  # битый реестр базы: как отсутствующий, линтер ветки покажет ошибку
+            templates[template_key(pack, template)] = {v: e.digest for v, e in entries.items()}
         return ReleasedVersions(templates=templates, sha=await self._tip(dirs, branch))
 
     async def _registry_text(self, dirs: WorkspaceDirs, target: RemoteTarget, spec: str) -> str | None:

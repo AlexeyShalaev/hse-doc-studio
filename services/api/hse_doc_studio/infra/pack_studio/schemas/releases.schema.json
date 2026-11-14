@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hse-doc-studio.local/contracts/pack/releases.schema.json",
+  "title": "releases.yaml",
+  "description": "Реестр выпущенных версий шаблона: дайджест каталога и класс выпуска. Пишется `releases freeze`, руками не правится.",
+  "type": "object",
+  "properties": {
+    "releases": {
+      "type": "object",
+      "propertyNames": { "$ref": "common.schema.json#/$defs/versionId" },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+          "kind": { "enum": ["patch", "minor", "major"] }
+        },
+        "required": ["digest"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["releases"],
+  "additionalProperties": false
+}

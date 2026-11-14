@@ -101,20 +101,15 @@ def load_releases(template_dir: Path) -> dict[str, ReleaseEntry]:
     if not path.exists():
         return {}
     try:
-        text = path.read_text(encoding="utf-8")
-    except OSError as exc:
+        return parse_releases(path.read_text(encoding="utf-8"))
+    except (OSError, yaml.YAMLError) as exc:
         logger.warning("releases.yaml read error", path=str(path), exc=str(exc))
         return {}
-    return parse_releases(text, source=str(path))
 
 
-def parse_releases(text: str, *, source: str = RELEASES_FILE) -> dict[str, ReleaseEntry]:
-    """Реестр выпусков из текста `releases.yaml` (файл на диске или блоб базовой ветки); битый текст даёт пустой."""
-    try:
-        data = yaml.safe_load(text) or {}
-    except yaml.YAMLError as exc:
-        logger.warning("releases.yaml read error", path=source, exc=str(exc))
-        return {}
+def parse_releases(text: str) -> dict[str, ReleaseEntry]:
+    """Реестр выпусков из текста `releases.yaml` (например, из базовой ветки git). Битый YAML даёт `YAMLError`."""
+    data = yaml.safe_load(text) or {}
     raw = data.get("releases") if isinstance(data, dict) else None
     if not isinstance(raw, dict):
         return {}
@@ -161,15 +156,21 @@ def check_template(template_dir: Path) -> list[str]:
     return errors
 
 
-def freeze(template_dir: Path, version: str, kind: TemplateUpdateClass | None = None) -> ReleaseEntry:
-    """Внести версию в реестр выпусков (статус в version.yaml должен быть stable)."""
+def freeze(
+    template_dir: Path, version: str, kind: TemplateUpdateClass | None = None, *, replace: bool = False
+) -> ReleaseEntry:
+    """Внести версию в реестр выпусков (статус в version.yaml должен быть stable).
+
+    `replace` заменяет запись уже внесённой версии: так выпуск пересчитывает свой дайджест, пока PR не слит
+    (template-studio.md, 7.1). Решает, можно ли заменять, вызывающий (`infra/pack_studio/versions.py`).
+    """
     version_dir = _version_dir(template_dir, version)
     manifest = yaml.safe_load((version_dir / "version.yaml").read_text(encoding="utf-8")) or {}
     status = str(manifest.get("status", "stable"))
     if status not in ("stable", "deprecated"):
         raise ValueError(f"{template_dir.name}@{version}: выпускать можно только stable-версию (сейчас {status})")
     entries = load_releases(template_dir)
-    if version in entries:
+    if version in entries and not replace:
         raise ValueError(f"{template_dir.name}@{version}: версия уже выпущена — её каталог неизменен")
     entry = ReleaseEntry(version=version, digest=version_digest(version_dir), kind=kind)
     entries[version] = entry
