@@ -8,7 +8,7 @@ r"""Точечные правки YAML пака по позициям узлов
 
 * `set_value`: значение по пути. Скаляр заменяется в своём стиле (простой, в кавычках, блочный `|`); словарь и
   список правятся поэлементно; отсутствующий последний ключ дописывается в конец своего блока с отступом соседей
-  (и с их выравниванием значений). Значение, равное текущему, ничего не меняет;
+  (и с их выравниванием значений), с `after` сразу за ключом-соседом. Значение, равное текущему, ничего не меняет;
 * `insert_item`: элемент списка по индексу (`len` дописывает в конец);
 * `delete`: ключ словаря или элемент списка вместе с комментарием над ним;
 * `move_item`: элемент списка на новое место, с его комментарием.
@@ -49,10 +49,14 @@ class YamlEditError(ValueError):
 # ---------------------------------------------------------------------------
 
 
-def set_value(text: str, path: YamlPath, value: Any) -> str:
-    """Значение по пути; последний ключ словаря может отсутствовать, тогда он дописывается в конец блока."""
+def set_value(text: str, path: YamlPath, value: Any, *, after: str | None = None) -> str:
+    """Значение по пути; последний ключ словаря может отсутствовать, тогда он дописывается в конец блока.
+
+    `after` ставит новый ключ сразу за этим ключом того же словаря (если он там есть), а не в конец блока:
+    `release` за `status` в `version.yaml`. Для существующего ключа `after` ничего не меняет.
+    """
     expected = _expect(text, path, lambda parent, key: _assign(parent, key, value), root=value)
-    return _checked(_set(text, path, value), expected)
+    return _checked(_set(text, path, value, after=after), expected)
 
 
 def insert_item(text: str, path: YamlPath, index: int, value: Any) -> str:
@@ -573,7 +577,7 @@ def _align_column(doc: _Doc, mapping: Node) -> int | None:
     return columns.pop() if padded and len(columns) == 1 else None
 
 
-def _add_key(doc: _Doc, loc: _Loc, key: Key, value: Any) -> str:
+def _add_key(doc: _Doc, loc: _Loc, key: Key, value: Any, after: str | None = None) -> str:
     mapping = loc.node
     if not isinstance(key, str):
         raise YamlEditError(f"path element {key!r} is not in the document")
@@ -581,12 +585,14 @@ def _add_key(doc: _Doc, loc: _Loc, key: Key, value: Any) -> str:
         return "".join(_entry_lines(key, value, 0))
     if not isinstance(mapping, MappingNode):
         raise YamlEditError(f"cannot add key {key!r}: the parent is not a mapping")
+    keys = [getattr(node, "value", None) for node, _ in mapping.value]
+    index = keys.index(after) + 1 if after is not None and after in keys else len(mapping.value)
     if loc.in_flow or doc.is_flow(mapping):
         item = f"{_scalar_text(key, flow=True, as_key=True)}: {_inline(value, flow=True)}"
-        return _flow_insert(doc, mapping, len(mapping.value), item)
+        return _flow_insert(doc, mapping, index, item)
     indent = doc.column(mapping.value[0][0].start_mark.index)
     lines = _entry_lines(key, value, indent, _align_column(doc, mapping))
-    return _block_insert(doc, mapping, len(mapping.value), lines, doc.separated(mapping))
+    return _block_insert(doc, mapping, index, lines, doc.separated(mapping))
 
 
 def _current(text: str, path: YamlPath) -> Any:
@@ -596,7 +602,7 @@ def _current(text: str, path: YamlPath) -> Any:
     return node
 
 
-def _set(text: str, path: YamlPath, value: Any) -> str:
+def _set(text: str, path: YamlPath, value: Any, after: str | None = None) -> str:
     current = _missing = object()
     try:
         current = _current(text, path)
@@ -607,7 +613,7 @@ def _set(text: str, path: YamlPath, value: Any) -> str:
         return text
     doc = _Doc(text)
     if current is _missing:
-        return _add_key(doc, doc.locate(path[:-1]), path[-1], value)
+        return _add_key(doc, doc.locate(path[:-1]), path[-1], value, after)
     if isinstance(value, dict) and isinstance(current, dict) and current and value:
         return _set_mapping(text, path, current, value)
     if isinstance(value, list) and isinstance(current, list) and current and value:

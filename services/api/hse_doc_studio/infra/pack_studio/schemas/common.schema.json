@@ -1,0 +1,205 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hse-doc-studio.local/contracts/pack/common.schema.json",
+  "title": "Общие определения схем пака",
+  "description": "Общие типы манифестов пака: локализованные строки, id, даты, места и метки даты подписей.",
+  "$defs": {
+    "id": {
+      "description": "id документа, слота, профиля, анкеты: латиница, цифры, `_` и одиночный `-`. Двойной дефис зарезервирован под инстансы командного режима (`report--ivanov`).",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9]+(?:[_-][A-Za-z0-9]+)*$",
+      "maxLength": 64
+    },
+    "metaKey": {
+      "description": "Ключ поля метаданных: печатается в шаблонах как `project.meta.<ключ>`.",
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+      "maxLength": 64
+    },
+    "versionId": {
+      "description": "Номер версии шаблона `ГОД.MINOR[.PATCH]`.",
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+(?:\\.[0-9]+)?$"
+    },
+    "isoDate": {
+      "description": "Дата `ГГГГ-ММ-ДД` (YAML-дата приводится к строке до проверки).",
+      "type": "string",
+      "format": "date",
+      "pattern": "^[0-9]{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12][0-9]|3[01])$"
+    },
+    "langCode": {
+      "type": "string",
+      "pattern": "^[a-z]{2}(?:-[a-z]{2})?$"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1
+    },
+    "localized": {
+      "description": "Строка интерфейса: `{ ru: ..., en: ... }` или одна строка (тогда это ru).",
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "object",
+          "propertyNames": { "$ref": "#/$defs/langCode" },
+          "additionalProperties": { "type": "string" }
+        }
+      ]
+    },
+    "localizedLists": {
+      "description": "Пункты по языкам: `{ ru: [...], en: [...] }`.",
+      "type": "object",
+      "propertyNames": { "$ref": "#/$defs/langCode" },
+      "additionalProperties": { "type": "array", "items": { "type": "string" } }
+    },
+    "kinds": {
+      "description": "Форматы работы, в которых существует сущность. Нет ключа или пусто: оба.",
+      "type": "array",
+      "items": { "enum": ["research", "project"] },
+      "uniqueItems": true
+    },
+    "staffing": {
+      "type": "array",
+      "items": { "enum": ["solo", "team"] },
+      "uniqueItems": true
+    },
+    "engine": { "enum": ["xelatex", "lualatex", "pdflatex"] },
+    "severity": { "enum": ["info", "warn", "err", "skipped"] },
+    "align": { "enum": ["left", "center", "right"] },
+    "dateFormat": {
+      "enum": ["day", "month_word", "month_number", "year", "year_short", "date_numeric", "date_long"]
+    },
+    "anchorName": {
+      "description": "Имя якоря места подписи в шаблоне (signing-route.md, 15.17).",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,39}$"
+    },
+    "anchorDateName": {
+      "description": "Якорь метки даты «имя.часть» (`supervisor.day`).",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,39}\\.[a-z][a-z0-9_]{0,39}$"
+    },
+    "page": { "type": "integer", "minimum": 1 },
+    "mmPlacement": {
+      "description": "Место подписи в мм на листе A4. Ширина от 10 до 200 мм, верх рамки от 0 до 287 мм; лоадер ещё требует `x_mm + width_mm <= 210` (рамка внутри листа по ширине).",
+      "type": "object",
+      "properties": {
+        "page": { "$ref": "#/$defs/page" },
+        "x_mm": { "type": "number", "minimum": 0, "maximum": 200 },
+        "y_mm": { "type": "number", "minimum": 0, "maximum": 287 },
+        "width_mm": { "type": "number", "minimum": 10, "maximum": 200 }
+      },
+      "required": ["x_mm", "y_mm", "width_mm"],
+      "additionalProperties": false
+    },
+    "anchorPlacement": {
+      "description": "Место подписи на якоре шаблона (15.17.7): сдвиг от якоря и, по желанию, запасное место в мм для сборки без якорей.",
+      "type": "object",
+      "properties": {
+        "anchor": { "$ref": "#/$defs/anchorName" },
+        "align": { "$ref": "#/$defs/align" },
+        "dx_mm": { "type": "number", "minimum": -200, "maximum": 200 },
+        "dy_mm": { "type": "number", "minimum": -287, "maximum": 287 },
+        "width_mm": { "type": "number", "minimum": 10, "maximum": 200 },
+        "page": { "$ref": "#/$defs/page" },
+        "x_mm": { "type": "number", "minimum": 0, "maximum": 200 },
+        "y_mm": { "type": "number", "minimum": 0, "maximum": 287 }
+      },
+      "required": ["anchor"],
+      "dependentRequired": {
+        "page": ["x_mm", "y_mm", "width_mm"],
+        "x_mm": ["y_mm", "width_mm"],
+        "y_mm": ["x_mm", "width_mm"]
+      },
+      "additionalProperties": false
+    },
+    "placement": {
+      "description": "Место слота на документе (`placements`): в мм или на якоре.",
+      "oneOf": [{ "$ref": "#/$defs/mmPlacement" }, { "$ref": "#/$defs/anchorPlacement" }]
+    },
+    "defaultPlacement": {
+      "description": "`default_placement` слота: в мм или на якоре, но тогда с полным запасным местом в мм.",
+      "oneOf": [
+        { "$ref": "#/$defs/mmPlacement" },
+        {
+          "allOf": [
+            { "$ref": "#/$defs/anchorPlacement" },
+            { "required": ["anchor", "x_mm", "y_mm", "width_mm"] }
+          ]
+        }
+      ]
+    },
+    "mmDateMark": {
+      "description": "Метка даты в мм. Лоадер ещё требует рамку внутри листа A4 (`x_mm + width_mm <= 210`, `y_mm + height_mm <= 297`).",
+      "type": "object",
+      "properties": {
+        "page": { "$ref": "#/$defs/page" },
+        "x_mm": { "type": "number", "minimum": 0 },
+        "y_mm": { "type": "number", "minimum": 0 },
+        "width_mm": { "type": "number", "exclusiveMinimum": 0 },
+        "height_mm": { "type": "number", "exclusiveMinimum": 0 },
+        "format": { "$ref": "#/$defs/dateFormat" },
+        "align": { "$ref": "#/$defs/align" }
+      },
+      "required": ["x_mm", "y_mm", "width_mm", "height_mm", "format"],
+      "additionalProperties": false
+    },
+    "anchorDateMark": {
+      "description": "Метка даты на якоре (15.17.7). Без `format` формат берётся из части якоря, и она обязана быть форматом. Запасная метка (`page`, `x_mm`, `y_mm`) требует `width_mm` и рамку внутри листа A4.",
+      "type": "object",
+      "properties": {
+        "anchor": { "$ref": "#/$defs/anchorDateName" },
+        "format": { "$ref": "#/$defs/dateFormat" },
+        "height_mm": { "type": "number", "minimum": 2, "maximum": 20 },
+        "width_mm": { "type": "number", "minimum": 0.1, "maximum": 200 },
+        "dx_mm": { "type": "number", "minimum": -200, "maximum": 200 },
+        "dy_mm": { "type": "number", "minimum": -287, "maximum": 287 },
+        "align": { "$ref": "#/$defs/align" },
+        "page": { "$ref": "#/$defs/page" },
+        "x_mm": { "type": "number", "minimum": 0 },
+        "y_mm": { "type": "number", "minimum": 0 }
+      },
+      "required": ["anchor"],
+      "dependentRequired": {
+        "page": ["x_mm", "y_mm", "width_mm"],
+        "x_mm": ["y_mm", "width_mm"],
+        "y_mm": ["x_mm", "width_mm"]
+      },
+      "if": { "not": { "required": ["format"] } },
+      "then": {
+        "properties": {
+          "anchor": {
+            "pattern": "\\.(?:day|month_word|month_number|year|year_short|date_numeric|date_long)$"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "dateMark": {
+      "oneOf": [{ "$ref": "#/$defs/mmDateMark" }, { "$ref": "#/$defs/anchorDateMark" }]
+    },
+    "signingRoute": {
+      "description": "Порядок маршрута: шаги по порядку, внутри шага слоты подписывают параллельно. Шаг это id слота каталога или список id.",
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "$ref": "#/$defs/id" },
+          { "type": "array", "items": { "$ref": "#/$defs/id" }, "minItems": 1 }
+        ]
+      }
+    },
+    "checksOverride": {
+      "type": "object",
+      "properties": {
+        "disabled_categories": { "type": "array", "items": { "type": "string" } },
+        "disabled": { "type": "array", "items": { "type": "string" } },
+        "enabled": { "type": "array", "items": { "type": "string" } },
+        "severity_override": {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/severity" }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

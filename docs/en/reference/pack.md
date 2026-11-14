@@ -113,7 +113,7 @@ A preset does not set the signing method: the signer picks it from the methods t
 
 The Studio applies the preset when the author first prepares the checkpoint's route, and leaves places the author set or moved alone. Presets can ship as a patch version: it differs from the previous one only in these keys and in `signatures.route` and `signing_route`, with the same template files and requirements. The exception for files is `common/anchors.tex` and anchor calls that do not change the PDF (below, "Reproducible build"). Anything else makes it a minor.
 
-Check before releasing: `python -m hse_doc_studio.infra.template.pack_lint <version directory>`. The linter reports as errors a box past the edge of the sheet, a place or marks on a document outside the slot's `applies_to` or outside the version's documents, a `signing_slots` entry whose document is not in the checkpoint or whose slot is unknown or does not apply, a repeated pair, `when` on a signature the checkpoint already requires, and `optional: true` on a slot with `required: true`. It warns when a signature beyond the checkpoint is missing from the route order (it will go as the last step), when a `per_author` slot has a place on a shared document of a team template, and when a place is narrower than the detached e-signature plate where the checkpoint allows one (the box will widen leftwards to 70 mm). Whether a box lands on the right line the linter cannot know: build the documents and look at the boxes on the Signatures tab.
+Check before releasing: `hse-doc-studio pack lint <version directory>` (the commands are below, in [The `hse-doc-studio pack` command](#pack-cli)). The linter reports as errors a box past the edge of the sheet, a place or marks on a document outside the slot's `applies_to` or outside the version's documents, a `signing_slots` entry whose document is not in the checkpoint or whose slot is unknown or does not apply, a repeated pair, `when` on a signature the checkpoint already requires, and `optional: true` on a slot with `required: true`. It warns when a signature beyond the checkpoint is missing from the route order (it will go as the last step), when a `per_author` slot has a place on a shared document of a team template, and when a place is narrower than the detached e-signature plate where the checkpoint allows one (the box will widen leftwards to 70 mm). Whether a box lands on the right line the linter cannot know: build the documents and look at the boxes on the Signatures tab.
 
 You do not have to retype coordinates. Place the boxes and date marks on a built document of a live project, then open the "⋯" menu on the Signatures tab and choose "Copy as template preset". The Studio copies a `signatures.slots` fragment with `placements` and `default_dates` of this document or of every project document: document and slot ids as in the pack (a team member's document `report--ivanov` becomes `report`), coordinates rounded to 1 mm. Custom project signatures, disabled places and boxes the pack loader would reject stay out of the fragment, and the dialog lists them as warnings. The fragment carries no names of people and no project name.
 
@@ -226,3 +226,21 @@ release:
 ```
 
 The linter checks a version that is not in `releases.yaml` and the last one entered there: a release enters the version in the same PR. Older released versions are not checked after the fact.
+
+## For pack authors: the `hse-doc-studio pack` command {#pack-cli}
+
+The command works on a packs folder without the Studio and without TeX. A directory for `lint` and `check` is a version, a template, a pack or a folder of packs; `<template>` is the `templates/<template>/` directory.
+
+| Command | What it does |
+|---|---|
+| `pack lint <dir>...` | the linter for every version under the directory, the class of an unreleased version included |
+| `pack check <dir>... [--base REF]` | the linter, immutability of released versions (`releases.yaml`), manifest schemas, the class of unreleased versions. With `--base origin/master` the released versions are those in `releases.yaml` of the base branch, and the entry of a version released there cannot be removed or recomputed |
+| `pack classify <template> [<base>] <new>` | the class of a new version with its reasons; without a base it compares with the previous released version |
+| `pack new-version <template> [--from V] [--to V] [--class C]` | a copy of the latest version (or `--from`) under the number `--to` or by the class `--class` (patch, minor, major; patch by default): patch and minor count from the latest version, major is `<year+1>.1`. Only `id`, `status: beta` and `released_at` change in the copy; the `release` block is removed, `changes` and `breaking_changes` are empty, all other bytes stay the same |
+| `pack freeze <template> <version> [--release] [--default] [--kind K] [--replace]` | a release: `--release` sets `status: stable`, `released_at` to today and `release.kind`, `--default` makes the version the template `default_version`, then the linter and schemas run and the version goes into `releases.yaml`. On an error every edit is undone. `--replace` recomputes the entry of the last entered version while the release is not merged (with `--base`, only for a version that is not in the base) |
+
+The usual course: `pack new-version`, edits and `changes` notes, `pack classify` (if the class is above the number, run `pack new-version --class minor` again or set `release.kind` and `release.note`), `pack freeze --release --default`, `pack check`.
+
+The release class in `releases.yaml` is `--kind`, else `release.kind`, else the class of the number. It cannot be softer than the class of the number. A schema error in a released version is a warning: only a new version fixes such a version.
+
+`--json` prints one JSON object to stdout, `--strict` makes `lint` and `check` treat warnings as errors too. Exit codes: 0 all fine; 1 errors found, the number is softer than the class or the command refused; 2 wrong arguments, a directory not found or a git ref not resolved. The old `python -m hse_doc_studio.infra.template.pack_lint` works as `pack lint`.
