@@ -21,6 +21,12 @@ describe("пометка «Место по строке шаблона» (15.17.
     expect(placeOnLine(placed("manual", "found"))).toBe(false);
     expect(placeOnLine(undefined)).toBe(false);
   });
+
+  it("якоря неизвестны: место на запасном месте пака, без уточнения «по строке»", () => {
+    expect(placeOnLine(placed("pack", "unknown"))).toBe(false);
+    expect(placeOnLine(placed("pack", "missing", false))).toBe(false);
+    expect(placeOnLine(placed("pack", null))).toBe(false);
+  });
 });
 
 describe("подсказки места на якоре", () => {

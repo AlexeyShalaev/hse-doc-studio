@@ -111,7 +111,7 @@ The deadline hint `deadline_hint` needs both locales, at most 200 characters and
 
 A preset does not set the signing method: the signer picks it from the methods the checkpoint item allows (`methods`). Nor does it set people: they are project data.
 
-The Studio applies the preset when the author first prepares the checkpoint's route, and leaves places the author set or moved alone. Presets can ship as a patch version: it differs from the previous one only in these keys and in `signatures.route` and `signing_route`, with the same template files and requirements. Anything else makes it a minor.
+The Studio applies the preset when the author first prepares the checkpoint's route, and leaves places the author set or moved alone. Presets can ship as a patch version: it differs from the previous one only in these keys and in `signatures.route` and `signing_route`, with the same template files and requirements. The exception for files is `common/anchors.tex` and anchor calls that do not change the PDF (below, "Reproducible build"). Anything else makes it a minor.
 
 Check before releasing: `python -m hse_doc_studio.infra.template.pack_lint <version directory>`. The linter reports as errors a box past the edge of the sheet, a place or marks on a document outside the slot's `applies_to` or outside the version's documents, a `signing_slots` entry whose document is not in the checkpoint or whose slot is unknown or does not apply, a repeated pair, `when` on a signature the checkpoint already requires, and `optional: true` on a slot with `required: true`. It warns when a signature beyond the checkpoint is missing from the route order (it will go as the last step), when a `per_author` slot has a place on a shared document of a team template, and when a place is narrower than the detached e-signature plate where the checkpoint allows one (the box will widen leftwards to 70 mm). Whether a box lands on the right line the linter cannot know: build the documents and look at the boxes on the Signatures tab.
 
@@ -124,24 +124,37 @@ The layout of a document depends on the project data: the English application ha
 1. Put `common/anchors.tex` into the version: a byte-for-byte copy of the Studio reference (`services/api/hse_doc_studio/infra/compile/tex/anchors.tex`). Load it in the document after the shared files: `\input{../common/anchors}`.
 2. Put the anchor right before the line: `\hseSignAnchor[\linewidth]{supervisor}\rule{\linewidth}{0.4pt}` for a signature and `\hseDateAnchor[8mm]{supervisor}{day}\rule{8mm}{0.4pt}` for a part of the date row. The optional argument is the line width; without it the anchor is a point. A signature anchor is named by the catalog slot id, a date anchor by a "name, part" pair where the part is the mark format by convention (`day`, `month_word`, `month_number`, `year`, ...). The macro prints nothing in the PDF.
 3. Template wrappers pass the name as their first optional argument (`\hseSignField[supervisor]{0.15\textwidth}{Signature}`) and are listed in `signatures.anchor_macros`, so that the linter sees their calls.
-4. In `version.yaml` write the anchor instead of coordinates:
+4. In `version.yaml` write the anchor instead of coordinates. This is how `hse-cs-sse/coursework` 2026.1.5 does it:
 
 ```yaml
 signatures:
   anchor_macros: [hseSignField, signdateblank]
   slots:
-    - id: supervisor
+    - id: author
+      default_placement: { page: 1, x_mm: 160, y_mm: 208, width_mm: 30 }
       placements:
-        topic_application: { anchor: supervisor, align: right, width_mm: 28 }
-        project_proposal:  { anchor: supervisor, align: left, dy_mm: -14, width_mm: 40 }
+        # Application: the right edge of the box at the end of the "Signature" line, the top 11 mm higher.
+        topic_application: { anchor: author, align: right, dy_mm: -11, width_mm: 30, page: 1, x_mm: 165, y_mm: 201 }
+        # Report title page, "Signature, date": the box at the left end of the line, the date at the right end.
+        report:            { anchor: author, align: left, dx_mm: 1, dy_mm: -11, width_mm: 28, page: 1, x_mm: 120, y_mm: 223 }
       default_dates:
+        report:
+          - { anchor: author.date_numeric, align: right, dx_mm: -1, width_mm: 20 }
+    - id: supervisor
+      default_placement: { page: 1, x_mm: 110, y_mm: 130, width_mm: 40 }
+      placements:
+        # Project description, item 6: the anchor at the start of the date row, the box in the empty cell above it.
+        project_proposal:  { anchor: supervisor, align: left, dx_mm: 30, dy_mm: -22, width_mm: 40, page: 1, x_mm: 110, y_mm: 131 }
+        topic_application: { anchor: supervisor, align: right, width_mm: 28, page: 1, x_mm: 168, y_mm: 177 }
+      default_dates:
+        # The Russian row "« __ » ______ 2026 г." and the English "__.__.2026": a mark whose anchor is not in the build is not placed.
         project_proposal:
           - { anchor: supervisor.day }
           - { anchor: supervisor.month_word }
-          - { anchor: supervisor.month_number }   # the English row "__.__.2026"
-    - id: author
-      placements:
-        topic_application: { anchor: author, align: right, dy_mm: -11, width_mm: 30, page: 1, x_mm: 165, y_mm: 201 }
+          - { anchor: supervisor.month_number }
+    - id: academic_supervisor
+      # The consent line is printed only when the supervisor is not from HSE.
+      default_placement: { anchor: academic_supervisor, align: right, width_mm: 28, page: 1, x_mm: 168, y_mm: 216 }
 ```
 
 | Field | Meaning | Default |
@@ -157,5 +170,42 @@ signatures:
 How the Studio places it: the build anchors are known and the anchor is there, the box follows the line; known but the anchor is missing, so the document has no such row, and there is no place; unknown (the document is not built, it was built by an older runner, the PDF came from the local Studio), so the fallback place in mm if it is set, otherwise no place. An uploaded PDF of your own gets no anchored place at all: a person places it. A date mark whose anchor is not in the build is not placed, so one entry covers both the Russian and the English date row. An anchored `default_placement` needs the full fallback place in mm: every Studio version reads it.
 
 After every build the template places nobody moved follow the lines of the new build; if the line is gone, the place is switched off. Manual places, documents on a signing route (their place changes only with "Send a new version"), documents with an e-signature over the frozen PDF and uploaded PDFs are left alone.
+
+#### `anchor_macros` wrappers
+
+A template usually draws its signature lines with its own macro, and the anchor is easier to put inside it. The wrapper takes the anchor name as its first optional argument and prints the line as before without it. From `hse-cs-sse` 2026.1.5:
+
+```latex
+% topic_application.tex: a "Signature" line with the slot anchor
+\newcommand{\hseSignField}[3][]{%
+  \begin{minipage}[t]{#2}\centering
+    \if\relax\detokenize{#1}\relax\else\hseSignAnchor[\linewidth]{#1}\fi%
+    \rule{\linewidth}{0.4pt}\\[-2pt]{\footnotesize\itshape #3}
+  \end{minipage}}
+\newcommand{\hseSupervisorSign}[1]{\hseSignField[supervisor]{0.15\textwidth}{#1}}
+
+% common/meta.tex: the date row with day and month anchors; without common/anchors it prints as before
+\newcommand{\hseIfAnchor}[2]{\if\relax\detokenize{#1}\relax\else\ifdefined\hseDateAnchor#2\fi\fi}
+\newcommand{\signdateblank}[1][]{«\hseIfAnchor{#1}{\hseDateAnchor[0.8cm]{#1}{day}}\rule{0.8cm}{0.4pt}» \hseIfAnchor{#1}{\hseDateAnchor[2.5cm]{#1}{month_word}}\rule{2.5cm}{0.4pt} \hseFormYear~г.}
+```
+
+List the wrapper names in `signatures.anchor_macros` (without the backslash): the linter counts a `\hseSignField[supervisor]` call as the `supervisor` anchor and takes a wrapper's date parts from its definition in the document files or in `common/` (for `\signdateblank[supervisor]` these are `supervisor.day` and `supervisor.month_word`). If the same line is on both the Russian and the English page of one file, move it into its own macro, like `\hseSupervisorSign` above: otherwise the anchor appears twice in the file and the linter warns about the repeat.
+
+#### Fallback place
+
+The `page`, `x_mm`, `y_mm` fields together with `width_mm` on an anchored entry are the fallback place: the Studio puts the box there while the build lines are unknown. That happens if the document is not built yet, if a runner older than 0.27.0 built it, or if the PDF was uploaded to the server from the local Studio. The fallback place works in Studios before 0.27.0 too: they read an entry with it as a plain place in mm, and drop an anchored entry without millimetres in favour of `default_placement`.
+
+- Take the fallback place from the most common layout. In `hse-cs-sse` 2026.1.5 it is the Russian application without the consultant line, with millimetres taken from a build.
+- An anchored `default_placement` without a full fallback place is a linter error: image upload and the signer page read it in every Studio version.
+- Date marks can do without a fallback place. The course project has none on purpose: the Russian and English date rows differ, and a fallback mark would land on the wrong row. Without a fallback place the mark simply appears after a build.
+- If the build lines are known and the anchor is missing, the fallback place does not apply: the document has no such line, so there is no place.
+
+#### Reproducible build
+
+Anchors do not change the PDF: `\savepos` and `\write` put nothing on the page, and PDFs with and without anchors are byte for byte the same. So a patch version that only adds anchors does not give "There are changes" on documents out for signing. The patch class check lets `common/anchors.tex` and anchor calls through as file changes.
+
+To keep the PDF the same between builds too, the Studio calls latexmk with `-latexoption=-output-comment=hse-doc-studio`. Without it TeX writes the build date and minute into the XDV header, and xdvipdfmx puts them into the document `/Creator` when the document has no hyperref. A document rebuilt without edits in a different minute then gave a different PDF and a false "There are changes". If you compare PDFs of two pack versions outside the Studio, pass latexmk the same option and `SOURCE_DATE_EPOCH`. On the server runners 0.27.0 and newer build this way.
+
+You do not need to place boxes by millimetres by hand: build a document with anchors, drag the box on the Signatures tab and choose "Copy as template preset" in the "⋯" menu. An anchored template place goes into the fragment as the pack entry as is, and a manual place is written relative to the slot anchor on the same page (`align: left`, `dx_mm`, `dy_mm`) with a `# by the build:` comment and the millimetres of this build. If the build has no anchors, the place is written in mm with a `# no anchor` comment.
 
 The linter checks that every anchored entry has an anchor call or a call of a wrapper from `anchor_macros` with that name in the document files or in `common/`, that `common/anchors.tex` exists and the document loads it, and that an anchored `default_placement` has its fallback place. It warns when an anchor name in the sources is not a catalog slot id (a typo) and when one name appears twice in a file (the place follows the first one). The linter does not see an `\if` around an anchor: build the document with every combination of the data and check the boxes on the Signatures tab.

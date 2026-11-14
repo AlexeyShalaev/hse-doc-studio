@@ -111,6 +111,34 @@ In template version 2026.1.4 of the MSc SSE course project (`hse-cs-sse`) the fo
 
 **Updating to 2026.1.4 while a route is running.** If the application is already out for signing, the update does not stop the route: the signers sign the version sent earlier, and the document shows “There are changes”. The update plan warns about this with an “Out for signing: …” line. To have the corrected form signed, click “Send new version” on the Signing card. The update does not change the route composition: if the supervisor is from HSE but the academic supervisor is on the route, their signature can be marked optional and skipped ([Optional signatures and skipping](send-for-signing.md#optional)).
 
+## MSc SSE course project 2026.1.5 { #sse-2026-1-5 }
+
+Template version 2026.1.5 of the MSc SSE course project (`hse-cs-sse`) changes neither the text of the documents nor the requirements. It adds:
+
+- a ready signing route for the topic application: the author, then the supervisor and the consultant (if any), then the academic supervisor (only if the supervisor is not from HSE) ([Route from the template](send-for-signing.md#preset-sse));
+- signature places and date marks on the document lines: they follow the lines whatever the language of the work, the length of the title and the set of application lines ([Signature places on the template lines](send-for-signing.md#anchors));
+- deadline hints at the checkpoints (below).
+
+**Updating from 2026.1.4.** The project overview shows an update card; click “Update”. This is a fixes (patch) update, so it is offered right on the overview.
+
+- The preview shows updates to a few template files: they get invisible signature line records and the `common/anchors.tex` file. If you edited these files, the update merges with your edits or asks you to resolve a conflict, as with any template update.
+- **The PDF does not change.** The line records print nothing, and after the update the document builds byte for byte the same. So documents out for signing do not get “There are changes”, and you do not need to send a new version. The update plan may still show an “Out for signing: …” line: it is about the files, not the PDF. One caveat: a runner older than 0.27.0 gave a different PDF for the application rebuilt in a different minute, with no update at all ([Questions and answers](send-for-signing.md#faq)).
+- Places you set yourself do not change. In projects on 2026.1.4 and earlier the places are usually set by hand, so they stay where they are. To put a place on its line, click “Reset place to template” next to the box. Places on documents under a route and on signed documents are not touched by the update either.
+- Places the Studio set itself and you never touched move to the template lines. If the lines of the current build are unknown, the preview says “Signature places will follow the template lines after the build: N”.
+- A route draft created before the update does not change by itself. If its composition differs from the template, the editor shows “The new template version has a different route for this checkpoint” and offers “Reset to template”. Checkpoints you have not prepared a route for yet build it from the template right away.
+- The update can be undone in the project settings, “Template version” section.
+
+**Deadline hints.** The grey line under the deadline on the checkpoint page ([Submission deadline](#deadline)):
+
+| Checkpoint | Hint |
+|---|---|
+| Topic application (SmartLMS) | “Usually mid-November; the exact date is announced in SmartLMS” |
+| CP1, extended proposal | “Usually in January; the date is announced at the mentor seminar” |
+| Course project pre-defence | “Three to four weeks before the defences; the programme office announces the date” |
+| Course project defence | “Usually in June: the text goes to the supervisor first, then to SmartLMS; the dates are announced in SmartLMS” |
+
+The template does not set the deadline itself: you do.
+
 ## Requirements { #requirements }
 
 The traceability matrix: every requirement from the specification (`\req{…}`) and where it is referenced (`\reqref{…}`) — the “covered / not referenced” statuses expose gaps before the committee finds them. The recognition format is configurable, and “Suggest with AI” proposes one from your text.

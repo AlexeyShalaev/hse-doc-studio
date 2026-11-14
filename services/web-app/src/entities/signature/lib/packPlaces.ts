@@ -92,7 +92,8 @@ export const placeMarkOf = (
 
 /**
  * Место как в шаблоне стоит на строке шаблона (`source: anchor`, 15.17.14): уточнение пометки
- * «Место из шаблона».
+ * «Место из шаблона». Только когда строка в источнике подписи найдена: пока якоря сборки
+ * неизвестны, место пака на якоре стоит на запасном месте в мм, и это просто «Место из шаблона».
  */
 export const placeOnLine = (
   placement:
@@ -100,10 +101,13 @@ export const placeOnLine = (
         origin?: PlacementOrigin;
         preset_available?: boolean;
         source?: PlaceSource | null;
+        anchor?: PlaceAnchorResponse | null;
       }
     | undefined,
 ): boolean =>
-  placeMarkOf(placement) === "template" && placement?.source === "anchor";
+  placeMarkOf(placement) === "template" &&
+  placement?.source === "anchor" &&
+  placement.anchor?.state === "found";
 
 /**
  * Подсказка у пары, чьё место пака на якоре (15.17.8, 15.17.11, 15.17.14):

@@ -11,7 +11,7 @@ name: E2E server-lite
 # три шарда, у каждого свой стенд. Телефонный проект (~16 минут из ~20) делится по файлам по замеренной
 # длительности; файл, не закреплённый ни за одним шардом, уходит в rest, так что новый сценарий не потеряется.
 # Отчёты шардов сводит джоб report: один HTML-отчёт e2e-report и общий артефакт e2e-screenshots.
-# Маршрут подписания (signing-route, signing-snapshot, signing-dates и signing-deadlines.spec.ts, ~5 мин) идёт в rest последним: ему нужен общий раннер с поддельным
+# Маршрут подписания (signing-route, signing-snapshot, signing-dates, signing-deadlines и signing-presets.spec.ts, ~5 мин) идёт в rest последним: ему нужен общий раннер с поддельным
 # TeX, а M1 проверяет стенд без раннеров.
 
 on:

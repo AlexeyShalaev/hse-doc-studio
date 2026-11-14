@@ -72,7 +72,7 @@ Runners installed this way are managed on the Runners page itself. The Actions m
 
 The order is chosen so that a failure halfway breaks nothing. The registration token and the runner are revoked first, then the install is removed: otherwise the Deployment pod, which keeps finishing builds for up to 10 minutes after deletion, could take new jobs without an install. If revoking fails, the install is untouched and the removal can be retried. If the host fails to remove the install (502 `remove_failed`), the runner is already revoked and the install stays in the "Installs without a runner" block; the Deployment is deleted last, so the install stays visible until it is fully gone, and removing it again finishes the job. An install cannot be removed while it is being updated (409 `install_busy`). The audit log gets `runner_install.local.remove` with the id of the revoked runner (`revoked_runner`) and of the revoked registration tokens, or `runner_install.local.remove_failed` when the host fails; the runner revocation itself is `runner.revoke` as usual.
 
-### Updating a runner installed from the admin area
+### Updating a runner installed from the admin area { #runner-upgrade }
 
 Update puts the image of the current Studio version on the runner in place, without removing and installing it again. The name, the Secret with the token, the data volume and the runner record in the Studio are kept, no new token is issued. When the runner is older than the Studio, its row has an accented "Update to vX" button, and so does the "Deployment details" window next to the "Older than the Studio" mark. A runner on the Studio version can be updated too (from the menu): the settings are applied again by the current rules and the runner restarts.
 
@@ -181,6 +181,15 @@ The list shows version, tags, capacity and last poll time.
 - **Revoke** closes the runner's access for good. A registration token can also be revoked before use.
 - The api and runner versions are checked at registration; an incompatible runner is rejected.
 - After registering, a new runner negotiates capabilities with the api (`/announce`): AI relay, separate slots for it, a stop notice, the command channel and the disk ([Runner disk](#runner-disk)). With an older api that does not know this call the runner keeps working as before, without the relay; an older runner works with a newer api too.
+
+## Why update runners to 0.27.0 { #runner-version }
+
+An older runner works with the new Studio, but two things about builds come only from runners 0.27.0 and newer. A runner installed from the admin area updates with the "Update to vX" button ([Updating a runner installed from the admin area](#runner-upgrade)); update the others with the new image. A personal runner in the local Studio updates together with it.
+
+- **Signature places on the template lines.** A template can record during the build where the signature lines and date rows are on the page, and the Studio puts the boxes on them ([Signature places on the template lines](../workbench/send-for-signing.md#anchors)); the MSc SSE course project works this way from version 2026.1.5. The runner uploads the line positions file (`<document>.hsepos`) together with the PDF only when both it and the server announced the `build_anchors` capability during negotiation (`/announce`). An older runner does not send this file: the Studio does not know the build lines, boxes go to the template's fallback place in millimetres, date marks are not placed, and after a text edit the places do not follow the lines. The build does not fail.
+- **Reproducible PDF.** A runner 0.27.0 calls latexmk with `-latexoption=-output-comment=hse-doc-studio`. Before that, TeX wrote the build date and minute into the PDF of a document without hyperref (the `/Creator` field), so a document rebuilt without edits in a different minute gave a different PDF. Documents out for signing then got a false "There are changes since it was sent for signing". This happened, for example, with the topic application.
+
+Each runner's version shows in the "Version" column on the "Runners" page; a runner older than the Studio has an "Update to vX" button there (if it was installed from the admin area).
 
 ## Runner disk { #runner-disk }
 
