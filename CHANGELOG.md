@@ -6,6 +6,14 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.28.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.27.0...v0.28.0) - 2026-11-14
+
+- Mail log, version 2. Mail the mail server rejected temporarily is resent by the Studio itself: up to 5 attempts after 1, 5, 15 and 30 minutes. The log shows which messages are still being retried and which failed for good. A message has a “Send again” button, and the log has “Send unsent”. Self-diagnostics gains an “Email delivery” check that warns when mail stops going out.
+- Runner disk autoclean. When a shared runner has less than 10% of disk left, it cleans the build cache by itself, at most once an hour. The threshold and the switch are in the runner row in the admin panel, along with the result of the last cleanup. Requires runner 0.28.0. After an update the updater removes images of versions older than the previous one, so rolling back one version stays fast.
+- Template security: Jinja in packs runs in a sandbox. A template cannot reach Python internals or server files. The output of our packs is byte for byte the same. The pack linter also catches symbolic links, token-like strings and the -shell-escape flag.
+- For template authors (first steps of the Template Studio). The linter works out the class of a new pack version (patch, minor, major) from the changes and does not allow releasing it softer than needed; the reason goes into release.note. JSON schemas for pack manifests are published (contracts/pack), so hints and validation work right in the editor.
+- Fixed random failures of signing route e2e tests caused by the login rate limit.
+
 ## [0.27.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.26.0...v0.27.0) - 2026-11-14
 
 - Signature places on template lines. A template can mark a signature or date line in LaTeX (an anchor), and after a build the box lands exactly on it. Places follow the layout by themselves: the document language, lines printed by a condition and a long title. The mark reads “Place on a template line”, and when the line is missing from the document the place is turned off. Places set by hand, documents out for signing or with an e-signature and an uploaded PDF never move. After a build the Studio tells how many places it moved.

@@ -1,6 +1,32 @@
 {
   "releases": [
     {
+      "version": "0.28.0",
+      "date": "2026-11-14",
+      "notes": [
+        {
+          "ru": "Журнал писем, версия 2. Письма, которые почтовый сервер временно отклонил, Студия отправляет повторно сама: до 5 попыток через 1, 5, 15 и 30 минут. В журнале видно, какие письма ещё повторяются, а какие не ушли совсем. У письма есть кнопка «Отправить ещё раз», у журнала «Отправить неушедшие». В самодиагностике появилась проверка «Доставка писем»: она предупреждает, если письма перестали уходить.",
+          "en": "Mail log, version 2. Mail the mail server rejected temporarily is resent by the Studio itself: up to 5 attempts after 1, 5, 15 and 30 minutes. The log shows which messages are still being retried and which failed for good. A message has a “Send again” button, and the log has “Send unsent”. Self-diagnostics gains an “Email delivery” check that warns when mail stops going out."
+        },
+        {
+          "ru": "Автоочистка диска раннера. Когда на диске общего раннера остаётся меньше 10% места, раннер сам чистит кэш сборок, не чаще раза в час. Порог и включение настраиваются в строке раннера в админке, там же итог последней очистки. Нужен раннер 0.28.0. Апдейтер после обновления удаляет образы версий старше предыдущей, поэтому откат на одну версию назад остаётся быстрым.",
+          "en": "Runner disk autoclean. When a shared runner has less than 10% of disk left, it cleans the build cache by itself, at most once an hour. The threshold and the switch are in the runner row in the admin panel, along with the result of the last cleanup. Requires runner 0.28.0. After an update the updater removes images of versions older than the previous one, so rolling back one version stays fast."
+        },
+        {
+          "ru": "Безопасность шаблонов: Jinja в паках работает в песочнице. Шаблон не может обратиться к внутренностям Python и к файлам сервера. Вывод наших паков не изменился ни на байт. Линтер паков дополнительно ловит символические ссылки, похожие на токены строки и флаг -shell-escape.",
+          "en": "Template security: Jinja in packs runs in a sandbox. A template cannot reach Python internals or server files. The output of our packs is byte for byte the same. The pack linter also catches symbolic links, token-like strings and the -shell-escape flag."
+        },
+        {
+          "ru": "Для авторов шаблонов (первые шаги «Студии шаблонов»). Линтер сам определяет класс новой версии пака (patch, minor, major) по изменениям и не даёт выпустить её мягче, чем нужно; объяснение выбора пишется в release.note. Для манифестов паков опубликованы JSON-схемы (contracts/pack), подсказки и проверка работают прямо в редакторе.",
+          "en": "For template authors (first steps of the Template Studio). The linter works out the class of a new pack version (patch, minor, major) from the changes and does not allow releasing it softer than needed; the reason goes into release.note. JSON schemas for pack manifests are published (contracts/pack), so hints and validation work right in the editor."
+        },
+        {
+          "ru": "Исправлены случайные падения e2e-тестов маршрута подписания из-за лимита входа.",
+          "en": "Fixed random failures of signing route e2e tests caused by the login rate limit."
+        }
+      ]
+    },
+    {
       "version": "0.27.0",
       "date": "2026-11-14",
       "notes": [
