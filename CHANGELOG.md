@@ -6,6 +6,13 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.27.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.26.0...v0.27.0) - 2026-11-14
+
+- Signature places on template lines. A template can mark a signature or date line in LaTeX (an anchor), and after a build the box lands exactly on it. Places follow the layout by themselves: the document language, lines printed by a condition and a long title. The mark reads “Place on a template line”, and when the line is missing from the document the place is turned off. Places set by hand, documents out for signing or with an e-signature and an uploaded PDF never move. After a build the Studio tells how many places it moved.
+- MSc course project template 2026.1.5: a ready route for the topic application. The author, then the supervisor and the consultant (when set), and the academic supervisor only when the supervisor is not from HSE. Signature boxes and dates sit on the lines of the application and the project description, and the author's signature and date on the report title. Checkpoints now hint when the deadline is usually announced. The PDF does not change after updating from 2026.1.4, so documents out for signing do not get “Has changes”.
+- Builds are now reproducible: XeLaTeX no longer writes the build minute into the PDF. Before, a document without hyperref rebuilt without changes in another minute came out different, and a document out for signing could get a false “Has changes”. The fix is in the runner: update runners to 0.27.0 in the admin panel. On an older runner template lines are not detected and places come from the fallback millimetres.
+- Times in emails, reminders, invitations and the AI limit message are now in Moscow time, for example “15 Nov 2026, 23:59 (Moscow time)”. The checkpoint deadline reminder has a signing line: who we are waiting for, finished or not sent. Consecutive date mark edits by one person are merged into one route history event.
+
 ## [0.26.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.25.1...v0.26.0) - 2026-11-13
 
 - Checkpoint deadlines. Each submission checkpoint in a project can have a deadline, date and time in Moscow time. The template does not set it, it only hints when it is usually announced. The checkpoint shows “in N days”, “today”, “package built” or “overdue”, and the project list marks the nearest deadline. MCP reads it and sets it with set_checkpoint_deadline.
