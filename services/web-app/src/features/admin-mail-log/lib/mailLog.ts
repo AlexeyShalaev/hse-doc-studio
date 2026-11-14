@@ -21,6 +21,29 @@ export const mailTemplateGroup = (
   return null;
 };
 
+/** Сколько попыток делает автоповтор (docs/design/mail-log.md, 14, V6). */
+export const MAIL_MAX_ATTEMPTS = 5;
+
+/** Письмо не ушло, но Студия ещё повторит отправку сама (V13). */
+export const isMailRetrying = (
+  entry: Pick<MailLogEntry, "status" | "next_attempt_at">,
+): boolean => entry.status === "failed" && entry.next_attempt_at !== null;
+
+/**
+ * Причины, по которым «Отправить ещё раз» недоступно, но объяснять их надо в «Что можно сделать»:
+ * письмо устарело, уже повторено, почта выключена (14.2). Токен, тестовое письмо и удалённый вид
+ * объясняют подсказки по виду, итог `sent` и `suppressed` объяснять не нужно, автоповтор свой.
+ */
+const SILENT_BLOCKS = new Set([
+  "status",
+  "token_link",
+  "smtp_test",
+  "template_gone",
+  "retrying",
+]);
+export const isExplainedBlock = (code: string | null): code is string =>
+  code !== null && !SILENT_BLOCKS.has(code);
+
 /** «Не отправлялось» в полосе за сутки: `not_sent` и `suppressed` вместе. */
 export const skippedCount = (summary: MailLogSummary): number =>
   summary.not_sent + summary.suppressed;
@@ -94,6 +117,10 @@ export const mailNextKey = (template: string): MailNextKey | null => {
 
 /** Строка блока «Что можно сделать»: сначала про итог, затем по виду письма. */
 export type MailNextStep =
+  /** Студия повторит отправку сама: делать ничего не нужно (V6). */
+  | { kind: "retrying" }
+  /** Отправлять ещё раз не нужно: письмо устарело, уже повторено и т. д. (14.2). */
+  | { kind: "stale"; code: string }
   /** Сбой из-за настроек почты: «Сначала проверьте настройки почты» со ссылкой. */
   | { kind: "checkSmtp" }
   /** Почта не была настроена: письмо не уходило и само не уйдёт. */
@@ -102,12 +129,21 @@ export type MailNextStep =
   | { kind: "suppressed"; reason: string | null }
   | { kind: "template"; key: MailNextKey };
 
-export const mailNextSteps = (entry: {
-  template: string;
-  status: MailLogEntry["status"];
-  reason: string | null;
-}): MailNextStep[] => {
+export const mailNextSteps = (
+  entry: {
+    template: string;
+    status: MailLogEntry["status"];
+    reason: string | null;
+    next_attempt_at?: string | null;
+  },
+  /** Почему повтор недоступен (`resend.blocked` карточки); null, пока карточка не пришла. */
+  blocked: string | null = null,
+): MailNextStep[] => {
   const steps: MailNextStep[] = [];
+  if (entry.status === "failed" && (entry.next_attempt_at ?? null) !== null) {
+    steps.push({ kind: "retrying" });
+  }
+  if (isExplainedBlock(blocked)) steps.push({ kind: "stale", code: blocked });
   if (entry.status === "failed" && isSmtpSettingsFailure(entry.reason)) {
     steps.push({ kind: "checkSmtp" });
   }

@@ -50,6 +50,9 @@ services:
       HSE_STUDIO__AUTH__ADMIN_NAME: Администратор
       HSE_STUDIO__AUTH__ADMIN_PASSWORD: ${SERVER_LITE_ADMIN_PASSWORD:?}
       HSE_STUDIO__CORS__ALLOW_ORIGINS: '["http://localhost:${SERVER_LITE_PORT:-8100}","http://localhost:5173"]'
+      # Только стенд: e2e заводят десятки людей и входят ими с одного адреса хоста, а вход и регистрация считаются
+      # по IP (AUTH_IP, 30 в минуту). Множитель 4 даёт e2e запас; у сервера по умолчанию 1, лимит проверяют тесты api.
+      HSE_STUDIO__RATE_LIMIT__SCALE: ${SERVER_LITE_RATE_LIMIT_SCALE:-4}
     volumes:
       - server-lite-data:/data
     healthcheck:

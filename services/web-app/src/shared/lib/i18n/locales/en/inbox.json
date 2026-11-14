@@ -160,6 +160,7 @@
     "tls_public": "Public address certificate",
     "tls_s3": "S3 certificate",
     "backups": "Backups",
-    "smtp": "Mail (SMTP)"
+    "smtp": "Mail (SMTP)",
+    "mail_delivery": "Email delivery"
   }
 }

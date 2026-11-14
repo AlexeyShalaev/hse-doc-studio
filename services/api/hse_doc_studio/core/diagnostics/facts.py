@@ -83,6 +83,22 @@ class SmtpFacts:
 
 
 @dataclass(frozen=True)
+class MailDeliveryFacts:
+    """Журнал писем (docs/design/mail-log.md, V14): ушло и не ушло за час и за сутки, последняя попытка.
+
+    `failed` считает и письма, которые ждут автоповтора: они тоже пока не ушли."""
+
+    configured: bool
+    hour_sent: int = 0
+    hour_failed: int = 0
+    day_sent: int = 0
+    day_failed: int = 0
+    last_failed: bool = False
+    last_reason: str | None = None
+    last_code: int | None = None
+
+
+@dataclass(frozen=True)
 class TaskFact:
     name: str
     interval_s: float

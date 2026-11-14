@@ -9,7 +9,12 @@ from hse_doc_studio.core.background import BackgroundTaskRunner
 from hse_doc_studio.core.backup.protocols import IBackupDestinationRepository
 from hse_doc_studio.core.diagnostics.entities import CheckId
 from hse_doc_studio.core.diagnostics.ports import IDiagCheck, IDiagStore
-from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository
+from hse_doc_studio.core.identity.protocols import (
+    IAuditLog,
+    IInstanceSettingsRepository,
+    IMailLogRepository,
+    IMailSender,
+)
 from hse_doc_studio.core.invitations.protocols import INotifier
 from hse_doc_studio.core.jobs.autoscale import IQueueMetricsReader
 from hse_doc_studio.core.lifecycle.ports import IAdminDirectory, ILifecycleRuns
@@ -40,6 +45,7 @@ from hse_doc_studio.use_cases.diagnostics.checks import (
     DatabaseCheck,
     DiskCheck,
     JobsCheck,
+    MailDeliveryCheck,
     MigrationsCheck,
     ObjectStorageCheck,
     RunnersCheck,
@@ -99,6 +105,8 @@ class ServerDiagnosticsProvider(Provider):
         store: IDiagStore,
         notifier: INotifier,
         admins: IAdminDirectory,
+        mail_log: IMailLogRepository,
+        mail_sender: IMailSender,
     ) -> DiagnosticsService:
         cfg = settings.diagnostics
         tls = TlsProbe()
@@ -125,6 +133,7 @@ class ServerDiagnosticsProvider(Provider):
                 BackupProbe(sessions), instance_settings, destinations, feature_enabled=settings.backups.enabled
             ),
             SmtpCheck(SmtpProbe(smtp.params)),
+            MailDeliveryCheck(mail_log, mail_sender),
         ]
         return DiagnosticsService(checks, store, instance_settings, notifier, admins, timeout_s=cfg.check_timeout_s)
 

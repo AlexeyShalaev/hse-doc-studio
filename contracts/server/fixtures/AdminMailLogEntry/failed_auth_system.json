@@ -31,5 +31,8 @@
   "ref": {
     "kind": "signing_route",
     "id": "0d1e2f30-4152-4637-8899-aabbccddeeff"
-  }
+  },
+  "next_attempt_at": null,
+  "last_attempt_at": null,
+  "resent_from_id": null
 }

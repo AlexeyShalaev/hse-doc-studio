@@ -44,7 +44,8 @@
     "tls_public": "Public address certificate",
     "tls_s3": "S3 certificate",
     "backups": "Backups",
-    "smtp": "Mail (SMTP)"
+    "smtp": "Mail (SMTP)",
+    "mail_delivery": "Email delivery"
   },
   "okReason": {
     "database": "The database answers in {{latency_ms}} ms, Postgres {{version}}.",
@@ -57,7 +58,8 @@
     "tls_public": "The certificate is valid for {{days_left}} more days.",
     "tls_s3": "The certificate is valid for {{days_left}} more days.",
     "backups": "The last backup was {{age_hours}} h ago.",
-    "smtp": "SMTP answers in {{latency_ms}} ms."
+    "smtp": "SMTP answers in {{latency_ms}} ms.",
+    "mail_delivery": "{{failed}} of {{total}} emails did not go out in the last day."
   },
   "reason": {
     "unknown": "Reason code: {{code}}",
@@ -95,7 +97,10 @@
     "no_leader": "No background-job leader found: periodic jobs do not run.",
     "heartbeat_stale": "The scheduled check has not reported for {{seconds}} s.",
     "task_stale": "Jobs have not run for a long time: {{tasks}}.",
-    "task_failing": "Jobs fail on every run: {{tasks}}."
+    "task_failing": "Jobs fail on every run: {{tasks}}.",
+    "mail_failing_hour": "{{failed}} of {{total}} emails did not go out in the last hour ({{percent}}%).",
+    "mail_failing_day": "{{failed}} of {{total}} emails did not go out in the last day ({{percent}}%).",
+    "mail_last_failed": "The last email did not go out: {{error}}."
   },
   "hint": {
     "unknown": "Open the server log (docker compose logs api) and run the check again.",
@@ -131,7 +136,10 @@
     "no_leader": "Restart api. If there is still no leader, check the database connection: leadership is a database lock.",
     "heartbeat_stale": "The leader runs in another instance and has not reported for long: check its log and the database.",
     "task_stale": "Restart api; if it repeats, read the log: a background job is stuck.",
-    "task_failing": "Read the api log for the job name: it fails on every run."
+    "task_failing": "Read the api log for the job name: it fails on every run.",
+    "mail_failing_hour": "Open Mail with the Not sent filter: the email card shows the reason and the SMTP reply. If the SMTP server refuses, fix the Mail (SMTP) block and send a test email. The Studio retries temporary failures on its own; after the fix, send the rest with Send unsent.",
+    "mail_failing_day": "Open Mail with the Not sent filter and look at the reasons. Frequent refusals for addresses mean wrong addresses, sign-in and connection failures mean mail settings. After the fix, press Send unsent.",
+    "mail_last_failed": "Open the last unsent email in Mail: it shows the reason and the SMTP reply. If it is the settings, fix the Mail (SMTP) block and send a test email."
   },
   "diskNote": "Disk thresholds are shared with the space guard and edited on the page",
   "diskNoteLink": "“Data retention”",
@@ -157,13 +165,17 @@
       "backup_warn_hours": "Backup age: warning",
       "backup_fail_hours": "Backup age: failure",
       "confirm_runs": "Status confirmation",
-      "repeat_hours": "Reminder about the same problem"
+      "repeat_hours": "Reminder about the same problem",
+      "mail_failed_warn_percent": "Unsent emails: warning",
+      "mail_failed_fail_percent": "Unsent emails: failure"
     },
     "hint": {
       "confirm_runs": "How many checks in a row a status must hold before admins are notified. Guards against flapping.",
       "repeat_hours": "At most this often while the problem persists.",
       "tls_warn_days": "Days before the certificate expires.",
-      "tls_fail_days": "Days before the certificate expires."
+      "tls_fail_days": "Days before the certificate expires.",
+      "mail_failed_warn_percent": "Share of unsent emails in the last hour or day, when the window has at least five attempts.",
+      "mail_failed_fail_percent": "Share of unsent emails in the last hour or day, when the window has at least five attempts."
     },
     "unit": {
       "db_latency_warn_ms": "ms",
@@ -179,7 +191,9 @@
       "backup_warn_hours": "h",
       "backup_fail_hours": "h",
       "confirm_runs": "passes",
-      "repeat_hours": "h"
+      "repeat_hours": "h",
+      "mail_failed_warn_percent": "%",
+      "mail_failed_fail_percent": "%"
     },
     "notify": {
       "label": "Notify admins",
@@ -227,6 +241,7 @@
     "backups": "backups",
     "backupDestinations": "backup destinations",
     "smtp": "mail settings",
-    "instance": "server address settings"
+    "instance": "server address settings",
+    "mail": "emails that did not go out"
   }
 }

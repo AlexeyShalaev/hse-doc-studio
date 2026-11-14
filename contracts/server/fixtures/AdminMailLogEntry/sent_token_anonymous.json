@@ -22,5 +22,8 @@
   "task": null,
   "origin": "forgot_password",
   "project": null,
-  "ref": null
+  "ref": null,
+  "next_attempt_at": null,
+  "last_attempt_at": null,
+  "resent_from_id": null
 }

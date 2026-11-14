@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 import yaml
 from hse_doc_studio.infra.template.pack_lint import lint_version_dir
+from hse_doc_studio.infra.template.releases import freeze
 
 # .../services/api/tests/unit/infra/template/<this> → корень репозитория.
 PACKS_ROOT = Path(__file__).resolve().parents[6] / "packs"
@@ -515,3 +516,121 @@ def test_real_packs_pass_safety_rules(version_dir: Path) -> None:
     report = lint_version_dir(version_dir)
     assert not [e for e in report.errors if "символическая ссылка" in e or "секретам" in e]
     assert not [w for w in report.warnings if "shell-escape" in w]
+
+
+# ── класс невыпущенной версии по содержимому (template-studio.md, 7.2) ──
+
+
+def _class_manifest(version: str, **extra: object) -> dict:
+    manifest = _manifest(required_for_pack=True)
+    manifest["id"] = version
+    manifest["meta_fields"] = {"year": {"type": "string", "required_at": "create"}}
+    manifest["pack_submission"]["profiles"][0]["items"] = [{"doc_id": "report", "signatures": ["author"]}]
+    manifest.update(extra)
+    return manifest
+
+
+def _class_version(template: Path, version: str, *, freeze_it: bool = False, **extra: object) -> Path:
+    version_dir = template / "versions" / version
+    _write_version(version_dir, _class_manifest(version, **extra))
+    if freeze_it:
+        freeze(template, version)
+    return version_dir
+
+
+def _release_errors(version_dir: Path) -> list[str]:
+    return [e for e in lint_version_dir(version_dir).errors if e.startswith(("release", "version.yaml: `release"))]
+
+
+def _release_warnings(version_dir: Path) -> list[str]:
+    return [w for w in lint_version_dir(version_dir).warnings if w.startswith("release")]
+
+
+_NEW_FIELD = {"meta_fields": {"year": {"type": "string", "required_at": "create"}, "udc": {"type": "string"}}}
+
+
+def test__release_class__patch_number_with_a_new_required_field__reports_error(tmp_path: Path) -> None:
+    _class_version(tmp_path, "2026.1", freeze_it=True)
+    draft = _class_version(tmp_path, "2026.1.1", **_NEW_FIELD)
+
+    (error,) = _release_errors(draft)
+
+    assert "2026.1.1 после 2026.1 это patch" in error
+    assert "не меньше minor" in error
+    assert "meta_fields.udc" in error
+
+
+def test__release_class__minor_number__is_enough(tmp_path: Path) -> None:
+    _class_version(tmp_path, "2026.1", freeze_it=True)
+    draft = _class_version(tmp_path, "2026.2.0", **_NEW_FIELD)
+
+    assert _release_errors(draft) == []
+
+
+def test__release_class__declared_kind_softer_than_the_number__reports_error(tmp_path: Path) -> None:
+    _class_version(tmp_path, "2026.1", freeze_it=True)
+    draft = _class_version(tmp_path, "2026.2.0", release={"kind": "patch"}, **_NEW_FIELD)
+
+    (error,) = _release_errors(draft)
+
+    assert "release.kind: patch" in error
+    assert "(minor)" in error
+
+
+def test__release_class__declared_kind_stricter__is_allowed(tmp_path: Path) -> None:
+    _class_version(tmp_path, "2026.1", freeze_it=True)
+    draft = _class_version(tmp_path, "2026.1.1", release={"kind": "minor"})
+
+    assert _release_errors(draft) == []
+
+
+def test__release_class__soft_rule_above_the_class__warns_until_explained(tmp_path: Path) -> None:
+    _class_version(tmp_path, "2026.1", freeze_it=True)
+    profile = _class_manifest("2026.1.1")["pack_submission"]["profiles"][0]
+    profile["items"][0]["methods"] = {"author": ["image"]}
+    draft = _class_version(tmp_path, "2026.1.1", pack_submission={"profiles": [profile]})
+
+    assert _release_errors(draft) == []
+    (warning,) = _release_warnings(draft)
+    assert "предлагают minor" in warning
+    assert "release.note" in warning
+
+    note = "Способы подписи сужены под требование SmartLMS: исправление, а не новое требование."
+    _class_version(
+        tmp_path, "2026.1.1", pack_submission={"profiles": [profile]}, release={"kind": "patch", "note": note}
+    )
+
+    assert _release_errors(draft) == []
+    assert _release_warnings(draft) == []
+
+
+def test__release_class__blank_note_and_unknown_kind__report_errors(tmp_path: Path) -> None:
+    _class_version(tmp_path, "2026.1", freeze_it=True)
+    draft = _class_version(tmp_path, "2026.1.1", release={"kind": "hotfix", "note": " "})
+
+    errors = _release_errors(draft)
+
+    assert any("release.kind" in e and "hotfix" in e for e in errors)
+    assert any("release.note" in e for e in errors)
+
+
+def test__release_class__released_history_is_not_checked_but_the_newest_release_is(tmp_path: Path) -> None:
+    # 2026.1.1 выпущена patch-версией с новым обязательным полем: так её внёс в реестр PR выпуска.
+    _class_version(tmp_path, "2026.1", freeze_it=True)
+    violating = _class_version(tmp_path, "2026.1.1", freeze_it=True, **_NEW_FIELD)
+
+    assert len(_release_errors(violating)) == 1
+
+    # Следующая выпущенная версия делает её историей: задним числом выпущенное не проверяется.
+    _class_version(tmp_path, "2026.1.2", freeze_it=True, **_NEW_FIELD)
+
+    assert _release_errors(violating) == []
+    assert _release_errors(tmp_path / "versions" / "2026.1.2") == []
+
+
+def test__release_class__first_version_and_dir_outside_a_template__are_skipped(tmp_path: Path) -> None:
+    first = _class_version(tmp_path, "2026.1", **_NEW_FIELD)
+    _write_version(tmp_path / "loose", _class_manifest("2026.1.1", **_NEW_FIELD))
+
+    assert _release_errors(first) == []
+    assert _release_errors(tmp_path / "loose") == []

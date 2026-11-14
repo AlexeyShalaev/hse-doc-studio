@@ -120,6 +120,8 @@ export type MailLogRecord = {
   rerendered: boolean;
   /** Тема перерисовки, если она отличается от ушедшей (после правки шаблона). */
   preview_subject: string | null;
+  /** Письмо уже неактуально по объекту (14.2): код причины, как его даст сервер. */
+  stale: string | null;
 };
 
 /** Черновик строки: время задано «сколько секунд назад», остальное по умолчанию. */
@@ -148,6 +150,16 @@ export type MailDraft = {
   values?: Record<string, string>;
   rerendered?: boolean;
   preview_subject?: string;
+  /** Попыток (автоповтор, 14, V7); по умолчанию 1. */
+  attempts?: number;
+  /** Автоповтор запланирован через столько секунд от «сейчас». */
+  next_in?: number;
+  /** Последняя попытка столько секунд назад (если попыток больше одной). */
+  last_ago?: number;
+  /** Ручной повтор строки с этим id. */
+  resent_from_id?: number;
+  /** Письмо уже неактуально по объекту: код причины (14.2). */
+  stale?: string;
 };
 
 const isoAt = (ms: number): string =>
@@ -189,7 +201,7 @@ export const makeMailLogRecord = (
         ? { smtp_code: draft.smtp_code ?? null, text: draft.error ?? null }
         : null,
     message_id: draft.status === "sent" ? messageIdOf(id, ms) : null,
-    attempts: 1,
+    attempts: draft.attempts ?? 1,
     duration_ms: durationOf(draft),
     cause: draft.cause,
     actor: draft.actor ? { ...draft.actor } : null,
@@ -197,6 +209,13 @@ export const makeMailLogRecord = (
     origin: draft.origin,
     project: draft.project ? { ...draft.project } : null,
     ref: draft.ref ? { ...draft.ref } : null,
+    next_attempt_at:
+      draft.next_in === undefined ? null : isoAt(nowMs + draft.next_in * 1000),
+    last_attempt_at:
+      draft.last_ago === undefined
+        ? null
+        : isoAt(nowMs - draft.last_ago * 1000),
+    resent_from_id: draft.resent_from_id ?? null,
   };
   const link = draft.link ?? "none";
   return {
@@ -207,6 +226,7 @@ export const makeMailLogRecord = (
     values: draft.values ?? {},
     rerendered: draft.rerendered ?? false,
     preview_subject: draft.preview_subject ?? null,
+    stale: draft.stale ?? null,
   };
 };
 
@@ -535,14 +555,64 @@ export const renderMailPreview = (
   return { subject, html, text };
 };
 
-/** Карточка письма, как её отдаёт `GET /mail-log/{id}` (6.2). */
-export const makeMailLogDetail = (record: MailLogRecord): MailLogDetail => ({
-  entry: structuredClone(record.entry),
-  preview: renderMailPreview(record),
-  link_hidden: record.link === "token",
-  note_hidden: record.note_len > 0,
-  rerendered: record.entry.template_known && record.rerendered,
-});
+/** Окно ручного повтора от первой попытки (14, V4). */
+export const MAIL_RESEND_WINDOW_HOURS = 72;
+
+export type MailResendContext = {
+  /** Журнал, где искать ручные повторы строки; по умолчанию их нет. */
+  journal?: readonly MailLogRecord[];
+  nowMs?: number;
+  /** Настроена ли почта сейчас; по умолчанию да. */
+  smtpConfigured?: boolean;
+};
+
+/** Ручные повторы строки (`resent_from_id`), новые первыми. */
+export const mailResentOf = (
+  record: MailLogRecord,
+  journal: readonly MailLogRecord[] = [],
+): MailLogDetail["resent"] =>
+  journal
+    .filter((r) => r.entry.resent_from_id === record.entry.id)
+    .sort((a, b) => b.entry.id - a.entry.id)
+    .map((r) => ({ id: r.entry.id, at: r.entry.at, status: r.entry.status }));
+
+/** Почему «Отправить ещё раз» недоступно: те же правила и порядок, что у сервера (14.2). */
+export const mailResendBlockOf = (
+  record: MailLogRecord,
+  context: MailResendContext = {},
+): string | null => {
+  const { entry } = record;
+  const nowMs = context.nowMs ?? NOW_MS;
+  const resent = mailResentOf(record, context.journal);
+  if (entry.status !== "failed" && entry.status !== "not_sent") return "status";
+  if (!entry.template_known) return "template_gone";
+  if (record.link === "token") return "token_link";
+  if (entry.template === "smtp_test") return "smtp_test";
+  if (entry.next_attempt_at !== null) return "retrying";
+  if (Date.parse(entry.at) < nowMs - MAIL_RESEND_WINDOW_HOURS * HOUR * 1000) {
+    return "too_old";
+  }
+  if (resent.some((r) => r.status === "sent")) return "already_resent";
+  if (context.smtpConfigured === false) return "smtp_off";
+  return record.stale;
+};
+
+/** Карточка письма, как её отдаёт `GET /mail-log/{id}` (6.2, 14.4). */
+export const makeMailLogDetail = (
+  record: MailLogRecord,
+  context: MailResendContext = {},
+): MailLogDetail => {
+  const blocked = mailResendBlockOf(record, context);
+  return {
+    entry: structuredClone(record.entry),
+    preview: renderMailPreview(record),
+    link_hidden: record.link === "token",
+    note_hidden: record.note_len > 0,
+    rerendered: record.entry.template_known && record.rerendered,
+    resend: { allowed: blocked === null, blocked },
+    resent: mailResentOf(record, context.journal),
+  };
+};
 
 // ── Сводка ────────────────────────────────────────────────────────────────
 
@@ -557,11 +627,17 @@ export const makeMailLogSummary = (
   const nowMs = options.nowMs ?? NOW_MS;
   const since = nowMs - MAIL_WINDOW_HOURS * HOUR * 1000;
   const counts = { sent: 0, failed: 0, not_sent: 0, suppressed: 0 };
+  let retrying = 0;
   let last: MailLogEntry | null = null;
   for (const { entry } of journal) {
     const at = Date.parse(entry.at);
     if (at < since || at > nowMs) continue;
-    counts[entry.status] += 1;
+    // Ждут автоповтора: в `failed` не входят (V13).
+    if (entry.status === "failed" && entry.next_attempt_at !== null) {
+      retrying += 1;
+    } else {
+      counts[entry.status] += 1;
+    }
     if (
       entry.status === "failed" &&
       (last === null || at > Date.parse(last.at))
@@ -573,6 +649,7 @@ export const makeMailLogSummary = (
     smtp_configured: options.smtpConfigured,
     window_hours: MAIL_WINDOW_HOURS,
     ...counts,
+    retrying,
     last_failure: last ? { at: last.at, reason: last.reason ?? "other" } : null,
     retention_days: options.retentionDays ?? MAIL_RETENTION_DAYS,
   };
@@ -649,6 +726,55 @@ export const MAIL_DEFAULT_DRAFTS: readonly MailDraft[] = [
     link: "token",
     note_len: 64,
     values: { actor: P.maria.name, project: PR.bertie.name, role: "editor" },
+  },
+  {
+    // Временный сбой: Студия повторит отправку сама (14, V6).
+    ago: 7 * MIN,
+    template: "signing_request",
+    to: P.olga,
+    subject: `Мария Келлер просит подписать: ${TOPIC}`,
+    status: "failed",
+    reason: "recipient_refused",
+    smtp_code: 451,
+    error:
+      "4.7.1 <olga@example.org>: Recipient address rejected: Greylisted, please try again later",
+    duration_ms: 380,
+    attempts: 2,
+    last_ago: 2 * MIN,
+    next_in: 3 * MIN,
+    cause: "user",
+    actor: P.maria,
+    origin: "notification",
+    project: PR.bertie,
+    ref: { kind: "signing_route", id: SIGN_ROUTE },
+    link: "page",
+    link_path: SIGN_PATH,
+    values: { actor: P.maria.name, project: PR.bertie.name, profile: TOPIC },
+  },
+  {
+    // Пять попыток не помогли; маршрут ещё ждёт подписи, можно отправить ещё раз.
+    ago: 30 * MIN,
+    template: "checkpoint_due",
+    to: P.anna,
+    subject: `Срок через 3 дня: ${TOPIC}`,
+    status: "failed",
+    reason: "timeout",
+    error:
+      "SMTPConnectTimeoutError: Timed out connecting to smtp.example.org on port 587",
+    duration_ms: 10012,
+    attempts: 5,
+    last_ago: 2 * MIN,
+    cause: "system",
+    task: "checkpoint_reminders",
+    origin: "notification",
+    project: PR.bertie,
+    link: "page",
+    link_path: `/projects/${PR.bertie.id}/submit/cp/topic`,
+    values: {
+      project: PR.bertie.name,
+      profile: TOPIC,
+      deadline: "14 ноября 2026, 23:59 (МСК)",
+    },
   },
   {
     ago: 40 * MIN,
@@ -1387,6 +1513,13 @@ export const MAIL_LOG_PAGES = {
   smtp_off: makeMailLogPage(MAIL_JOURNALS.smtp_off),
   auth_failure: makeMailLogPage(MAIL_JOURNALS.auth_failure),
   long: makeMailLogPage([...LONG_JOURNAL, ...DEFAULT_JOURNAL.slice(0, 3)]),
+  // Фильтр «Ждут повтора» из полосы за сутки (14.3).
+  retrying: makeMailLogPage(
+    DEFAULT_JOURNAL.filter(
+      (r) => r.entry.status === "failed" && r.entry.next_attempt_at !== null,
+    ),
+    { totalEstimate: null },
+  ),
 } satisfies Record<string, MailLogPage>;
 export type MailLogPageState = keyof typeof MAIL_LOG_PAGES;
 
@@ -1459,7 +1592,35 @@ export const MAIL_LOG_RECORDS = {
   project_gone: findRecord(DEFAULT_JOURNAL, (e) => e.project?.name === null),
   /** Длинные адрес, тема, имя и проект. */
   long: findRecord(LONG_JOURNAL, (e) => e.status === "failed"),
+  /** Временный сбой: ждёт автоповтора (14, V6). */
+  retrying: findRecord(DEFAULT_JOURNAL, (e) => e.next_attempt_at !== null),
+  /** Пять попыток не помогли: можно «Отправить ещё раз». */
+  gave_up: findRecord(
+    DEFAULT_JOURNAL,
+    (e) => e.template === "checkpoint_due" && e.attempts > 1,
+  ),
 } satisfies Record<string, MailLogRecord>;
+
+const GAVE_UP = MAIL_LOG_RECORDS.gave_up;
+/** Ручной повтор строки GAVE_UP, который дошёл (14, V2). */
+const RESENT_COPY = makeMailLogRecord(
+  {
+    ago: 60,
+    template: "checkpoint_due",
+    to: P.anna,
+    subject: GAVE_UP.entry.subject,
+    status: "sent",
+    cause: "user",
+    actor: P.maria,
+    origin: "admin_resend",
+    project: PR.bertie,
+    link: "page",
+    link_path: GAVE_UP.link_path ?? "/",
+    values: { ...GAVE_UP.values },
+    resent_from_id: GAVE_UP.entry.id,
+  },
+  GAVE_UP.entry.id + 5000,
+);
 export type MailLogRecordState = keyof typeof MAIL_LOG_RECORDS;
 
 /**
@@ -1485,6 +1646,20 @@ export const MAIL_LOG_DETAILS = {
     },
   }),
   long: makeMailLogDetail(MAIL_LOG_RECORDS.long),
+  // Версия 2 (раздел 14): ждёт автоповтора, можно отправить ещё раз, уже неактуально, повторено.
+  retrying: makeMailLogDetail(MAIL_LOG_RECORDS.retrying),
+  resend_allowed: makeMailLogDetail(GAVE_UP),
+  stale_route: makeMailLogDetail({
+    ...MAIL_LOG_RECORDS.retrying,
+    entry: {
+      ...MAIL_LOG_RECORDS.retrying.entry,
+      attempts: 5,
+      next_attempt_at: null,
+    },
+    stale: "route_done",
+  }),
+  resent: makeMailLogDetail(GAVE_UP, { journal: [RESENT_COPY, GAVE_UP] }),
+  resent_copy: makeMailLogDetail(RESENT_COPY),
 } satisfies Record<string, MailLogDetail>;
 export type MailLogDetailState = keyof typeof MAIL_LOG_DETAILS;
 

@@ -22,5 +22,8 @@
   "task": "weekly_digest",
   "origin": "notification",
   "project": null,
-  "ref": null
+  "ref": null,
+  "next_attempt_at": null,
+  "last_attempt_at": null,
+  "resent_from_id": null
 }

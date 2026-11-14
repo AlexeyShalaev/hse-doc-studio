@@ -1,0 +1,10 @@
+{
+  "planned": 14,
+  "skipped": {
+    "token_link": 3,
+    "route_done": 2,
+    "already_resent": 1
+  },
+  "started": false,
+  "limit": 200
+}

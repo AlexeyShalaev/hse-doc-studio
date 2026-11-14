@@ -26,7 +26,10 @@
     "ref": {
       "kind": "registration_invite",
       "id": "inv_01hx9q7m2k"
-    }
+    },
+    "next_attempt_at": null,
+    "last_attempt_at": null,
+    "resent_from_id": null
   },
   "preview": {
     "subject": "Приглашение в Студию",
@@ -35,5 +38,10 @@
   },
   "link_hidden": true,
   "note_hidden": false,
-  "rerendered": false
+  "rerendered": false,
+  "resend": {
+    "allowed": false,
+    "blocked": "token_link"
+  },
+  "resent": []
 }

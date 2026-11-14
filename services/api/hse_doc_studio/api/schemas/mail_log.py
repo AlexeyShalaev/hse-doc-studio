@@ -7,10 +7,13 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
+from pydantic import Field, StringConstraints
+
 from hse_doc_studio.api.schemas.common import StrictModel
+from hse_doc_studio.core.listing import SEARCH_MAX
 
 MailStatusName = Literal["sent", "failed", "not_sent", "suppressed"]
 MailCauseName = Literal["user", "anonymous", "system"]
@@ -73,6 +76,11 @@ class AdminMailLogEntry(StrictModel):
     origin: str
     project: AdminMailLogProject | None
     ref: AdminMailLogRef | None
+    # Версия 2 (mail-log.md, раздел 14): запланирован автоповтор; время последней попытки, если их больше одной;
+    # исходная строка ручного повтора.
+    next_attempt_at: datetime | None
+    last_attempt_at: datetime | None
+    resent_from_id: int | None
 
 
 class AdminMailLogPage(StrictModel):
@@ -94,6 +102,21 @@ class AdminMailLogPreview(StrictModel):
     text: str
 
 
+class AdminMailLogResendState(StrictModel):
+    """Можно ли «Отправить ещё раз»; `blocked` код причины (14.2): `token_link`, `route_done` и т. д."""
+
+    allowed: bool
+    blocked: str | None
+
+
+class AdminMailLogResent(StrictModel):
+    """Ручной повтор этой строки: новая строка журнала."""
+
+    id: int
+    at: datetime
+    status: MailStatusName
+
+
 class AdminMailLogDetail(StrictModel):
     entry: AdminMailLogEntry
     # null, если вида письма в этой версии больше нет.
@@ -101,6 +124,9 @@ class AdminMailLogDetail(StrictModel):
     link_hidden: bool
     note_hidden: bool
     rerendered: bool
+    resend: AdminMailLogResendState
+    # Новые первыми.
+    resent: list[AdminMailLogResent]
 
 
 class AdminMailLogLastFailure(StrictModel):
@@ -117,6 +143,46 @@ class AdminMailLogSummary(StrictModel):
     failed: int
     not_sent: int
     suppressed: int
+    # Не ушло, но Студия ещё повторит отправку сама; `failed` без них (V13).
+    retrying: int
     # Последний `failed` в окне сводки; null, если сбоев в окне не было.
     last_failure: AdminMailLogLastFailure | None
     retention_days: int
+
+
+ResendOutcomeName = Literal["sent", "failed", "retrying", "blocked"]
+
+
+class AdminMailLogResendResult(StrictModel):
+    """Итог «Отправить ещё раз»: `blocked` с причиной, если письмо неактуально или повтор недоступен."""
+
+    outcome: ResendOutcomeName
+    blocked: str | None
+    # Новая строка журнала; null у `blocked`.
+    entry_id: int | None
+    # Причина или класс сбоя новой попытки.
+    reason: str | None
+
+
+class AdminMailLogResendBatchRequest(StrictModel):
+    """«Отправить неушедшие»: фильтры списка (без итога и курсора) и предпросмотр."""
+
+    template: list[Annotated[str, StringConstraints(pattern=r"^[a-z_]{1,64}$")]] = Field(default_factory=list)
+    reason: Annotated[str, StringConstraints(pattern=r"^[a-z_]{1,32}$")] | None = None
+    recipient_id: Annotated[str, StringConstraints(min_length=1, max_length=64)] | None = None
+    recipient: Annotated[str, StringConstraints(min_length=1, max_length=320)] | None = None
+    project_id: UUID | None = None
+    # Период как `from` и `to` списка: `since` включительно, `until` не включая.
+    since: datetime | None = None
+    until: datetime | None = None
+    q: Annotated[str, StringConstraints(max_length=SEARCH_MAX)] | None = None
+    dry_run: bool = True
+
+
+class AdminMailLogResendBatch(StrictModel):
+    """Сколько писем уйдёт (или ушло в фоновую отправку) и сколько пропущено по причинам."""
+
+    planned: int
+    skipped: dict[str, int]
+    started: bool
+    limit: int

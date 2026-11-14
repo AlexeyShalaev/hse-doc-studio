@@ -1,4 +1,5 @@
-"""Метрики журнала писем для /metrics (docs/design/mail-log.md, 8.2): попытки по виду и итогу, сбои записи журнала."""
+"""Метрики журнала писем для /metrics (docs/design/mail-log.md, 8.2 и V16): попытки по виду и итогу, сбои записи
+журнала, прекращённые автоповторы."""
 
 from __future__ import annotations
 
@@ -26,7 +27,11 @@ def mail_collector(counters: MailCounters) -> Callable[[], Iterable[str]]:
             "# HELP hse_mail_log_write_failures_total Строки журнала писем, которые не удалось записать.",
             "# TYPE hse_mail_log_write_failures_total counter",
             f"hse_mail_log_write_failures_total {counters.write_failures}",
+            "# HELP hse_mail_retry_dropped_total Прекращённые автоповторы писем по причине.",
+            "# TYPE hse_mail_retry_dropped_total counter",
         ]
+        for reason, value in sorted(counters.dropped().items()):
+            lines.append(f'hse_mail_retry_dropped_total{{reason="{_label(reason)}"}} {value}')
         return lines
 
     return collect

@@ -1,0 +1,38 @@
+{
+  "id": 1300,
+  "at": "2026-11-11T11:40:00Z",
+  "template": "signing_reminder",
+  "template_known": true,
+  "lang": "en",
+  "to_email": "john.smith@example.org",
+  "to_user": {
+    "id": "7d2c9a1e3b4f4e6a8c0d2b1a9e8f7c65",
+    "name": "John Smith",
+    "email": "john.smith@example.org"
+  },
+  "subject": "Reminder: Course project topic application (SmartLMS)",
+  "status": "failed",
+  "reason": "connect",
+  "failure": {
+    "smtp_code": null,
+    "text": "OSError: [Errno 111] Connection refused"
+  },
+  "message_id": null,
+  "attempts": 2,
+  "duration_ms": 12,
+  "cause": "system",
+  "actor": null,
+  "task": "signing_reminders",
+  "origin": "signing_auto_reminder",
+  "project": {
+    "id": "5b0c1d2e-3f40-4152-8364-758697a8b9c0",
+    "name": "Курсовая работа по ГОСТ"
+  },
+  "ref": {
+    "kind": "signing_route",
+    "id": "0d1e2f30-4152-4637-8899-aabbccddeeff"
+  },
+  "next_attempt_at": "2026-11-11T11:46:00Z",
+  "last_attempt_at": "2026-11-11T11:41:00Z",
+  "resent_from_id": null
+}

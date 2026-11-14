@@ -1,0 +1,397 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hse-doc-studio.local/contracts/pack/version.schema.json",
+  "title": "version.yaml",
+  "description": "Манифест версии шаблона: `templates/<шаблон>/versions/<версия>/version.yaml` (docs/ru/reference/pack.md). Выпущенная версия неизменна.",
+  "type": "object",
+  "properties": {
+    "id": { "$ref": "common.schema.json#/$defs/versionId" },
+    "manifest_format": {
+      "description": "Формат манифеста; новее известного Студии (`MANIFEST_FORMAT`) прячет версию.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1
+    },
+    "released_at": { "$ref": "common.schema.json#/$defs/isoDate" },
+    "status": { "enum": ["stable", "beta", "deprecated"] },
+    "release": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "description": "Класс выпуска; строже класса по номерам можно, мягче нельзя.",
+          "enum": ["patch", "minor", "major"]
+        },
+        "note": {
+          "description": "Объяснение автора к мягкому правилу классификатора (template-studio.md, 7.2). Лоадер не читает.",
+          "$ref": "common.schema.json#/$defs/localized"
+        }
+      },
+      "additionalProperties": false
+    },
+    "min_studio": {
+      "description": "Наименьшая версия Студии, которая понимает эту версию шаблона.",
+      "type": "string",
+      "pattern": "^v?[0-9]+\\.[0-9]+(?:\\.[0-9]+)?"
+    },
+    "summary": { "$ref": "common.schema.json#/$defs/localized" },
+    "changes": { "$ref": "common.schema.json#/$defs/localizedLists" },
+    "breaking_changes": { "$ref": "common.schema.json#/$defs/localizedLists" },
+    "supported_kinds": {
+      "description": "Форматы работы версии. Лоадер их не читает: форматы задают документы и поля.",
+      "$ref": "common.schema.json#/$defs/kinds"
+    },
+    "supported_staffing": { "$ref": "common.schema.json#/$defs/staffing" },
+    "engine": {
+      "type": "object",
+      "properties": {
+        "default": { "$ref": "common.schema.json#/$defs/engine" },
+        "allowed": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/engine" } },
+        "passes": { "type": "integer", "minimum": 1 },
+        "flags": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "latex_packages": { "type": "array", "items": { "type": "string" } },
+    "langs": {
+      "description": "Языковые коды суффиксов файлов (bundle-раскладка v2); первый это язык по умолчанию.",
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/$defs/langCode" },
+      "uniqueItems": true
+    },
+    "documents": {
+      "description": "Ростер документов: id папки `files/<id>/doc.yaml` или (v1) запись документа целиком.",
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "$ref": "common.schema.json#/$defs/id" },
+          { "allOf": [{ "$ref": "doc.schema.json" }, { "type": "object", "required": ["id"] }] }
+        ]
+      }
+    },
+    "dynamic_includes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "template": { "$ref": "common.schema.json#/$defs/text" },
+          "output": { "$ref": "common.schema.json#/$defs/text" }
+        },
+        "required": ["template", "output"],
+        "additionalProperties": false
+      }
+    },
+    "meta_groups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "$ref": "common.schema.json#/$defs/metaKey" },
+          "label": { "$ref": "common.schema.json#/$defs/localized" },
+          "section": {
+            "description": "Страница настроек проекта: «Метаданные» (`meta`, по умолчанию) или «Документы».",
+            "enum": ["meta", "documents"]
+          }
+        },
+        "required": ["id"],
+        "additionalProperties": false
+      }
+    },
+    "meta_fields": {
+      "type": "object",
+      "propertyNames": { "$ref": "common.schema.json#/$defs/metaKey" },
+      "additionalProperties": { "$ref": "#/$defs/metaField" }
+    },
+    "author_group_placeholder": { "type": "string" },
+    "forms": { "type": "array", "items": { "$ref": "#/$defs/form" } },
+    "signatures": {
+      "type": "object",
+      "properties": {
+        "anchor_macros": {
+          "description": "Обёртки якорей в шаблоне, без обратной косой (`hseSignField`).",
+          "type": "array",
+          "items": { "type": "string", "pattern": "^\\\\?[A-Za-z]+$" }
+        },
+        "slots": { "type": "array", "items": { "$ref": "#/$defs/slot" } },
+        "route": { "$ref": "common.schema.json#/$defs/signingRoute" }
+      },
+      "additionalProperties": false
+    },
+    "pack_submission": {
+      "type": "object",
+      "properties": {
+        "profiles": { "type": "array", "items": { "$ref": "#/$defs/profile" } }
+      },
+      "additionalProperties": false
+    },
+    "checks_version": {
+      "type": "object",
+      "properties": {
+        "disabled_categories": { "type": "array", "items": { "type": "string" } },
+        "disabled": { "type": "array", "items": { "type": "string" } },
+        "severity_override": {
+          "type": "object",
+          "additionalProperties": { "$ref": "common.schema.json#/$defs/severity" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "requirements": {
+      "type": "object",
+      "properties": {
+        "format": { "enum": ["macro", "id", "custom"] },
+        "id_pattern": { "type": "string" },
+        "definition_docs": { "type": "array", "items": { "type": "string" } },
+        "def_pattern": { "type": "string" },
+        "ref_pattern": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "nda": {
+      "type": "object",
+      "properties": {
+        "source_dir": { "$ref": "common.schema.json#/$defs/text" },
+        "submission_dir": { "type": "string" }
+      },
+      "required": ["source_dir"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["id"],
+  "additionalProperties": false,
+  "$defs": {
+    "scalar": { "type": ["string", "number", "boolean", "null"] },
+    "metaField": {
+      "type": "object",
+      "properties": {
+        "type": { "enum": ["string", "bool", "person", "select", "font"] },
+        "label": { "$ref": "common.schema.json#/$defs/localized" },
+        "placeholder": { "type": "string" },
+        "required_at": { "enum": ["create", "finalize", "never"] },
+        "help": { "$ref": "common.schema.json#/$defs/localized" },
+        "default": { "$ref": "#/$defs/scalar" },
+        "auto": { "enum": ["academic_year"] },
+        "options": { "type": "array", "items": { "type": ["string", "number", "boolean"] } },
+        "group": { "$ref": "common.schema.json#/$defs/metaKey" },
+        "scope": { "enum": ["project", "author"] },
+        "supported_kinds": { "$ref": "common.schema.json#/$defs/kinds" }
+      },
+      "additionalProperties": false
+    },
+    "form": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/id" },
+        "title": { "$ref": "common.schema.json#/$defs/localized" },
+        "icon": { "type": "string" },
+        "schema_version": { "type": "integer", "minimum": 1 },
+        "required_for_pack": { "type": "boolean" },
+        "per_author": { "type": "boolean" },
+        "supported_kinds": { "$ref": "common.schema.json#/$defs/kinds" },
+        "output": {
+          "type": "object",
+          "properties": {
+            "template": { "$ref": "common.schema.json#/$defs/text" },
+            "output_name": { "type": "string" },
+            "format": { "type": "string" }
+          },
+          "required": ["template"],
+          "additionalProperties": false
+        },
+        "sections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "$ref": "common.schema.json#/$defs/id" },
+              "title": { "$ref": "common.schema.json#/$defs/localized" },
+              "fields": { "type": "array", "items": { "$ref": "#/$defs/formField" } }
+            },
+            "required": ["id"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["id"],
+      "additionalProperties": false
+    },
+    "formField": {
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/id" },
+        "type": { "enum": ["bool", "text", "textarea", "number", "select", "multiselect", "table", "markdown"] },
+        "label": { "$ref": "common.schema.json#/$defs/localized" },
+        "help": { "$ref": "common.schema.json#/$defs/localized" },
+        "placeholder": { "$ref": "common.schema.json#/$defs/localized" },
+        "content": { "$ref": "common.schema.json#/$defs/localized" },
+        "required": { "type": "boolean" },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "$ref": "common.schema.json#/$defs/id" },
+              "label": { "$ref": "common.schema.json#/$defs/localized" },
+              "default": { "type": "boolean" }
+            },
+            "required": ["id"],
+            "additionalProperties": false
+          }
+        },
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "$ref": "common.schema.json#/$defs/id" },
+              "label": { "$ref": "common.schema.json#/$defs/localized" }
+            },
+            "required": ["id"],
+            "additionalProperties": false
+          }
+        },
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "step": { "type": "number" },
+        "min_length": { "type": "integer", "minimum": 0 },
+        "default": { "$ref": "#/$defs/scalar" },
+        "widget": { "type": "string" },
+        "visible_if": {
+          "type": "object",
+          "properties": {
+            "field": { "$ref": "common.schema.json#/$defs/id" },
+            "equals": { "$ref": "#/$defs/scalar" }
+          },
+          "required": ["field"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["id"],
+      "additionalProperties": false
+    },
+    "slot": {
+      "description": "Слот подписи каталога.",
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/id" },
+        "label": { "$ref": "common.schema.json#/$defs/localized" },
+        "applies_to": {
+          "oneOf": [
+            { "type": "array", "items": { "$ref": "common.schema.json#/$defs/id" } },
+            { "$ref": "common.schema.json#/$defs/id" }
+          ]
+        },
+        "per_author": { "type": "boolean" },
+        "required": { "type": "boolean" },
+        "required_for": {
+          "description": "Устарело: лоадер читает и отбрасывает, обязательность подписи задают профили сдачи.",
+          "deprecated": true
+        },
+        "default_placement": { "$ref": "common.schema.json#/$defs/defaultPlacement" },
+        "placements": {
+          "description": "Место слота по документам (signing-route.md, 15.3): `{ <id документа>: место }`.",
+          "type": "object",
+          "propertyNames": { "$ref": "common.schema.json#/$defs/id" },
+          "additionalProperties": { "$ref": "common.schema.json#/$defs/placement" }
+        },
+        "default_dates": {
+          "description": "Метки даты подписания по документам (14.10), не больше восьми на документ.",
+          "type": "object",
+          "propertyNames": { "$ref": "common.schema.json#/$defs/id" },
+          "additionalProperties": {
+            "type": "array",
+            "items": { "$ref": "common.schema.json#/$defs/dateMark" },
+            "maxItems": 8
+          }
+        }
+      },
+      "required": ["id"],
+      "additionalProperties": false
+    },
+    "profile": {
+      "description": "Профиль сдачи (контрольная точка).",
+      "type": "object",
+      "properties": {
+        "id": { "$ref": "common.schema.json#/$defs/id" },
+        "name": { "$ref": "common.schema.json#/$defs/localized" },
+        "description": { "$ref": "common.schema.json#/$defs/localized" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "doc_id": { "$ref": "common.schema.json#/$defs/id" },
+              "signatures": { "type": "array", "items": { "$ref": "common.schema.json#/$defs/id" } },
+              "skip_if_nda": { "type": "boolean" },
+              "supported_kinds": { "$ref": "common.schema.json#/$defs/kinds" },
+              "methods": {
+                "description": "Способы подписи по слоту: картинка, открепленная ЭП, PAdES.",
+                "type": "object",
+                "propertyNames": { "$ref": "common.schema.json#/$defs/id" },
+                "additionalProperties": {
+                  "oneOf": [
+                    { "$ref": "#/$defs/signMethod" },
+                    { "type": "array", "items": { "$ref": "#/$defs/signMethod" } }
+                  ]
+                }
+              }
+            },
+            "required": ["doc_id"],
+            "additionalProperties": false
+          }
+        },
+        "extra_items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "source": { "type": "string" },
+              "output_name": { "type": "string" },
+              "format": { "type": "string" },
+              "supported_kinds": { "$ref": "common.schema.json#/$defs/kinds" }
+            },
+            "required": ["source"],
+            "additionalProperties": false
+          }
+        },
+        "signing_route": { "$ref": "common.schema.json#/$defs/signingRoute" },
+        "signing_slots": {
+          "description": "Пресет маршрута точки (15.3): подписи сверх `items` по условию и необязательные.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "doc_id": { "$ref": "common.schema.json#/$defs/id" },
+              "slot_id": { "$ref": "common.schema.json#/$defs/id" },
+              "when": {
+                "type": "object",
+                "properties": {
+                  "person": { "enum": ["supervisor", "co_supervisor", "academic_supervisor"] },
+                  "role": { "enum": ["university", "company"] }
+                },
+                "required": ["person"],
+                "additionalProperties": false
+              },
+              "optional": { "type": "boolean" }
+            },
+            "required": ["doc_id", "slot_id"],
+            "additionalProperties": false
+          }
+        },
+        "deadline_hint": {
+          "description": "Подсказка срока точки (16.4): обе локали, до 200 знаков, без конкретных дат (сроки каждый год свои; даты ловит лоадер и линтер).",
+          "type": "object",
+          "properties": {
+            "ru": { "$ref": "#/$defs/hintText" },
+            "en": { "$ref": "#/$defs/hintText" }
+          },
+          "required": ["ru", "en"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["id"],
+      "additionalProperties": false
+    },
+    "signMethod": { "enum": ["image", "detached", "pades"] },
+    "hintText": { "type": "string", "pattern": "\\S", "maxLength": 200 }
+  }
+}

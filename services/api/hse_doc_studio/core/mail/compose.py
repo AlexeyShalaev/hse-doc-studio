@@ -225,9 +225,15 @@ def build_content(
     note: str | None = None,
     code: str | None = None,
     redaction: Redaction | None = None,
+    note_in_inbox: bool = False,
 ) -> MailContent:
     """Содержимое письма. С `redaction` письмо собирается для журнала: `link` и `note` не принимаются, ссылки и
-    сообщение заменяются пометками (`Redaction`), остальное совпадает с ушедшим письмом."""
+    сообщение заменяются пометками (`Redaction`), остальное совпадает с ушедшим письмом.
+
+    `note_in_inbox`: письмо повтора из журнала (docs/design/mail-log.md, V3), сообщения человека нет, на его месте
+    `layout.note_in_inbox` («сообщение есть во «Входящих»»); вместе с `note` не принимается."""
+    if note_in_inbox and note is not None:
+        raise ValueError("note_in_inbox replaces the note")
     cat = catalog(lang)
     layout = cat["layout"]
     texts = cat["mails"][template.value]
@@ -238,7 +244,7 @@ def build_content(
         if link is not None or note is not None:
             raise ValueError("a redacted mail takes no link and no note")
         action, plain_link = _redacted_link(template, texts, layout, origin, redaction)
-        message = layout["note_hidden"] if redaction.note else ""
+        message = layout["note_hidden"] if redaction.note else layout["note_in_inbox"] if note_in_inbox else ""
     else:
         fixed = _FIXED_PATH.get(template)
         if fixed is not None:
@@ -246,7 +252,7 @@ def build_content(
         href = safe_link(link, server_url)
         action = Action(texts["action"], href) if "action" in texts and href else None
         plain_link = None if href or not link else one_line(link, 500)
-        message = clean_note(note) if note else ""
+        message = clean_note(note) if note else layout["note_in_inbox"] if note_in_inbox else ""
 
     def text(template_: str) -> Text:
         return Text(template_, vals)
@@ -293,6 +299,7 @@ def compose(
     note: str | None = None,
     code: str | None = None,
     redaction: Redaction | None = None,
+    note_in_inbox: bool = False,
 ) -> RenderedMail:
     """Тема, текст и HTML письма. `link` для видов с кнопкой; у уведомлений ссылка на сервер строится сама.
 
@@ -309,5 +316,6 @@ def compose(
         note=note,
         code=code,
         redaction=redaction,
+        note_in_inbox=note_in_inbox,
     )
     return RenderedMail(subject=content.subject, text=render_text(content), html=render_html(content))

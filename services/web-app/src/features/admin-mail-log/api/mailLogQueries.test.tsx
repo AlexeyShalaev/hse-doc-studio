@@ -127,8 +127,13 @@ describe("API журнала писем на моках", () => {
     const bertie = await mailLogApi.page({
       project_id: MAIL_PROJECTS.bertie.id,
       reason: "recipient_refused",
+      retrying: "false",
     });
     expect(bertie.items).toHaveLength(1);
+    // Ждёт автоповтора (451): отдельный фильтр, как у сервера (14, V13).
+    const waiting = await mailLogApi.page({ retrying: "true" });
+    expect(waiting.items.map((e) => e.failure?.smtp_code)).toEqual([451]);
+    await expect(mailLogApi.page({ retrying: "maybe" })).rejects.toThrow();
 
     const unknownTemplate = await mailLogApi.page({
       template: ["weekly_digest"],
@@ -194,7 +199,8 @@ describe("API журнала писем на моках", () => {
     expect(summary).toMatchObject({
       smtp_configured: true,
       window_hours: 24,
-      failed: 2,
+      failed: 3,
+      retrying: 1,
       retention_days: 90,
     });
     smtp = false;

@@ -1,6 +1,14 @@
 import { useCallback, useMemo } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { Cpu, FolderOpen, Globe, Mail, RefreshCw, User } from "lucide-react";
+import {
+  Cpu,
+  FolderOpen,
+  Globe,
+  Mail,
+  RefreshCw,
+  RotateCw,
+  User,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import {
@@ -39,9 +47,14 @@ import {
   type MailLogSummary,
   type MailTemplateGroup,
 } from "../api/schemas";
-import { mailFailureOf, mailHintOf, skippedCount } from "../lib/mailLog";
+import {
+  isMailRetrying,
+  mailFailureOf,
+  mailHintOf,
+  skippedCount,
+} from "../lib/mailLog";
 import { mailWhen } from "../lib/when";
-import { STATUS_BADGE, useReasonText, useTemplateLabel } from "./labels";
+import { statusBadgeOf, useReasonText, useTemplateLabel } from "./labels";
 import "./mailLog.css";
 
 /** Блок «Почта (SMTP)» в «Вход и регистрация»: туда ведут плашка и подсказка. */
@@ -88,6 +101,8 @@ export type MailLogViewProps = {
   onRefresh: () => void;
   onRetry: () => void;
   onRetryMore?: (() => void) | undefined;
+  /** «Отправить неушедшие» (14, V11); без обработчика кнопки нет. */
+  onResendBatch?: (() => void) | undefined;
 };
 
 /** Второе слово итога: причина пропуска или класс сбоя (неизвестный класс как `other`). */
@@ -125,6 +140,7 @@ export const MailLogView = ({
   onRefresh,
   onRetry,
   onRetryMore,
+  onResendBatch,
 }: MailLogViewProps) => {
   const { t, i18n } = useTranslation("adminMail");
   const templateLabel = useTemplateLabel();
@@ -198,6 +214,16 @@ export const MailLogView = ({
             t("filter.status"),
             state.filters.status.map((s) => t(`statusFilter.${s}`)).join(", "),
             { status: null },
+          ),
+        ]
+      : []),
+    ...(state.filter("retrying")
+      ? [
+          chip(
+            "retrying",
+            t("filter.retrying"),
+            t(`retryingFilter.${state.filter("retrying")}`),
+            { retrying: null },
           ),
         ]
       : []),
@@ -315,19 +341,27 @@ export const MailLogView = ({
         cell: ({ row }) => {
           const e = row.original;
           const why = outcomeReason(e);
+          const badge = statusBadgeOf(e);
+          const next =
+            isMailRetrying(e) && e.next_attempt_at
+              ? mailWhen(e.next_attempt_at, now, locale)
+              : null;
+          const detail = [
+            next ? t("retryAt", { time: next.time }) : null,
+            e.failure?.smtp_code != null ? String(e.failure.smtp_code) : null,
+            why,
+          ]
+            .filter((part): part is string => part !== null)
+            .join(" · ");
           return (
             <span
               className="ml-status"
               data-testid={`mail-status-${String(e.id)}`}
             >
-              <Badge variant={STATUS_BADGE[e.status]}>
-                {t(`status.${e.status}`)}
-              </Badge>
-              {why && (
-                <span className="ml-sub ml-ellipsis" title={why}>
-                  {e.failure?.smtp_code != null
-                    ? `${String(e.failure.smtp_code)} · ${why}`
-                    : why}
+              <Badge variant={badge.variant}>{t(badge.key)}</Badge>
+              {detail && (
+                <span className="ml-sub ml-ellipsis" title={detail}>
+                  {detail}
                 </span>
               )}
             </span>
@@ -384,9 +418,13 @@ export const MailLogView = ({
   const failedDay = (): void => {
     state.setFilters({
       status: ["failed"],
+      retrying: "false",
       from: isoDay(new Date(now - 24 * 3600 * 1000)),
       to: null,
     });
+  };
+  const retryingNow = (): void => {
+    state.setFilters({ status: null, retrying: "true", from: null, to: null });
   };
 
   return (
@@ -408,21 +446,35 @@ export const MailLogView = ({
           </>
         }
         actions={
-          <Button
-            variant="ghost"
-            size="sm"
-            type="button"
-            disabled={refreshing}
-            onClick={onRefresh}
-            data-testid="mail-refresh"
-          >
-            {refreshing ? (
-              <Spinner size="sm" />
-            ) : (
-              <RefreshCw size="0.8125rem" aria-hidden="true" />
+          <>
+            {onResendBatch && summary?.smtp_configured && (
+              <Button
+                variant="secondary"
+                size="sm"
+                type="button"
+                onClick={onResendBatch}
+                data-testid="mail-resend-batch"
+              >
+                <RotateCw size="0.8125rem" aria-hidden="true" />
+                {t("batch.button")}
+              </Button>
             )}
-            {t("refresh")}
-          </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              type="button"
+              disabled={refreshing}
+              onClick={onRefresh}
+              data-testid="mail-refresh"
+            >
+              {refreshing ? (
+                <Spinner size="sm" />
+              ) : (
+                <RefreshCw size="0.8125rem" aria-hidden="true" />
+              )}
+              {t("refresh")}
+            </Button>
+          </>
         }
       />
       {summary && !summary.smtp_configured && (
@@ -442,7 +494,13 @@ export const MailLogView = ({
           />
         </div>
       )}
-      {summary && <MailDayBand summary={summary} onFailed={failedDay} />}
+      {summary && (
+        <MailDayBand
+          summary={summary}
+          onFailed={failedDay}
+          onRetrying={retryingNow}
+        />
+      )}
       <FilterBar
         search={state.q}
         onSearchChange={state.setQ}
@@ -545,13 +603,18 @@ export const MailLogView = ({
   );
 };
 
-/** Полоса за сутки (4.1): «Отправлено», «Не ушло» (кликом фильтр), «Не отправлялось» и подсказка. */
+/**
+ * Полоса за сутки (4.1, 14.3): «Отправлено», «Не ушло» и «Ждут повтора» (кликом фильтр),
+ * «Не отправлялось» и подсказка.
+ */
 export const MailDayBand = ({
   summary,
   onFailed,
+  onRetrying,
 }: {
   summary: MailLogSummary;
   onFailed: () => void;
+  onRetrying?: (() => void) | undefined;
 }) => {
   const { t } = useTranslation("adminMail");
   const n = (value: number) => value.toLocaleString(localeTag());
@@ -580,6 +643,18 @@ export const MailDayBand = ({
             <span className="ml-dot" data-tone="muted" aria-hidden="true" />
             {t("day.failed", { n: n(summary.failed) })}
           </span>
+        )}
+        {summary.retrying > 0 && (
+          <button
+            type="button"
+            className="ml-day-item ml-day-retrying"
+            data-testid="mail-day-retrying"
+            title={t("day.retryingShow")}
+            onClick={onRetrying}
+          >
+            <span className="ml-dot" data-tone="warn" aria-hidden="true" />
+            {t("day.retrying", { n: n(summary.retrying) })}
+          </button>
         )}
         <span className="ml-day-item" data-testid="mail-day-skipped">
           <span className="ml-dot" data-tone="muted" aria-hidden="true" />

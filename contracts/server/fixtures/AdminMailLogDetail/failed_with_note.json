@@ -32,7 +32,10 @@
     "ref": {
       "kind": "project_invitation",
       "id": "a71f3c2e9d8b4c5a"
-    }
+    },
+    "next_attempt_at": null,
+    "last_attempt_at": null,
+    "resent_from_id": null
   },
   "preview": {
     "subject": "Анна Петрова приглашает вас в «Курсовая работа по ГОСТ»",
@@ -41,5 +44,10 @@
   },
   "link_hidden": true,
   "note_hidden": true,
-  "rerendered": false
+  "rerendered": false,
+  "resend": {
+    "allowed": false,
+    "blocked": "token_link"
+  },
+  "resent": []
 }
