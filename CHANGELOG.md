@@ -6,6 +6,22 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.29.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.28.0...v0.29.0) (2026-11-14)
+
+
+### Features
+
+* **packs:** CLI hse-doc-studio pack (Студия шаблонов, T2) ([e0a5210](https://github.com/AlexeyShalaev/hse-doc-studio/commit/e0a5210d41046d10336f6e0c18c9d2b03c60e62c))
+* **packs:** hse-doc-studio pack CLI: lint, check, classify, new-version, freeze ([f5dc10f](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f5dc10f26dd7d7ba02499945cd91d77a3b3fd5e5))
+
+
+### Bug Fixes
+
+* **deps:** dnspython 2.9.2 (CVE-2026-128089) ([3da9a77](https://github.com/AlexeyShalaev/hse-doc-studio/commit/3da9a77b4c0578b37fcfc648f307a06beeed474e))
+* **deps:** dnspython 2.9.2 (CVE-2026-128089) ([5484c36](https://github.com/AlexeyShalaev/hse-doc-studio/commit/5484c3616655301dfc1ea3360d302801d69a9958))
+* **packs:** quote comma texts in { ru, en } and lint them ([31bd55b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/31bd55bda5ddb6cdc38d72cb4708c1fdf6a23259))
+* **packs:** кавычки у текстов { ru, en }, разрезанных запятой, и правило линтера ([28d40b2](https://github.com/AlexeyShalaev/hse-doc-studio/commit/28d40b25a855c350370a3a17d66e9f7c011f0940))
+
 ## [0.28.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.27.0...v0.28.0) - 2026-11-14
 
 - Mail log, version 2. Mail the mail server rejected temporarily is resent by the Studio itself: up to 5 attempts after 1, 5, 15 and 30 minutes. The log shows which messages are still being retried and which failed for good. A message has a “Send again” button, and the log has “Send unsent”. Self-diagnostics gains an “Email delivery” check that warns when mail stops going out.
