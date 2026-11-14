@@ -37,6 +37,7 @@ export const TokenScopeSchema = z.enum([
   "mcp",
   "mcp:admin",
   "sign",
+  "packs",
 ]);
 export const ProjectRoleSchema = z.enum([
   "reader",
@@ -63,6 +64,8 @@ export const CapabilitiesSchema = z.strictObject({
   // Сервер: git по HTTPS включён; локально: вход на сервер Студии по коду устройства.
   git_remote: z.boolean(),
   git_server_login: z.boolean(),
+  // Студия шаблонов: раздел включён и есть право «Автор шаблонов» (локально: включён в Настройках).
+  pack_studio: z.boolean(),
 });
 export type Capabilities = z.infer<typeof CapabilitiesSchema>;
 

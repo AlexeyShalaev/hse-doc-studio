@@ -244,7 +244,12 @@
       "signature_profile_image": "Картинка подписи сохранена в профиле",
       "signature_profile_image_cleared": "Картинка подписи удалена из профиля",
       "signature_profile_key": "Сертификат или открытый ключ сохранён в профиле",
-      "signature_profile_key_cleared": "Сертификат или открытый ключ удалён из профиля"
+      "signature_profile_key_cleared": "Сертификат или открытый ключ удалён из профиля",
+      "pack_studio_section_update": "Изменено включение Студии шаблонов",
+      "pack_studio_grant_add": "Выдано право «Автор шаблонов»",
+      "pack_studio_grant_remove": "Снято право «Автор шаблонов»",
+      "pack_studio_workspace_create": "Создано рабочее пространство Студии шаблонов",
+      "pack_studio_workspace_delete": "Удалено рабочее пространство Студии шаблонов"
     },
     "search": "Поиск по журналу",
     "searchPlaceholder": "Человек, код действия, объект",
@@ -346,7 +351,12 @@
       "preset": "Пресет шаблона",
       "differs": "Отличалось от шаблона",
       "version": "Версия шаблона",
-      "placements": "Мест подписи из шаблона"
+      "placements": "Мест подписи из шаблона",
+      "subject": "Кому",
+      "grant_id": "Право",
+      "kind": "Вид",
+      "url": "Адрес",
+      "packs_path": "Папка паков"
     },
     "values": {
       "password": "пароль",

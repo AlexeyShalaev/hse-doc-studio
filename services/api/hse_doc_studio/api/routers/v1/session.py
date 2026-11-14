@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dishka.exceptions import NoFactoryError
 from fastapi import APIRouter, Request, Response
 
 from hse_doc_studio.api.admin_access import admin_request_allowed
@@ -19,11 +20,13 @@ from hse_doc_studio.api.schemas.session import (
     OidcProviderOption,
     SessionUser,
 )
+from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.identity.entities import User
 from hse_doc_studio.core.identity.normalize import avatar_initials
 from hse_doc_studio.core.identity.passwords import PASSWORD_MIN_LENGTH
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.use_cases.identity.bootstrap import BootstrapUC
+from hse_doc_studio.use_cases.pack_studio.access import PackStudioAccess
 
 router = APIRouter()
 
@@ -73,12 +76,25 @@ def _local_bootstrap() -> BootstrapResponse:
     )
 
 
+async def _pack_studio_allowed(request: Request, actor: Actor) -> bool:
+    """Раздел «Студия шаблонов» включён и человеку дано право (template-studio.md, D4)."""
+    container = getattr(request.state, "dishka_container", None) or request.app.state.dishka_container
+    try:
+        access = await container.get(PackStudioAccess)
+    except NoFactoryError:
+        # Сборка без Студии шаблонов (урезанные контейнеры тестов): раздела нет, вход от этого не ломается.
+        return False
+    return await access.allowed(actor)
+
+
 @router.get("/session/bootstrap", response_model=BootstrapResponse)
 async def bootstrap(request: Request, response: Response) -> BootstrapResponse:
     # Ответ несёт токен CSRF текущей сессии: кэшировать его нельзя.
     response.headers["Cache-Control"] = "no-store"
     if settings.mode is StudioMode.local:
-        return _local_bootstrap()
+        local = _local_bootstrap()
+        local.capabilities.pack_studio = await _pack_studio_allowed(request, Actor.local())
+        return local
     uc = await request.state.dishka_container.get(BootstrapUC)
     result = await uc.execute(credentials_from_request(request).session_secret)
     # С чужого host/IP админки для человека нет, даже если он админ установки
@@ -119,6 +135,9 @@ async def bootstrap(request: Request, response: Response) -> BootstrapResponse:
         inbox=await inbox_badge(request, result.user.id if result.user else None),
         landing=LandingInfo(enabled=result.landing_enabled, name=result.instance_name),
     )
+    if result.user is not None:
+        user_actor = Actor.user(result.user.id, is_instance_admin=result.user.is_instance_admin)
+        response_body.capabilities.pack_studio = await _pack_studio_allowed(request, user_actor)
     if guest is not None:
         # Гостю недоступно ничего из возможностей установки.
         response_body.capabilities = Capabilities(**dict.fromkeys(Capabilities.model_fields, False))

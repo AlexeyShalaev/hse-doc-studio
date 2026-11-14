@@ -9,6 +9,7 @@ from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.infra.di.providers.local_git_servers import LocalGitServersProvider
 from hse_doc_studio.infra.di.providers.local_remote_runner import LocalRemoteRunnerProvider
 from hse_doc_studio.infra.di.providers.mcp import McpProvider
+from hse_doc_studio.infra.di.providers.pack_studio import PackStudioProvider
 from hse_doc_studio.infra.di.providers.repositories import LocalPersistenceProvider
 from hse_doc_studio.infra.di.providers.services import DomainServiceProvider
 from hse_doc_studio.infra.di.providers.use_cases import UseCaseProvider
@@ -33,6 +34,7 @@ def _server_providers(engine: AsyncEngine | None) -> list[Provider]:
     from hse_doc_studio.infra.di.providers.server_invitations import ServerInvitationsProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_jobs import ServerJobsProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_lifecycle import ServerLifecycleProvider  # noqa: PLC0415
+    from hse_doc_studio.infra.di.providers.server_pack_studio import ServerPackStudioProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_passkeys import ServerPasskeyProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_persistence import ServerPersistenceProvider  # noqa: PLC0415
     from hse_doc_studio.infra.di.providers.server_quotas import ServerQuotasProvider  # noqa: PLC0415
@@ -63,6 +65,7 @@ def _server_providers(engine: AsyncEngine | None) -> list[Provider]:
         ServerUpdatesProvider(),
         ServerSigningRoutesProvider(),
         ServerMcpProvider(),
+        ServerPackStudioProvider(),
         # invites: идёт последним, перекрывает сценарии участников и подтверждения почты.
         ServerInvitationsProvider(),
         # stage 5: ревью и совместная правка; подменяет замок папки, поэтому последним.
@@ -72,7 +75,13 @@ def _server_providers(engine: AsyncEngine | None) -> list[Provider]:
 
 def create_container(mode: StudioMode = StudioMode.local, *, engine: AsyncEngine | None = None) -> AsyncContainer:
     """Контейнер под режим. Серверные провайдеры идут после локальных и перекрывают их; ``engine`` для тестов."""
-    providers: list[Provider] = [LocalPersistenceProvider(), DomainServiceProvider(), UseCaseProvider(), McpProvider()]
+    providers: list[Provider] = [
+        LocalPersistenceProvider(),
+        DomainServiceProvider(),
+        UseCaseProvider(),
+        McpProvider(),
+        PackStudioProvider(),
+    ]
     if mode is StudioMode.server:
         providers.extend(_server_providers(engine))
     else:

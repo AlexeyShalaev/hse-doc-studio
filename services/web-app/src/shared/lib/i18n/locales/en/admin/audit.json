@@ -244,7 +244,12 @@
       "signature_profile_image": "Signature image saved to the profile",
       "signature_profile_image_cleared": "Signature image removed from the profile",
       "signature_profile_key": "Certificate or public key saved to the profile",
-      "signature_profile_key_cleared": "Certificate or public key removed from the profile"
+      "signature_profile_key_cleared": "Certificate or public key removed from the profile",
+      "pack_studio_section_update": "Pack Studio switched on or off",
+      "pack_studio_grant_add": "Pack author right granted",
+      "pack_studio_grant_remove": "Pack author right revoked",
+      "pack_studio_workspace_create": "Pack Studio workspace created",
+      "pack_studio_workspace_delete": "Pack Studio workspace deleted"
     },
     "search": "Search the log",
     "searchPlaceholder": "Person, action code or object",
@@ -344,7 +349,12 @@
       "preset": "Template preset",
       "differs": "Differed from the template",
       "version": "Template version",
-      "placements": "Places from the template"
+      "placements": "Places from the template",
+      "subject": "Subject",
+      "grant_id": "Grant",
+      "kind": "Kind",
+      "url": "Address",
+      "packs_path": "Packs folder"
     },
     "values": {
       "password": "password",
