@@ -23,8 +23,9 @@ def _restore_language() -> Iterator[None]:
 @pytest.mark.parametrize(
     ("lang", "expected"),
     [
-        ("ru", "Ваш лимит исчерпан: токены ИИ за сутки, 100 из 100. Сбросится 11.11.2026 00:00 UTC."),
-        ("en", "Your limit is used up: AI tokens for the day, 100 of 100. Resets 2026-11-11 00:00 UTC."),
+        # Полночь UTC это 03:00 по Москве: время как в письмах.
+        ("ru", "Ваш лимит исчерпан: токены ИИ за сутки, 100 из 100. Сбросится 11.11.2026, 03:00 (МСК)."),
+        ("en", "Your limit is used up: AI tokens for the day, 100 of 100. Resets 11 Nov 2026, 03:00 (Moscow time)."),
     ],
 )
 def test__describe_run_error__token_quota_names_numbers_and_reset(lang: str, expected: str) -> None:

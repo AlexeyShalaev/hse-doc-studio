@@ -210,15 +210,25 @@ def _profile_of(version: TemplateVersion, profile_id: str) -> SubmissionProfile:
 
 
 def test__real_packs__builtin_order_places_every_slot(templates: YamlTemplateRepository) -> None:
-    """Ни одна выпущенная версия не задаёт порядок, и ни один её слот не уходит в хвост встроенного."""
+    """Ни один слот выпущенной версии не уходит в хвост встроенного порядка; порядок точки, если пак его задаёт
+    (`hse-cs-sse` 2026.1.5, пресет 15.10), ставит каждый слот точки и её слоты сверх точки и совпадает со встроенным."""
     builtin = {slot_id for step in BUILTIN_ROUTE for slot_id in step}
     for pack in templates.list_packs():
         for template in pack.templates:
             for version_id in templates.list_versions(pack.id, template.id):
                 version = _real(templates, pack.id, template.id, version_id)
-                assert version.signatures_config.route == ()
-                assert all(p.signing_route == () for p in version.pack_submission.profiles)
-                assert {s.id for s in version.signatures_config.slots} <= builtin, f"{pack.id}/{version_id}"
+                where = f"{pack.id}/{template.id}/{version_id}"
+                assert version.signatures_config.route == (), where
+                assert {s.id for s in version.signatures_config.slots} <= builtin, where
+                for profile in version.pack_submission.profiles:
+                    if not profile.signing_route:
+                        continue
+                    placed = {slot_id for step in profile.signing_route for slot_id in step}
+                    used = {s for item in profile.items for s in item.signatures}
+                    used |= {preset.slot_id for preset in profile.signing_slots}
+                    assert used <= placed, (where, profile.id)
+                    builtin_steps = [set(step) & placed for step in BUILTIN_ROUTE]
+                    assert [set(step) for step in profile.signing_route] == [s for s in builtin_steps if s], where
 
 
 def test__sse_topic_approval__author_then_supervisor(templates: YamlTemplateRepository) -> None:

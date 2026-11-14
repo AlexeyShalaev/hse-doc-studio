@@ -1,9 +1,9 @@
 """Места подписей на якорях шаблона на настоящем сервере (docs/design/signing-route.md, 15.17.8 и 15.17.9).
 
-Синтетический пак `anchor_stand`: та же точка «Заявка на тему КП», что у пресета 15.10, но места заданы якорями.
-Разные вёрстки (язык, строка консультанта, длинное название) дают разные места без правки пака; ручное место,
-документ под маршрутом и с ЭП над B пересборка не двигает; без якорей (раннер прежней версии) и у своего PDF место
-встаёт по запасным мм пака или не встаёт совсем.
+Пак `anchor_stand`: настоящая `hse-cs-sse/coursework` 2026.1.5, точка «Заявка на тему КП» с пресетом 15.10 на
+якорях. Разные вёрстки (язык, строка консультанта, длинное название) дают разные места без правки пака; ручное место,
+документ под маршрутом и с ЭП над B пересборка не двигает; без якорей (раннер прежней версии) место встаёт по
+запасным мм пака, а метки даты без них не встают; у своего PDF мест из шаблона нет.
 """
 
 from __future__ import annotations
@@ -113,8 +113,9 @@ async def test__draft__places_and_dates_on_the_lines_of_the_build(anchor_packs: 
     # Правые края у конца линии «Подпись» (195 мм), верх рамки на 10 и 11 мм выше линии.
     assert _box(project, APPLICATION, "supervisor") == (167.0, 176.8, 28.0, True)
     assert _box(project, APPLICATION, "author") == (165.0, 201.3, 30.0, True)
+    # Описание проекта: рамка в пустой ячейке над строкой даты, на 30 мм правее её начала, верх на 22 мм выше.
     proposal = _placements(project)[PROPOSAL]["supervisor"]
-    assert (proposal["x_mm"], proposal["y_mm"], proposal["width_mm"]) == (81.7, 139.0, 40.0)
+    assert (proposal["x_mm"], proposal["y_mm"], proposal["width_mm"]) == (109.7, 131.0, 40.0)
     # Русская строка даты: день и месяц словом; метки английской строки (месяц числом) в этой сборке нет.
     assert [(m["format"], m["x_mm"], m["y_mm"]) for m in proposal["dates"]] == [
         ("day", 81.7, 148.0),
@@ -134,7 +135,7 @@ async def test__draft__places_and_dates_on_the_lines_of_the_build(anchor_packs: 
         "dx_mm": 0.0,
         "dy_mm": -10.0,
         "width_mm": 28.0,
-        "fallback": None,
+        "fallback": {"page": 1, "x_mm": 168.0, "y_mm": 177.0, "width_mm": 28.0},
     }
 
 
@@ -156,7 +157,7 @@ async def test__layouts__language_and_title_move_the_places_without_pack_edits(
     assert _box(project, APPLICATION, "author") == (165.0, 172.5, 30.0, True)
     assert longer == 1
     proposal = _placements(project)[PROPOSAL]["supervisor"]
-    assert (proposal["y_mm"], [m["y_mm"] for m in proposal["dates"]]) == (145.0, [154.0, 154.0])
+    assert (proposal["y_mm"], [m["y_mm"] for m in proposal["dates"]]) == (137.0, [154.0, 154.0])
     # Та же сборка: места не меняются, файл не пишется.
     assert again == 0
 
@@ -239,7 +240,7 @@ async def test__document_on_a_route__rebuild_keeps_the_place_new_version_moves_i
     # «Отправить новую версию»: места из шаблона встают по строкам отправленной сборки.
     assert _box(project, APPLICATION, "supervisor") == (167.0, 148.0, 28.0, True)
     assert _box(project, APPLICATION, "author") == (165.0, 172.5, 30.0, True)
-    assert _box(project, PROPOSAL, "supervisor")[1] == 139.0  # описание не менялось
+    assert _box(project, PROPOSAL, "supervisor")[1] == 131.0  # описание не менялось
 
 
 async def test__e_signature_over_b__rebuild_keeps_the_place(anchor_packs: Path, stand: Stand) -> None:
@@ -280,7 +281,7 @@ async def test__e_signature_over_b__rebuild_keeps_the_place(anchor_packs: Path, 
 # --- без якорей и свой PDF -----------------------------------------------------------------------------------------
 
 
-async def test__runner_without_anchors__fallback_mm_or_no_place(anchor_packs: Path, stand: Stand) -> None:
+async def test__runner_without_anchors__fallback_mm_places_no_date_marks(anchor_packs: Path, stand: Stand) -> None:
     project, author = await _project(stand)
     # Раннер прежней версии: PDF есть, якорей нет.
     build(project, APPLICATION, None)
@@ -288,23 +289,30 @@ async def test__runner_without_anchors__fallback_mm_or_no_place(anchor_packs: Pa
 
     _draft(project, author)
 
+    # Запасные места пака (замеры 2026.1.4) с пометкой якоря, без сборки; метки даты запасных мест не имеют.
     placements = _placements(project)
-    assert _box(project, APPLICATION, "author") == (165.0, 201.0, 30.0, True)  # запасное место пака
+    assert _box(project, APPLICATION, "author") == (165.0, 201.0, 30.0, True)
+    assert _box(project, APPLICATION, "supervisor") == (168.0, 177.0, 28.0, True)
     assert placements[APPLICATION]["author"]["from_pack"]["anchor"] == "author"
     assert placements[APPLICATION]["author"]["from_pack"].get("build") is None
-    assert "supervisor" not in placements.get(APPLICATION, {})  # без запасного места места нет
+    assert _box(project, PROPOSAL, "supervisor") == (110.0, 131.0, 40.0, True)
+    assert placements[PROPOSAL]["supervisor"]["dates"] == []
     assert _after_build(stand, project, APPLICATION) == 0
     state = _signatures(project, author)
     assert state["placements"][APPLICATION]["author"]["anchor"] == {"id": "author", "state": "unknown"}
-    unknown = _restore(project, author, APPLICATION, "supervisor")
-    assert unknown.status_code == 409, unknown.text
-    assert unknown.json()["code"] == "anchors_unknown"
     assert _plan_hints(project, author)[(APPLICATION, "supervisor")] == []
+    fallback = _restore(project, author, APPLICATION, "supervisor")
+    assert fallback.status_code == 200, fallback.text
+    assert (fallback.json()["x_mm"], fallback.json()["y_mm"]) == (168.0, 177.0)
 
-    # Сборка уже с якорями: место из запасного встаёт по строке, пара черновика без места получает место.
+    # Сборка уже с якорями: места из запасных встают по строкам, метки даты появляются у описания.
     assert _rebuild(stand, project, APPLICATION, application_lines(), "with anchors") == 2
     assert _box(project, APPLICATION, "author") == (165.0, 201.3, 30.0, True)
     assert _box(project, APPLICATION, "supervisor") == (167.0, 176.8, 28.0, True)
+    assert _rebuild(stand, project, PROPOSAL, proposal_lines(), "with anchors") == 1
+    proposal = _placements(project)[PROPOSAL]["supervisor"]
+    assert (proposal["x_mm"], proposal["y_mm"]) == (109.7, 131.0)
+    assert [m["format"] for m in proposal["dates"]] == ["day", "month_word"]
     restored = _restore(project, author, APPLICATION, "supervisor")
     assert restored.status_code == 200, restored.text
     assert (restored.json()["x_mm"], restored.json()["y_mm"], restored.json()["source"]) == (167.0, 176.8, "anchor")
@@ -334,7 +342,7 @@ async def test__own_uploaded_pdf__no_template_places(anchor_packs: Path, stand: 
 
     # У своего PDF строк шаблона нет: ни места по якорю, ни запасного места в мм.
     assert set(_placements(project).get(APPLICATION, {})) == set()
-    assert _box(project, PROPOSAL, "supervisor")[:2] == (81.7, 139.0)
+    assert _box(project, PROPOSAL, "supervisor")[:2] == (109.7, 131.0)
     assert _after_build(stand, project, APPLICATION) == 0
     restored = _restore(project, author, APPLICATION, "author")
     assert restored.status_code == 409, restored.text

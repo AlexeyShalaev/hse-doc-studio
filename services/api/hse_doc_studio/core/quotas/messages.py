@@ -1,8 +1,13 @@
-"""Текст отказа по квоте на языке интерфейса: что исчерпано, сколько, до какого предела и когда сбросится."""
+"""Текст отказа по квоте на языке интерфейса: что исчерпано, сколько, до какого предела и когда сбросится.
+
+Момент сброса по Москве тем же правилом, что в письмах (`format_moment`, пояс `DISPLAY_ZONE`).
+"""
 
 from __future__ import annotations
 
+from hse_doc_studio.core.enums import Lang
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.mail.compose import format_moment
 from hse_doc_studio.core.quotas.errors import QuotaExceededError
 from hse_doc_studio.core.quotas.kinds import QuotaKind, QuotaScope
 
@@ -37,8 +42,9 @@ def describe_quota_exceeded(exc: QuotaExceededError) -> str:
     who_ru, who_en = _WHO[exc.scope]
     used_ru, limit_ru = _number(exc.kind, exc.used, en=False), _number(exc.kind, exc.limit, en=False)
     used_en, limit_en = _number(exc.kind, exc.used, en=True), _number(exc.kind, exc.limit, en=True)
-    until_ru = f" Сбросится {exc.resets_at:%d.%m.%Y %H:%M} UTC." if exc.resets_at is not None else ""
-    until_en = f" Resets {exc.resets_at:%Y-%m-%d %H:%M} UTC." if exc.resets_at is not None else ""
+    resets = exc.resets_at
+    until_ru = f" Сбросится {format_moment(Lang.ru, resets)}." if resets is not None else ""
+    until_en = f" Resets {format_moment(Lang.en, resets)}." if resets is not None else ""
     return localized_error(
         f"{who_ru} исчерпан: {what_ru}, {used_ru} из {limit_ru}.{until_ru}",
         f"{who_en} is used up: {what_en}, {used_en} of {limit_en}.{until_en}",

@@ -74,7 +74,7 @@ async def test__real_coursework__existing_project_is_offered_the_patch_2026_1_1(
 
     status = (await test_app.get(base)).json()
     assert status["current_version"] == "2026.1"
-    assert status["recommended"]["version"]["version"] == "2026.1.4"
+    assert status["recommended"]["version"]["version"] == "2026.1.5"
     assert status["recommended"]["update_class"] == "patch"
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.1"})).json()
@@ -102,7 +102,7 @@ async def test__real_coursework__2026_1_1_project_is_offered_the_patch_2026_1_2(
 
     status = (await test_app.get(base)).json()
     assert status["current_version"] == "2026.1.1"
-    assert status["recommended"]["version"]["version"] == "2026.1.4"
+    assert status["recommended"]["version"]["version"] == "2026.1.5"
     assert status["recommended"]["update_class"] == "patch"
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.2"})).json()
@@ -136,7 +136,7 @@ async def test__real_coursework__2026_1_2_project_gets_sign_methods_in_patch_202
 
     status = (await test_app.get(base)).json()
     assert status["current_version"] == "2026.1.2"
-    assert status["recommended"]["version"]["version"] == "2026.1.4"
+    assert status["recommended"]["version"]["version"] == "2026.1.5"
     assert status["recommended"]["update_class"] == "patch"
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.3"})).json()
@@ -182,7 +182,7 @@ async def test__real_coursework__2026_1_3_project_gets_form_fixes_in_patch_2026_
 
     status = (await test_app.get(base)).json()
     assert status["current_version"] == "2026.1.3"
-    assert status["recommended"]["version"]["version"] == "2026.1.4"
+    assert status["recommended"]["version"]["version"] == "2026.1.5"
     assert status["recommended"]["update_class"] == "patch"
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.4"})).json()
@@ -199,3 +199,45 @@ async def test__real_coursework__2026_1_3_project_gets_form_fixes_in_patch_2026_
     application = (folder / "topic_application" / "topic_application.tex").read_text(encoding="utf-8")
     assert "\\ifhseLangEn" in application
     assert "\\clearpage" not in application
+
+
+async def test__real_coursework__2026_1_4_project_gets_anchors_and_presets_in_patch_2026_1_5(
+    test_app: AsyncClient, tmp_path: Path
+) -> None:
+    """2026.1.5 добавляет якоря мест в шаблон и пресеты маршрутов: файлы меняются только якорями."""
+    folder = tmp_path / "sse"
+    folder.mkdir()
+    payload = {
+        **project_api_payload(str(folder)),
+        "pack_id": "hse-cs-sse",
+        "template_id": "coursework",
+        "version": "2026.1.4",
+        "lang": "ru",
+    }
+    created = await test_app.post("/api/v1/projects", json=payload)
+    assert created.status_code == 201, created.text
+    project = created.json()
+    base = f"/api/v1/projects/{project['id']}/template-update"
+
+    status = (await test_app.get(base)).json()
+    assert status["current_version"] == "2026.1.4"
+    assert status["recommended"]["version"]["version"] == "2026.1.5"
+    assert status["recommended"]["update_class"] == "patch"
+
+    plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.5"})).json()
+    changed = {f["path"] for f in plan["files"] if f["action"] != "unchanged"}
+    assert changed == {
+        "common/anchors.tex",
+        "topic_application/topic_application.tex",
+        "project_proposal/preamble.tex",
+        "project_proposal/project_proposal.tex",
+        "report/preamble.tex",
+        "report/title.tex",
+    }
+    applied = await test_app.post(
+        f"{base}/apply", json={"to_version": "2026.1.5", "fingerprint": plan["fingerprint"], "resolutions": {}}
+    )
+    assert applied.status_code == 200, applied.text
+    application = (folder / "topic_application" / "topic_application.tex").read_text(encoding="utf-8")
+    assert "\\hseSignField[supervisor]" in application
+    assert (folder / "common" / "anchors.tex").is_file()

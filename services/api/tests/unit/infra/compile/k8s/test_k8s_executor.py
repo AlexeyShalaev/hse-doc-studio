@@ -188,6 +188,7 @@ async def test__run__any_build__fixed_pdf_date_and_real_date_in_text(tmp_path: P
     env = {e["name"]: e["value"] for e in spec["containers"][0]["env"]}
     assert env["SOURCE_DATE_EPOCH"] == "315532800"
     assert env["FORCE_SOURCE_DATE"] == "0"
+    assert "-latexoption=-output-comment=hse-doc-studio" in spec["containers"][0]["command"][2]
 
 
 async def test__run__fonts_claim__mounted_read_only_where_fontconfig_scans(tmp_path: Path, project: Path) -> None:

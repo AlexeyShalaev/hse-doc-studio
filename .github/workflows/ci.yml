@@ -63,6 +63,8 @@ jobs:
               # Разбор файла позиций якорей: его проверяет TeX-тест якорей.
               - "services/api/hse_doc_studio/core/signatures/anchors.py"
               - "services/api/tests/integration/tex/**"
+              # TeX-тест мест на якорях собирает настоящий пак (`test_sse_anchor_presets.py`).
+              - "packs/hse-cs-sse/**"
               - "services/api/pyproject.toml"
               - "services/api/uv.lock"
             frontend:
