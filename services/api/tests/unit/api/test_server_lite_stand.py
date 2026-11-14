@@ -83,6 +83,18 @@ def test__compose__api_environment__server_mode_with_env_admin(compose: dict[str
     assert env["HSE_STUDIO__AUTH__REGISTRATION_MODE"] == "invite"
 
 
+def test__compose__rate_limit__stand_only_scale_keeps_limiter_on(compose: dict[str, Any]) -> None:
+    # e2e входят десятками людей с одного адреса хоста: стенд ослабляет лимиты множителем, но не выключает их,
+    # а у сервера по умолчанию множитель остаётся 1.
+    env = compose["services"]["api"]["environment"]
+
+    assert "HSE_STUDIO__RATE_LIMIT__ENABLED" not in env
+    assert env["HSE_STUDIO__RATE_LIMIT__SCALE"] == "${SERVER_LITE_RATE_LIMIT_SCALE:-4}"
+    defaults = Settings(_env_file=None).rate_limit
+    assert defaults.enabled
+    assert defaults.scale == 1.0
+
+
 def test__compose__secrets__come_from_env_not_from_the_repository(compose: dict[str, Any]) -> None:
     env = compose["services"]["api"]["environment"]
 
