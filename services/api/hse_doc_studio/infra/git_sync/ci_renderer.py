@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from jinja2 import Environment, FileSystemLoader, StrictUndefined
+from jinja2 import FileSystemLoader, StrictUndefined
 
 from hse_doc_studio.core.git_sync.ci import (
     BUILD_OUT_DIR,
@@ -15,21 +15,13 @@ from hse_doc_studio.core.git_sync.ci import (
     CiTrigger,
     RenderedCiFile,
 )
+from hse_doc_studio.infra.template.jinja_sandbox import CI_YAML_SYNTAX, make_environment
 
 _TEMPLATES = Path(__file__).resolve().parent / "ci_templates"
 
-# YAML и shell полны `{{ }}`, `{% %}` и `${...}`, поэтому разметка шаблона пишется как `[[ ]]` и `[% %]`.
-_ENV = Environment(  # noqa: S701 — вывод это YAML, не HTML; значения проверены в parse_ci_options
-    loader=FileSystemLoader(_TEMPLATES),
-    block_start_string="[%",
-    block_end_string="%]",
-    variable_start_string="[[",
-    variable_end_string="]]",
-    trim_blocks=True,
-    lstrip_blocks=True,
-    keep_trailing_newline=True,
-    undefined=StrictUndefined,
-)
+# YAML и shell полны `{{ }}`, `{% %}` и `${...}`, поэтому разметка шаблона пишется как `[[ ]]` и `[% %]`
+# (CI_YAML_SYNTAX). Шаблоны свои, но окружение то же песочное, что у паков: Jinja в Студии одна.
+_ENV = make_environment(CI_YAML_SYNTAX, undefined=StrictUndefined, loader=FileSystemLoader(_TEMPLATES))
 
 _TEMPLATE_NAMES = {CiProvider.github: "github.yml.j2", CiProvider.gitlab: "gitlab.yml.j2"}
 
@@ -64,5 +56,5 @@ class JinjaCiRenderer:
             "condition": " || ".join(_GITHUB_CONDITIONS[t] for t in options.triggers),
             "rules": [_GITLAB_RULES[t] for t in options.triggers],
         }
-        content = _ENV.get_template(_TEMPLATE_NAMES[options.provider]).render(context)
+        content = _ENV.render_template(_TEMPLATE_NAMES[options.provider], context)
         return RenderedCiFile(path=options.path, content=content)

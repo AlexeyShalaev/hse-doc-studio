@@ -3,7 +3,10 @@ from __future__ import annotations
 from typing import Any
 
 import structlog
-from jinja2 import ChainableUndefined, Environment, TemplateSyntaxError, UndefinedError
+from jinja2 import TemplateSyntaxError, UndefinedError
+from jinja2.exceptions import SecurityError
+
+from hse_doc_studio.infra.template.jinja_sandbox import form_environment
 
 logger = structlog.get_logger()
 
@@ -15,12 +18,17 @@ class FormOutputRenderer:
     instead of leaking raw ``{{ ... }}`` — the same behavior as the project-init
     TemplateRenderer. On any render error the raw template is returned verbatim
     so the user sees something rather than nothing.
+
+    Шаблон вывода приходит из пака, поэтому рендер идёт в песочнице
+    (`jinja_sandbox.form_environment`) с её белым списком атрибутов и пределами.
     """
 
     def render(self, template_text: str, context: dict[str, Any]) -> str:
         try:
-            env = Environment(undefined=ChainableUndefined, keep_trailing_newline=True)  # noqa: S701
-            return env.from_string(template_text).render(**context)
+            return form_environment().render_source(template_text, context)
+        except SecurityError as exc:
+            logger.warning("form output template violates the sandbox, returning as-is", exc=str(exc))
+            return template_text
         except (TemplateSyntaxError, UndefinedError) as exc:
             logger.warning("form output template error, returning as-is", exc=str(exc))
             return template_text

@@ -34,7 +34,11 @@ r"""Линтер пака (bundle-раскладка v2): превращает �
     `anchor_lint`): вызов якоря или обёртки из `anchor_macros` в исходнике
     документа или в `common/`, файл макросов `common/anchors.tex` подключён,
     `default_placement` на якоре с запасным местом в мм; предупреждения: имя
-    якоря в исходнике не id слота каталога, одно имя дважды в файле.
+    якоря в исходнике не id слота каталога, одно имя дважды в файле;
+  * безопасность пака (template-studio.md, раздел 9): символические ссылки в
+    каталоге версии и похожие на секреты строки (`ghp_`, `github_pat_`,
+    `glpat-`, закрытые ключи PEM) это ошибки; `-shell-escape` во
+    `engine.flags` предупреждение (Студия флаги пака при сборке не использует).
 
 Запуск: `python -m hse_doc_studio.infra.template.pack_lint <version_dir>…`
 (exit code 1 при ошибках). Roster ↔ doc.yaml проверяется fail-fast самим
@@ -43,6 +47,7 @@ r"""Линтер пака (bundle-раскладка v2): превращает �
 
 from __future__ import annotations
 
+import os
 import posixpath
 import re
 import sys
@@ -51,7 +56,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from jinja2 import Environment, TemplateSyntaxError
+from jinja2 import TemplateSyntaxError
 
 from hse_doc_studio.core.catalog import AnchorPlace
 from hse_doc_studio.core.checkpoint_deadlines import parse_deadline_hint
@@ -63,6 +68,7 @@ from hse_doc_studio.infra.project_init.template_renderer import (
     collect_sources_suffixed,
 )
 from hse_doc_studio.infra.template.anchor_lint import lint_anchors
+from hse_doc_studio.infra.template.jinja_sandbox import pack_environment
 from hse_doc_studio.infra.template.yaml_template_repository import (
     parse_default_dates,
     parse_signing_route,
@@ -82,6 +88,14 @@ _TEX_COMMENT_RE = re.compile(r"(?<!\\)%.*")
 # Языки, на которых обязаны быть заметки версии (`changes:`). Не `langs:` пака —
 # то языки ДОКУМЕНТОВ, а это язык интерфейса, на котором заметки читает человек.
 _CHANGES_LANGS = ("ru", "en")
+# Похожие на секреты строки: токен в паке уедет в публичный репозиторий паков.
+_SECRET_PATTERNS: tuple[tuple[str, re.Pattern[bytes]], ...] = (
+    ("токен GitHub", re.compile(rb"\bghp_[A-Za-z0-9]{36}")),
+    ("токен GitHub", re.compile(rb"\bgithub_pat_[A-Za-z0-9_]{22,}")),
+    ("токен GitLab", re.compile(rb"\bglpat-[A-Za-z0-9_-]{20,}")),
+    ("закрытый ключ", re.compile(rb"-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----")),
+)
+_SHELL_ESCAPE_RE = re.compile(r"(?:^|\s)--?(?:shell-escape|enable-write18)(?:\s|$)")
 
 
 @dataclass
@@ -92,16 +106,6 @@ class LintReport:
     @property
     def ok(self) -> bool:
         return not self.errors
-
-
-def _jinja_env() -> Environment:
-    # Те же LaTeX-safe делимитеры, что у рендера (см. template_renderer).
-    return Environment(  # noqa: S701
-        block_start_string="((*",
-        block_end_string="*))",
-        comment_start_string="((#",
-        comment_end_string="#))",
-    )
 
 
 def _load_manifest(version_dir: Path) -> dict[str, Any]:
@@ -508,6 +512,51 @@ def _lint_changes(manifest: dict[str, Any]) -> list[str]:
     return errors
 
 
+def _lint_symlinks(version_dir: Path) -> list[str]:
+    """Символические ссылки в версии: пак не должен показывать файлы вне себя (раздел 9)."""
+    errors: list[str] = []
+    for root, dirs, files in os.walk(version_dir, followlinks=False):
+        for name in sorted([*dirs, *files]):
+            path = Path(root) / name
+            if path.is_symlink():
+                errors.append(f"{path.relative_to(version_dir).as_posix()}: символическая ссылка в паке запрещена")
+    return errors
+
+
+def _lint_secrets(version_dir: Path) -> list[str]:
+    """Похожие на токены и ключи строки в файлах версии (сам секрет в отчёт не попадает)."""
+    errors: list[str] = []
+    for root, _dirs, files in os.walk(version_dir, followlinks=False):
+        for name in sorted(files):
+            path = Path(root) / name
+            if path.is_symlink():
+                continue
+            data = path.read_bytes()
+            label = next((label for label, pattern in _SECRET_PATTERNS if pattern.search(data)), None)
+            if label is not None:
+                errors.append(
+                    f"{path.relative_to(version_dir).as_posix()}: похоже на {label}, секретам не место в паке"
+                )
+    return errors
+
+
+def _lint_engine_flags(manifest: dict[str, Any]) -> list[str]:
+    engine = manifest.get("engine")
+    flags = engine.get("flags") if isinstance(engine, dict) else None
+    if isinstance(flags, str) and _SHELL_ESCAPE_RE.search(flags):
+        return [
+            (
+                "engine.flags: -shell-escape разрешает TeX запускать команды; Студия флаги пака при сборке "
+                "не использует, а у читателей пака вне Студии это исполнение кода"
+            )
+        ]
+    return []
+
+
+def _lint_safety(version_dir: Path, manifest: dict[str, Any]) -> tuple[list[str], list[str]]:
+    return _lint_symlinks(version_dir) + _lint_secrets(version_dir), _lint_engine_flags(manifest)
+
+
 def lint_version_dir(version_dir: Path) -> LintReport:  # noqa: C901, PLR0912, PLR0915
     report = LintReport()
     files_dir = version_dir / "files"
@@ -518,7 +567,7 @@ def lint_version_dir(version_dir: Path) -> LintReport:  # noqa: C901, PLR0912, P
     langs = tuple(str(c).lower() for c in manifest.get("langs", []) if isinstance(c, str))
 
     # ── 1. Jinja-parse (гоча verbatim-fallback) ──
-    env = _jinja_env()
+    env = pack_environment()  # тот же разбор, что у рендера: песочница и LaTeX-разметка
     for f in sorted(files_dir.rglob("*")):
         if not f.is_file() or f.suffix.lower() not in _TEXT_SUFFIXES or f.name == PACK_DOC_MANIFEST:
             continue
@@ -548,6 +597,7 @@ def lint_version_dir(version_dir: Path) -> LintReport:  # noqa: C901, PLR0912, P
         _lint_slot_placements(version_dir, manifest),
         _lint_signing_slots(manifest),
         _lint_plate_room(manifest),
+        _lint_safety(version_dir, manifest),
         lint_anchors(version_dir, manifest),
     ):
         report.errors.extend(errors)
