@@ -209,3 +209,20 @@ To keep the PDF the same between builds too, the Studio calls latexmk with `-lat
 You do not need to place boxes by millimetres by hand: build a document with anchors, drag the box on the Signatures tab and choose "Copy as template preset" in the "⋯" menu. An anchored template place goes into the fragment as the pack entry as is, and a manual place is written relative to the slot anchor on the same page (`align: left`, `dx_mm`, `dy_mm`) with a `# by the build:` comment and the millimetres of this build. If the build has no anchors, the place is written in mm with a `# no anchor` comment.
 
 The linter checks that every anchored entry has an anchor call or a call of a wrapper from `anchor_macros` with that name in the document files or in `common/`, that `common/anchors.tex` exists and the document loads it, and that an anchored `default_placement` has its fallback place. It warns when an anchor name in the sources is not a catalog slot id (a typo) and when one name appears twice in a file (the place follows the first one). The linter does not see an `\if` around an anchor: build the document with every combination of the data and check the boxes on the Signatures tab.
+
+## For pack authors: the class of a new version
+
+The pack linter works out the class of a new version from its contents: it compares the version with the previous released version of the template. There are two kinds of rules.
+
+- **Hard** rules set the minimum. A new document, field, field group, form, submission profile, checkpoint item, signature slot, check rule or check file, language, work kind, staffing or build setup (`engine`, `latex_packages`, `dynamic_includes`) is minor. Removing a document, field, profile, slot or form is minor too, and major is suggested until there is a data migration declaration. Signing presets (a slot `default_placement` included), deadline hints and the texts of labels and hints are patch.
+- **Soft** rules only suggest a class. Edits to template files and check settings are patch, and the author may raise them to minor. A change to `methods` of an item or to field defaults suggests minor. A new optional field (`required_at: never`, no `default` and no `auto`) suggests patch when it keeps the output while empty.
+
+The version number and `release.kind` cannot be softer than the minimum: the linter reports such a version as an error. When a soft rule suggests more than you release, the linter warns. Explain the choice in `release.note`, and the explanation goes into the PR description:
+
+```yaml
+release:
+  kind: patch
+  note: "Signing methods narrowed to what SmartLMS requires: a fix, not a new requirement."
+```
+
+The linter checks a version that is not in `releases.yaml` and the last one entered there: a release enters the version in the same PR. Older released versions are not checked after the fact.

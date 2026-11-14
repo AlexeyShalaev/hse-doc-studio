@@ -5,6 +5,7 @@ from hse_doc_studio.core.enums import TemplateUpdateClass
 from hse_doc_studio.core.template_versions import (
     classify_update,
     is_newer,
+    is_softer,
     parse_app_version,
     parse_version_key,
     stricter,
@@ -73,3 +74,10 @@ def test__studio_satisfies() -> None:
     assert not studio_satisfies("0.2.0", "0.1.3")
     # dev-сборка с неразобранной версией открывает всё.
     assert studio_satisfies("0.2.0", "dev")
+
+
+def test__is_softer__orders_patch_minor_major() -> None:
+    assert is_softer(TemplateUpdateClass.patch, TemplateUpdateClass.minor)
+    assert is_softer(TemplateUpdateClass.minor, TemplateUpdateClass.major)
+    assert not is_softer(TemplateUpdateClass.minor, TemplateUpdateClass.minor)
+    assert not is_softer(TemplateUpdateClass.major, TemplateUpdateClass.patch)
