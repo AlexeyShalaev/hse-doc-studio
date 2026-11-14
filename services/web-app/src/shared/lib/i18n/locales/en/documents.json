@@ -240,7 +240,8 @@
       "noOutputNotStarted": "There is no build output: LaTeX was not started, the build stopped earlier. The reason is above.",
       "noOutputEmpty": "There is no build output: the runner did not send a single log line. The reason is above; if there is none, it is a runner failure, check its log on its machine.",
       "retry": "Build again"
-    }
+    },
+    "placesMoved": "Template signature places moved to the new layout: {{n}}"
   },
   "preview": {
     "passWord_one": "pass",

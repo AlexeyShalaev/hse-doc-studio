@@ -66,6 +66,8 @@ export type PlanSlotLike = {
   is_mine?: boolean | undefined;
   // Подпись необязательна на точке (signing-route.md, 13.6).
   optional?: boolean | undefined;
+  // Подсказки, которые не блокируют подпись: `anchor_missing` нет строки в собранном документе (15.17.14).
+  hints?: readonly string[] | undefined;
 };
 
 export type SignaturePlanLike = {

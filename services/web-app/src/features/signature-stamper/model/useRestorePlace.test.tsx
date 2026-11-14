@@ -5,7 +5,7 @@ import { I18nextProvider } from "react-i18next";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { signatureApi, signatureKeys } from "@entities/signature";
 import { ApiError } from "@shared/api";
-import { i18n } from "@shared/lib";
+import { i18n, toast } from "@shared/lib";
 import type { SignaturesStateResponse } from "@shared/api/types";
 import { useRestorePlace } from "./useRestorePlace";
 
@@ -25,6 +25,8 @@ const MOVED = {
   signed_at: null,
   origin: "manual" as const,
   preset_available: true,
+  source: null,
+  anchor: null,
 };
 const RESTORED = { ...MOVED, x_mm: 110, y_mm: 130, origin: "pack" as const };
 
@@ -138,4 +140,29 @@ describe("«Вернуть место из шаблона»", () => {
     expect(screen.queryByTestId("dates-reset-text")).toBeNull();
     expect(post).toHaveBeenCalledTimes(1);
   });
+
+  it.each([
+    [
+      "anchors_unknown",
+      "Не удалось вернуть место: Место из шаблона появится после сборки документа.",
+    ],
+    [
+      "anchor_missing",
+      "Не удалось вернуть место: В собранном документе нет строки для этой подписи. Проверьте данные проекта или поставьте место вручную.",
+    ],
+  ])(
+    "409 %s места на строке шаблона: тост с причиной, окна нет",
+    async (code, text) => {
+      vi.spyOn(signatureApi, "restorePlacement").mockRejectedValueOnce(
+        new ApiError("Refused", code, 409),
+      );
+      const error = vi.spyOn(toast, "error").mockReturnValue("t");
+      mount();
+      await userEvent.click(screen.getByText("restore"));
+      await waitFor(() => {
+        expect(error).toHaveBeenCalledWith(text);
+      });
+      expect(screen.queryByTestId("dates-reset-text")).toBeNull();
+    },
+  );
 });

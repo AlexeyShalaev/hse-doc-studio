@@ -145,6 +145,8 @@ export const CompileDetailSchema = CompileListItemSchema.extend({
   wait: CompileWaitSchema.nullish(),
   // Где шла сборка: личный раннер, общий или фолбэк. null в локальном режиме.
   placement: CompilePlacementSchema.nullish(),
+  // Сколько мест подписей из шаблона встали по строкам шаблона этой сборки (signing-route.md, 15.17.9).
+  signature_places_moved: z.number().default(0),
 });
 
 export const CheckResultsResponseSchema = z.object({

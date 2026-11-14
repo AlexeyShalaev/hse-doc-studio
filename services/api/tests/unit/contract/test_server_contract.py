@@ -344,7 +344,7 @@ _SCHEMAS: dict[str, Any] = {
     # «Вернуть место из шаблона» (signing-route.md, 15.11): тело в pending до среза W15.
     "RestorePlacementRequest": sig.RestorePlacementRequest,
     # Места на якорях шаблона (signing-route.md, 15.17.14): рантайм-слот с местом пака на якоре и состояние подписей
-    # с якорями сборки; эталоны в pending до среза W17.
+    # с якорями сборки; эталоны из pending перенёс W17.
     "RuntimeSlot": sig.RuntimeSlotResponse,
     "SignaturesState": sig.SignaturesStateResponse,
 }

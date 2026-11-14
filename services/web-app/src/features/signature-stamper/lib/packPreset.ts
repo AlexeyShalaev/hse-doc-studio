@@ -2,6 +2,11 @@
 // документа проекта переводятся в фрагмент `version.yaml` пака (`placements` и `default_dates` слотов,
 // signing-route.md, 15.3). Модуль чистый: состояние подписей, документы проекта и каталог версии ему
 // передают, на сервер он не ходит.
+//
+// Якоря (signing-route.md, 15.17.12): место «из шаблона» на якоре выводится записью пака как есть;
+// ручное место на документе, у сборки которого есть якорь с id слота на той же странице, выводится
+// относительно него (комментарий с мм этой сборки), метка даты так же по якорю `<слот>.<формат>`;
+// без якорей место и метка в мм с комментарием «якоря нет».
 
 /** Лист A4 и рамка места подписи из пака: те же границы, что у `parse_slot_placement` на сервере. */
 const SHEET_WIDTH_MM = 210;
@@ -36,6 +41,75 @@ export type PresetPlacement = {
   dates?: readonly PresetDateMark[];
   /** `pack`: место как в шаблоне, выводится без округления с пометкой. */
   origin?: "pack" | "seed" | "manual" | undefined;
+  /** `anchor`: место как в шаблоне стоит на строке шаблона, выводится записью пака (15.17.12). */
+  source?: "anchor" | "mm" | null | undefined;
+};
+
+/** Запасное место записи на якоре в мм. */
+type PresetMmPlace = {
+  page: number;
+  x_mm: number;
+  y_mm: number;
+  width_mm: number;
+};
+
+/** Место подписи на якоре в записи пака (15.17.7): поля по умолчанию в YAML не пишутся. */
+export type PresetAnchorPlace = {
+  anchor: string;
+  align: string;
+  dx_mm: number;
+  dy_mm: number;
+  /** null: ширина линии. */
+  width_mm: number | null;
+  fallback: PresetMmPlace | null;
+};
+
+/** Метка даты на якоре в записи пака (15.17.7). */
+export type PresetAnchorDate = {
+  anchor: string;
+  format: string;
+  align: string;
+  height_mm: number;
+  width_mm: number | null;
+  dx_mm: number;
+  /** null: минус высота, метка стоит на линии. */
+  dy_mm: number | null;
+  fallback: (PresetMmPlace & { height_mm: number }) | null;
+};
+
+/** Записи пака по документам у рантайм-слота (`RuntimeSlotResponse`): место на якоре выводится как есть. */
+export type PresetRuntimeSlot = {
+  id: string;
+  default_placements?:
+    | Readonly<
+        Record<
+          string,
+          | ({ source: "anchor" } & PresetAnchorPlace)
+          | ({ source: "mm" } & PresetMmPlace)
+        >
+      >
+    | undefined;
+  default_dates?:
+    | Readonly<
+        Record<
+          string,
+          readonly (
+            | ({ source: "anchor" } & PresetAnchorDate)
+            | ({ source: "mm" } & PresetDateMark)
+          )[]
+        >
+      >
+    | undefined;
+};
+
+/** Якорь сборки (`SignaturesStateResponse.anchors`): мм от левого верхнего угла, `y_mm` базовая линия. */
+export type PresetBuildAnchor = {
+  id: string;
+  kind: "sign" | "date";
+  page: number;
+  x_mm: number;
+  y_mm: number;
+  width_mm: number;
 };
 
 export type PresetSlotDef = {
@@ -76,6 +150,15 @@ export type PackPresetInput = {
   docIds?: readonly string[] | null;
   /** Брать и выключенные места (затравки). */
   includeDisabled?: boolean;
+  /** Рантайм-слоты проекта: записи пака на якоре для мест «из шаблона» (15.17.12). */
+  runtimeSlots?: readonly PresetRuntimeSlot[];
+  /**
+   * Якоря сборки по документам проекта (`SignaturesStateResponse.anchors`, null неизвестны). Без поля
+   * вывод без якорей, как до них: места в мм без комментария.
+   */
+  anchors?: Readonly<
+    Record<string, { items: readonly PresetBuildAnchor[] } | null>
+  >;
   /** Строки комментариев: язык выбирает вызывающий. */
   texts: PackPresetTexts;
 };
@@ -87,6 +170,12 @@ export type PackPresetTexts = {
   hint: string;
   /** Комментарий у места, которое как в шаблоне. */
   asInPack: string;
+  /** Строка шапки, если во фрагменте есть места на якорях: по какой сборке и почему они не зависят от данных. */
+  anchorsHeader?: string;
+  /** Комментарий у места относительно якоря: «по сборке», дальше мм этой сборки. */
+  byBuild?: string;
+  /** Комментарий у места в мм, когда якоря неизвестны или нужного нет. */
+  noAnchor?: string;
 };
 
 export type PlaceProblem = "page" | "width" | "edge" | "top";
@@ -114,12 +203,26 @@ export type PackPresetWarning =
   | { code: "too_many_dates"; slot: string; doc: string; dropped: number }
   | { code: "disabled"; count: number };
 
+/** Метка даты в выводе: на якоре (с мм этой сборки или как в паке) или в мм с комментарием. */
+export type PresetDateOut = {
+  /** Метка этой сборки в мм; у метки пака на якоре без запасного места null. */
+  mark: PresetDateMark | null;
+  anchor: PresetAnchorDate | null;
+  note: "as_in_pack" | "by_build" | "no_anchor" | null;
+};
+
 export type PackPresetEntry = {
   slot: string;
   doc: string;
   place: { page: number; x_mm: number; y_mm: number; width_mm: number };
   dates: PresetDateMark[];
   asInPack: boolean;
+  /** Место на якоре: запись пака как есть или относительно якоря сборки (15.17.12). */
+  anchorPlace?: PresetAnchorPlace;
+  /** `by_build`: место относительно якоря, в комментарии мм этой сборки; `no_anchor`: мм без якоря. */
+  note?: "by_build" | "no_anchor";
+  /** Метки даты в выводе с якорями; без поля метки идут из `dates` в мм. */
+  dateOut?: PresetDateOut[];
 };
 
 export type PackPreset = {
@@ -198,7 +301,27 @@ export const dateProblem = (d: PresetDateMark): DateProblem | null => {
 };
 
 const sameEntry = (a: PackPresetEntry, b: PackPresetEntry): boolean =>
-  JSON.stringify([a.place, a.dates]) === JSON.stringify([b.place, b.dates]);
+  JSON.stringify([a.place, a.dates, a.anchorPlace, a.dateOut]) ===
+  JSON.stringify([b.place, b.dates, b.anchorPlace, b.dateOut]);
+
+/** До 0,1 мм, как отпечаток места (15.4). */
+const tenth = (value: number): number => Math.round(value * 10) / 10 + 0;
+
+/** Верх рамки подписи на якоре по умолчанию и высота метки даты (лоадер пака, 15.17.7). */
+const ANCHOR_DEFAULT_DY_MM = -10;
+const ANCHOR_DATE_HEIGHT_MM = 5;
+
+/** Левый край рамки ширины `width` на линии при выравнивании `align` (15.17.8), до `dx_mm`. */
+const alignedX = (
+  line: PresetBuildAnchor,
+  align: string,
+  width: number,
+): number =>
+  align === "right"
+    ? line.x_mm + line.width_mm - width
+    : align === "center"
+      ? line.x_mm + (line.width_mm - width) / 2
+      : line.x_mm;
 
 // Ключ YAML без кавычек, если он не похож на число, булево или null.
 const YAML_PLAIN = /^[A-Za-z_][A-Za-z0-9_.-]*$/;
@@ -219,6 +342,48 @@ const flowDate = (d: PresetDateMark): string =>
     d.align === "center" ? "" : `, align: ${key(d.align)}`
   } }`;
 
+/** Запись места на якоре: `anchor` и только поля, отличные от значений лоадера по умолчанию. */
+const flowAnchorPlace = (a: PresetAnchorPlace): string => {
+  const parts = [`anchor: ${key(a.anchor)}`];
+  if (a.align !== "center") parts.push(`align: ${key(a.align)}`);
+  if (a.dx_mm !== 0) parts.push(`dx_mm: ${num(a.dx_mm)}`);
+  if (a.dy_mm !== ANCHOR_DEFAULT_DY_MM) parts.push(`dy_mm: ${num(a.dy_mm)}`);
+  const width = a.width_mm ?? a.fallback?.width_mm ?? null;
+  if (width !== null) parts.push(`width_mm: ${num(width)}`);
+  if (a.fallback !== null)
+    parts.push(
+      `page: ${num(a.fallback.page)}`,
+      `x_mm: ${num(a.fallback.x_mm)}`,
+      `y_mm: ${num(a.fallback.y_mm)}`,
+    );
+  return `{ ${parts.join(", ")} }`;
+};
+
+/** Запись метки даты на якоре; `format` только если он не часть якоря. */
+const flowAnchorDate = (d: PresetAnchorDate): string => {
+  const parts = [`anchor: ${key(d.anchor)}`];
+  if (d.anchor.slice(d.anchor.indexOf(".") + 1) !== d.format)
+    parts.push(`format: ${key(d.format)}`);
+  if (d.align !== "center") parts.push(`align: ${key(d.align)}`);
+  if (d.height_mm !== ANCHOR_DATE_HEIGHT_MM)
+    parts.push(`height_mm: ${num(d.height_mm)}`);
+  const width = d.width_mm ?? d.fallback?.width_mm ?? null;
+  if (width !== null) parts.push(`width_mm: ${num(width)}`);
+  if (d.dx_mm !== 0) parts.push(`dx_mm: ${num(d.dx_mm)}`);
+  if (d.dy_mm !== null) parts.push(`dy_mm: ${num(d.dy_mm)}`);
+  if (d.fallback !== null)
+    parts.push(
+      `page: ${num(d.fallback.page)}`,
+      `x_mm: ${num(d.fallback.x_mm)}`,
+      `y_mm: ${num(d.fallback.y_mm)}`,
+    );
+  return `{ ${parts.join(", ")} }`;
+};
+
+/** Мм этой сборки в комментарии: «1, 168, 177, 28». */
+const mmList = (values: readonly number[]): string =>
+  values.map(num).join(", ");
+
 const comment = (text: string): string =>
   text
     .split("\n")
@@ -231,31 +396,139 @@ const render = (
   texts: PackPresetTexts,
 ): string => {
   if (entries.length === 0) return "";
+  const onAnchors = entries.some(
+    (e) =>
+      e.anchorPlace !== undefined ||
+      (e.dateOut ?? []).some((d) => d.anchor !== null),
+  );
   const lines = [
     comment(texts.header),
     comment(texts.hint),
+    ...(onAnchors && texts.anchorsHeader !== undefined
+      ? [comment(texts.anchorsHeader)]
+      : []),
     "signatures:",
     "  slots:",
   ];
+  const tail = (text: string | undefined): string =>
+    text === undefined ? "" : `  # ${text}`;
+  const byBuild = (values: readonly number[]): string =>
+    tail(
+      texts.byBuild === undefined
+        ? undefined
+        : `${texts.byBuild}: ${mmList(values)}`,
+    );
   for (const slot of slotOrder) {
     const own = entries.filter((e) => e.slot === slot);
     if (own.length === 0) continue;
     lines.push(`    - id: ${key(slot)}`, "      placements:");
     for (const e of own) {
-      const note = e.asInPack ? `  # ${texts.asInPack}` : "";
-      lines.push(`        ${key(e.doc)}: ${flowPlace(e.place)}${note}`);
+      const p = e.place;
+      const note = e.asInPack
+        ? tail(texts.asInPack)
+        : e.note === "by_build"
+          ? byBuild([p.page, p.x_mm, p.y_mm, p.width_mm])
+          : e.note === "no_anchor"
+            ? tail(texts.noAnchor)
+            : "";
+      const flow =
+        e.anchorPlace === undefined
+          ? flowPlace(e.place)
+          : flowAnchorPlace(e.anchorPlace);
+      lines.push(`        ${key(e.doc)}: ${flow}${note}`);
     }
-    const dated = own.filter((e) => e.dates.length > 0);
+    const dated = own.filter((e) => (e.dateOut ?? e.dates).length > 0);
     if (dated.length > 0) {
       lines.push("      default_dates:");
       for (const e of dated) {
         lines.push(`        ${key(e.doc)}:`);
-        for (const d of e.dates) lines.push(`          - ${flowDate(d)}`);
+        if (e.dateOut === undefined) {
+          for (const d of e.dates) lines.push(`          - ${flowDate(d)}`);
+          continue;
+        }
+        for (const d of e.dateOut) {
+          const flow =
+            d.anchor !== null
+              ? flowAnchorDate(d.anchor)
+              : d.mark !== null
+                ? flowDate(d.mark)
+                : null;
+          if (flow === null) continue;
+          const m = d.mark;
+          const note =
+            d.note === "as_in_pack"
+              ? tail(texts.asInPack)
+              : d.note === "by_build" && m !== null
+                ? byBuild([m.page, m.x_mm, m.y_mm, m.width_mm, m.height_mm])
+                : d.note === "no_anchor"
+                  ? tail(texts.noAnchor)
+                  : "";
+          lines.push(`          - ${flow}${note}`);
+        }
       }
     }
   }
   return `${lines.join("\n")}\n`;
 };
+
+/** Линия якоря `id` вида `kind` на странице `page` в сборке документа; null, если её нет. */
+const lineOf = (
+  anchors: { items: readonly PresetBuildAnchor[] } | null | undefined,
+  kind: "sign" | "date",
+  id: string,
+  page: number,
+): PresetBuildAnchor | null =>
+  anchors?.items.find(
+    (a) => a.kind === kind && a.id === id && a.page === page,
+  ) ?? null;
+
+/** Ручное место относительно линии якоря: выравнивание по левому краю, смещения до 0,1 мм. */
+const relativePlace = (
+  slot: string,
+  place: PackPresetEntry["place"],
+  line: PresetBuildAnchor,
+): PresetAnchorPlace => ({
+  anchor: slot,
+  align: "left",
+  dx_mm: tenth(place.x_mm - line.x_mm),
+  dy_mm: tenth(place.y_mm - line.y_mm),
+  width_mm: place.width_mm,
+  fallback: null,
+});
+
+/** Метка даты относительно линии якоря; выравнивание метки остаётся (оно же выравнивание текста). */
+const relativeDate = (
+  anchor: string,
+  mark: PresetDateMark,
+  line: PresetBuildAnchor,
+): PresetAnchorDate => {
+  const width = tenth(mark.width_mm);
+  const height = tenth(mark.height_mm);
+  const dy = tenth(mark.y_mm - line.y_mm);
+  return {
+    anchor,
+    format: mark.format,
+    align: mark.align,
+    height_mm: height,
+    width_mm: width,
+    dx_mm: tenth(mark.x_mm - alignedX(line, mark.align, width)),
+    // Метка стоит на линии: верх на её высоту выше, как по умолчанию у лоадера.
+    dy_mm: Math.abs(dy + height) < 0.05 ? null : dy,
+    fallback: null,
+  };
+};
+
+/** Запись пака на якоре без дискриминатора, как её пишет YAML. */
+const packAnchorPlace = (
+  entry: { source: "anchor" } & PresetAnchorPlace,
+): PresetAnchorPlace => ({
+  anchor: entry.anchor,
+  align: entry.align,
+  dx_mm: entry.dx_mm,
+  dy_mm: entry.dy_mm,
+  width_mm: entry.width_mm,
+  fallback: entry.fallback,
+});
 
 /**
  * Пресет мест подписей пака по состоянию подписей проекта (template-studio.md, 13).
@@ -319,6 +592,15 @@ export const buildPackPresetYaml = (input: PackPresetInput): PackPreset => {
         continue;
       }
 
+      // Место «из шаблона» на якоре: запись пака как есть (15.17.12).
+      const runtime = input.runtimeSlots?.find((r) => r.id === runtimeSlot);
+      const packEntry = runtime?.default_placements?.[docKey];
+      const packOnAnchor =
+        placement.origin === "pack" &&
+        placement.source === "anchor" &&
+        packEntry?.source === "anchor"
+          ? packEntry
+          : null;
       const asInPack = placement.origin === "pack";
       const place = asInPack
         ? {
@@ -336,6 +618,8 @@ export const buildPackPresetYaml = (input: PackPresetInput): PackPreset => {
 
       const rawDates = placement.dates ?? [];
       const dates: PresetDateMark[] = [];
+      // Метки до округления: смещение от якоря считается до 0,1 мм.
+      const exactDates: PresetDateMark[] = [];
       rawDates.slice(0, PRESET_MAX_DATE_MARKS).forEach((raw, index) => {
         const mark: PresetDateMark = {
           page: raw.page,
@@ -359,6 +643,7 @@ export const buildPackPresetYaml = (input: PackPresetInput): PackPreset => {
           return;
         }
         dates.push(date);
+        exactDates.push(mark);
       });
       if (rawDates.length > PRESET_MAX_DATE_MARKS) {
         warnings.push({
@@ -376,6 +661,65 @@ export const buildPackPresetYaml = (input: PackPresetInput): PackPreset => {
         dates,
         asInPack,
       };
+      if (packOnAnchor !== null) {
+        entry.anchorPlace = packAnchorPlace(packOnAnchor);
+        entry.dateOut = (runtime?.default_dates?.[docKey] ?? []).map(
+          (mark): PresetDateOut =>
+            mark.source === "anchor"
+              ? {
+                  mark: null,
+                  anchor: {
+                    anchor: mark.anchor,
+                    format: mark.format,
+                    align: mark.align,
+                    height_mm: mark.height_mm,
+                    width_mm: mark.width_mm,
+                    dx_mm: mark.dx_mm,
+                    dy_mm: mark.dy_mm,
+                    fallback: mark.fallback,
+                  },
+                  note: null,
+                }
+              : {
+                  mark: {
+                    page: mark.page,
+                    x_mm: mark.x_mm,
+                    y_mm: mark.y_mm,
+                    width_mm: mark.width_mm,
+                    height_mm: mark.height_mm,
+                    format: mark.format,
+                    align: mark.align,
+                  },
+                  anchor: null,
+                  note: null,
+                },
+        );
+      } else if (input.anchors !== undefined && !asInPack) {
+        // Ручное место: относительно якоря сборки с id слота на той же странице, иначе мм с пометкой.
+        const anchors = input.anchors[docKey];
+        const line = lineOf(anchors, "sign", slot, place.page);
+        if (line === null) entry.note = "no_anchor";
+        else {
+          entry.anchorPlace = relativePlace(
+            slot,
+            { ...place, x_mm: placement.x_mm, y_mm: placement.y_mm },
+            line,
+          );
+          entry.note = "by_build";
+        }
+        if (dates.length > 0)
+          entry.dateOut = dates.map((mark, index): PresetDateOut => {
+            const id = `${slot}.${mark.format}`;
+            const dateLine = lineOf(anchors, "date", id, mark.page);
+            return dateLine === null
+              ? { mark, anchor: null, note: "no_anchor" }
+              : {
+                  mark,
+                  anchor: relativeDate(id, exactDates[index] ?? mark, dateLine),
+                  note: "by_build",
+                };
+          });
+      }
       const pair = `${slot}\u0000${defId}`;
       const first = kept.get(pair);
       if (first === undefined) {

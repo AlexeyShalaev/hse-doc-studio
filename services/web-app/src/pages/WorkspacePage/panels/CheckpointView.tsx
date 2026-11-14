@@ -397,6 +397,11 @@ export const CheckpointView = ({
                                 : null) ??
                               planSlot?.hint ??
                               "";
+                            // Строки для подписи в собранном документе нет (15.17.8): не блокирует,
+                            // место ставят руками на вкладке «Подписи».
+                            const noLine =
+                              planSlot?.hints?.includes("anchor_missing") ??
+                              false;
                             return (
                               <span
                                 key={signature.slotId}
@@ -445,6 +450,17 @@ export const CheckpointView = ({
                                     data-testid={`checkpoint-slot-hint-${docId}-${signature.slotId}`}
                                   >
                                     {hint}
+                                  </span>
+                                )}
+                                {!signature.isSigned && noLine && (
+                                  <span
+                                    style={{
+                                      fontSize: "0.6875rem",
+                                      color: "var(--c-warn)",
+                                    }}
+                                    data-testid={`checkpoint-slot-no-line-${docId}-${signature.slotId}`}
+                                  >
+                                    {t("signatureStamper:place.anchor.missing")}
                                   </span>
                                 )}
                               </span>

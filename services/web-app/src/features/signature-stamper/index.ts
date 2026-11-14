@@ -9,7 +9,7 @@ export type {
   PlaceRestoreControl,
   SlotDateControl,
 } from "./ui/DocPlacementPanel";
-export { PlaceOriginMark } from "./ui/PlaceOriginMark";
+export { PlaceAnchorNote, PlaceOriginMark } from "./ui/PlaceOriginMark";
 export type { PlaceOriginMarkProps } from "./ui/PlaceOriginMark";
 export { useRestorePlace } from "./model/useRestorePlace";
 export type { RestorePlace } from "./model/useRestorePlace";

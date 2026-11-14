@@ -126,6 +126,10 @@
         "title": "Signing: route from the template",
         "hint": "Template 2026.1.4 with a ready route. In “Bertie” the checkpoint draft is not created yet: “Prepare and send” gives the author and the supervisor at once, the template signature places are on, the supervisor has date marks, the academic supervisor is not added (the supervisor is from HSE). In another project the draft is changed: you added the academic supervisor and moved the supervisor place, so “Reset to template” and “Reset place to template” are there."
       },
+      "student_signing_anchors": {
+        "title": "Signing: places on template lines",
+        "hint": "A template with signature places on lines (anchors). “Bertie” is built: the checkpoint draft puts the author and supervisor boxes on the document lines, marked “Placed on the template line”; the document has no line for the academic supervisor, so adding them to the route shows “no line”. In another project the anchors are unknown: the supervisor place “appears after the build”."
+      },
       "student_signing_migration": {
         "title": "Signing: 0.20.0 migration",
         "hint": "The student's route was sent before versions on signature and its version cannot be restored: the route is stopped and needs a new version."

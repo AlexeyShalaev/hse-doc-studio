@@ -41,8 +41,16 @@ export {
   DetachedVerdictSchema,
   FreezePdfResponseSchema,
   FrozenPdfSchema,
+  BuildAnchorSchema,
+  BuildAnchorsSchema,
+  PackAnchorDateMarkSchema,
+  PackAnchorPlaceSchema,
+  PackDateEntrySchema,
   PackDateMarkSchema,
+  PackPlaceEntrySchema,
   PackPlaceSchema,
+  PlaceAnchorSchema,
+  PlaceSourceSchema,
   PinnedPdfSchema,
   PlacementOriginSchema,
   PlacementSchema,
@@ -59,10 +67,16 @@ export {
   UploadSignatureResponseSchema,
 } from "./api/signatureSchemas";
 export type {
+  BuildAnchor,
+  BuildAnchors,
   DateMark,
   DateMarkAlign,
   DateMarkFormat,
   DateMarkInput,
+  PackDateEntry,
+  PackPlaceEntry,
+  PlaceAnchor,
+  PlaceSource,
   PlacementOrigin,
   RestorePlacementRequest,
   SetDateMarksRequest,
@@ -76,5 +90,13 @@ export {
   longestDateText,
   todayInDisplayZone,
 } from "./lib/dateMarks";
-export { packDatesOf, packPlaceOf, placeMarkOf } from "./lib/packPlaces";
-export type { PlaceMark } from "./lib/packPlaces";
+export {
+  anchorNoteOf,
+  packDatesOf,
+  packEntryOf,
+  packHasMmPlace,
+  packPlaceOf,
+  placeMarkOf,
+  placeOnLine,
+} from "./lib/packPlaces";
+export type { AnchorNote, PlaceMark } from "./lib/packPlaces";

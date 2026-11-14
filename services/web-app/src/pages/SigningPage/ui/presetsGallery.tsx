@@ -21,7 +21,8 @@ import { galleryPdfUrl } from "./galleryPdf";
 // шаблона», «Изменён вами» и «Вернуть как в шаблоне»), окно подтверждения и пометки мест на
 // вкладке «Подписи» («Место из шаблона», «Место изменено», «Вернуть место из шаблона»). Правки
 // живут в памяти записи. Живой редактор маршрута на демо-сервере в сценарии
-// `student_signing_presets`.
+// `student_signing_presets`. Места на строках шаблона (15.17.14): «Место по строке шаблона», нет
+// строки, якоря неизвестны, свой PDF; живьём в сценарии `student_signing_anchors`.
 
 type Project = z.infer<typeof ProjectResponseSchema>;
 
@@ -125,22 +126,60 @@ const fromPack = (slotId: string): PlacementResponse => {
     signed_at: null,
     origin: "pack",
     preset_available: true,
+    source: "mm",
+    anchor: null,
   };
 };
 
+/** Места пака обоих слотов на строках шаблона (15.17.7), без запасного места в мм. */
+const ANCHOR_SLOT_DEFS = SLOT_DEFS.map((def) => ({
+  ...def,
+  default_placements: {
+    [DOC]: {
+      source: "anchor" as const,
+      anchor: def.id,
+      align: "left" as const,
+      dx_mm: 0,
+      dy_mm: -10,
+      width_mm: 40,
+      fallback: null,
+    },
+  },
+}));
+
+/** Место на якоре: `state` есть ли строка в собранном документе. */
+const onAnchor = (
+  slotId: string,
+  state: "found" | "missing" | "unknown",
+  over: Partial<PlacementResponse> = {},
+): PlacementResponse => ({
+  ...fromPack(slotId),
+  source: "anchor",
+  anchor: { id: slotId, state },
+  ...over,
+});
+
 /** Вкладка «Подписи» документа: место научрука из шаблона, место академрука сдвинуто руками. */
-const PlacesEditor = () => {
-  const [placements, setPlacements] = useState<
-    Record<string, PlacementResponse>
-  >({
+const PlacesEditor = ({
+  initial = {
     supervisor: fromPack("supervisor"),
     academic_supervisor: {
       ...fromPack("academic_supervisor"),
       x_mm: 130,
       y_mm: 184,
       origin: "manual",
+      source: null,
     },
-  });
+  },
+  slotDefs = SLOT_DEFS,
+  ownPdf = false,
+}: {
+  initial?: Record<string, PlacementResponse>;
+  slotDefs?: typeof SLOT_DEFS;
+  ownPdf?: boolean;
+}) => {
+  const [placements, setPlacements] =
+    useState<Record<string, PlacementResponse>>(initial);
   const [restoring, setRestoring] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [pageCount, setPageCount] = useState(0);
@@ -152,7 +191,10 @@ const PlacesEditor = () => {
     setPlacements((prev) => {
       const current = prev[slotId];
       return current
-        ? { ...prev, [slotId]: { ...current, ...patch, origin: "manual" } }
+        ? {
+            ...prev,
+            [slotId]: { ...current, ...patch, origin: "manual", source: null },
+          }
         : prev;
     });
   };
@@ -180,7 +222,7 @@ const PlacesEditor = () => {
           projectId={PROJECT}
           docId={DOC}
           pdfAvailable
-          slotDefs={SLOT_DEFS}
+          slotDefs={slotDefs}
           state={state}
           lang="ru"
           currentPage={page}
@@ -192,6 +234,7 @@ const PlacesEditor = () => {
           onSlotModeChange={() => undefined}
           placeControl={{
             canRestore: true,
+            ownPdf,
             isRestoring: (slotId) => restoring === slotId,
             onRestore: (slotId) => {
               setRestoring(slotId);
@@ -199,7 +242,11 @@ const PlacesEditor = () => {
                 setRestoring(null);
                 setPlacements((prev) => ({
                   ...prev,
-                  [slotId]: fromPack(slotId),
+                  [slotId]: {
+                    ...fromPack(slotId),
+                    source: prev[slotId]?.source === null ? "mm" : "anchor",
+                    anchor: prev[slotId]?.anchor ?? null,
+                  },
                 }));
               }, 500);
             },
@@ -213,7 +260,7 @@ const PlacesEditor = () => {
           pdfRelPath="output/topic_application.pdf"
           pdfUrl={galleryPdfUrl()}
           pdfAvailable
-          slotDefs={SLOT_DEFS}
+          slotDefs={slotDefs}
           state={state}
           page={page}
           onPageChange={setPage}
@@ -281,6 +328,76 @@ export const routePresetEntries = (): GalleryEntry[] => [
     () => <PlacesEditor />,
     "У научрука «Место из шаблона» с метками даты пака; место академрука сдвинуто: «Место изменено» и «Вернуть место из шаблона». Сдвиньте рамку научрука, и она станет изменённой.",
   ),
+  editorEntry(
+    "signature_place_on_line",
+    "Места на строках шаблона: строка есть и строки нет",
+    () => (
+      <PlacesEditor
+        slotDefs={ANCHOR_SLOT_DEFS}
+        initial={{
+          supervisor: onAnchor("supervisor", "found"),
+          academic_supervisor: onAnchor("academic_supervisor", "missing", {
+            enabled: false,
+            origin: "seed",
+            source: "mm",
+            dates: [],
+          }),
+        }}
+      />
+    ),
+    "У научрука «Место по строке шаблона»: рамка стоит на строке собранного документа. Строки академрука в документе нет: подсказка «нет строки» вместо кнопки, место ставят руками. Сдвиньте рамку научрука: «Место изменено» и «Вернуть место из шаблона».",
+  ),
+  editorEntry(
+    "signature_place_anchors_unknown",
+    "Места на строках шаблона: якоря неизвестны",
+    () => (
+      <PlacesEditor
+        slotDefs={ANCHOR_SLOT_DEFS}
+        initial={{
+          supervisor: onAnchor("supervisor", "unknown", {
+            enabled: false,
+            origin: "seed",
+            source: "mm",
+            dates: [],
+          }),
+          academic_supervisor: onAnchor("academic_supervisor", "unknown", {
+            x_mm: 130,
+            y_mm: 184,
+            origin: "manual",
+            source: null,
+            dates: [],
+          }),
+        }}
+      />
+    ),
+    "Документ не собран или собран раннером прежней версии, запасного места в мм у шаблона нет: «Место из шаблона появится после сборки документа» у места научрука и вместо «Вернуть место» у сдвинутого места академрука.",
+  ),
+  editorEntry(
+    "signature_place_own_pdf",
+    "Места на строках шаблона: свой загруженный PDF",
+    () => (
+      <PlacesEditor
+        slotDefs={ANCHOR_SLOT_DEFS}
+        ownPdf
+        initial={{
+          supervisor: onAnchor("supervisor", "unknown", {
+            x_mm: 120,
+            y_mm: 140,
+            origin: "manual",
+            source: null,
+            dates: [],
+          }),
+          academic_supervisor: onAnchor("academic_supervisor", "unknown", {
+            enabled: false,
+            origin: "seed",
+            source: "mm",
+            dates: [],
+          }),
+        }}
+      />
+    ),
+    "Документ заменён своим PDF: строк шаблона у него нет, места на якоре ставит человек. «Вернуть место из шаблона» нет, вместо неё «У загруженного PDF нет строк шаблона».",
+  ),
   {
     id: "route_preset_live_fresh",
     title: "Живой редактор: черновик по шаблону",
@@ -303,6 +420,19 @@ export const routePresetEntries = (): GalleryEntry[] => [
     render: () => (
       <SigningRouteEditor
         project={demoProject("p_01hxa4n7pq")}
+        profileId="topic-approval"
+      />
+    ),
+  },
+  {
+    id: "signature_place_live_anchors",
+    title: "Живой редактор: места по строкам шаблона",
+    note: "«Bertie» собран с якорями: черновик ставит автора и научрука по строкам («Место по строке шаблона»). Добавьте академрука: строки для него в документе нет.",
+    frame: "screen",
+    scenario: "student_signing_anchors",
+    render: () => (
+      <SigningRouteEditor
+        project={demoProject("p_01hxa1c4de")}
         profileId="topic-approval"
       />
     ),

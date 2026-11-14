@@ -6,6 +6,7 @@ import {
   SetDateMarksRequestSchema,
   formatDateMark,
   type DateMarkInput,
+  type BuildAnchor,
   type PlacementOrigin,
   type SignedAt,
 } from "@entities/signature";
@@ -45,6 +46,11 @@ import type { ServerDemoWorld } from "./world";
 // меток снимает пометку, «Вернуть место из шаблона» (`POST .../restore`) ставит место и метки из
 // пака с теми же кодами, что у меток даты. Метки даты пака есть только у проекта на версии
 // шаблона с пресетом (`hasPreset`).
+// Места на строках шаблона (signing-route.md, 15.17): в сценарии с якорями (`anchorsOf`) места
+// слотов пака на якорях, место считается по линии сборки (выравнивание по левому краю, верх рамки
+// на 10 мм выше линии), пометка «из шаблона» узнаётся по `fromPack`, а не по совпадению мм. Якоря
+// известны: нет линии, значит нет места (`anchor.state: missing`, «Вернуть место» 409
+// `anchor_missing`); неизвестны (null): места пака нет совсем (409 `anchors_unknown`).
 // Сроки контрольных точек (signing-route.md, 16): срок точки хранится здесь по проектам, состояние
 // считается при чтении правилами 16.6 (пакетов в демо нет, поэтому прошедший срок «просрочен»).
 // У «Bertie» срок через 3 дня, у чужого проекта рецензента сегодня, у проекта читателя прошёл
@@ -67,6 +73,12 @@ type Placement = {
 };
 
 type Place = { page: number; x_mm: number; y_mm: number; width_mm: number };
+
+/** Якоря сборки документов проекта в демо (15.17.4): null, пока они неизвестны. */
+export type DemoBuildAnchors = { build: string; items: BuildAnchor[] } | null;
+
+/** Верх рамки на якоре относительно линии (`dy_mm` пака по умолчанию, 15.17.7). */
+const ANCHOR_DY_MM = -10;
 type PackMark = Omit<DateMarkInput, "id">;
 
 // Лист A4 документа демо и число страниц: рамки меток проверяются по ним (`bad_date_mark`).
@@ -372,6 +384,12 @@ export const createCheckpointDemo = (
   getRoutes: () => SigningRouteDemo,
   /** Проект на версии шаблона с пресетом: у слотов метки даты из пака. */
   hasPreset: (projectId: string) => boolean = () => false,
+  /**
+   * Места пака на строках шаблона (15.17): якоря сборки документов проекта, null неизвестны;
+   * undefined: места пака в мм, как раньше.
+   */
+  anchorsOf: (projectId: string) => DemoBuildAnchors | undefined = () =>
+    undefined,
 ): CheckpointDemo => {
   let placements = new Map<string, Record<string, Record<string, Placement>>>();
   // Проект → точка → срок (ISO с поясом Москвы).
@@ -446,6 +464,15 @@ export const createCheckpointDemo = (
     const found = placements.get(projectId);
     if (found) return found;
     const fresh = seedPlacements();
+    // На строках шаблона затравка стоит по линии сборки и всегда с пометкой (15.17.10); без линии
+    // или без якорей места пака нет, остаётся выключенная рамка без пометки.
+    if (onAnchors(projectId))
+      for (const [docId, slots] of Object.entries(fresh))
+        for (const [slotId, current] of Object.entries(slots)) {
+          const place = packPlace(projectId, docId, slotId);
+          if (place) Object.assign(current, place, { fromPack: true });
+          else current.fromPack = current.enabled;
+        }
     placements.set(projectId, fresh);
     return fresh;
   };
@@ -456,6 +483,46 @@ export const createCheckpointDemo = (
     slotId: string,
   ): PackMark[] =>
     hasPreset(projectId) ? (PACK_DATES[slotId]?.[docId] ?? []) : [];
+  const onAnchors = (projectId: string): boolean =>
+    anchorsOf(projectId) !== undefined;
+  /** Линия якоря слота в сборке документа; null: якоря неизвестны или строки нет. */
+  const lineOf = (projectId: string, slotId: string): BuildAnchor | null =>
+    anchorsOf(projectId)?.items.find(
+      (a) => a.kind === "sign" && a.id === slotId,
+    ) ?? null;
+  /**
+   * Место пака у пары: в мм, а на якоре по линии сборки (выравнивание влево, `dy_mm` -10, ширина
+   * записи); null, если места нет (якоря неизвестны без запасного места или строки нет).
+   */
+  const packPlace = (
+    projectId: string,
+    docId: string,
+    slotId: string,
+  ): Place | null => {
+    const place = PACK_PLACES[slotId]?.[docId];
+    if (!place) return null;
+    if (!onAnchors(projectId)) return place;
+    const line = lineOf(projectId, slotId);
+    return line === null
+      ? null
+      : {
+          page: line.page,
+          x_mm: line.x_mm,
+          y_mm: round1(line.y_mm + ANCHOR_DY_MM),
+          width_mm: place.width_mm,
+        };
+  };
+  /** Якорь места пака у пары (`PlacementResponse.anchor`); null у места пака в мм. */
+  const anchorRefOf = (projectId: string, docId: string, slotId: string) => {
+    if (!onAnchors(projectId) || !PACK_PLACES[slotId]?.[docId]) return null;
+    const state =
+      anchorsOf(projectId) === null
+        ? ("unknown" as const)
+        : lineOf(projectId, slotId) === null
+          ? ("missing" as const)
+          : ("found" as const);
+    return { id: slotId, state };
+  };
   /** Происхождение места (15.4): как в шаблоне, затравка из пака или изменено. */
   const originOf = (
     projectId: string,
@@ -463,6 +530,19 @@ export const createCheckpointDemo = (
     slotId: string,
     p: Placement,
   ): PlacementOrigin => {
+    // На якоре место меняется от сборки: «как в шаблоне» по пометке, затравка всегда с ней (15.17.10).
+    if (onAnchors(projectId)) {
+      if (!PACK_PLACES[slotId]?.[docId]) return "manual";
+      if (!p.fromPack) return "manual";
+      if (marksKey(p.dates) === marksKey(packDates(projectId, docId, slotId)))
+        return "pack";
+      return !p.enabled &&
+        p.dates.length === 0 &&
+        p.sign_date === null &&
+        p.manual === null
+        ? "seed"
+        : "manual";
+    }
     const place = PACK_PLACES[slotId]?.[docId];
     if (!place || !samePlace(p, place)) return "manual";
     if (
@@ -485,7 +565,7 @@ export const createCheckpointDemo = (
     slotId: string,
     current: Placement,
   ): Placement | null => {
-    const place = PACK_PLACES[slotId]?.[docId];
+    const place = packPlace(projectId, docId, slotId);
     if (!place) return null;
     return {
       ...current,
@@ -527,6 +607,7 @@ export const createCheckpointDemo = (
     const { manual: _manual, fromPack: _fromPack, ...rest } = placement;
     const signedAt = signedAtOf(projectId, docId, slotId, placement);
     const lang = langOf(projectId);
+    const origin = originOf(projectId, docId, slotId, placement);
     return {
       ...rest,
       dates: placement.dates.map((mark) => ({
@@ -537,8 +618,15 @@ export const createCheckpointDemo = (
             : formatDateMark(signedAt.at, mark.format, lang),
       })),
       signed_at: signedAt,
-      origin: originOf(projectId, docId, slotId, placement),
+      origin,
       preset_available: PACK_PLACES[slotId]?.[docId] !== undefined,
+      source:
+        origin === "manual"
+          ? null
+          : origin === "pack" && onAnchors(projectId)
+            ? ("anchor" as const)
+            : ("mm" as const),
+      anchor: anchorRefOf(projectId, docId, slotId),
     };
   };
   const placementsOut = (projectId: string) =>
@@ -553,6 +641,17 @@ export const createCheckpointDemo = (
         ),
       ]),
     );
+  /** Якоря источника подписи по документам (15.17.14); без якорей в сценарии пусто. */
+  const anchorsOut = (projectId: string) => {
+    const anchors = anchorsOf(projectId);
+    if (anchors === undefined) return {};
+    return Object.fromEntries(
+      DEMO_SIGNING_PROFILE.docs.map((doc) => [
+        doc.doc_id,
+        anchors === null ? null : { ...anchors, problems: [] },
+      ]),
+    );
+  };
   /** Свободный id метки: d1, d2, … в пределах слота документа. */
   const nextIds = (marks: DateMarkInput[]): StoredMark[] => {
     const used = new Set(marks.flatMap((m) => (m.id === null ? [] : [m.id])));
@@ -661,10 +760,28 @@ export const createCheckpointDemo = (
           runtime_slots: RUNTIME_SLOTS.map((slot) => ({
             ...slot,
             extra_by: getRoutes().extraBy(projectId)[slot.id] ?? {},
+            default_placements: Object.fromEntries(
+              Object.entries(slot.default_placements).map(([docId, place]) => [
+                docId,
+                onAnchors(projectId)
+                  ? {
+                      source: "anchor",
+                      anchor: slot.id,
+                      align: "left",
+                      dx_mm: 0,
+                      dy_mm: ANCHOR_DY_MM,
+                      width_mm: place.width_mm,
+                      fallback: null,
+                    }
+                  : { source: "mm", ...place },
+              ]),
+            ),
             default_dates: Object.fromEntries(
               slot.applies_to.flatMap((docId) => {
                 const marks = packDates(projectId, docId, slot.id);
-                return marks.length > 0 ? [[docId, marks]] : [];
+                return marks.length > 0
+                  ? [[docId, marks.map((mark) => ({ source: "mm", ...mark }))]]
+                  : [];
               }),
             ),
           })),
@@ -672,6 +789,7 @@ export const createCheckpointDemo = (
           withheld: {},
           optional: optionalOf(projectId),
           skipped: getRoutes().skippedOf(projectId),
+          anchors: anchorsOut(projectId),
         }),
       ),
     },
@@ -792,6 +910,20 @@ export const createCheckpointDemo = (
         if (!parsed.success)
           return demoError(422, "validation_error", "Invalid request");
         const current = placementsOf(projectId)[docId]?.[slotId];
+        // Место на строке шаблона (15.17.14): якоря неизвестны без запасного места или строки нет.
+        const anchor = anchorRefOf(projectId, docId, slotId);
+        if (current && anchor?.state === "unknown")
+          return demoError(
+            409,
+            "anchors_unknown",
+            "Build anchors of the document are unknown",
+          );
+        if (current && anchor?.state === "missing")
+          return demoError(
+            409,
+            "anchor_missing",
+            "The built document has no line for this signature",
+          );
         const next = current
           ? fromPackOf(projectId, docId, slotId, current)
           : null;

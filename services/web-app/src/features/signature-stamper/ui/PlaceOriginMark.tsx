@@ -1,6 +1,11 @@
 import { useTranslation } from "react-i18next";
-import { LayoutTemplate, PencilLine, RotateCcw } from "lucide-react";
-import { placeMarkOf } from "@entities/signature";
+import {
+  CircleAlert,
+  LayoutTemplate,
+  PencilLine,
+  RotateCcw,
+} from "lucide-react";
+import { placeMarkOf, placeOnLine, type AnchorNote } from "@entities/signature";
 import type { PlacementResponse } from "@shared/api/types";
 import { Spinner } from "@shared/ui";
 
@@ -19,7 +24,8 @@ export type PlaceOriginMarkProps = {
 /**
  * Пометка места подписи (docs/design/signing-route.md, 15.7): «Место из шаблона», если место и
  * метки даты как в шаблоне (или это затравка из пака), иначе «Место изменено» и кнопка «Вернуть
- * место из шаблона». Без места в шаблоне пометки нет.
+ * место из шаблона». Без места в шаблоне пометки нет. У места на строке шаблона (якорь, 15.17.14)
+ * пометка уточняется: «Место по строке шаблона».
  */
 export const PlaceOriginMark = ({
   placement,
@@ -33,6 +39,7 @@ export const PlaceOriginMark = ({
   const mark = placeMarkOf(placement);
   if (mark === null) return null;
   const fromTemplate = mark === "template";
+  const onLine = placeOnLine(placement);
   return (
     <div
       className="flex items-center"
@@ -48,15 +55,24 @@ export const PlaceOriginMark = ({
       <span
         className="chip subtle"
         title={
-          fromTemplate ? t("place.fromTemplateTitle") : t("place.changedTitle")
+          onLine
+            ? t("place.onLineTitle")
+            : fromTemplate
+              ? t("place.fromTemplateTitle")
+              : t("place.changedTitle")
         }
+        data-on-line={onLine ? "" : undefined}
       >
         {fromTemplate ? (
           <LayoutTemplate size="0.5625rem" aria-hidden="true" />
         ) : (
           <PencilLine size="0.5625rem" aria-hidden="true" />
         )}
-        {fromTemplate ? t("place.fromTemplate") : t("place.changed")}
+        {onLine
+          ? t("place.onLine")
+          : fromTemplate
+            ? t("place.fromTemplate")
+            : t("place.changed")}
       </span>
       {!fromTemplate && canRestore && (
         <button
@@ -75,6 +91,56 @@ export const PlaceOriginMark = ({
           {t("place.restore")}
         </button>
       )}
+    </div>
+  );
+};
+
+const NOTE_KEYS = {
+  missing: "place.anchor.missing",
+  unknown: "place.anchor.unknown",
+  own_pdf: "place.anchor.ownPdf",
+} as const;
+
+/**
+ * Подсказка у пары, чьё место пака на строке шаблона (docs/design/signing-route.md, 15.17.14): строки
+ * в собранном документе нет, место появится после сборки, у загруженного PDF строк шаблона нет.
+ * Стоит вместо кнопки «Вернуть место из шаблона»: вернуть такое место нечем.
+ */
+export const PlaceAnchorNote = ({
+  note,
+  slotId,
+  indent = false,
+}: {
+  note: AnchorNote | null;
+  /** id слота: test id подсказки. */
+  slotId: string;
+  /** Отступ слева, чтобы строка встала под подписью слота (вкладка «Подписи»). */
+  indent?: boolean;
+}) => {
+  const { t } = useTranslation("signatureStamper");
+  if (note === null) return null;
+  const warn = note === "missing";
+  return (
+    <div
+      className="flex"
+      style={{
+        gap: "0.3125rem",
+        alignItems: "flex-start",
+        fontSize: "0.65625rem",
+        lineHeight: 1.4,
+        paddingLeft: indent ? "2.625rem" : undefined,
+        color: warn ? "var(--c-warn)" : "var(--fg-2)",
+      }}
+      role={warn ? "status" : undefined}
+      data-testid={`place-anchor-${slotId}`}
+      data-note={note}
+    >
+      <CircleAlert
+        size="0.6875rem"
+        aria-hidden="true"
+        style={{ flexShrink: 0, marginTop: "0.0625rem" }}
+      />
+      <span>{t(NOTE_KEYS[note])}</span>
     </div>
   );
 };

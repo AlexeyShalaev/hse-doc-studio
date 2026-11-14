@@ -147,8 +147,8 @@ describe("TemplateUpdateDialog (list rendering)", () => {
       warnings: [],
       signature_presets: {
         updated: [
-          { doc_id: "report", slot_id: "supervisor" },
-          { doc_id: "report", slot_id: "author" },
+          { doc_id: "report", slot_id: "supervisor", after_build: false },
+          { doc_id: "report", slot_id: "author", after_build: false },
         ],
         kept: [{ doc_id: "proposal", slot_id: "supervisor", reason: "route" }],
       },
@@ -169,7 +169,9 @@ describe("TemplateUpdateDialog (list rendering)", () => {
     plan = {
       ...makePlan(),
       signature_presets: {
-        updated: [{ doc_id: "report", slot_id: "supervisor" }],
+        updated: [
+          { doc_id: "report", slot_id: "supervisor", after_build: false },
+        ],
         kept: [
           { doc_id: "proposal", slot_id: "supervisor", reason: "manual" },
           { doc_id: "application", slot_id: "author", reason: "route" },
@@ -183,6 +185,28 @@ describe("TemplateUpdateDialog (list rendering)", () => {
     expect(lines).toHaveTextContent("Места подписей из шаблона обновятся: 1");
     expect(lines).toHaveTextContent(
       "Не обновятся: изменены вами 1, на подписании 2, подписаны 1",
+    );
+  });
+
+  it("places on template lines without anchors of the current build: a line «after the build»", () => {
+    plan = {
+      ...makePlan(),
+      signature_presets: {
+        updated: [
+          { doc_id: "report", slot_id: "supervisor", after_build: false },
+          { doc_id: "application", slot_id: "supervisor", after_build: true },
+          { doc_id: "application", slot_id: "author", after_build: true },
+        ],
+        kept: [],
+      },
+    };
+    renderDialog();
+    const lines = screen.getByTestId("update-signature-presets");
+    expect(lines).toHaveTextContent("Места подписей из шаблона обновятся: 1");
+    expect(
+      screen.getByTestId("update-signature-presets-after-build"),
+    ).toHaveTextContent(
+      "Места подписей встанут по строкам шаблона после сборки: 2",
     );
   });
 

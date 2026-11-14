@@ -12,7 +12,10 @@ import { createAccountRoutes } from "./accountRoutes";
 import { createAdminRoutes } from "./adminRoutes";
 import { createAuthRoutes } from "./authRoutes";
 import { catalogRoutes } from "./catalogRoutes";
-import { createCheckpointDemo } from "./checkpointRoutes";
+import {
+  createCheckpointDemo,
+  type DemoBuildAnchors,
+} from "./checkpointRoutes";
 import { createSharedProviderUserRoutes } from "./installRoutes";
 import { createInvitationRoutes } from "./invitationRoutes";
 import { createMailLogAdminRoutes } from "./mailLog";
@@ -60,12 +63,34 @@ export const signerProfileDemo = createSignerProfileDemo({
 // Маршрут из шаблона (signing-route.md, 15): в сценарии `student_signing_presets` проекты на
 // версии шаблона 2026.1.4 с пресетом точки, в остальных на 2026.1.3 (только порядок шагов).
 const hasPreset = (): boolean =>
-  world.scenario.id === "student_signing_presets";
+  world.scenario.id === "student_signing_presets" ||
+  world.scenario.id === "student_signing_anchors";
+// Места на строках шаблона (signing-route.md, 15.17), `student_signing_anchors`: в «Bertie»
+// документ собран с якорями, строки академрука в нём нет; в остальных проектах якоря неизвестны.
+const ANCHORS_BUILT: DemoBuildAnchors = {
+  build: "5f0c2b8e1d7a4c3b",
+  items: [
+    {
+      id: "supervisor",
+      kind: "sign",
+      page: 1,
+      x_mm: 112,
+      y_mm: 143.6,
+      width_mm: 40,
+    },
+    { id: "author", kind: "sign", page: 1, x_mm: 120, y_mm: 240, width_mm: 40 },
+  ],
+};
+const anchorsOf = (projectId: string): DemoBuildAnchors | undefined => {
+  if (world.scenario.id !== "student_signing_anchors") return undefined;
+  return projectId === "p_01hxa1c4de" ? ANCHORS_BUILT : null;
+};
 // Точка сдачи с подписями и местами слотов: без неё не открыть карточку «Подписание».
 export const checkpointDemo = createCheckpointDemo(
   () => world,
   () => signingRouteDemo,
   hasPreset,
+  anchorsOf,
 );
 export const signingRouteDemo = createSigningRouteDemo({
   getUser: () => world.bootstrap.user,
@@ -152,6 +177,11 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * В «Bertie» черновика точки нет: первый заход создаст его по пресету (места из шаблона включены,
  * у научрука метки даты, академрук не добавлен по условию). В «Практике 2025» черновик уже изменён
  * автором: академрук добавлен вами, место научрука сдвинуто.
+ *
+ * Места на строках шаблона (раздел 15.17), `student_signing_anchors`: тот же шаблон с местами на
+ * якорях. «Bertie» собран: черновик по пресету ставит рамки по строкам («Место по строке
+ * шаблона»), строки академрука в документе нет (добавленный вами академрук: «нет строки»). В
+ * «Практике 2025» якоря неизвестны: у научрука «Место из шаблона появится после сборки».
  */
 const seedSigningPresets = (signer: { id: string; name: string }): void => {
   const changed = "p_01hxa4n7pq";
