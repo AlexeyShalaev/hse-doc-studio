@@ -30,7 +30,9 @@
 каталоги и lock существующих проектов не переименовываются.
 
 Класс перехода считается по номерам; пак может объявить его строже
-(`release.kind`), но не мягче — это проверяет линтер пака.
+(`release.kind`), но не мягче. Что требует содержимое, считает `core/template_diff.py`
+(жёсткие правила дают минимум, мягкие предлагают класс), а линтер пака сверяет номер и
+`release.kind` невыпущенной версии с этим минимумом относительно предыдущей выпущенной.
 """
 
 from __future__ import annotations
@@ -95,6 +97,11 @@ def stricter(first: TemplateUpdateClass | None, second: TemplateUpdateClass | No
     if second is None:
         return first
     return first if _CLASS_ORDER[first] >= _CLASS_ORDER[second] else second
+
+
+def is_softer(candidate: TemplateUpdateClass, required: TemplateUpdateClass) -> bool:
+    """Мягче ли `candidate`, чем `required` (patch мягче minor, minor мягче major)."""
+    return _CLASS_ORDER[candidate] < _CLASS_ORDER[required]
 
 
 def parse_app_version(version: str | None) -> VersionKey | None:
