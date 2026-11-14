@@ -89,7 +89,7 @@ _TEX_COMMENT_RE = re.compile(r"(?<!\\)%.*")
 # то языки ДОКУМЕНТОВ, а это язык интерфейса, на котором заметки читает человек.
 _CHANGES_LANGS = ("ru", "en")
 # Похожие на секреты строки: токен в паке уедет в публичный репозиторий паков.
-_SECRET_PATTERNS: tuple[tuple[str, re.Pattern[bytes]], ...] = (
+_LEAK_PATTERNS: tuple[tuple[str, re.Pattern[bytes]], ...] = (
     ("токен GitHub", re.compile(rb"\bghp_[A-Za-z0-9]{36}")),
     ("токен GitHub", re.compile(rb"\bgithub_pat_[A-Za-z0-9_]{22,}")),
     ("токен GitLab", re.compile(rb"\bglpat-[A-Za-z0-9_-]{20,}")),
@@ -523,7 +523,7 @@ def _lint_symlinks(version_dir: Path) -> list[str]:
     return errors
 
 
-def _lint_secrets(version_dir: Path) -> list[str]:
+def _lint_leaked_tokens(version_dir: Path) -> list[str]:
     """Похожие на токены и ключи строки в файлах версии (сам секрет в отчёт не попадает)."""
     errors: list[str] = []
     for root, _dirs, files in os.walk(version_dir, followlinks=False):
@@ -532,7 +532,7 @@ def _lint_secrets(version_dir: Path) -> list[str]:
             if path.is_symlink():
                 continue
             data = path.read_bytes()
-            label = next((label for label, pattern in _SECRET_PATTERNS if pattern.search(data)), None)
+            label = next((label for label, pattern in _LEAK_PATTERNS if pattern.search(data)), None)
             if label is not None:
                 errors.append(
                     f"{path.relative_to(version_dir).as_posix()}: похоже на {label}, секретам не место в паке"
@@ -554,7 +554,7 @@ def _lint_engine_flags(manifest: dict[str, Any]) -> list[str]:
 
 
 def _lint_safety(version_dir: Path, manifest: dict[str, Any]) -> tuple[list[str], list[str]]:
-    return _lint_symlinks(version_dir) + _lint_secrets(version_dir), _lint_engine_flags(manifest)
+    return _lint_symlinks(version_dir) + _lint_leaked_tokens(version_dir), _lint_engine_flags(manifest)
 
 
 def lint_version_dir(version_dir: Path) -> LintReport:  # noqa: C901, PLR0912, PLR0915
