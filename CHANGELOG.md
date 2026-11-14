@@ -6,6 +6,28 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.28.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.27.0...v0.28.0) (2026-11-14)
+
+
+### Features
+
+* **mail-log:** автоповтор, «Отправить ещё раз», «Отправить неушедшие» и проверка «Доставка писем» ([70807e4](https://github.com/AlexeyShalaev/hse-doc-studio/commit/70807e436c20fa6d968668e000ed651265fc8e5d))
+* **mail-log:** журнал писем v2, повтор писем и проверка «Доставка писем» ([9f9c12c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/9f9c12cfd4d1e694768e81565b52ffc9276619ac))
+* **pack-studio:** point YAML edits and pack schemas (T4) ([089240a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/089240a002f020fdbf01a0305a8bcc7bacfe3024))
+* **pack-studio:** точечные правки YAML и схемы паков (T4) ([e7c041d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/e7c041dc8ebf95eeb872dfe859107f7c2afd7b8f))
+* **packs:** default_placement is a signing preset in the patch exception (T1) ([04cfa12](https://github.com/AlexeyShalaev/hse-doc-studio/commit/04cfa121767b0805f60987a2441517b3c8616504))
+* **packs:** template version change classifier and release class lint (T1) ([419bc56](https://github.com/AlexeyShalaev/hse-doc-studio/commit/419bc56baee4d269ea48c18a771c44985ccf18ec))
+* **packs:** классификатор изменений версии шаблона и правило линтера (T1) ([2e70003](https://github.com/AlexeyShalaev/hse-doc-studio/commit/2e700031db4c75205501dd726c1bf65f8ccbb3af))
+* **runner:** automatic disk cleanup by threshold and old image pruning after updates ([09fa95c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/09fa95c75f23fda8a6e8422034e5d7c14152fbeb))
+* **runner:** автоочистка диска раннера по порогу и чистка старых образов после обновления ([2a921d6](https://github.com/AlexeyShalaev/hse-doc-studio/commit/2a921d69bb69035c545baece804ab80ac3b68b68))
+
+
+### Bug Fixes
+
+* **db:** dk_03 после ml_04, одна голова миграций ([ee9dba0](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ee9dba05e01c00fd9685265132dcf9f6c86a6d39))
+* **security:** песочница Jinja для шаблонов паков (T3) ([0f7a775](https://github.com/AlexeyShalaev/hse-doc-studio/commit/0f7a775e6e07973a16f59670b1d19b6feed4d8c8))
+* **security:** песочница Jinja для шаблонов паков (T3) ([9a24700](https://github.com/AlexeyShalaev/hse-doc-studio/commit/9a24700c5214ada02ccb1a877d28791b1faff005))
+
 ## [0.27.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.26.0...v0.27.0) - 2026-11-14
 
 - Signature places on template lines. A template can mark a signature or date line in LaTeX (an anchor), and after a build the box lands exactly on it. Places follow the layout by themselves: the document language, lines printed by a condition and a long title. The mark reads “Place on a template line”, and when the line is missing from the document the place is turned off. Places set by hand, documents out for signing or with an e-signature and an uploaded PDF never move. After a build the Studio tells how many places it moved.
