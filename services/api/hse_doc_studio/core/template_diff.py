@@ -9,13 +9,13 @@
 * жёсткое задаёт минимум: новая поверхность (документ, поле, профиль, пункт точки, слот, правило проверок, язык,
   окружение сборки) это minor, удаление тоже minor, а предлагается major, пока нет декларации миграции;
 * мягкое только предлагает класс: автор может выпустить мягче предложенного, но не мягче минимума, и пишет
-  объяснение в `release.note` (содержимое файлов, `methods` пункта, `default_placement` слота, значения полей по
-  умолчанию, удалённый файл).
+  объяснение в `release.note` (содержимое файлов, `methods` пункта, значения полей по умолчанию, удалённый файл).
 
 Исключение для patch (`core/template_versions.py`, signing-route.md, 15.10): заготовки подписания (`placements`,
-`default_dates`, `signing_slots`, `signatures.route`, `signing_route`, `signatures.anchor_macros`) и подсказки сроков
-(`deadline_hint`) это patch жёстко. Второе исключение, необязательное поле (`required_at: never`, без `default` и
-`auto`), это мягкое правило с предложением patch: пустое поле не должно менять вывод, а это видно только по шаблону.
+`default_placement`, `default_dates`, `signing_slots`, `signatures.route`, `signing_route`,
+`signatures.anchor_macros`) и подсказки сроков (`deadline_hint`) это patch жёстко. Второе исключение, необязательное
+поле (`required_at: never`, без `default` и `auto`), это мягкое правило с предложением patch: пустое поле не должно
+менять вывод, а это видно только по шаблону.
 
 Чего правило не знает, то minor (`unclassified`): классификатор ошибается в строгую сторону.
 
@@ -85,10 +85,6 @@ _MESSAGES: dict[str, tuple[str, str]] = {
         "Способы подписи пункта точки: {path}; patch только с объяснением в release.note",
         "Signing methods of a checkpoint item: {path}; patch only with an explanation in release.note",
     ),
-    "default_placement": (
-        "Место подписи слота по умолчанию: {path}; patch только с объяснением в release.note",
-        "Default signature place of a slot: {path}; patch only with an explanation in release.note",
-    ),
     "optional_field_added": (
         "Новое необязательное поле {path}: patch, если пустое поле не меняет вывод, иначе minor",
         "New optional field {path}: patch when the empty field keeps the output, otherwise minor",
@@ -138,7 +134,6 @@ _SHORT: dict[str, tuple[str, str]] = {
     "check_rule_removed": ("удалённые правила проверок", "removed check rules"),
     "check_file_removed": ("удалённые файлы проверок", "removed check files"),
     "methods": ("способы подписи", "signing methods"),
-    "default_placement": ("места подписей по умолчанию", "default signature places"),
     "optional_field_added": ("необязательные поля", "optional fields"),
     "field_default": ("значения полей по умолчанию", "field defaults"),
     "required_looser": ("ослабленные требования", "relaxed requirements"),
@@ -474,8 +469,7 @@ _RULES: tuple[_Rule, ...] = (
     # подписи
     _whole(r"signatures\.(?:route|anchor_macros)", _PRESET),
     _entity(rf"signatures\.slots{_ID}", "slot_added"),
-    _whole(rf"signatures\.slots{_ID}\.(?:placements|default_dates)", _PRESET),
-    _whole(rf"signatures\.slots{_ID}\.default_placement", _soft("default_placement", _MINOR)),
+    _whole(rf"signatures\.slots{_ID}\.(?:placements|default_placement|default_dates)", _PRESET),
     _whole(rf"signatures\.slots{_ID}\.required", _judge_required_flag("slot_required")),
     _whole(rf"signatures\.slots{_ID}\.(?:applies_to|per_author)", _hard("slot_scope", _MINOR)),
     # профили сдачи и пункты точек

@@ -40,13 +40,13 @@ def _codes(report: ChangeReport) -> set[str]:
         # Сужение `methods` patch-версией: мягкое правило предлагает minor, минимум patch (7.2).
         (SSE, "2026.1.2", "2026.1.3", MINOR, {"methods"}),
         (SSE, "2026.1.3", "2026.1.4", PATCH, {"text", "optional_field_added", "file_changed"}),
-        # Пресеты на якорях; `default_placement` слотов консультанта и академрука перешёл на якорь (мягкое, minor).
+        # Пресеты на якорях; `default_placement` слотов консультанта и академрука перешёл на якорь (тоже исключение).
         (
             SSE,
             "2026.1.4",
             "2026.1.5",
-            MINOR,
-            {"signing_preset", "deadline_hint", "default_placement", "file_added", "file_changed"},
+            PATCH,
+            {"signing_preset", "deadline_hint", "file_added", "file_changed"},
         ),
         (
             PACKS / "hse-cs-se" / "templates" / "coursework",
@@ -90,12 +90,13 @@ def test__sse_2026_1_5__released_as_a_patch_of_2026_1_4_and_default() -> None:
 
 def test__sse_2026_1_5__manifest_differs_only_in_signing_presets_and_deadline_hints() -> None:
     report = _report(SSE, "2026.1.4", "2026.1.5")
+
+    assert report.minimum is PATCH
+    assert report.suggested is PATCH
     manifest_reasons = [r for r in report.reasons if not r.path.startswith("files/")]
 
-    # `default_placement` в исключение 15.10 не входит (7.2: мягкое правило), но R27 менял только его форму: якорь
-    # с запасным местом в мм.
-    assert {r.code for r in manifest_reasons if not r.exception} == {"default_placement"}
-    assert {r.path for r in manifest_reasons if r.code == "default_placement"} == {
+    assert all(r.exception for r in manifest_reasons), [r.path for r in manifest_reasons if not r.exception]
+    assert {r.path for r in manifest_reasons if r.path.endswith("default_placement")} == {
         "signatures.slots[co_supervisor].default_placement",
         "signatures.slots[academic_supervisor].default_placement",
     }
@@ -110,7 +111,7 @@ def test__sse_2026_1_5__manifest_differs_only_in_signing_presets_and_deadline_hi
         f"pack_submission.profiles[{p}].deadline_hint"
         for p in ("topic-approval", "extended-proposal", "pre-defence", "final")
     }
-    assert all(r.change == "added" for r in manifest_reasons if r.exception)
+    assert all(r.change == "added" for r in manifest_reasons if not r.path.endswith("default_placement"))
 
 
 def test__sse_2026_1_5__files_differ_only_in_anchors() -> None:

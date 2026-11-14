@@ -196,6 +196,9 @@ def test__yaml_comments_and_layout__change_nothing(tmp_path: Path) -> None:
     "mutate",
     [
         lambda v: _slot(v, "supervisor").update(placements={"report": {"page": 1, "x_mm": 80, "y_mm": 139}}),
+        lambda v: _slot(v, "supervisor").update(
+            default_placement={"page": 1, "x_mm": 100, "y_mm": 130, "width_mm": 40}
+        ),
         lambda v: _slot(v, "author").update(default_dates={"report": [{"anchor": "author.date_numeric"}]}),
         lambda v: _profile(v).update(signing_slots=[{"doc_id": "report", "slot_id": "supervisor"}]),
         lambda v: v.manifest["signatures"].update(route=[["author"], ["supervisor"]]),
@@ -203,7 +206,16 @@ def test__yaml_comments_and_layout__change_nothing(tmp_path: Path) -> None:
         lambda v: _profile(v).update(signing_route=[["author"], ["supervisor"]]),
         lambda v: _profile(v).update(deadline_hint={"ru": "Обычно в июне", "en": "Usually in June"}),
     ],
-    ids=["placements", "default_dates", "signing_slots", "route", "anchor_macros", "signing_route", "deadline_hint"],
+    ids=[
+        "placements",
+        "default_placement",
+        "default_dates",
+        "signing_slots",
+        "route",
+        "anchor_macros",
+        "signing_route",
+        "deadline_hint",
+    ],
 )
 def test__patch_exception_keys__are_a_hard_patch(tmp_path: Path, mutate: Callable[[_Version], None]) -> None:
     report = _classify(tmp_path, mutate)
@@ -235,13 +247,6 @@ def test__patch_exception_keys__are_a_hard_patch(tmp_path: Path, mutate: Callabl
         (lambda v: v.manifest["checks_version"].update(disabled=["gost/abstract"]), "check_tuning", PATCH),
         (lambda v: v.docs["report"].update(source_file="report/main.tex"), "document_source", PATCH),
         (lambda v: _profile(v)["items"][0].update(methods={"author": ["image"]}), "methods", MINOR),
-        (
-            lambda v: _slot(v, "supervisor").update(
-                default_placement={"page": 1, "x_mm": 100, "y_mm": 130, "width_mm": 40}
-            ),
-            "default_placement",
-            MINOR,
-        ),
         (_set("meta_fields.city.default", "Пермь"), "field_default", MINOR),
         (_set("meta_fields.city_en", {"type": "string", "required_at": "never"}), "optional_field_added", PATCH),
     ],
@@ -255,7 +260,6 @@ def test__patch_exception_keys__are_a_hard_patch(tmp_path: Path, mutate: Callabl
         "checks_version",
         "doc_source_file",
         "methods",
-        "default_placement",
         "field_default",
         "optional_field",
     ],
