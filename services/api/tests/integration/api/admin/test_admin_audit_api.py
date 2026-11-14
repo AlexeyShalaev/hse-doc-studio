@@ -297,6 +297,8 @@ _AUDITED_ELSEWHERE: dict[tuple[str, str], str] = {
     # «Диск» раннера: проверяют tests/integration/api/personal/test_runner_disk_api и unit-тесты runner_disk
     ("POST", "/api/admin/runners/{id}/disk/cleanup"): "runner.disk_cleanup",
     ("POST", "/api/admin/runners/{id}/disk/commands/{id}/cancel"): "runner.disk_cleanup_cancel",
+    # Автоочистка (storage-cleanup.md, 14.5): проверяют test_runner_disk_api (Postgres) и unit-тесты runner_disk.
+    ("PUT", "/api/admin/runners/{id}/disk/auto"): "runner.disk_auto_policy",
     ("POST", "/api/admin/ai-providers"): "settings.ai_provider_create",
     ("PATCH", "/api/admin/ai-providers/{id}"): "settings.ai_provider_update",
     ("DELETE", "/api/admin/ai-providers/{id}"): "settings.ai_provider_delete",
