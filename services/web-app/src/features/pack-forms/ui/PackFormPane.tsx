@@ -10,6 +10,7 @@ import { ApiError } from "@shared/api";
 import { Button, ErrorState, Spinner } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import { ModelEditorProvider, useModelEditor } from "../model/modelEditor";
+import { DocForm } from "./documents/DocForm";
 import { VersionForm } from "./VersionForm";
 import "./packForms.css";
 
@@ -18,6 +19,8 @@ export type PackFormPaneProps = {
   path: string;
   /** Форма записала файлы: проверки, класс версии, git (как после сохранения в редакторе). */
   onSaved: (changed: string[]) => void;
+  /** Открыть файл в редакторе (форма документа из ростера версии). */
+  onOpenFile?: ((path: string) => void) | undefined;
 };
 
 /** Причина отказа сервера под текстом ошибки (`model_invalid`, `yaml_patch_conflict`). */
@@ -87,6 +90,7 @@ export const PackFormPane = ({
   workspaceId,
   path,
   onSaved,
+  onOpenFile,
 }: PackFormPaneProps) => {
   const { t } = useTranslation("packForms");
   const ref = versionRefOf(path);
@@ -118,7 +122,16 @@ export const PackFormPane = ({
     >
       <div className="pf-pane" data-testid="pack-form-pane">
         <Status />
-        <VersionForm workspaceId={workspaceId} path={path} onSaved={onSaved} />
+        {kind === "doc" ? (
+          <DocForm docId={path.split("/").slice(-2)[0] ?? ""} />
+        ) : (
+          <VersionForm
+            workspaceId={workspaceId}
+            path={path}
+            onSaved={onSaved}
+            onOpenFile={onOpenFile}
+          />
+        )}
       </div>
     </ModelEditorProvider>
   );
