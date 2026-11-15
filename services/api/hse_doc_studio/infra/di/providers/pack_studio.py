@@ -31,6 +31,7 @@ from hse_doc_studio.core.pack_studio.protocols import (
     IPackChecker,
     IPackHosting,
     IPackPreviewRenderer,
+    IPackScaffolder,
     IPackStudioSectionStore,
     IPackVersions,
     IPackWorkspaceFiles,
@@ -41,6 +42,7 @@ from hse_doc_studio.core.pack_studio.protocols import (
     IServiceAccessRepository,
     WorkspaceLimits,
 )
+from hse_doc_studio.core.pack_studio.scaffold import Maintainer
 from hse_doc_studio.core.paths import PathMapping
 from hse_doc_studio.core.repositories import ISettingsRepository, ITemplateRepository
 from hse_doc_studio.core.vcs.protocols import ICommitAuthorProvider
@@ -59,6 +61,7 @@ from hse_doc_studio.infra.pack_studio.preview_dispatch import PreviewJobDispatch
 from hse_doc_studio.infra.pack_studio.preview_renderer import PackPreviewRenderer, PreviewRenderLimits
 from hse_doc_studio.infra.pack_studio.preview_store import FsPreviewStore
 from hse_doc_studio.infra.pack_studio.preview_worker import StageLimits
+from hse_doc_studio.infra.pack_studio.scaffold import PackScaffolder
 from hse_doc_studio.infra.pack_studio.version_wizard import PackVersionWizard
 from hse_doc_studio.infra.pack_studio.workspace_check import WorkspacePackChecker
 from hse_doc_studio.infra.pack_studio.workspace_files import LocalPackWorkspaceFiles
@@ -73,6 +76,7 @@ from hse_doc_studio.use_cases.pack_studio.insight import PackInsightService
 from hse_doc_studio.use_cases.pack_studio.official import OfficialPacks
 from hse_doc_studio.use_cases.pack_studio.places import PackPlacesService
 from hse_doc_studio.use_cases.pack_studio.preview import PackPreviewService, PreviewLimits
+from hse_doc_studio.use_cases.pack_studio.scaffold import PackScaffoldService
 from hse_doc_studio.use_cases.pack_studio.versions import PackVersionService
 from hse_doc_studio.use_cases.pack_studio.workspaces import PackWorkspaceService, WorkspaceTasks
 
@@ -96,6 +100,14 @@ def official_repo() -> OfficialRepo | None:
         base_branch=cfg.official_base_branch,
         license=cfg.official_license,
     )
+
+
+def profile_maintainer(author: ICommitAuthorProvider) -> Maintainer | None:
+    """Сопровождающий нового пака по умолчанию: подпись коммитов человека (профиль), но не служебная подпись."""
+    signed = author.author()
+    if (signed.name, signed.email) == (settings.vcs.author_name, settings.vcs.author_email):
+        return None
+    return Maintainer(name=signed.name, email=signed.email)
 
 
 def previews_root() -> Path:
@@ -244,6 +256,21 @@ class PackStudioProvider(Provider):
         self, workspaces: PackWorkspaceService, versions: IPackVersions, git: IPackWorkspaceGit
     ) -> PackVersionService:
         return PackVersionService(workspaces, versions, git)
+
+    @provide
+    def get_pack_scaffolder(self) -> IPackScaffolder:
+        cfg = settings.pack_studio
+        return PackScaffolder(max_files=cfg.max_tree_files, max_bytes=cfg.max_tree_bytes)
+
+    @provide(scope=Scope.REQUEST)
+    def get_scaffold_service(
+        self,
+        workspaces: PackWorkspaceService,
+        scaffolder: IPackScaffolder,
+        templates: ITemplateRepository,
+        author: ICommitAuthorProvider,
+    ) -> PackScaffoldService:
+        return PackScaffoldService(workspaces, scaffolder, templates, maintainer=lambda: profile_maintainer(author))
 
     @provide
     def get_preview_store(self) -> IPreviewStore:

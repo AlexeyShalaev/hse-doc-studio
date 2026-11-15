@@ -8,6 +8,7 @@ import {
   Folder,
   Lock,
   Package,
+  PackagePlus,
   RefreshCw,
 } from "lucide-react";
 import { clsx } from "clsx";
@@ -34,6 +35,10 @@ export type PackTreePanelProps = {
   onSelect: (path: string) => void;
   /** «Новая версия» на шаблоне (мастер, срез T10): имена папок пака и шаблона. */
   onNewVersion?: ((pack: string, template: string) => void) | undefined;
+  /** «Новый пак» (срез T15): кнопка в шапке дерева и в пустом дереве. */
+  onNewPack?: (() => void) | undefined;
+  /** «Новый шаблон» в паке (срез T15): имя папки пака. */
+  onNewTemplate?: ((pack: string) => void) | undefined;
 };
 
 type TemplateDir = { pack: string; template: string };
@@ -42,6 +47,7 @@ type Annotations = {
   versions: Map<string, PackTreeVersion>;
   names: Map<string, string>;
   templates: Map<string, TemplateDir>;
+  packs: Map<string, string>;
 };
 
 /** Версии и подписи паков и шаблонов по пути каталога (в нижнем регистре). */
@@ -49,7 +55,9 @@ const annotate = (tree: PackTree, lang: string): Annotations => {
   const versions = new Map<string, PackTreeVersion>();
   const names = new Map<string, string>();
   const templates = new Map<string, TemplateDir>();
+  const packs = new Map<string, string>();
   for (const pack of tree.packs) {
+    packs.set(pack.path.toLowerCase(), pack.path.split("/")[0] ?? pack.path);
     if (pack.name) {
       names.set(
         pack.path.toLowerCase(),
@@ -73,7 +81,7 @@ const annotate = (tree: PackTree, lang: string): Annotations => {
       }
     }
   }
-  return { versions, names, templates };
+  return { versions, names, templates, packs };
 };
 
 const withItem = (
@@ -139,6 +147,7 @@ type NodeProps = {
   onSelect: (path: string) => void;
   notes: Annotations;
   onNewVersion: ((pack: string, template: string) => void) | undefined;
+  onNewTemplate: ((pack: string) => void) | undefined;
 };
 
 const TreeNode = ({
@@ -150,6 +159,7 @@ const TreeNode = ({
   onSelect,
   notes,
   onNewVersion,
+  onNewTemplate,
 }: NodeProps) => {
   const { t } = useTranslation("packStudio");
   const key = node.path.toLowerCase();
@@ -159,6 +169,8 @@ const TreeNode = ({
     const version = notes.versions.get(key);
     const name = notes.names.get(key);
     const template = onNewVersion ? notes.templates.get(key) : undefined;
+    const pack = onNewTemplate ? notes.packs.get(key) : undefined;
+    const action = Boolean(template ?? pack);
     const Chevron = expanded ? ChevronDown : ChevronRight;
     const Icon = depth === 0 ? Package : Folder;
     return (
@@ -171,7 +183,7 @@ const TreeNode = ({
         <button
           type="button"
           className="ps-tree-row"
-          style={template ? { ...indent, paddingRight: "2rem" } : indent}
+          style={action ? { ...indent, paddingRight: "2rem" } : indent}
           onClick={() => {
             toggle(node.path);
           }}
@@ -201,6 +213,20 @@ const TreeNode = ({
             <FilePlus2 size="0.75rem" />
           </button>
         )}
+        {pack && onNewTemplate && (
+          <button
+            type="button"
+            className="icon-btn ps-tree-action"
+            aria-label={t("tree.newTemplate", { pack })}
+            title={t("tree.newTemplate", { pack })}
+            onClick={() => {
+              onNewTemplate(pack);
+            }}
+            data-testid={`tree-new-template-${node.path}`}
+          >
+            <FilePlus2 size="0.75rem" />
+          </button>
+        )}
         {expanded && node.children.length > 0 && (
           <ul role="group" className="ps-tree-group">
             {node.children.map((child) => (
@@ -214,6 +240,7 @@ const TreeNode = ({
                 onSelect={onSelect}
                 notes={notes}
                 onNewVersion={onNewVersion}
+                onNewTemplate={onNewTemplate}
               />
             ))}
           </ul>
@@ -261,6 +288,8 @@ export const PackTreePanel = ({
   selectedPath,
   onSelect,
   onNewVersion,
+  onNewPack,
+  onNewTemplate,
 }: PackTreePanelProps) => {
   const { t, i18n } = useTranslation("packStudio");
   const tree = usePackTree(workspaceId);
@@ -272,7 +301,12 @@ export const PackTreePanel = ({
     (): Annotations =>
       tree.data
         ? annotate(tree.data, i18n.language)
-        : { versions: new Map(), names: new Map(), templates: new Map() },
+        : {
+            versions: new Map(),
+            names: new Map(),
+            templates: new Map(),
+            packs: new Map(),
+          },
     [tree.data, i18n.language],
   );
   // Раскрытые папки: по умолчанию паки и путь к открытому файлу, поверх них
@@ -297,20 +331,34 @@ export const PackTreePanel = ({
     <div className="ps-tree" data-testid="pack-tree">
       <div className="ps-pane-head">
         <span className="ps-pane-title">{t("tree.title")}</span>
-        <button
-          type="button"
-          className="icon-btn"
-          aria-label={t("tree.reload")}
-          title={t("tree.reload")}
-          onClick={() => void tree.refetch()}
-          disabled={tree.isFetching}
-        >
-          {tree.isFetching ? (
-            <Spinner size="sm" />
-          ) : (
-            <RefreshCw size="0.75rem" />
+        <span className="flex items-center" style={{ gap: "0.25rem" }}>
+          {onNewPack && (
+            <button
+              type="button"
+              className="icon-btn"
+              aria-label={t("tree.newPack")}
+              title={t("tree.newPack")}
+              onClick={onNewPack}
+              data-testid="tree-new-pack"
+            >
+              <PackagePlus size="0.75rem" />
+            </button>
           )}
-        </button>
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label={t("tree.reload")}
+            title={t("tree.reload")}
+            onClick={() => void tree.refetch()}
+            disabled={tree.isFetching}
+          >
+            {tree.isFetching ? (
+              <Spinner size="sm" />
+            ) : (
+              <RefreshCw size="0.75rem" />
+            )}
+          </button>
+        </span>
       </div>
       {tree.isPending ? (
         <div className="flex justify-center" style={{ padding: "1rem" }}>
@@ -328,7 +376,22 @@ export const PackTreePanel = ({
             <Notice tone="warn" role="status" text={t("tree.truncated")} />
           )}
           {nodes.length === 0 ? (
-            <p className="ps-pane-empty">{t("tree.empty")}</p>
+            <div
+              className="ps-pane-empty flex flex-col items-start"
+              style={{ gap: "0.375rem" }}
+            >
+              <p style={{ margin: 0 }}>{t("tree.empty")}</p>
+              {onNewPack && (
+                <button
+                  type="button"
+                  className="ps-link"
+                  onClick={onNewPack}
+                  data-testid="tree-empty-new-pack"
+                >
+                  {t("tree.newPack")}
+                </button>
+              )}
+            </div>
           ) : (
             <ul
               role="tree"
@@ -346,6 +409,7 @@ export const PackTreePanel = ({
                   onSelect={onSelect}
                   notes={notes}
                   onNewVersion={onNewVersion}
+                  onNewTemplate={onNewTemplate}
                 />
               ))}
             </ul>

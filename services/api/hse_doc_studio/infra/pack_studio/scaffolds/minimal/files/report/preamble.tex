@@ -1,0 +1,40 @@
+% !TeX program = xelatex
+% ============================================================
+% report/preamble.tex: преамбула отчёта по ГОСТ 7.32-2017.
+% Поля 30/15/20/20 мм, шрифт 12 пт, интервал 1,5, абзацный отступ
+% 1,25 см, заголовки разделов по центру прописными.
+% ============================================================
+\usepackage{fontspec}
+\IfFontExistsTF{Times New Roman}{%
+  \setmainfont{Times New Roman}%
+}{%
+  \setmainfont{Tinos}[Extension=.ttf, UprightFont=*-Regular, BoldFont=*-Bold, ItalicFont=*-Italic, BoldItalicFont=*-BoldItalic]%
+}
+\usepackage[english,russian]{babel}
+
+\usepackage[a4paper,left=30mm,right=15mm,top=20mm,bottom=20mm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{indentfirst}
+\setlength{\parindent}{1.25cm}
+
+\usepackage{xcolor}
+\usepackage{titlesec}
+\titleformat{\chapter}[block]{\normalfont\bfseries\centering}{\thechapter}{0.5em}{\MakeUppercase}
+\titlespacing*{\chapter}{0pt}{0pt}{12pt}
+\titleformat{\section}{\normalfont\bfseries}{\thesection}{0.5em}{}
+
+\usepackage[titles]{tocloft}
+\renewcommand{\cfttoctitlefont}{\hfil\normalfont\bfseries}
+\renewcommand{\cftaftertoctitle}{\hfil}
+\renewcommand{\cftchapfont}{\normalfont}
+\renewcommand{\cftchappagefont}{\normalfont}
+\renewcommand{\cftchapleader}{\cftdotfill{\cftdotsep}}
+\addto\captionsrussian{%
+  \renewcommand{\contentsname}{СОДЕРЖАНИЕ}%
+  \renewcommand{\bibname}{Список использованных источников}%
+}
+
+\usepackage[hidelinks]{hyperref}
+
+\input{../common/meta}

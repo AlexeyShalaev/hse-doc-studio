@@ -1,0 +1,45 @@
+% ============================================================
+% report/title.tex: титульный лист по ГОСТ 7.32-2017 (упрощённый).
+% Данные берутся из макросов \hse... (common/meta).
+% ============================================================
+\begin{titlepage}
+\thispagestyle{empty}
+\singlespacing
+\setlength{\parindent}{0pt}
+
+\begin{center}
+\hseFill{Наименование организации}
+
+\vspace{0.3cm}
+\hseProgram
+\end{center}
+
+\vfill
+
+\begin{center}
+\textbf{ОТЧЁТ}\\[0.3cm]
+\textbf{\hseProjectName}
+\end{center}
+
+\vfill
+
+\begin{flushright}
+\begin{minipage}{0.55\textwidth}
+\raggedright
+Руководитель:\\
+\hseSupervisorTitle\\
+\rule{3cm}{0.4pt}~\hseSupervisorName
+
+\vspace{0.8cm}
+Выполнил студент группы \hseGroup:\\
+\rule{3cm}{0.4pt}~\hseAuthorName
+\end{minipage}
+\end{flushright}
+
+\vfill
+
+\begin{center}
+\hseYear
+\end{center}
+\end{titlepage}
+\setcounter{page}{2}

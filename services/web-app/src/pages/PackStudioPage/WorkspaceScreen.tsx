@@ -28,6 +28,7 @@ import { PackFileEditor } from "@features/pack-file-editor";
 import { PackGitBar } from "@features/pack-git";
 import { PackPlacesEditor } from "@features/pack-places";
 import { PackPreviewPane } from "@features/pack-preview";
+import { NewPackDialog, type NewPackTarget } from "@features/pack-scaffold";
 import { PackTreePanel, versionStatusVariant } from "@features/pack-tree";
 import {
   NewVersionDialog,
@@ -170,6 +171,8 @@ export const WorkspaceScreen = () => {
   const [reload, setReload] = useState(0);
   // Мастер «Новая версия»: шаблон, для которого открыт шаг 1.
   const [newVersion, setNewVersion] = useState<NewVersionTarget | null>(null);
+  // «Новый пак» и «Новый шаблон» (срез T15).
+  const [newPack, setNewPack] = useState<NewPackTarget | null>(null);
   // Места подписей записаны в манифест версии: проверки заново, PDF при этом не устаревает.
   const [placesSaves, setPlacesSaves] = useState(0);
   // Окно «Подключить к каталогу этой Студии» (только папка в локальной Студии).
@@ -289,6 +292,14 @@ export const WorkspaceScreen = () => {
       onNewVersion={(pack, template) => {
         setTreeOpen(false);
         setNewVersion({ pack, template });
+      }}
+      onNewPack={() => {
+        setTreeOpen(false);
+        setNewPack({ kind: "pack" });
+      }}
+      onNewTemplate={(pack) => {
+        setTreeOpen(false);
+        setNewPack({ kind: "template", pack });
       }}
     />
   );
@@ -492,6 +503,17 @@ export const WorkspaceScreen = () => {
         onCreated={(created) => {
           setNewVersion(null);
           open(`${created.version.path}/version.yaml`);
+        }}
+      />
+      <NewPackDialog
+        workspaceId={ws.id}
+        target={newPack}
+        onClose={() => {
+          setNewPack(null);
+        }}
+        onCreated={(created) => {
+          setNewPack(null);
+          open(created.main_file ?? `${created.version.path}/version.yaml`);
         }}
       />
       <Modal

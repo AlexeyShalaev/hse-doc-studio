@@ -106,4 +106,52 @@ describe("дерево пространства", () => {
       screen.getByTestId("tree-file-hse-cs-sse/pack.yaml"),
     ).toBeInTheDocument();
   });
+
+  it("«Новый пак» в шапке и «Новый шаблон» у пака", async () => {
+    vi.spyOn(packStudioApi, "tree").mockResolvedValue(TREE);
+    const onNewPack = vi.fn();
+    const onNewTemplate = vi.fn();
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <PackTreePanel
+          workspaceId="ws1"
+          selectedPath={null}
+          onSelect={vi.fn()}
+          onNewPack={onNewPack}
+          onNewTemplate={onNewTemplate}
+        />
+      </QueryClientProvider>,
+    );
+
+    await userEvent.click(
+      await screen.findByTestId("tree-new-template-hse-cs-sse"),
+    );
+    await userEvent.click(screen.getByTestId("tree-new-pack"));
+
+    expect(onNewTemplate).toHaveBeenCalledWith("hse-cs-sse");
+    expect(onNewPack).toHaveBeenCalledOnce();
+  });
+
+  it("пустое дерево предлагает новый пак", async () => {
+    vi.spyOn(packStudioApi, "tree").mockResolvedValue({
+      ...TREE,
+      packs: [],
+      files: [],
+    });
+    const onNewPack = vi.fn();
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <PackTreePanel
+          workspaceId="ws1"
+          selectedPath={null}
+          onSelect={vi.fn()}
+          onNewPack={onNewPack}
+        />
+      </QueryClientProvider>,
+    );
+
+    await userEvent.click(await screen.findByTestId("tree-empty-new-pack"));
+
+    expect(onNewPack).toHaveBeenCalledOnce();
+  });
 });

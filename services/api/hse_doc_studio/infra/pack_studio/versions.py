@@ -130,7 +130,7 @@ def _latest(versions: Collection[str]) -> str:
     return max(keyed, key=lambda v: keyed[v])
 
 
-def _draft_manifest(text: str, version: str, today: date, *, keep_notes: bool = False) -> str:
+def draft_manifest(text: str, version: str, today: date, *, keep_notes: bool = False) -> str:
     """`version.yaml` черновика: точечные правки копии базы, остальной текст байт в байт."""
     data = yaml.safe_load(text) or {}
     if not isinstance(data, dict):
@@ -215,7 +215,7 @@ def copy_version(template_dir: Path, source: str, to: str, *, keep_notes: bool, 
         )
         manifest = copy / VERSION_MANIFEST
         day = today or date.today()  # noqa: DTZ011 — местный календарь автора
-        draft = _draft_manifest(_read(manifest), to, day, keep_notes=keep_notes)
+        draft = draft_manifest(_read(manifest), to, day, keep_notes=keep_notes)
         manifest.write_bytes(draft.encode("utf-8"))
         copy.rename(target)
     except (OSError, YamlEditError, yaml.YAMLError) as exc:

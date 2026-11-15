@@ -30,6 +30,12 @@ import {
   PackWorkspaceListSchema,
   PackWorkspaceSchema,
   PackYamlPatchResponseSchema,
+  PackScaffoldCreatedSchema,
+  PackScaffoldOptionsSchema,
+  type CreatePackRequest,
+  type CreatePackTemplateRequest,
+  type PackScaffoldCreated,
+  type PackScaffoldOptions,
   type CreatePackServiceAccessRequest,
   type OpenPackOfficialRequest,
   type PackOfficial,
@@ -281,6 +287,28 @@ export const packStudioApi = {
         timeout: 120_000,
       })
       .then(parseResp(PackGitSchema)),
+
+  // Пак и шаблон с нуля (срез T15): источники копии и значения по умолчанию,
+  // новый пак с первым шаблоном, новый шаблон в существующем паке.
+  scaffoldOptions: (id: string): Promise<PackScaffoldOptions> =>
+    apiClient
+      .get(`${ws(id)}/scaffold`, quiet)
+      .then(parseResp(PackScaffoldOptionsSchema)),
+  createPack: (
+    id: string,
+    body: CreatePackRequest,
+  ): Promise<PackScaffoldCreated> =>
+    apiClient
+      .post(`${ws(id)}/packs`, body, quiet)
+      .then(parseResp(PackScaffoldCreatedSchema)),
+  createTemplate: (
+    id: string,
+    pack: string,
+    body: CreatePackTemplateRequest,
+  ): Promise<PackScaffoldCreated> =>
+    apiClient
+      .post(`${ws(id)}/packs/${enc(pack)}/templates`, body, quiet)
+      .then(parseResp(PackScaffoldCreatedSchema)),
 
   // Мастер «Новая версия» (срез T10): базы и номера, копия, живой класс,
   // заметки, новый номер, перенос правок выпущенной версии, выпуск.

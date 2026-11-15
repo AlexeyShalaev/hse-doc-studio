@@ -1,0 +1,45 @@
+% ((# ============================================================ #))
+% ((# common/meta.tex: автогенерируемый файл, не редактируйте его.  #))
+% ((# Студия перерисовывает его из данных проекта перед каждой      #))
+% ((# сборкой (dynamic_includes в version.yaml). Документы печатают #))
+% ((# данные проекта макросами \hse..., а не литералами: правка в   #))
+% ((# настройках проекта сразу попадает в PDF.                      #))
+% ((# Двухстрочная форма \newcommand{..}{%<перевод строки>значение}  #))
+% ((# нужна, чтобы не получить «{{{»: Jinja принял бы его за начало #))
+% ((# выражения.                                                    #))
+% ((# ============================================================ #))
+
+% \hseFill{...}: жёлтая подсветка места, которое автор заменяет своим текстом.
+\ExplSyntaxOn
+\ProvideDocumentCommand{\hseFill}{m}
+ {
+  \group_begin:
+  \setlength{\fboxsep}{1.5pt}
+  \seq_set_split:Nnn \l_tmpa_seq { ~ } { <#1> }
+  \seq_set_map:NNn \l_tmpb_seq \l_tmpa_seq { \colorbox{yellow!50}{##1} }
+  \seq_use:Nn \l_tmpb_seq { ~ }
+  \group_end:
+ }
+\ExplSyntaxOff
+
+% Тема работы: имя проекта.
+\newcommand{\hseProjectName}{%
+{{ project.name | texesc }}}
+
+% Автор.
+\newcommand{\hseAuthorName}{%
+((* if author.name *)){{ author.name | texesc }}((* elif project.authors *)){{ project.authors[0].name | texesc }}((* else *))\hseFill{ФИО автора}((* endif *))}
+\newcommand{\hseGroup}{%
+((* if author.group *)){{ author.group | texesc }}((* elif project.authors and project.authors[0].group *)){{ project.authors[0].group | texesc }}((* else *))\hseFill{группа}((* endif *))}
+
+% Руководитель.
+\newcommand{\hseSupervisorName}{%
+((* if project.supervisor.name *)){{ project.supervisor.name | texesc }}((* else *))\hseFill{ФИО руководителя}((* endif *))}
+\newcommand{\hseSupervisorTitle}{%
+((* if project.supervisor.title *)){{ project.supervisor.title | texesc }}((* else *))\hseFill{должность руководителя}((* endif *))}
+
+% Поля анкеты (meta_fields в version.yaml).
+\newcommand{\hseYear}{%
+((* if project.meta.year *)){{ project.meta.year | texesc }}((* else *))\hseFill{год}((* endif *))}
+\newcommand{\hseProgram}{%
+((* if project.meta.program *)){{ project.meta.program | texesc }}((* else *))\hseFill{образовательная программа}((* endif *))}

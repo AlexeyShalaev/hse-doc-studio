@@ -75,6 +75,11 @@ class PackStudioErrorCode(StrEnum):
     paths_outside_packs = "paths_outside_packs"
     # Срез T9: места подписей и метки даты на PDF предпросмотра
     place_invalid = "place_invalid"
+    # Срез T15: пак и шаблон с нуля
+    id_invalid = "id_invalid"
+    name_required = "name_required"
+    template_id_taken = "template_id_taken"
+    pack_not_found = "pack_not_found"
 
 
 _C = PackStudioErrorCode
@@ -174,7 +179,11 @@ _TABLE: dict[PackStudioErrorCode, tuple[int, str, str]] = {
         "Раздел включается переменной окружения HSE_STUDIO__PACK_STUDIO__ENABLED.",
         "The section is set by the HSE_STUDIO__PACK_STUDIO__ENABLED environment variable.",
     ),
-    _C.pack_id_taken: (409, "Пак с таким id уже есть.", "A pack with this id already exists."),
+    _C.pack_id_taken: (
+        409,
+        "Пак с таким id уже есть в рабочем пространстве или в каталоге Студии.",
+        "A pack with this id already exists in the workspace or in the Studio catalog.",
+    ),
     _C.push_denied: (403, "Нет права отправлять в этот репозиторий.", "You cannot push to this repository."),
     _C.pr_permission_missing: (
         403,
@@ -285,6 +294,18 @@ _TABLE: dict[PackStudioErrorCode, tuple[int, str, str]] = {
         "Место подписи нельзя записать: рамка за краем листа или слот не относится к документу.",
         "The signature place cannot be written: the box is off the page or the slot does not apply to the document.",
     ),
+    _C.id_invalid: (
+        400,
+        "Недопустимый id: строчная латиница и цифры, у пака через дефис, у шаблона через дефис или подчёркивание.",
+        "Invalid id: lowercase Latin letters and digits, a hyphen in a pack, a hyphen or underscore in a template.",
+    ),
+    _C.name_required: (400, "Укажите название на русском или английском.", "Enter a name in Russian or English."),
+    _C.template_id_taken: (
+        409,
+        "Шаблон с таким id в этом паке уже есть.",
+        "This pack already has a template with this id.",
+    ),
+    _C.pack_not_found: (404, "Пак не найден в рабочем пространстве.", "Pack not found in the workspace."),
 }
 
 

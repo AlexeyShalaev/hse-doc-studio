@@ -1,0 +1,37 @@
+% !TeX program = xelatex
+% ============================================================
+% report/report.tex: отчёт по ГОСТ 7.32-2017.
+% Структура: титульный лист, содержание, введение, основная часть,
+% заключение, список использованных источников.
+% Пишите свой текст вместо жёлтых \hseFill{...}; данные о себе,
+% руководителе и годе задайте в настройках проекта.
+% ============================================================
+\documentclass[12pt,a4paper]{extreport}
+\input{preamble}
+\begin{document}
+\input{title}
+
+\tableofcontents
+\clearpage
+
+\chapter*{Введение}
+\addcontentsline{toc}{chapter}{Введение}
+\hseFill{актуальность темы, цель и задачи работы}
+
+\chapter{Основная часть}
+\section{Постановка задачи}
+\hseFill{описание задачи}
+
+\section{Решение}
+\hseFill{описание решения}
+
+\chapter*{Заключение}
+\addcontentsline{toc}{chapter}{Заключение}
+\hseFill{итоги работы}
+
+\begin{thebibliography}{9}
+\addcontentsline{toc}{chapter}{Список использованных источников}
+\bibitem{gost} ГОСТ 7.32-2017. Отчёт о научно-исследовательской работе. Структура и правила оформления.
+\end{thebibliography}
+
+\end{document}

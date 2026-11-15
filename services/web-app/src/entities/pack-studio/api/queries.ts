@@ -7,7 +7,9 @@ import {
 import { sessionKeys } from "@entities/session";
 import { packStudioApi, type PackVersionRef } from "./packStudioApi";
 import type {
+  CreatePackRequest,
   CreatePackServiceAccessRequest,
+  CreatePackTemplateRequest,
   CreatePackStudioGrantRequest,
   CreatePackVersionRequest,
   CreatePackWorkspaceRequest,
@@ -50,6 +52,8 @@ export const packStudioKeys = {
       ref.template,
       ref.version,
     ] as const,
+  scaffold: (id: string) =>
+    [...packStudioKeys.workspace(id), "scaffold"] as const,
   versionOptions: (id: string, pack: string, template: string) =>
     [...packStudioKeys.workspace(id), "versions", pack, template] as const,
   // Состояние версии зависит от файлов: `revision` меняется с каждой сохранённой правкой.
@@ -407,6 +411,38 @@ const forgetVersionFiles = (client: QueryClient, id: string) => {
   });
   client.removeQueries({ queryKey: [...packStudioKeys.workspace(id), "file"] });
   client.removeQueries({ queryKey: [...packStudioKeys.workspace(id), "lint"] });
+};
+
+/** Окно «Новый пак» и «Новый шаблон»: источники копии, занятые id, умолчания (срез T15). */
+export const usePackScaffoldOptions = (id: string, enabled: boolean) =>
+  useQuery({
+    queryKey: packStudioKeys.scaffold(id),
+    queryFn: () => packStudioApi.scaffoldOptions(id),
+    enabled: enabled && id.length > 0,
+    staleTime: 0,
+  });
+
+export const useCreatePack = (id: string) => {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: CreatePackRequest) => packStudioApi.createPack(id, body),
+    onSuccess: () => {
+      forgetVersionFiles(client, id);
+      void client.invalidateQueries({ queryKey: packStudioKeys.scaffold(id) });
+    },
+  });
+};
+
+export const useCreatePackTemplate = (id: string) => {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { pack: string; body: CreatePackTemplateRequest }) =>
+      packStudioApi.createTemplate(id, args.pack, args.body),
+    onSuccess: () => {
+      forgetVersionFiles(client, id);
+      void client.invalidateQueries({ queryKey: packStudioKeys.scaffold(id) });
+    },
+  });
 };
 
 export const useCreatePackVersion = (id: string) => {

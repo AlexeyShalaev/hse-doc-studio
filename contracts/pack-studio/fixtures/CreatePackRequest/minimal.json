@@ -1,0 +1,16 @@
+{
+  "id": "spbu-cs",
+  "name": { "ru": "СПбГУ: прикладная информатика", "en": "SPbU: Applied Computer Science" },
+  "description": null,
+  "maintainer": { "name": "Ирина Смирнова", "email": "author@example.org", "url": "" },
+  "license": "Apache-2.0",
+  "source": "https://git.example.org/packs/spbu-cs",
+  "template": {
+    "id": "coursework",
+    "name": { "ru": "Курсовая работа", "en": "Course paper" },
+    "short_name": { "ru": "КР", "en": "CP" },
+    "description": null
+  },
+  "scaffold": { "kind": "minimal", "source": null },
+  "version": null
+}

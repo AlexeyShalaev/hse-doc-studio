@@ -45,6 +45,14 @@ from hse_doc_studio.core.pack_studio.preview import (
     VersionDescription,
 )
 from hse_doc_studio.core.pack_studio.protection import Protection
+from hse_doc_studio.core.pack_studio.scaffold import (
+    CopySource,
+    NewPack,
+    NewTemplate,
+    ScaffoldResult,
+    ScaffoldSource,
+    SourcePack,
+)
 from hse_doc_studio.core.pack_studio.versions import (
     BaseRegistry,
     CreatedVersion,
@@ -513,3 +521,29 @@ class IPackVersions(Protocol):
         registry: BaseRegistry,
         today: date,
     ) -> ReleasedVersionView: ...
+
+
+class IPackScaffolder(Protocol):
+    """Пак и шаблон с нуля над папкой паков `root` (раздел 8, срез T15): заготовка «Минимальный» или копия версии.
+
+    Каталог собирается во временной папке рядом и переносится целиком: при отказе ничего не остаётся. Отказы это
+    `PackStudioError`: `pack_id_taken`, `template_id_taken`, `pack_not_found`, `version_not_found`.
+    """
+
+    def sources(self, root: Path) -> tuple[SourcePack, ...]:
+        """Паки пространства с шаблонами и версиями: из чего можно сделать копию."""
+        ...
+
+    def pack_dirs(self, root: Path) -> frozenset[str]:
+        """Папки паков пространства в свёрнутом регистре (заняты для нового id)."""
+        ...
+
+    def workspace_source(self, root: Path, source: ScaffoldSource) -> CopySource: ...
+
+    def create_pack(
+        self, root: Path, pack: NewPack, *, version: str, today: date, source: CopySource | None
+    ) -> ScaffoldResult: ...
+
+    def create_template(  # noqa: PLR0913 — пак, шаблон, номер и источник
+        self, root: Path, pack: str, template: NewTemplate, *, version: str, today: date, source: CopySource | None
+    ) -> ScaffoldResult: ...
