@@ -67,6 +67,7 @@ from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.paths import PathMapping
 from hse_doc_studio.core.projects.locator import IProjectLocator
 from hse_doc_studio.core.repositories import IProjectRepository, ISettingsRepository, ITemplateRepository
+from hse_doc_studio.core.uow import spawn_detached
 from hse_doc_studio.core.vcs.constants import vcs_exclude_for
 from hse_doc_studio.use_cases.git_sync.blocking import finish_before_cancel
 from hse_doc_studio.use_cases.git_sync.probe_remote import (
@@ -215,7 +216,7 @@ class CloneProjectUC:
 
     def start(self, operation_id: str, plan: FolderPlan, work: Callable[[], Awaitable[CloneResult]]) -> None:
         """Запускает клонирование в фоне. Итог и уборка папки при отказе или отмене остаются за ним."""
-        task = asyncio.create_task(self._run(operation_id, plan, work))
+        task = spawn_detached(self._run(operation_id, plan, work))
         self._operations.attach_task(operation_id, task)
 
     async def _checked_input(self, inp: CloneProjectInput) -> RemoteUrl:

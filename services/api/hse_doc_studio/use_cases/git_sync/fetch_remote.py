@@ -41,6 +41,7 @@ from hse_doc_studio.core.git_sync.protocols import (
 from hse_doc_studio.core.git_sync.remote_project import PROJECT_FILE, parse_remote_project, schema_blocks_merge
 from hse_doc_studio.core.git_sync.url import parse_remote_url
 from hse_doc_studio.core.repositories import IProjectIndexRepository, IProjectRepository
+from hse_doc_studio.core.uow import spawn_detached
 from hse_doc_studio.use_cases.git_sync.health import with_failure, with_success
 from hse_doc_studio.use_cases.git_sync.provider_resolver import ProviderResolver
 from hse_doc_studio.use_cases.git_sync.status import (
@@ -134,7 +135,7 @@ class FetchGitRemoteUC:
         if running is not None:
             # Отмена просьбы (клиент ушёл) не должна обрывать выборку, которую ждут другие: ждём через shield.
             return await asyncio.shield(running) if manual else FetchOutcome(FetchResult.skipped)
-        task = asyncio.ensure_future(self._fetch_exclusive(project, manual=manual))
+        task = spawn_detached(self._fetch_exclusive(project, manual=manual))
         self._book.track(folder, task)
         return await asyncio.shield(task)
 

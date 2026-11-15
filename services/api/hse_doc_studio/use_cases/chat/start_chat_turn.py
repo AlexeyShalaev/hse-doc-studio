@@ -33,6 +33,7 @@ from hse_doc_studio.core.repositories import (
     ISettingsRepository,
 )
 from hse_doc_studio.core.services import ChatContextService
+from hse_doc_studio.core.uow import spawn_detached
 from hse_doc_studio.infra.ai.agent.run_manager import AgentRunManager
 from hse_doc_studio.use_cases.ai_providers.relay_info import (
     AiProviderSource,
@@ -275,7 +276,7 @@ class StartChatTurnUC:
         tool_answers: dict[str, dict[str, str]] | None = None,
     ) -> None:
         cancel = asyncio.Event()
-        task = asyncio.create_task(
+        task = spawn_detached(
             self._run_turn_task(run, project, provider, model, cancel, approved_call_ids, tool_answers or {})
         )
         self._run_manager.register(run.id, task, run.session_id, run.project_folder)
@@ -289,9 +290,7 @@ class StartChatTurnUC:
         model: str,
         project_id: UUID,
     ) -> None:
-        task = asyncio.create_task(
-            self._generate_title_task(folder, session_id, user_text, provider, model, project_id)
-        )
+        task = spawn_detached(self._generate_title_task(folder, session_id, user_text, provider, model, project_id))
         self._title_tasks.add(task)
         task.add_done_callback(self._title_tasks.discard)
 

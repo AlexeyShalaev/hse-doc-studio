@@ -30,6 +30,7 @@ from hse_doc_studio.core.git_sync.protocols import (
 from hse_doc_studio.core.git_sync.remote_project import PROJECT_FILE, require_mergeable_project
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.template_update.protocols import IUpdateJournalRepository
+from hse_doc_studio.core.uow import spawn_detached
 from hse_doc_studio.use_cases.git_sync.status import default_state
 from hse_doc_studio.use_cases.git_sync.sync_apply import HEADS_PREFIX, TRACKING_PREFIX
 from hse_doc_studio.use_cases.git_sync.sync_project import SyncProjectUC
@@ -85,7 +86,7 @@ class StartSyncUC:
         project = (await self._get_project.execute(GetProjectInput(project_id=inp.project_id))).project
         await self.preflight(project)
         operation = self._operations.begin(OperationKind.sync, project_id=project.id, folder=project.folder)
-        task = asyncio.create_task(self._sync.run(project, operation.id), name=f"git-sync-{operation.id}")
+        task = spawn_detached(self._sync.run(project, operation.id), name=f"git-sync-{operation.id}")
         self._operations.attach_task(operation.id, task)
         return StartSyncOutput(operation_id=operation.id)
 

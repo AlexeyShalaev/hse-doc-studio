@@ -17,6 +17,7 @@ from hse_doc_studio.core.identity.session_policy import Clock, utc_now
 from hse_doc_studio.core.invitations.entities import MAILED_KINDS, NotificationKind, NotificationPayload
 from hse_doc_studio.core.invitations.protocols import INotificationMailer, INotificationRepository
 from hse_doc_studio.core.mail.journal import MailOrigin, MailSkipReason
+from hse_doc_studio.core.uow import after_commit, spawn_detached
 
 _log = logging.getLogger(__name__)
 
@@ -42,7 +43,12 @@ def _origin(kind: NotificationKind) -> MailOrigin:
 
 class Notifier:
     """Уведомление пишется в той же транзакции, что и событие; письмо уходит отдельной задачей и действию
-    не мешает (сбой SMTP только в журнале писем). Письмо получает только подтверждённая почта открытого аккаунта."""
+    не мешает (сбой SMTP только в журнале писем). Письмо получает только подтверждённая почта открытого аккаунта.
+
+    Задача письма стартует после коммита события (`after_commit`): откатилось событие, письма о нём нет, а
+    отправка читает уже закоммиченные строки. Идёт она в своих сессиях (`spawn_detached`), а не в сессии события,
+    которой тем временем пользуется сам запрос.
+    """
 
     def __init__(
         self,
@@ -75,11 +81,14 @@ class Notifier:
         # Без SMTP задача всё равно идёт: строка журнала `not_sent` нужна и тогда (L2).
         origin = _origin(kind)
         if self._background:
-            task = asyncio.create_task(self._mail(user_id, kind, payload, origin))
-            self._pending.add(task)
-            task.add_done_callback(self._pending.discard)
+            after_commit(lambda: self._spawn(user_id, kind, payload, origin))
         else:
             await self._mail(user_id, kind, payload, origin)
+
+    def _spawn(self, user_id: str, kind: NotificationKind, payload: NotificationPayload, origin: MailOrigin) -> None:
+        task = spawn_detached(self._mail(user_id, kind, payload, origin), name=f"notification-mail-{kind.value}")
+        self._pending.add(task)
+        task.add_done_callback(self._pending.discard)
 
     async def drain(self) -> None:
         """Дожидается писем, начатых в фоне (тесты и остановка)."""

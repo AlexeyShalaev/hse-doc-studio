@@ -71,6 +71,7 @@ from hse_doc_studio.core.pack_studio.preview import (
 )
 from hse_doc_studio.core.pack_studio.protocols import IPackPreviewRenderer, IPreviewDispatcher, IPreviewStore
 from hse_doc_studio.core.signatures.dates import DISPLAY_ZONE
+from hse_doc_studio.core.uow import spawn_detached
 from hse_doc_studio.use_cases.compile.compile_job_hooks import compile_failure
 from hse_doc_studio.use_cases.pack_studio.workspaces import PackWorkspaceService, owner_of
 
@@ -341,7 +342,7 @@ class PackPreviewService:
         self, actor: Actor, root: Path, ref: VersionRef, build: PreviewBuild, request: MaterializeRequest
     ) -> None:
         # Задача создаётся в контексте запроса: язык интерфейса и актор остаются при ней.
-        task = asyncio.create_task(self._launch(actor, root, ref, build, request))
+        task = spawn_detached(self._launch(actor, root, ref, build, request))
         self._launches.add(task)
         task.add_done_callback(self._launches.discard)
 

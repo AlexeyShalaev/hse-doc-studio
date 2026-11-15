@@ -2,33 +2,34 @@
 
 Репозиторий держит ``SessionProvider`` и на каждый вызов берёт сессию через ``use()``: живая
 ambient-транзакция используется как есть, иначе открывается короткая своя; ``own()`` открывает свою
-всегда, мимо ambient. Закрытая транзакция
-помечается флагом, поэтому фоновая задача, унаследовавшая контекст, не возьмёт мёртвую сессию.
+всегда, мимо ambient. Закрытая транзакция помечается флагом, поэтому фоновая задача, унаследовавшая
+контекст, не возьмёт мёртвую сессию. Живую она тоже не должна брать: `AsyncSession` не делится между
+задачами, поэтому фоновую работу отпускают через `core.uow.spawn_detached`, а побочные эффекты события
+откладывают до коммита через `core.uow.after_commit` (их выполняет выход из ``begin()``).
 """
 
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from contextvars import ContextVar
-from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-
-@dataclass(eq=False)
-class AmbientTransaction:
-    session: AsyncSession
-    closed: bool = False
+from hse_doc_studio.core.uow import TransactionScope, current_transaction, enter_transaction, leave_transaction
 
 
-_ambient: ContextVar[AmbientTransaction | None] = ContextVar("hse_db_ambient_transaction", default=None)
+class AmbientTransaction(TransactionScope):
+    """Транзакция `begin()` с её сессией; contextvar общий с `core.uow`."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        super().__init__()
+        self.session = session
 
 
 def live_ambient() -> AmbientTransaction | None:
     """Открытая ambient-транзакция текущего контекста; закрытая не считается."""
-    tx = _ambient.get()
-    return tx if tx is not None and not tx.closed else None
+    tx = current_transaction()
+    return tx if isinstance(tx, AmbientTransaction) else None
 
 
 class SessionProvider:
@@ -43,12 +44,14 @@ class SessionProvider:
             return
         async with self._sessionmaker() as session, session.begin():
             tx = AmbientTransaction(session)
-            token = _ambient.set(tx)
+            token = enter_transaction(tx)
             try:
                 yield
             finally:
                 tx.closed = True
-                _ambient.reset(token)
+                leave_transaction(token)
+        # Сюда доходит только закоммиченная транзакция: исключение тела или коммита сюда не пускает.
+        tx.committed()
 
     @asynccontextmanager
     async def use(self) -> AsyncIterator[AsyncSession]:
