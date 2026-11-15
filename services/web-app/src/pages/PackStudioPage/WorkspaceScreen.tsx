@@ -28,7 +28,7 @@ import { PackFileEditor } from "@features/pack-file-editor";
 import { PackGitBar } from "@features/pack-git";
 import { PackPlacesEditor } from "@features/pack-places";
 import { PackPreviewPane } from "@features/pack-preview";
-import { NewPackDialog, type NewPackTarget } from "@features/pack-scaffold";
+import type { NewPackTarget } from "@features/pack-scaffold";
 import { PackTreePanel, versionStatusVariant } from "@features/pack-tree";
 import {
   NewVersionDialog,
@@ -55,6 +55,13 @@ import { Notice } from "@shared/ui/ConflictKit";
 const ConnectCatalogDialog = lazy(() =>
   import("@features/pack-catalog-connect").then((m) => ({
     default: m.ConnectCatalogDialog,
+  })),
+);
+
+// «Новый пак» и «Новый шаблон» (срез T15): окно грузится по первому нажатию.
+const NewPackDialog = lazy(() =>
+  import("@features/pack-scaffold").then((m) => ({
+    default: m.NewPackDialog,
   })),
 );
 
@@ -505,17 +512,21 @@ export const WorkspaceScreen = () => {
           open(`${created.version.path}/version.yaml`);
         }}
       />
-      <NewPackDialog
-        workspaceId={ws.id}
-        target={newPack}
-        onClose={() => {
-          setNewPack(null);
-        }}
-        onCreated={(created) => {
-          setNewPack(null);
-          open(created.main_file ?? `${created.version.path}/version.yaml`);
-        }}
-      />
+      {newPack && (
+        <Suspense fallback={null}>
+          <NewPackDialog
+            workspaceId={ws.id}
+            target={newPack}
+            onClose={() => {
+              setNewPack(null);
+            }}
+            onCreated={(created) => {
+              setNewPack(null);
+              open(created.main_file ?? `${created.version.path}/version.yaml`);
+            }}
+          />
+        </Suspense>
+      )}
       <Modal
         isOpen={pending !== null}
         onClose={() => {
