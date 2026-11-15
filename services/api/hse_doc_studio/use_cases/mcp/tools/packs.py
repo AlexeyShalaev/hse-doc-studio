@@ -1,4 +1,4 @@
-"""Студия шаблонов через MCP: тулы `pack_*` (docs/design/template-studio.md, раздел 11; срез T16).
+"""Студия шаблонов через MCP: тулы `pack_*` (docs/design/template-studio.md, раздел 11; срезы T16 и T15).
 
 Тулы зовут те же сценарии, что маршруты `/api/v1/pack-studio`, с теми же проверками:
 
@@ -37,6 +37,16 @@ from hse_doc_studio.core.pack_studio.paths import TEMPLATES_DIR, VERSIONS_DIR, V
 from hse_doc_studio.core.pack_studio.places import MarkBox, PlaceBox, PlaceOp, PlaceOpKind
 from hse_doc_studio.core.pack_studio.preview import PreviewBuild
 from hse_doc_studio.core.pack_studio.protocols import IPdfTextReader
+from hse_doc_studio.core.pack_studio.scaffold import (
+    Maintainer,
+    NewPack,
+    NewTemplate,
+    Scaffold,
+    ScaffoldKind,
+    ScaffoldResult,
+    ScaffoldSource,
+    SourceOrigin,
+)
 from hse_doc_studio.core.pack_studio.versions import LANGS, VersionNotesInput, VersionState
 from hse_doc_studio.use_cases.mcp.tools._base import (
     ArgumentError,
@@ -56,6 +66,7 @@ from hse_doc_studio.use_cases.pack_studio.insight import PackInsightService
 from hse_doc_studio.use_cases.pack_studio.official import OfficialPacks
 from hse_doc_studio.use_cases.pack_studio.places import PackPlacesService
 from hse_doc_studio.use_cases.pack_studio.preview import PackPreviewService, StartPreviewInput
+from hse_doc_studio.use_cases.pack_studio.scaffold import CreatePackInput, CreateTemplateInput, PackScaffoldService
 from hse_doc_studio.use_cases.pack_studio.versions import CreateVersionInput, PackVersionService, ReleaseInput
 from hse_doc_studio.use_cases.pack_studio.workspaces import PackWorkspaceService, WorkspaceView
 
@@ -1075,3 +1086,183 @@ class PackProposeTool(PackTool):
             }
         )
         return json_result(summary)
+
+
+# ── пак и шаблон с нуля (срез T15) ──────────────────────────────────────────
+
+_LOCALIZED_TEXT = {
+    "type": "object",
+    "properties": {"ru": {"type": "string"}, "en": {"type": "string"}},
+    "description": "Текст ru и en; пустой перевод берёт текст другого языка",
+}
+_SCAFFOLD_SOURCE = {
+    "type": "object",
+    "properties": {
+        "origin": {"type": "string", "enum": ["workspace", "catalog"]},
+        "pack": {"type": "string"},
+        "template": {"type": "string"},
+        "version": {"type": "string"},
+    },
+    "required": ["origin", "pack", "template", "version"],
+    "description": "Что копировать (из pack_scaffold_options); без него заготовка «Минимальный»",
+}
+
+
+def _text_pair(args: Mapping[str, object], key: str) -> dict[str, str] | None:
+    raw = args.get(key)
+    if raw is None:
+        return None
+    if isinstance(raw, str):
+        return {"ru": raw, "en": ""}
+    if not isinstance(raw, Mapping):
+        raise ArgumentError(localized_error(f"{key}: ожидается {{ru, en}}", f"{key}: {{ru, en}} is expected"))
+    return {lang: str(raw.get(lang) or "") for lang in LANGS}
+
+
+def _scaffold(args: Mapping[str, object]) -> Scaffold:
+    raw = args.get("copy_from")
+    if raw is None:
+        return Scaffold()
+    if not isinstance(raw, Mapping):
+        raise ArgumentError(localized_error("copy_from: ожидается объект", "copy_from: an object is expected"))
+    try:
+        origin = SourceOrigin(str(raw.get("origin") or "workspace"))
+    except ValueError:
+        raise ArgumentError(localized_error("copy_from.origin: workspace или catalog", "copy_from.origin")) from None
+    return Scaffold(
+        kind=ScaffoldKind.copy,
+        source=ScaffoldSource(origin, text_arg(raw, "pack"), text_arg(raw, "template"), text_arg(raw, "version")),
+    )
+
+
+def _new_template(args: Mapping[str, object], prefix: str = "template") -> NewTemplate:
+    return NewTemplate(
+        id=text_arg(args, f"{prefix}_id"),
+        name=_text_pair(args, f"{prefix}_name") or {},
+        short_name=_text_pair(args, f"{prefix}_short_name"),
+    )
+
+
+def _created(result: ScaffoldResult) -> dict[str, object]:
+    return {
+        "version": result.ref.dir,
+        "pack_created": result.pack_created,
+        "manifests": result.manifests,
+        "main_file": result.main_file,
+        "files": result.files,
+        "source": result.source,
+        "hint": localized_error(
+            "Проверьте версию (pack_lint), соберите документ (pack_preview_build) и правьте файлы черновика.",
+            "Check the version (pack_lint), build a document (pack_preview_build) and edit the draft files.",
+        ),
+    }
+
+
+class PackScaffoldOptionsTool(PackTool):
+    spec = ToolSpec(
+        name="pack_scaffold_options",
+        description=(
+            "Студия шаблонов: что нужно для pack_create и pack_new_template: версии, которые можно скопировать "
+            "(origin workspace: паки пространства, catalog: паки каталога этой Студии), занятые id паков, "
+            "сопровождающий и лицензия по умолчанию, номер первой версии."
+        ),
+        parameters=_schema({"workspace_id": _WORKSPACE_ID}, ("workspace_id",)),
+    )
+    kind = ToolKind.read
+
+    async def run(self, actor: Actor, args: dict[str, object]) -> ToolResult:
+        options = await (await self._deps.get(PackScaffoldService)).options(actor, uuid_arg(args, "workspace_id"))
+        return json_result(options)
+
+
+class PackCreateTool(PackTool):
+    spec = ToolSpec(
+        name="pack_create",
+        description=(
+            "Студия шаблонов: новый пак с первым шаблоном и черновой версией beta. Без copy_from заготовка "
+            "«Минимальный»: «Отчёт» по ГОСТ 7.32 с титулом, поля «Учебный год» и «Образовательная программа», "
+            "подпись автора, одна точка сдачи. С copy_from копия выбранной версии с новыми id (пустой реестр "
+            "выпусков, атрибуция источника в манифесте). Id пака: строчная латиница и цифры через дефис, "
+            "уникален в пространстве и в каталоге Студии (pack_id_taken). Пример: "
+            '{"workspace_id": "<uuid>", "pack_id": "spbu-cs", "name": {"ru": "СПбГУ", "en": "SPbU"}, '
+            '"template_id": "coursework", "template_name": {"ru": "Курсовая", "en": "Course paper"}}.'
+        ),
+        parameters=_schema(
+            {
+                "workspace_id": _WORKSPACE_ID,
+                "pack_id": {"type": "string", "description": "Id и папка пака"},
+                "name": _LOCALIZED_TEXT,
+                "description": _LOCALIZED_TEXT,
+                "maintainer_name": {"type": "string", "description": "По умолчанию из профиля"},
+                "maintainer_email": {"type": "string"},
+                "license": {"type": "string", "description": "SPDX, по умолчанию Apache-2.0"},
+                "source": {"type": "string", "description": "Адрес репозитория пака"},
+                "template_id": {"type": "string", "description": "Id и папка первого шаблона"},
+                "template_name": _LOCALIZED_TEXT,
+                "template_short_name": _LOCALIZED_TEXT,
+                "copy_from": _SCAFFOLD_SOURCE,
+                "version": {"type": "string", "description": "Номер первой версии, по умолчанию <год>.1"},
+            },
+            ("workspace_id", "pack_id", "name", "template_id", "template_name"),
+        ),
+    )
+    kind = ToolKind.write
+
+    async def run(self, actor: Actor, args: dict[str, object]) -> ToolResult:
+        workspace_id = uuid_arg(args, "workspace_id")
+        service = await self._deps.get(PackScaffoldService)
+        maintainer_name = optional_text(args, "maintainer_name")
+        if maintainer_name is None:
+            default = (await service.options(actor, workspace_id)).maintainer
+        else:
+            default = Maintainer(name=maintainer_name, email=optional_text(args, "maintainer_email") or "")
+        pack = NewPack(
+            id=text_arg(args, "pack_id"),
+            name=_text_pair(args, "name") or {},
+            description=_text_pair(args, "description"),
+            maintainer=default,
+            license=optional_text(args, "license") or "",
+            source=optional_text(args, "source"),
+            template=_new_template(args),
+        )
+        result = await service.create_pack(
+            actor,
+            workspace_id,
+            CreatePackInput(pack=pack, scaffold=_scaffold(args), version=optional_text(args, "version")),
+        )
+        return json_result(_created(result))
+
+
+class PackNewTemplateTool(PackTool):
+    spec = ToolSpec(
+        name="pack_new_template",
+        description=(
+            "Студия шаблонов: новый шаблон в существующем паке пространства с черновой версией beta: заготовка "
+            "«Минимальный» или копия версии (copy_from, варианты в pack_scaffold_options). Id шаблона: строчная "
+            "латиница и цифры через дефис или подчёркивание, свободный в паке (template_id_taken)."
+        ),
+        parameters=_schema(
+            {
+                "workspace_id": _WORKSPACE_ID,
+                "pack": {"type": "string", "description": "Папка пака"},
+                "template_id": {"type": "string"},
+                "template_name": _LOCALIZED_TEXT,
+                "template_short_name": _LOCALIZED_TEXT,
+                "copy_from": _SCAFFOLD_SOURCE,
+                "version": {"type": "string", "description": "Номер первой версии, по умолчанию <год>.1"},
+            },
+            ("workspace_id", "pack", "template_id", "template_name"),
+        ),
+    )
+    kind = ToolKind.write
+
+    async def run(self, actor: Actor, args: dict[str, object]) -> ToolResult:
+        result = await (await self._deps.get(PackScaffoldService)).create_template(
+            actor,
+            uuid_arg(args, "workspace_id"),
+            text_arg(args, "pack"),
+            CreateTemplateInput(
+                template=_new_template(args), scaffold=_scaffold(args), version=optional_text(args, "version")
+            ),
+        )
+        return json_result(_created(result))

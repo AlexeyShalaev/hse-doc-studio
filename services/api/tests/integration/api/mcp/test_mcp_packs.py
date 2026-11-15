@@ -247,3 +247,60 @@ async def test__propose__without_confirm__only_a_summary_of_the_git_workspace(st
     assert status["branch"] is None
     # Сводка ничего не отправляет: на сервере нет рабочей ветки.
     assert "pack-studio" not in remote.git("branch", "--list")
+
+
+async def test__scaffold__options_new_pack_and_template_copy(studio: Studio) -> None:
+    ws_id = await _open(studio)
+
+    async with _client(studio) as client:
+        options = await _call(client, "pack_scaffold_options", {"workspace_id": ws_id})
+        created = await _call(
+            client,
+            "pack_create",
+            {
+                "workspace_id": ws_id,
+                "pack_id": "my-pack",
+                "name": {"ru": "Мой пак", "en": "My pack"},
+                "maintainer_name": "Автор Паков",
+                "template_id": "report",
+                "template_name": {"ru": "Отчёт", "en": "Report"},
+                "version": "2026.1",
+            },
+        )
+        lint = await _call(client, "pack_lint", {"workspace_id": ws_id, "path": created["manifests"][-1]})
+        copied = await _call(
+            client,
+            "pack_new_template",
+            {
+                "workspace_id": ws_id,
+                "pack": "demo",
+                "template_id": "practice",
+                "template_name": "Практика",
+                "copy_from": {"origin": "workspace", "pack": "demo", "template": "report", "version": "2026.1.0"},
+            },
+        )
+        taken = await _call(
+            client,
+            "pack_create",
+            {
+                "workspace_id": ws_id,
+                "pack_id": "hse-cs-sse",
+                "name": {"ru": "Дубль"},
+                "template_id": "x",
+                "template_name": {"ru": "Икс"},
+            },
+            ok=False,
+        )
+
+    assert {"demo", "hse-cs-sse"} <= set(options["taken_packs"])
+    assert ("catalog", "hse-cs-sse") in {(p["origin"], p["pack"]) for p in options["sources"]}
+    assert created["version"] == "my-pack/templates/report/versions/2026.1"
+    assert created["pack_created"] is True
+    assert created["main_file"].endswith("files/report/report.tex")
+    pack = yaml.safe_load((studio.folder / "my-pack" / "pack.yaml").read_text(encoding="utf-8"))
+    assert pack["maintainer"] == {"name": "Автор Паков"}
+    assert lint["errors"] == 0
+    assert copied["pack_created"] is False
+    assert copied["source"] == {"origin": "workspace", "pack": "demo", "template": "report", "version": "2026.1.0"}
+    assert (studio.folder / "demo" / "templates" / "practice" / "template.yaml").is_file()
+    assert (taken["code"], taken["where"]) == ("pack_id_taken", "studio")
