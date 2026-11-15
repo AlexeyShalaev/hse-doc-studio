@@ -6,6 +6,22 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.32.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.31.0...v0.32.0) (2026-11-15)
+
+
+### Features
+
+* **packs:** fast packs CI job and pack ci init for pack repositories ([048c6e7](https://github.com/AlexeyShalaev/hse-doc-studio/commit/048c6e72b8dfaed4b0afc0b7084871567d431970))
+* **packs:** fast packs CI job and pack ci init for pack repositories ([dcfce41](https://github.com/AlexeyShalaev/hse-doc-studio/commit/dcfce41ab2209d5bb788ad21a13a334b87fd858c))
+
+
+### Bug Fixes
+
+* **compile:** build a missing TeX format before latexmk in local mode ([ab36d1c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ab36d1c42fb065eb272b05967f77f3aec8b50652))
+* **compile:** build a missing TeX format before latexmk in local mode ([ff92afd](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ff92afd6846c0ea7ebf454e3397cf1bf81256c62))
+* **pack-studio:** paste a GitHub token right where it is needed ([7ddfe6f](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7ddfe6f46b03782cef7892c66513535348b23370))
+* **pack-studio:** paste a GitHub token right where it is needed ([2cf1422](https://github.com/AlexeyShalaev/hse-doc-studio/commit/2cf142261e8ff62648c177ebdf4e04bd84f34cad))
+
 ## [0.31.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.30.0...v0.31.0) - 2026-11-15
 
 - Pack catalogs: an administrator connects packs from a git repository or an archive in the new admin section "Pack catalogs". The Studio checks the packs and shows a plan (new, changed and incompatible versions); after "Apply" they appear in the project wizard without a restart. Once a day the Studio picks up newly released versions on its own.
