@@ -38,7 +38,7 @@ from hse_doc_studio.core.runner_install import (
 )
 from hse_doc_studio.core.runner_install.entities import InstallJobState, InstallStep
 from hse_doc_studio.core.runner_isolation import installed_runner
-from hse_doc_studio.core.uow import IUnitOfWork
+from hse_doc_studio.core.uow import IUnitOfWork, spawn_detached
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
 from hse_doc_studio.use_cases.runner_install.common import wait_token_used
 from hse_doc_studio.use_cases.runner_install.jobs import InstallJobStore
@@ -148,7 +148,7 @@ class RunnerInstallService:
         if resources is not None and not resources.is_empty():
             details["resources"] = {k: v for k, v in asdict(resources).items() if v}
         await self._record("runner_install.local.start", actor_id, job, details)
-        task = asyncio.create_task(
+        task = spawn_detached(
             self._run(actor, host, job, studio_url, max(1, min(concurrency, MAX_CONCURRENCY)), resources)
         )
         self._tasks.add(task)
@@ -257,7 +257,7 @@ class RunnerInstallService:
         if runner is not None:
             details["runner"] = runner.id
         await self._record("runner_install.local.upgrade", actor_id, job, details)
-        task = asyncio.create_task(self._run_upgrade(actor, host, job, runner))
+        task = spawn_detached(self._run_upgrade(actor, host, job, runner))
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
         return job

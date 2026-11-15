@@ -27,6 +27,7 @@ from hse_doc_studio.core.backup.protocols import (
 from hse_doc_studio.core.backup.restore_job import RestoreJob, RestorePhase
 from hse_doc_studio.core.identity.protocols import IAuditLog
 from hse_doc_studio.core.identity.session_policy import Clock, utc_now
+from hse_doc_studio.core.uow import spawn_detached
 from hse_doc_studio.use_cases.admin.users import require_admin
 from hse_doc_studio.use_cases.backup.restore import BackupSource, RestoreBackupUC
 from hse_doc_studio.use_cases.backup.service import BackupService, short_error
@@ -113,7 +114,7 @@ class RestoreCoordinator:
                 target=destination_id,
                 details={"backup_id": backup_id},
             )
-            self._task = asyncio.create_task(self._preview(job))
+            self._task = spawn_detached(self._preview(job))
             return job
 
     async def _preview(self, job: RestoreJob) -> None:
@@ -169,7 +170,7 @@ class RestoreCoordinator:
                 target=job.destination_id,
                 details={"backup_id": job.backup_id, "overwrite": overwrite},
             )
-            self._task = asyncio.create_task(self._apply(job, admin_id))
+            self._task = spawn_detached(self._apply(job, admin_id))
             return job
 
     async def _check_apply(self, job: RestoreJob, *, overwrite: bool, confirm: str) -> None:

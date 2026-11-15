@@ -48,6 +48,7 @@ from hse_doc_studio.core.invitations.protocols import INotifier
 from hse_doc_studio.core.secrets import column_aad
 from hse_doc_studio.core.storage.errors import ObjectNotFoundError
 from hse_doc_studio.core.storage.ports import IObjectStore
+from hse_doc_studio.core.uow import spawn_detached
 
 logger = structlog.get_logger()
 
@@ -156,7 +157,7 @@ class BackupService:
             target=run.id,
             details={"trigger": trigger.value, "destination": run.destination_name},
         )
-        task = asyncio.create_task(self._execute(run, stored))
+        task = spawn_detached(self._execute(run, stored))
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
         return run

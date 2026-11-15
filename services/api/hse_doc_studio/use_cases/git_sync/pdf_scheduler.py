@@ -7,6 +7,7 @@ from uuid import UUID
 
 import structlog
 
+from hse_doc_studio.core.uow import spawn_detached
 from hse_doc_studio.use_cases.git_sync.publish_pdf import PublishPdfUC
 
 logger = structlog.get_logger()
@@ -26,10 +27,10 @@ class PdfPublishScheduler:
             self._again[key] = pages
             return
         try:
-            loop = asyncio.get_running_loop()
+            asyncio.get_running_loop()
         except RuntimeError:
             return
-        self._tasks[key] = loop.create_task(self._run(key, pages), name=f"pdf-publish-{doc_id}")
+        self._tasks[key] = spawn_detached(self._run(key, pages), name=f"pdf-publish-{doc_id}")
 
     async def _run(self, key: tuple[UUID, str], pages: int | None) -> None:
         project_id, doc_id = key

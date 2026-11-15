@@ -15,6 +15,7 @@ from hse_doc_studio.core.git_sync.entities import OperationKind
 from hse_doc_studio.core.git_sync.merge.choices import FileResolution
 from hse_doc_studio.core.git_sync.merge.drafts import prune_all
 from hse_doc_studio.core.git_sync.protocols import IGitOperationRegistry
+from hse_doc_studio.core.uow import spawn_detached
 from hse_doc_studio.core.vcs.protocols import IVcsFolderLocks
 from hse_doc_studio.use_cases.git_sync.conflict_support import ConflictSessions
 from hse_doc_studio.use_cases.git_sync.local_gate import LocalSyncGate
@@ -70,6 +71,6 @@ class ResolveConflictsUC:
         async with self._locks.for_folder(project.folder):
             await asyncio.to_thread(self._applier.check_resolution, project, loaded.state, request)
         operation = self._operations.begin(OperationKind.resolve, project_id=project.id, folder=project.folder)
-        task = asyncio.create_task(self._sync.run(project, operation.id, request), name=f"git-resolve-{operation.id}")
+        task = spawn_detached(self._sync.run(project, operation.id, request), name=f"git-resolve-{operation.id}")
         self._operations.attach_task(operation.id, task)
         return StartSyncOutput(operation_id=operation.id)

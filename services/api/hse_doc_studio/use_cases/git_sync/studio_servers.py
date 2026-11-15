@@ -42,6 +42,7 @@ from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
 from hse_doc_studio.core.git_sync.protocols import IGitCredentialRepository, IGitHostSettingsRepository
 from hse_doc_studio.core.git_sync.secret import Secret
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.uow import spawn_detached
 
 logger = structlog.get_logger()
 
@@ -240,9 +241,7 @@ class StudioServersService:
             expires_at=datetime.now(timezone.utc) + timedelta(seconds=grant.expires_in),
         )
         self._logins.put(login)
-        task = asyncio.get_running_loop().create_task(
-            self._poll(login, target, host, port, grant.device_code, grant.interval)
-        )
+        task = spawn_detached(self._poll(login, target, host, port, grant.device_code, grant.interval))
         self._logins.attach(login.login_id, task)
         return login
 

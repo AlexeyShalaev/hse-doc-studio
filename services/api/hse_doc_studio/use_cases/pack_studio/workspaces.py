@@ -54,6 +54,7 @@ from hse_doc_studio.core.pack_studio.protocols import (
     WorkspaceLimits,
 )
 from hse_doc_studio.core.paths import PathMapping
+from hse_doc_studio.core.uow import spawn_detached
 from hse_doc_studio.use_cases.git_sync.probe_remote import raise_probe_error, require_http_consent, valid_branch
 
 logger = structlog.get_logger()
@@ -104,7 +105,7 @@ class WorkspaceTasks:
     def spawn(self, workspace_id: UUID, work: Callable[[], Coroutine[Any, Any, None]]) -> None:
         if self.is_busy(workspace_id):
             raise PackStudioError(PackStudioErrorCode.workspace_busy)
-        task = asyncio.create_task(work())
+        task = spawn_detached(work())
         self._tasks[workspace_id] = task
         task.add_done_callback(lambda done: self._forget(workspace_id, done))
 
@@ -119,7 +120,7 @@ class WorkspaceTasks:
         async def run() -> _T:
             return await work()
 
-        task: asyncio.Task[Any] = asyncio.create_task(run())
+        task: asyncio.Task[Any] = spawn_detached(run())
         self._tasks[workspace_id] = task
         task.add_done_callback(lambda done: self._forget(workspace_id, done))
         return await asyncio.shield(task)

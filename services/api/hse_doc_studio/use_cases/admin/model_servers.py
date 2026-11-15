@@ -63,7 +63,7 @@ from hse_doc_studio.core.model_servers import (
     valid_model_ref,
 )
 from hse_doc_studio.core.secrets import column_aad
-from hse_doc_studio.core.uow import IUnitOfWork
+from hse_doc_studio.core.uow import IUnitOfWork, spawn_detached
 from hse_doc_studio.use_cases.admin.users import require_admin
 
 logger = structlog.get_logger()
@@ -300,7 +300,7 @@ class ModelServerService:
         self._jobs[job.id] = job
         await self._persist(job)
         gpu = hardware.gpu_vendor is GpuVendor.nvidia and hardware.docker_gpu_supported
-        job.task = asyncio.create_task(self._run(admin_id, job, gpu))
+        job.task = spawn_detached(self._run(admin_id, job, gpu))
         return self._job_view(job)
 
     # ── состояние в базе ───────────────────────────────────────────────────

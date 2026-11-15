@@ -37,6 +37,7 @@ from hse_doc_studio.core.lifecycle.sweeps import (
     SweepStep,
     closed_steps,
 )
+from hse_doc_studio.core.uow import spawn_detached
 from hse_doc_studio.use_cases.admin.users import require_admin
 from hse_doc_studio.use_cases.lifecycle.engine import ENGINE_STRATEGIES, LifecycleEngine
 
@@ -170,7 +171,7 @@ class LifecycleSweepService:
     # ---- прогон ----------------------------------------------------------------------------------------------
 
     def _spawn(self, coro: Coroutine[Any, Any, None]) -> None:
-        task = asyncio.create_task(coro)
+        task = spawn_detached(coro)
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
 

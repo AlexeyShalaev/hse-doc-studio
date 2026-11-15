@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+from contextvars import ContextVar
 from types import TracebackType
 from typing import Any, cast
 
 import pytest
+from hse_doc_studio.core.uow import after_commit, spawn_detached
 from hse_doc_studio.infra.db.session import SessionProvider, live_ambient
 from hse_doc_studio.infra.db.uow import SqlUnitOfWork
 
@@ -141,3 +143,83 @@ async def test__unit_of_work__begin__delegates_to_provider() -> None:
         assert live_ambient() is not None
 
     assert maker.sessions[0].outcome == "commit"
+
+
+async def test__detached_task__inside_live_transaction__does_not_see_it() -> None:
+    provider, maker = _provider()
+    seen: list[object] = []
+
+    async def background() -> None:
+        seen.append(live_ambient())
+        async with provider.use() as session:
+            seen.append(session)
+
+    async with provider.begin():
+        task = spawn_detached(background())
+        await task  # транзакция ещё жива, а задача её не видит
+
+    assert seen[0] is None
+    assert seen[1] is maker.sessions[1]
+
+
+async def test__detached_task__keeps_rest_of_context() -> None:
+    provider, _ = _provider()
+    marker: ContextVar[str | None] = ContextVar("marker", default=None)
+    marker.set("request")
+
+    async def background() -> str | None:
+        return marker.get()
+
+    async with provider.begin():
+        assert await spawn_detached(background()) == "request"
+
+
+async def test__after_commit__runs_after_commit_in_order() -> None:
+    provider, maker = _provider()
+    log: list[str] = []
+
+    async with provider.begin():
+        after_commit(lambda: log.append(f"first:{maker.sessions[0].outcome}"))
+        async with provider.begin():  # вложенный вызов откладывает до коммита внешней
+            after_commit(lambda: log.append("second"))
+        assert log == []
+
+    assert log == ["first:commit", "second"]
+
+
+async def test__after_commit__rollback__drops_actions() -> None:
+    provider, _ = _provider()
+    log: list[str] = []
+
+    async def failed_event() -> None:
+        async with provider.begin():
+            after_commit(lambda: log.append("mail"))
+            raise ValueError("boom")
+
+    with pytest.raises(ValueError, match="boom"):
+        await failed_event()
+
+    assert log == []
+
+
+async def test__after_commit__failing_action__does_not_break_commit_or_others() -> None:
+    provider, maker = _provider()
+    log: list[str] = []
+
+    def broken() -> None:
+        raise RuntimeError("smtp")
+
+    async with provider.begin():
+        after_commit(broken)
+        after_commit(lambda: log.append("next"))
+
+    assert maker.sessions[0].outcome == "commit"
+    assert log == ["next"]
+
+
+async def test__after_commit__without_transaction__runs_right_away() -> None:
+    log: list[str] = []
+
+    after_commit(lambda: log.append("now"))
+
+    assert log == ["now"]

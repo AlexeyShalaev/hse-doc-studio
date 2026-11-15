@@ -46,7 +46,7 @@ from hse_doc_studio.core.runner_install import (
     SshTarget,
 )
 from hse_doc_studio.core.runner_install.entities import InstallJobState
-from hse_doc_studio.core.uow import IUnitOfWork
+from hse_doc_studio.core.uow import IUnitOfWork, spawn_detached
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
 from hse_doc_studio.use_cases.runner_install.common import wait_token_used
 from hse_doc_studio.use_cases.runner_install.jobs import InstallJobStore
@@ -436,7 +436,7 @@ class SshInstallService:
     # ---- internals ---------------------------------------------------------------------------------------------
 
     def _spawn(self, coro: Coroutine[Any, Any, None]) -> None:
-        task = asyncio.create_task(coro)
+        task = spawn_detached(coro)
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
 
