@@ -6,6 +6,20 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.33.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.32.0...v0.33.0) (2026-11-15)
+
+
+### Features
+
+* **mcp:** Pack Studio tools pack_* (T16) ([5025ed9](https://github.com/AlexeyShalaev/hse-doc-studio/commit/5025ed9e7c48becc7c7a037c0c1c599ec8c217b8))
+* **mcp:** pack_create and pack_new_template for a pack from scratch ([ea4e3f5](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ea4e3f5cf9dc0babc397d953246e98f9279df43a))
+* **mcp:** pack_create and pack_new_template for a pack from scratch ([4995fd6](https://github.com/AlexeyShalaev/hse-doc-studio/commit/4995fd636569d3fceb46c3f46ba52c7eecd15a9d))
+* **pack-studio:** document forms: roster, languages, translations, variants (T12) ([fccda54](https://github.com/AlexeyShalaev/hse-doc-studio/commit/fccda546c2b04c2f7b85a3829c46ed21d4a583dc))
+* **pack-studio:** new pack and template from scratch (T15) ([fd04f35](https://github.com/AlexeyShalaev/hse-doc-studio/commit/fd04f3523fb57f52aecaa669e2a8deb9009c48fa))
+* **pack-studio:** version forms for fields, groups and questionnaires (T11) ([d3fd0cd](https://github.com/AlexeyShalaev/hse-doc-studio/commit/d3fd0cd5d1a696e4edb4898621324be99de22631))
+* **pack-studio:** формы проверок и правил, прогон проверок на предпросмотре (T14) ([7c93279](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7c932795d0ea13461ad17806d2e20b690a0c8422))
+* **pack-studio:** формы точек сдачи и порядка маршрута (T13) ([625936c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/625936c55c09c3b5e4ef7baf451281a1ecbaca0f))
+
 ## [0.32.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.31.0...v0.32.0) - 2026-11-15
 
 - A GitHub token can now be pasted right where it is needed: in the Official packs dialog, in New workspace of the Template Studio and in Git access (the Add token button). The Studio checks the token and selects it right away. The hint for official packs suggests a classic token with the public_repo scope.
