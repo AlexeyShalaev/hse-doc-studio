@@ -441,6 +441,138 @@ export const PackPreviewStartSchema = z.strictObject({
   builds: z.array(PackPreviewBuildSchema),
 });
 
+// ── Срез T10: мастер «Новая версия» ──
+
+export const UpdateClassSchema = z.enum(["patch", "minor", "major"]);
+
+/** Пункты по языкам: списки ru и en параллельны (pack_lint). */
+export const PackLocalizedListSchema = z.strictObject({
+  ru: z.array(z.string()).max(50),
+  en: z.array(z.string()).max(50),
+});
+
+export const PackVersionNumbersSchema = z.strictObject({
+  patch: z.string().nullable(),
+  minor: z.string().nullable(),
+  major: z.string().nullable(),
+});
+
+export const PackVersionChoiceSchema = z.strictObject({
+  version: z.string(),
+  status: z.string().nullable(),
+  // Выпущена в базовой ветке (D10).
+  released: z.boolean(),
+  // Внесена в реестр рабочего дерева (выпуск в ветке).
+  registered: z.boolean(),
+  modified: z.boolean(),
+});
+
+export const PackVersionOptionsSchema = z.strictObject({
+  pack: z.string(),
+  template: z.string(),
+  versions: z.array(PackVersionChoiceSchema),
+  default_base: z.string().nullable(),
+  default_version: z.string().nullable(),
+  numbers: PackVersionNumbersSchema,
+});
+
+export const CreatePackVersionRequestSchema = z.strictObject({
+  base: z.string().max(64).nullish(),
+  version: z.string().max(64).nullish(),
+  update_class: UpdateClassSchema.nullish(),
+});
+
+export const PackVersionRefSchema = z.strictObject({
+  pack: z.string(),
+  template: z.string(),
+  version: z.string(),
+  path: z.string(),
+});
+
+export const PackVersionCreatedSchema = z.strictObject({
+  version: PackVersionRefSchema,
+  base: z.string(),
+  update_class: UpdateClassSchema.nullable(),
+  warnings: z.array(z.string()),
+});
+
+export const PackVersionReasonSchema = z.strictObject({
+  code: z.string(),
+  path: z.string(),
+  change: z.string(),
+  minimum: UpdateClassSchema,
+  suggested: UpdateClassSchema,
+  hard: z.boolean(),
+  exception: z.boolean(),
+  message: LocalizedSchema,
+});
+
+export const PackVersionStateSchema = z.strictObject({
+  version: PackVersionRefSchema,
+  status: z.string().nullable(),
+  released: z.boolean(),
+  // Каталог выпущенной версии отличается от выпуска (7.3, 4.3).
+  modified: z.boolean(),
+  registered: z.boolean(),
+  // Выпуск записан в ветке, а каталог после него правили.
+  release_outdated: z.boolean(),
+  is_default: z.boolean(),
+  base: z.string().nullable(),
+  minimum: UpdateClassSchema.nullable(),
+  suggested: UpdateClassSchema.nullable(),
+  by_number: UpdateClassSchema.nullable(),
+  declared: UpdateClassSchema.nullable(),
+  note: z.string().nullable(),
+  number_ok: z.boolean(),
+  headline: LocalizedSchema,
+  reasons: z.array(PackVersionReasonSchema),
+  numbers: PackVersionNumbersSchema,
+  changes: PackLocalizedListSchema,
+  breaking_changes: PackLocalizedListSchema,
+  draft_changes: PackLocalizedListSchema,
+  draft_breaking: PackLocalizedListSchema,
+  move_to: z.string().nullable(),
+  error: z.string().nullable(),
+});
+
+export const PackVersionNotesRequestSchema = z.strictObject({
+  changes: PackLocalizedListSchema.nullish(),
+  breaking_changes: PackLocalizedListSchema.nullish(),
+  note: z.string().max(2000).nullish(),
+});
+
+export const PackRenumberRequestSchema = z.strictObject({
+  version: z.string().min(1).max(64),
+});
+
+export const PackMoveEditsRequestSchema = z.strictObject({
+  version: z.string().max(64).nullish(),
+});
+
+export const PackVersionMovedSchema = z.strictObject({
+  version: PackVersionRefSchema,
+  previous: z.string(),
+  unreleased: z.boolean(),
+  // Выпущенный каталог возвращён к выпуску (git); у папки возвращать нечем.
+  restored: z.boolean(),
+});
+
+export const PackReleaseRequestSchema = z.strictObject({
+  kind: UpdateClassSchema.nullish(),
+  set_default: z.boolean().optional(),
+});
+
+export const PackReleaseSchema = z.strictObject({
+  version: PackVersionRefSchema,
+  digest: z.string(),
+  kind: UpdateClassSchema.nullable(),
+  previous: z.string().nullable(),
+  replaced: z.boolean(),
+  default_set: z.boolean(),
+  edited: z.array(z.string()),
+  warnings: z.array(z.string()),
+});
+
 export type PackStudioSection = z.infer<typeof PackStudioSectionSchema>;
 export type PackWorkspace = z.infer<typeof PackWorkspaceSchema>;
 export type CreatePackWorkspaceRequest = z.infer<
@@ -488,3 +620,20 @@ export type PackServiceAccess = z.infer<typeof PackServiceAccessSchema>;
 export type CreatePackServiceAccessRequest = z.infer<
   typeof CreatePackServiceAccessRequestSchema
 >;
+export type UpdateClass = z.infer<typeof UpdateClassSchema>;
+export type PackLocalizedList = z.infer<typeof PackLocalizedListSchema>;
+export type PackVersionNumbers = z.infer<typeof PackVersionNumbersSchema>;
+export type PackVersionChoice = z.infer<typeof PackVersionChoiceSchema>;
+export type PackVersionOptions = z.infer<typeof PackVersionOptionsSchema>;
+export type CreatePackVersionRequest = z.infer<
+  typeof CreatePackVersionRequestSchema
+>;
+export type PackVersionCreated = z.infer<typeof PackVersionCreatedSchema>;
+export type PackVersionReason = z.infer<typeof PackVersionReasonSchema>;
+export type PackVersionState = z.infer<typeof PackVersionStateSchema>;
+export type PackVersionNotesRequest = z.infer<
+  typeof PackVersionNotesRequestSchema
+>;
+export type PackVersionMoved = z.infer<typeof PackVersionMovedSchema>;
+export type PackReleaseRequest = z.infer<typeof PackReleaseRequestSchema>;
+export type PackRelease = z.infer<typeof PackReleaseSchema>;

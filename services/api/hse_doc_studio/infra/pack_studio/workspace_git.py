@@ -403,6 +403,28 @@ class PackWorkspaceGit:
         truncated = len(raw) > max_bytes
         return raw[:max_bytes].decode("utf-8", errors="replace"), truncated
 
+    async def restore_from_base(
+        self, dirs: WorkspaceDirs, target: RemoteTarget, *, base_branch: str, paths: Sequence[str]
+    ) -> None:
+        base = remote_ref(_branch(base_branch))
+        for path in paths:
+            folder = dirs.tree / path
+            if folder.is_symlink() or folder.is_file():
+                folder.unlink()
+            elif folder.is_dir():
+                await asyncio.to_thread(shutil.rmtree, folder)
+            listed = await self._local(dirs, ["ls-tree", "-z", "--name-only", base, "--", path])
+            if not listed.strip(b"\0"):
+                continue
+            # Блобы базы в частичном клоне могут отсутствовать: команда с сетью, как checkout ветки.
+            await self._runner.run(
+                [*self._tree(dirs), "checkout", "--quiet", "--no-overlay", base, "--", path],
+                op=GitOp.fetch,
+                git_dir=dirs.git,
+                target=target,
+                timeout_s=self._config.fetch_timeout_s,
+            )
+
     @staticmethod
     def _tree(dirs: WorkspaceDirs) -> list[str]:
         return ["--work-tree", str(dirs.tree)]

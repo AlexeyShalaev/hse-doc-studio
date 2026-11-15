@@ -123,7 +123,8 @@ def parse_releases(text: str) -> dict[str, ReleaseEntry]:
     return entries
 
 
-def _write_releases(template_dir: Path, entries: dict[str, ReleaseEntry]) -> None:
+def write_releases(template_dir: Path, entries: dict[str, ReleaseEntry]) -> None:
+    """Реестр целиком из записей: шапка и записи по номеру (так его пишет `freeze`)."""
     body: dict[str, Any] = {
         "releases": {
             e.version: {"digest": e.digest, **({"kind": e.kind.value} if e.kind else {})}
@@ -174,7 +175,7 @@ def freeze(
         raise ValueError(f"{template_dir.name}@{version}: версия уже выпущена — её каталог неизменен")
     entry = ReleaseEntry(version=version, digest=version_digest(version_dir), kind=kind)
     entries[version] = entry
-    _write_releases(template_dir, entries)
+    write_releases(template_dir, entries)
     return entry
 
 

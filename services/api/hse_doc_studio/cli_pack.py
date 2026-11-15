@@ -24,7 +24,7 @@ from typing import Any
 
 from hse_doc_studio.core.enums import TemplateUpdateClass
 from hse_doc_studio.core.template_diff import classify_change
-from hse_doc_studio.core.template_versions import is_softer, parse_version_key
+from hse_doc_studio.core.template_versions import is_softer
 from hse_doc_studio.infra.pack_studio.base_ref import BaseRefError, BaseReleases
 from hse_doc_studio.infra.pack_studio.check import CheckResult, check_tree, lint_tree
 from hse_doc_studio.infra.pack_studio.layout import PackPathError, discover, require_template, resolve_version
@@ -32,9 +32,9 @@ from hse_doc_studio.infra.pack_studio.versions import (
     LintFailedError,
     PackVersionError,
     create_version,
+    previous_version,
     release_version,
 )
-from hse_doc_studio.infra.template.releases import load_releases
 
 EXIT_OK = 0
 EXIT_FAILED = 1
@@ -169,17 +169,6 @@ def _check(args: argparse.Namespace) -> int:
 # ── classify ──
 
 
-def _previous(template_dir: Path, version: str) -> str | None:
-    """База по умолчанию: предыдущая выпущенная версия, а если выпущенных ниже нет, предыдущая по номеру."""
-    key = parse_version_key(version)
-    if key is None:
-        return None
-    released = [v for v in load_releases(template_dir) if (k := parse_version_key(v)) is not None and k < key]
-    others = [p.name for p in (template_dir / "versions").iterdir() if (k := parse_version_key(p.name)) and k < key]
-    pool = [v for v in released if (template_dir / "versions" / v).is_dir()] or others
-    return max(pool, key=lambda v: parse_version_key(v) or (0, 0, 0)) if pool else None
-
-
 def _classify(args: argparse.Namespace) -> int:
     template_dir = require_template(args.template)
     if len(args.versions) > 2:  # noqa: PLR2004 — база и новая
@@ -188,7 +177,7 @@ def _classify(args: argparse.Namespace) -> int:
     if len(args.versions) == 2:  # noqa: PLR2004
         base_dir = resolve_version(template_dir, args.versions[0])
     else:
-        base = _previous(template_dir, new_dir.name)
+        base = previous_version(template_dir, new_dir.name)
         if base is None:
             raise PackPathError(f"{template_dir.name}@{new_dir.name}: нет версии ниже, укажите базу явно")
         base_dir = template_dir / "versions" / base

@@ -1,0 +1,34 @@
+{
+  "pack": "hse-cs-sse",
+  "template": "coursework",
+  "versions": [
+    {
+      "version": "2026.1.5",
+      "status": "stable",
+      "released": true,
+      "registered": true,
+      "modified": false
+    },
+    {
+      "version": "2026.1.6",
+      "status": "stable",
+      "released": true,
+      "registered": true,
+      "modified": false
+    },
+    {
+      "version": "2026.1.7",
+      "status": "beta",
+      "released": false,
+      "registered": false,
+      "modified": false
+    }
+  ],
+  "default_base": "2026.1.6",
+  "default_version": "2026.1.6",
+  "numbers": {
+    "patch": "2026.1.8",
+    "minor": "2026.2.0",
+    "major": "2027.1"
+  }
+}

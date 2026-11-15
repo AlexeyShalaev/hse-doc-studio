@@ -12,6 +12,11 @@ import {
   PackPreviewOptionsSchema,
   PackPreviewStartSchema,
   PackProposeResponseSchema,
+  PackReleaseSchema,
+  PackVersionCreatedSchema,
+  PackVersionMovedSchema,
+  PackVersionOptionsSchema,
+  PackVersionStateSchema,
   PackServiceAccessListSchema,
   PackServiceAccessSchema,
   PackStudioAdminSchema,
@@ -23,6 +28,7 @@ import {
   PackYamlPatchResponseSchema,
   type CreatePackServiceAccessRequest,
   type CreatePackStudioGrantRequest,
+  type CreatePackVersionRequest,
   type CreatePackWorkspaceRequest,
   type PackCiStatus,
   type PackCommitResponse,
@@ -35,6 +41,13 @@ import {
   type PackPreviewOptions,
   type PackProposeRequest,
   type PackProposeResponse,
+  type PackRelease,
+  type PackReleaseRequest,
+  type PackVersionCreated,
+  type PackVersionMoved,
+  type PackVersionNotesRequest,
+  type PackVersionOptions,
+  type PackVersionState,
   type PackServiceAccess,
   type PackReadOnlyReason,
   type PackStudioAdmin,
@@ -68,6 +81,10 @@ export type PackVersionRef = {
 
 const versionPreview = (id: string, ref: PackVersionRef) =>
   `${ws(id)}/versions/${enc(ref.pack)}/${enc(ref.template)}/${enc(ref.version)}/preview`;
+const versionPath = (id: string, ref: PackVersionRef) =>
+  `${ws(id)}/versions/${enc(ref.pack)}/${enc(ref.template)}/${enc(ref.version)}`;
+const templateVersions = (id: string, pack: string, template: string) =>
+  `${ws(id)}/templates/${enc(pack)}/${enc(template)}/versions`;
 const previewBuild = (id: string, buildId: string) =>
   `${ws(id)}/previews/${enc(buildId)}`;
 
@@ -241,6 +258,69 @@ export const packStudioApi = {
         timeout: 120_000,
       })
       .then(parseResp(PackGitSchema)),
+
+  // Мастер «Новая версия» (срез T10): базы и номера, копия, живой класс,
+  // заметки, новый номер, перенос правок выпущенной версии, выпуск.
+  versionOptions: (
+    id: string,
+    pack: string,
+    template: string,
+  ): Promise<PackVersionOptions> =>
+    apiClient
+      .get(templateVersions(id, pack, template), quiet)
+      .then(parseResp(PackVersionOptionsSchema)),
+  createVersion: (
+    id: string,
+    pack: string,
+    template: string,
+    body: CreatePackVersionRequest,
+  ): Promise<PackVersionCreated> =>
+    apiClient
+      .post(templateVersions(id, pack, template), body, quiet)
+      .then(parseResp(PackVersionCreatedSchema)),
+  versionState: (id: string, ref: PackVersionRef): Promise<PackVersionState> =>
+    apiClient
+      .get(`${versionPath(id, ref)}/state`, quiet)
+      .then(parseResp(PackVersionStateSchema)),
+  saveVersionNotes: (
+    id: string,
+    ref: PackVersionRef,
+    body: PackVersionNotesRequest,
+  ): Promise<PackVersionState> =>
+    apiClient
+      .put(`${versionPath(id, ref)}/notes`, body, quiet)
+      .then(parseResp(PackVersionStateSchema)),
+  renumberVersion: (
+    id: string,
+    ref: PackVersionRef,
+    version: string,
+  ): Promise<PackVersionMoved> =>
+    apiClient
+      .post(`${versionPath(id, ref)}/renumber`, { version }, quiet)
+      .then(parseResp(PackVersionMovedSchema)),
+  moveVersionEdits: (
+    id: string,
+    ref: PackVersionRef,
+    version: string | null,
+  ): Promise<PackVersionMoved> =>
+    apiClient
+      .post(`${versionPath(id, ref)}/move-edits`, version ? { version } : {}, {
+        ...quiet,
+        timeout: 120_000,
+      })
+      .then(parseResp(PackVersionMovedSchema)),
+  /** Выпуск: у git сначала выборка базы (номер мог уйти), затем freeze. */
+  releaseVersion: (
+    id: string,
+    ref: PackVersionRef,
+    body: PackReleaseRequest,
+  ): Promise<PackRelease> =>
+    apiClient
+      .post(`${versionPath(id, ref)}/release`, body, {
+        ...quiet,
+        timeout: 120_000,
+      })
+      .then(parseResp(PackReleaseSchema)),
 
   // Предпросмотр (срез T7): варианты версии, сборка, опрос, отмена, журнал.
   previewOptions: (

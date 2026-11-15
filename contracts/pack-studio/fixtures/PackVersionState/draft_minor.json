@@ -1,0 +1,80 @@
+{
+  "version": {
+    "pack": "hse-cs-sse",
+    "template": "coursework",
+    "version": "2026.1.7",
+    "path": "hse-cs-sse/templates/coursework/versions/2026.1.7"
+  },
+  "status": "beta",
+  "released": false,
+  "modified": false,
+  "registered": false,
+  "release_outdated": false,
+  "is_default": false,
+  "base": "2026.1.6",
+  "minimum": "minor",
+  "suggested": "minor",
+  "by_number": "patch",
+  "declared": null,
+  "note": null,
+  "number_ok": false,
+  "headline": {
+    "ru": "minor: новые поля, заготовки подписания",
+    "en": "minor: new fields, signing presets"
+  },
+  "reasons": [
+    {
+      "code": "field_added",
+      "path": "meta_fields.title_en",
+      "change": "added",
+      "minimum": "minor",
+      "suggested": "minor",
+      "hard": true,
+      "exception": false,
+      "message": {
+        "ru": "Новое поле meta_fields.title_en",
+        "en": "New field meta_fields.title_en"
+      }
+    },
+    {
+      "code": "signing_preset",
+      "path": "signatures.slots[supervisor].placements",
+      "change": "added",
+      "minimum": "patch",
+      "suggested": "patch",
+      "hard": true,
+      "exception": true,
+      "message": {
+        "ru": "Заготовка подписания: signatures.slots[supervisor].placements",
+        "en": "Signing preset: signatures.slots[supervisor].placements"
+      }
+    }
+  ],
+  "numbers": {
+    "patch": "2026.1.7",
+    "minor": "2026.2.0",
+    "major": "2027.1"
+  },
+  "changes": {
+    "ru": [],
+    "en": []
+  },
+  "breaking_changes": {
+    "ru": [],
+    "en": []
+  },
+  "draft_changes": {
+    "ru": [
+      "Новые поля: «Название работы на английском»."
+    ],
+    "en": [
+      "New fields: \"Title in English\"."
+    ]
+  },
+  "draft_breaking": {
+    "ru": [],
+    "en": []
+  },
+  "move_to": null,
+  "error": null
+}

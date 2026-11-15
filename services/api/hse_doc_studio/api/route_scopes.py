@@ -294,6 +294,14 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/pack-studio/workspaces/{workspace_id}/previews/{build_id}/pdf"): _A,
     ("GET", "/pack-studio/workspaces/{workspace_id}/previews/{build_id}/log"): _A,
     ("GET", "/pack-studio/workspaces/{workspace_id}/previews/{build_id}/anchors"): _A,
+    # Срез T10: мастер «Новая версия»
+    ("GET", "/pack-studio/workspaces/{workspace_id}/templates/{pack}/{template}/versions"): _A,
+    ("POST", "/pack-studio/workspaces/{workspace_id}/templates/{pack}/{template}/versions"): _A,
+    ("GET", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/state"): _A,
+    ("PUT", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/notes"): _A,
+    ("POST", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/renumber"): _A,
+    ("POST", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/move-edits"): _A,
+    ("POST", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/release"): _A,
     # Профиль подписанта: только свой, путь без id пользователя (только сервер)
     ("GET", "/account/signer-profile"): _A,
     ("GET", "/account/signer-profile/image"): _A,

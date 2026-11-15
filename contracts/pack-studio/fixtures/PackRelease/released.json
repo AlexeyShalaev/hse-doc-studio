@@ -1,0 +1,18 @@
+{
+  "version": {
+    "pack": "hse-cs-sse",
+    "template": "coursework",
+    "version": "2026.1.7",
+    "path": "hse-cs-sse/templates/coursework/versions/2026.1.7"
+  },
+  "digest": "sha256:9f2c0e7d",
+  "kind": "patch",
+  "previous": "2026.1.6",
+  "replaced": false,
+  "default_set": true,
+  "edited": [
+    "hse-cs-sse/templates/coursework/versions/2026.1.7/version.yaml",
+    "hse-cs-sse/templates/coursework/template.yaml"
+  ],
+  "warnings": []
+}

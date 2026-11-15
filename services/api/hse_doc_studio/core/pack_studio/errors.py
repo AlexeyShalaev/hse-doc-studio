@@ -64,6 +64,11 @@ class PackStudioErrorCode(StrEnum):
     service_access_missing = "service_access_missing"
     service_access_exists = "service_access_exists"
     service_access_not_found = "service_access_not_found"
+    # Срез T10: мастер «Новая версия»
+    version_not_found = "version_not_found"
+    version_taken = "version_taken"
+    version_number_invalid = "version_number_invalid"
+    version_not_modified = "version_not_modified"
 
 
 _C = PackStudioErrorCode
@@ -238,6 +243,22 @@ _TABLE: dict[PackStudioErrorCode, tuple[int, str, str]] = {
         "This repository already has a service access.",
     ),
     _C.service_access_not_found: (404, "Служебный доступ не найден.", "Service access not found."),
+    _C.version_not_found: (404, "Шаблон или версия не найдены.", "Template or version not found."),
+    _C.version_taken: (
+        409,
+        "Такой номер версии уже занят: версия есть в рабочем дереве или выпущена в базовой ветке.",
+        "This version number is taken: the version exists in the work tree or is released in the base branch.",
+    ),
+    _C.version_number_invalid: (
+        400,
+        "Номер версии не подходит: нужен ГОД.MINOR.PATCH выше базы.",
+        "The version number does not fit: it must be YEAR.MINOR.PATCH above the base.",
+    ),
+    _C.version_not_modified: (
+        409,
+        "Каталог выпущенной версии не менялся: переносить нечего.",
+        "The released version folder has not changed: there is nothing to move.",
+    ),
 }
 
 

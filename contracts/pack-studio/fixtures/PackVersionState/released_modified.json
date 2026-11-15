@@ -1,0 +1,50 @@
+{
+  "version": {
+    "pack": "hse-cs-sse",
+    "template": "coursework",
+    "version": "2026.1.6",
+    "path": "hse-cs-sse/templates/coursework/versions/2026.1.6"
+  },
+  "status": "stable",
+  "released": true,
+  "modified": true,
+  "registered": true,
+  "release_outdated": false,
+  "is_default": true,
+  "base": null,
+  "minimum": null,
+  "suggested": null,
+  "by_number": null,
+  "declared": "patch",
+  "note": null,
+  "number_ok": true,
+  "headline": {},
+  "reasons": [],
+  "numbers": {
+    "patch": null,
+    "minor": null,
+    "major": null
+  },
+  "changes": {
+    "ru": [
+      "Подписи полей показываются целиком."
+    ],
+    "en": [
+      "Field labels are shown in full."
+    ]
+  },
+  "breaking_changes": {
+    "ru": [],
+    "en": []
+  },
+  "draft_changes": {
+    "ru": [],
+    "en": []
+  },
+  "draft_breaking": {
+    "ru": [],
+    "en": []
+  },
+  "move_to": "2026.1.8",
+  "error": null
+}
