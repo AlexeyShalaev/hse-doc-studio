@@ -1,0 +1,146 @@
+{
+  "title": "Pack catalogs",
+  "lead": "Template packs beyond the ones built into the image: from a git repository or an archive. New versions appear in the project wizard without a rebuild or restart.",
+  "common": {
+    "cancel": "Cancel",
+    "close": "Close",
+    "save": "Save",
+    "done": "Done"
+  },
+  "sources": {
+    "title": "Sources",
+    "lead": "Check first: the Studio fetches the revision and shows which versions will appear. Apply puts exactly the checked revision into the catalog.",
+    "add": "Add source",
+    "emptyTitle": "No sources yet",
+    "emptyLead": "Connect a packs repository or upload an archive."
+  },
+  "source": {
+    "kind": {
+      "git": "git",
+      "archive": "Archive",
+      "folder": "Folder"
+    },
+    "enabled": "On",
+    "disabled": "Off",
+    "disabledHint": "The source packs are hidden from the project wizard. Versions stay for existing projects.",
+    "tracking": "Tracked",
+    "trackingHint": "Once a day the Studio checks the source and applies new released versions.",
+    "replacesBuiltin": "Replaces built-in",
+    "busy": "Checking",
+    "packsPath": "Packs folder: {{path}}",
+    "defaultBranch": "default branch",
+    "applied": "Applied revision {{revision}}, {{when}}",
+    "notApplied": "Not applied yet",
+    "checkedOk": "Checked {{when}}: ready to apply",
+    "checkedBlocked": "Checked {{when}}: has blockers",
+    "checkedFailed": "Check {{when}} failed",
+    "notChecked": "Not checked yet",
+    "pending_one": "{{count}} new version available",
+    "pending_other": "{{count}} new versions available",
+    "packs": "Source packs",
+    "noPacks": "No packs in the catalog yet: check and apply the source.",
+    "actions": "Actions for “{{name}}”",
+    "check": "Check",
+    "edit": "Edit",
+    "replaceArchive": "Replace archive",
+    "enable": "Turn on",
+    "disable": "Turn off",
+    "history": "History",
+    "remove": "Remove",
+    "errorDetail": "Details"
+  },
+  "pack": {
+    "hidden": "Hidden from the wizard",
+    "versionHidden": "hidden",
+    "versionHiddenHint": "The version is there for existing projects, but the wizard does not offer it.",
+    "builtin": "Built-in",
+    "orphan": "Removed source",
+    "replacesBuiltin": "Replaces built-in"
+  },
+  "others": {
+    "title": "Other catalog packs",
+    "lead": "Built into the image and left from removed sources. They are read-only here.",
+    "empty": "No other packs."
+  },
+  "add": {
+    "title": "Add source",
+    "lead": "After adding, check and apply the source: until then its packs do not appear in the wizard.",
+    "tabGit": "Git",
+    "tabArchive": "Archive",
+    "url": "Repository address",
+    "label": "Name",
+    "labelHint": "How the source is named in the list. Empty: from the address or file name.",
+    "packsPath": "Packs folder",
+    "packsPathGitHint": "Path to the packs folder from the repository root.",
+    "packsPathArchiveHint": "Path to the packs folder inside the archive. Empty: the archive root.",
+    "ref": "Tag, branch or sha",
+    "refHint": "Empty: the default branch. A tag is safer: its content does not change.",
+    "access": "Repository access",
+    "accessNone": "No access (public repository)",
+    "accessPersonal": "My git access",
+    "accessService": "Service access",
+    "credential": "Git access",
+    "credentialEmpty": "You have no git access for this address. Add one under Git access in the settings.",
+    "service": "Service access",
+    "serviceEmpty": "No service access yet. Add it in the Template Studio section.",
+    "choose": "Choose",
+    "insecureHttp": "Allow an unencrypted http:// address",
+    "replaceBuiltin": "Replace built-in",
+    "replaceBuiltinHint": "A pack with the same id as a built-in one replaces it in the wizard. Without the check box such a pack is not connected.",
+    "track": "Track once a day",
+    "trackHint": "The Studio checks the source by itself and applies new released versions when nothing blocks them.",
+    "file": "Archive .zip or .tar.gz",
+    "fileDrop": "Drop the archive here or",
+    "fileAction": "choose a file",
+    "fileActive": "Release to choose",
+    "fileLimit": "Up to {{size}}.",
+    "fileTooLarge": "The file is larger than {{size}}: such an archive is refused.",
+    "fileWrongType": "A .zip or .tar.gz archive is needed.",
+    "fileChosen": "{{name}}, {{size}}",
+    "submit": "Add",
+    "uploading": "Uploading the archive"
+  },
+  "edit": {
+    "title": "Edit “{{name}}”",
+    "lead": "A new ref, packs folder or built-in replacement resets the last check: check the source again.",
+    "accessKeep": "As now"
+  },
+  "replace": {
+    "title": "Replace the archive of “{{name}}”",
+    "lead": "Check and apply the new archive. Versions already in the catalog stay.",
+    "submit": "Upload"
+  },
+  "check": {
+    "title": "Check of “{{name}}”"
+  },
+  "history": {
+    "title": "History of “{{name}}”",
+    "empty": "No events yet.",
+    "ok": "Done",
+    "failed": "Refused",
+    "revision": "revision {{revision}}",
+    "action": {
+      "add": "Added",
+      "update": "Changed",
+      "check": "Check",
+      "apply": "Apply",
+      "enable": "Turned on",
+      "disable": "Turned off",
+      "remove": "Removed",
+      "track": "Tracking"
+    },
+    "summary": {
+      "added_one": "{{count}} version added: {{list}}",
+      "added_other": "{{count}} versions added: {{list}}",
+      "nothingAdded": "no new versions",
+      "new_one": "{{count}} new version",
+      "new_other": "{{count}} new versions",
+      "packs": "packs: {{list}}"
+    }
+  },
+  "remove": {
+    "title": "Remove “{{name}}”?",
+    "lead": "The source packs disappear from the project wizard. Versions stay in the store: existing projects keep working on them.",
+    "submit": "Remove"
+  }
+}

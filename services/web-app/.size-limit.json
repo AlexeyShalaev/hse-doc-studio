@@ -51,7 +51,7 @@
     "name": "Словарь админки: audit",
     "path": "dist/assets/locale-admin-audit-*.js",
     "gzip": true,
-    "limit": "11 kB"
+    "limit": "11.4 kB"
   },
   {
     "name": "Словарь админки: mail",
@@ -156,6 +156,12 @@
     "limit": "5.4 kB"
   },
   {
+    "name": "Словарь админки: packCatalog",
+    "path": "dist/assets/locale-admin-packCatalog-*.js",
+    "gzip": true,
+    "limit": "5.6 kB"
+  },
+  {
     "name": "Онбординг: песочница демо-проекта (lazy)",
     "path": "dist/assets/DemoSandbox-*.js",
     "gzip": true,
@@ -225,7 +231,7 @@
     "name": "Студия шаблонов (lazy, pages/PackStudioPage и фичи pack-*)",
     "path": "dist/assets/pack-studio-app-*.js",
     "gzip": true,
-    "limit": "27.5 kB"
+    "limit": "28 kB"
   },
   {
     "name": "Админка, «Студия шаблонов» (lazy, features/pack-studio-admin)",
@@ -234,9 +240,21 @@
     "limit": "4.4 kB"
   },
   {
+    "name": "Админка, «Каталоги паков» (lazy, features/pack-catalog-admin)",
+    "path": "dist/assets/pack-catalog-admin-*.js",
+    "gzip": true,
+    "limit": "7 kB"
+  },
+  {
+    "name": "Студия шаблонов, «Подключить к каталогу этой Студии» (lazy, features/pack-catalog-connect)",
+    "path": "dist/assets/pack-catalog-connect-*.js",
+    "gzip": true,
+    "limit": "2.2 kB"
+  },
+  {
     "name": "Словарь Студии шаблонов (ru и en)",
     "path": "dist/assets/locale-packStudio-*.js",
     "gzip": true,
-    "limit": "19.5 kB"
+    "limit": "20.2 kB"
   }
 ]

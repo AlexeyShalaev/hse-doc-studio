@@ -249,7 +249,15 @@
       "pack_studio_grant_add": "Pack author right granted",
       "pack_studio_grant_remove": "Pack author right revoked",
       "pack_studio_workspace_create": "Pack Studio workspace created",
-      "pack_studio_workspace_delete": "Pack Studio workspace deleted"
+      "pack_studio_workspace_delete": "Pack Studio workspace deleted",
+      "pack_catalog_source_add": "Pack catalog source added",
+      "pack_catalog_source_update": "Pack catalog source changed",
+      "pack_catalog_source_remove": "Pack catalog source removed",
+      "pack_catalog_source_enable": "Pack catalog source turned on",
+      "pack_catalog_source_disable": "Pack catalog source turned off",
+      "pack_catalog_check": "Pack catalog source checked",
+      "pack_catalog_apply": "Pack catalog source revision applied",
+      "pack_catalog_track": "Tracking updated a pack catalog source"
     },
     "search": "Search the log",
     "searchPlaceholder": "Person, action code or object",

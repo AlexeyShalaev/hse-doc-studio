@@ -24,6 +24,7 @@ import {
   KeyRound,
   LayoutDashboard,
   LayoutTemplate,
+  Library,
   Mail,
   Plug,
   Server,
@@ -66,6 +67,7 @@ export type AdminSection =
   | "modelServers"
   | "mcp"
   | "packStudio"
+  | "packCatalog"
   | "audit"
   | "mail";
 
@@ -115,6 +117,7 @@ const ADMIN_NAV: readonly NavGroup[] = [
       { id: "modelServers", to: "/admin/model-servers", icon: Cpu },
       { id: "mcp", to: "/admin/mcp", icon: Plug },
       { id: "packStudio", to: "/admin/pack-studio", icon: LayoutTemplate },
+      { id: "packCatalog", to: "/admin/pack-catalog", icon: Library },
     ],
   },
   {

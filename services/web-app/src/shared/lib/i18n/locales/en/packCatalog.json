@@ -1,0 +1,59 @@
+{
+  "verdict": {
+    "new": "Will appear",
+    "present": "Already there",
+    "changed": "Changed in source",
+    "incompatible": "Not for this Studio",
+    "invalid": "Has errors",
+    "unreleased": "Not released"
+  },
+  "verdictHint": {
+    "new": "The version appears in the catalog after Apply.",
+    "present": "This version is already in the catalog.",
+    "changed": "A version with this number is already in the catalog, but its files differ in the source. A released version cannot be replaced: release a new one.",
+    "incompatible": "The version needs a newer Studio or another pack format.",
+    "invalid": "The pack check found errors, or the version files changed after release.",
+    "unreleased": "The version is not in the source releases.yaml. Only released versions enter the catalog."
+  },
+  "blocker": {
+    "pack_conflict": "A pack with this id is already in the catalog. One pack needs one source.",
+    "version_changed": "The source changed a version that is already in the catalog. It cannot be replaced: projects pinned its files.",
+    "version_invalid": "Some released versions have errors.",
+    "no_packs": "The revision has no packs. Check the packs folder."
+  },
+  "conflict": {
+    "builtin": "A pack with this id is built into the Studio. It can be connected only with “Replace built-in” checked.",
+    "other_source": "A pack with this id already comes from the source “{{name}}”.",
+    "otherSourceUnknown": "A pack with this id already comes from another source.",
+    "invalid": "The pack cannot be read: fix the errors below."
+  },
+  "report": {
+    "label": "Check report",
+    "revision": "Revision {{revision}}",
+    "ok_one": "Ready to apply: {{count}} version will appear.",
+    "ok_other": "Ready to apply: {{count}} versions will appear.",
+    "okNothing": "Ready to apply, but nothing is new: all versions are already in the catalog.",
+    "blocked": "Cannot apply:",
+    "problems": "Notes on the revision",
+    "noPacks": "The revision has no packs.",
+    "replacesBuiltin": "Replaces built-in",
+    "minStudio": "Needs Studio {{version}} or newer",
+    "errors": "Errors",
+    "warnings": "Warnings"
+  },
+  "applied": {
+    "title": "Catalog updated",
+    "added_one": "{{count}} version added:",
+    "added_other": "{{count}} versions added:",
+    "nothing": "No new versions, the catalog did not change.",
+    "revision": "Applied revision {{revision}}."
+  },
+  "flow": {
+    "running": "Fetching the revision and reading the packs. This can take a couple of minutes.",
+    "again": "Check again",
+    "apply": "Apply",
+    "applying": "Applying",
+    "moved": "The source changed after the check. Check it again to apply the fresh revision.",
+    "busy": "The source is already being checked or applied. Wait and check again."
+  }
+}

@@ -6,6 +6,7 @@ export {
   useVersionDetail,
 } from "./api/catalogQueries";
 export {
+  PackOriginSchema,
   PackResponseSchema,
   VersionListItemSchema,
   VersionDetailSchema,

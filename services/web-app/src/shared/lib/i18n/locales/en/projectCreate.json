@@ -51,7 +51,10 @@
   },
   "pack": {
     "templatesCount_one": "{{count}} template",
-    "templatesCount_other": "{{count}} templates"
+    "templatesCount_other": "{{count}} templates",
+    "subscribed": "Connected: {{label}}",
+    "subscribedFallback": "Connected from the instance catalog",
+    "replacesBuiltin": "replaces built-in"
   },
   "template": {
     "selectPackFirst": "Select a pack on the previous step."

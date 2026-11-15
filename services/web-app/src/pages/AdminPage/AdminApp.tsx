@@ -87,6 +87,13 @@ const AdminPackStudioPage = lazy(() =>
   })),
 );
 
+// Каталоги паков: источники git и архивы, проверка и применение.
+const AdminPackCatalogPage = lazy(() =>
+  import("@features/pack-catalog-admin").then((m) => ({
+    default: m.PackCatalogAdminPage,
+  })),
+);
+
 // Ширина содержимого по разделу: формы настроек узкие, таблицы и сводки широкие.
 const INSTALL_PARTS = [
   ["instance", "narrow"],
@@ -380,6 +387,14 @@ export const AdminApp = () => {
           element={
             <Page width="narrow" ns={["packStudio"]}>
               <AdminPackStudioPage />
+            </Page>
+          }
+        />
+        <Route
+          path="pack-catalog"
+          element={
+            <Page width="wide" ns={["packCatalog"]}>
+              <AdminPackCatalogPage />
             </Page>
           }
         />
