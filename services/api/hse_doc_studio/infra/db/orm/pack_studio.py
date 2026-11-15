@@ -10,7 +10,19 @@ from __future__ import annotations
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, ForeignKey, Index, Integer, String, Text, Uuid, text
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    Uuid,
+    text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from hse_doc_studio.core.pack_studio.entities import WorkspaceKind, WorkspaceState
@@ -38,6 +50,10 @@ class PackWorkspaceRow(Base):
     remote_url: Mapped[str | None] = mapped_column(Text)
     credential_id: Mapped[UUID | None] = mapped_column(Uuid, ForeignKey("git_credentials.id", ondelete="SET NULL"))
     insecure_http: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
+    # Срез T6: служебный доступ репозитория вместо личного (4.2); удалён админом: ссылка обнуляется.
+    service_access_id: Mapped[UUID | None] = mapped_column(
+        Uuid, ForeignKey("pack_studio_service_access.id", ondelete="SET NULL")
+    )
     base_branch: Mapped[str | None] = mapped_column(Text)
     base_sha: Mapped[str | None] = mapped_column(String(64))
     fetched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -46,6 +62,8 @@ class PackWorkspaceRow(Base):
     pr_url: Mapped[str | None] = mapped_column(Text)
     pr_number: Mapped[int | None] = mapped_column(Integer)
     ci_status: Mapped[str | None] = mapped_column(String(32))
+    fork_url: Mapped[str | None] = mapped_column(Text)
+    pushed_sha: Mapped[str | None] = mapped_column(String(64))
     # Папка на диске бывает только у локальной установки; колонка держит форму записи общей.
     folder: Mapped[str | None] = mapped_column(Text)
     error_code: Mapped[str | None] = mapped_column(String(64))
@@ -66,4 +84,23 @@ class PackStudioGrantRow(Base):
     user_id: Mapped[str | None] = mapped_column(String(64), ForeignKey("users.id", ondelete="CASCADE"))
     group_id: Mapped[str | None] = mapped_column(String(64), ForeignKey("groups.id", ondelete="CASCADE"))
     granted_by: Mapped[str | None] = mapped_column(String(64), ForeignKey("users.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class PackStudioServiceAccessRow(Base):
+    """Служебный доступ репозитория паков (template-studio.md, 4.2): токен уровня установки, секрет шифртекстом с
+    привязкой к таблице, колонке и id записи. Один на репозиторий (`repo_key`: хост, порт, путь без регистра)."""
+
+    __tablename__ = "pack_studio_service_access"
+    __table_args__ = (UniqueConstraint("repo_key"),)
+
+    id: Mapped[UUID] = mapped_column(Uuid, primary_key=True)
+    url: Mapped[str] = mapped_column(Text, nullable=False)
+    host: Mapped[str] = mapped_column(Text, nullable=False)
+    port: Mapped[int | None] = mapped_column(Integer)
+    repo_key: Mapped[str] = mapped_column(Text, nullable=False)
+    label: Mapped[str] = mapped_column(Text, nullable=False)
+    token_family: Mapped[str | None] = mapped_column(String(32))
+    secret_enc: Mapped[str] = mapped_column(Text, nullable=False)
+    created_by: Mapped[str | None] = mapped_column(String(64), ForeignKey("users.id", ondelete="SET NULL"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

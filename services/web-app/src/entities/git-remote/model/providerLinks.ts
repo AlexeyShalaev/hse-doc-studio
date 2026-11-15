@@ -1,5 +1,10 @@
 import type { GitProvider } from "../api/gitRemoteSchemas";
-import { PROVIDER_CATALOG, providerSpec } from "./providerCatalog";
+import {
+  PROVIDER_CATALOG,
+  type PermissionProfile,
+  permissionsFor,
+  providerSpec,
+} from "./providerCatalog";
 
 // Ссылки на выпуск токена и добавление ключа. Параметры страниц проверены по
 // документации (см. providers.json); всё непроверенное остаётся простой ссылкой.
@@ -126,6 +131,8 @@ export type TokenLinkInput = {
   repo?: string | null;
   /** В ссылку попадает только там, где у страницы есть такой параметр (1..366). */
   expiresInDays?: number | null;
+  /** Профиль прав каталога (`packs`); профиля у провайдера нет: основные права и ссылки. */
+  profile?: PermissionProfile | null;
 };
 
 /**
@@ -138,6 +145,9 @@ export const tokenLinks = (
   input: TokenLinkInput,
 ): TokenLinks => {
   const spec = providerSpec(provider);
+  const permissions = permissionsFor(spec, input.profile);
+  const profile = input.profile ? spec.profiles?.[input.profile] : undefined;
+  const links = profile?.token_links ?? spec.token_links;
   const base = checkedBase(input.webBase);
   const name = cleanText(input.name, spec.limits.name);
   const description = cleanText(input.description, spec.limits.description);
@@ -146,7 +156,9 @@ export const tokenLinks = (
   const values: Record<string, string | null> = {
     name: name ? encodeComponent(name) : null,
     description: description ? encodeComponent(description) : null,
-    scopes: spec.permissions.required.map(encodeComponent).join(","),
+    scopes: [...permissions.required, ...permissions.optional]
+      .map(encodeComponent)
+      .join(","),
     target_name: owner ? encodeComponent(owner) : null,
     expires_in:
       days === null || days === undefined
@@ -155,8 +167,8 @@ export const tokenLinks = (
   };
   const path = pathOf(input.owner, input.repo);
   return {
-    primary: render(spec.token_links?.primary ?? null, base, path, values),
-    fallback: render(spec.token_links?.fallback ?? null, base, path, values),
+    primary: render(links?.primary ?? null, base, path, values),
+    fallback: render(links?.fallback ?? null, base, path, values),
   };
 };
 

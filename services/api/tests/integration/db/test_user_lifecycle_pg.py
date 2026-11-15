@@ -307,3 +307,31 @@ async def test__every_foreign_key_to_users__cascades_so_new_secret_tables_cannot
     wrong = {t: k for t, k in rules.items() if k not in ("c", "n") and t != "projects"}
     assert wrong == {}
     assert rules["projects"] == "r"
+
+
+async def test__delete__pack_studio_workspace_clones_removed_from_disk(
+    pg_migrated_engine: AsyncEngine, tmp_path: Path
+) -> None:
+    w = _World(pg_migrated_engine)
+    w.lifecycle = SqlUserLifecycle(w.sessions, data_dir=tmp_path)
+    w.delete = DeleteUserUC(w.users, w.lifecycle, w.audit, SqlUnitOfWork(w.sessions))
+    await w.user("boss", disabled=False)
+    await w.user("u1")
+    root = tmp_path / "pack-studio" / "workspaces"
+    mine, other = str(uuid.uuid4()), str(uuid.uuid4())
+    for ws_id, owner in ((mine, "u1"), (other, "boss")):
+        await _exec(
+            pg_migrated_engine,
+            "INSERT INTO pack_workspaces (id, owner_id, kind, label, packs_path, state, created_at, updated_at) "
+            "VALUES (:i, :o, 'git', 'packs', 'packs', 'ready', now(), now())",
+            i=ws_id,
+            o=owner,
+        )
+        (root / ws_id / "tree").mkdir(parents=True)
+        (root / ws_id / "tree" / "pack.yaml").write_text("id: demo\n", encoding="utf-8")
+
+    await w.delete.execute(w.admin, "u1")
+
+    assert not (root / mine).exists()
+    assert (root / other / "tree" / "pack.yaml").is_file()
+    assert await _count(pg_migrated_engine, "SELECT count(*) FROM pack_workspaces WHERE owner_id = 'u1'") == 0

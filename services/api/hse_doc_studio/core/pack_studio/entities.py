@@ -51,6 +51,8 @@ class PackWorkspace:
     remote_url: str | None = None
     credential_id: UUID | None = None
     insecure_http: bool = False
+    # git: служебный доступ репозитория (4.2) вместо личного; задаёт админ установки, только сервер.
+    service_access_id: UUID | None = None
     # git: базовая ветка (по умолчанию HEAD сервера) и её вершина после последней выборки.
     base_branch: str | None = None
     base_sha: str | None = None
@@ -61,6 +63,10 @@ class PackWorkspace:
     pr_url: str | None = None
     pr_number: int | None = None
     ci_status: str | None = None
+    # git: форк, в который уходит рабочая ветка без права push в репозиторий (4.3, шаг 4), и последняя
+    # отправленная вершина: по ней спрашивается статус проверок.
+    fork_url: str | None = None
+    pushed_sha: str | None = None
     # folder: абсолютный путь папки в файловой системе Студии (контейнерный, если Студия в Docker).
     folder: str | None = None
     error: WorkspaceError | None = None

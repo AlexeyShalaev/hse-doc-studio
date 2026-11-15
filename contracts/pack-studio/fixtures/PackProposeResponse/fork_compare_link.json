@@ -1,0 +1,70 @@
+{
+  "git": {
+    "workspace": {
+      "id": "5f0c1c8e-1b7a-4d51-9a43-0a5b2f3c4d10",
+      "kind": "git",
+      "label": "AlexeyShalaev/hse-doc-studio",
+      "state": "ready",
+      "busy": false,
+      "packs_path": "packs",
+      "url": "https://github.com/AlexeyShalaev/hse-doc-studio.git",
+      "credential_id": "1b2c3d4e-5f60-4a71-8b92-a3b4c5d6e7f8",
+      "service_access": false,
+      "insecure_http": false,
+      "folder": null,
+      "base_branch": "master",
+      "base_sha": "4f2a9c0d8e7b6a5f4e3d2c1b0a9f8e7d6c5b4a39",
+      "fetched_at": "2026-11-14T09:30:00Z",
+      "work_branch": "pack-studio/ivanov/hse-cs-sse-coursework-2026.1.7",
+      "pr_url": null,
+      "pr_number": null,
+      "ci_status": null,
+      "fork_url": "https://github.com/ivanov/hse-doc-studio.git",
+      "pushed_sha": "9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b",
+      "error": null,
+      "created_at": "2026-11-14T09:28:41Z",
+      "updated_at": "2026-11-15T10:12:00Z"
+    },
+    "provider": "github",
+    "head_sha": "9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b",
+    "branch": "pack-studio/ivanov/hse-cs-sse-coursework-2026.1.7",
+    "base_branch": "master",
+    "uncommitted": [],
+    "dirty": false,
+    "changed": [
+      {
+        "path": "hse-cs-sse/templates/coursework/versions/2026.1.7/version.yaml",
+        "status": "modified"
+      }
+    ],
+    "ahead": 1,
+    "behind": 2,
+    "compare_url": "https://github.com/AlexeyShalaev/hse-doc-studio/compare/master...ivanov:pack-studio/ivanov/hse-cs-sse-coursework-2026.1.7?expand=1"
+  },
+  "pushed_sha": "9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b",
+  "pushed_to": "https://github.com/ivanov/hse-doc-studio.git",
+  "pull_request": null,
+  "compare_url": "https://github.com/AlexeyShalaev/hse-doc-studio/compare/master...ivanov:pack-studio/ivanov/hse-cs-sse-coursework-2026.1.7?expand=1",
+  "pr_error": {
+    "code": "pr_permission_missing",
+    "detail": "Токену не хватает прав, чтобы открыть запрос на слияние."
+  },
+  "checks": {
+    "errors": 0,
+    "warnings": 0,
+    "findings": [],
+    "classes": [
+      {
+        "path": "hse-cs-sse/templates/coursework/versions/2026.1.7",
+        "base": "2026.1.6",
+        "minimum": "patch",
+        "suggested": "patch",
+        "by_number": "patch",
+        "headline": {
+          "ru": "Класс patch: только места подписей.",
+          "en": "Class patch: signature places only."
+        }
+      }
+    ]
+  }
+}

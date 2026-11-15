@@ -1,5 +1,5 @@
 {
-  "_comment": "Каталог git-провайдеров: единственный источник правды для бэкенда и фронтенда. Копии лежат в services/api/hse_doc_studio/core/git_sync/providers.json и services/web-app/src/entities/git-remote/model/providers.json, тесты требуют побайтного совпадения. Векторы: provider_cases.json. Параметры ссылок проверены по официальной документации 26.10.2026: всё непроверенное остаётся простой ссылкой (kind plain) и шагами в интерфейсе. Плейсхолдеры: {web_base} {path} в путях и {name} {description} {scopes} {expires_in} {target_name} в значениях параметров; значение без данных отбрасывается вместе с ключом, остальное кодируется строго, запятая между {scopes} остаётся запятой.",
+  "_comment": "Каталог git-провайдеров: единственный источник правды для бэкенда и фронтенда. Копии лежат в services/api/hse_doc_studio/core/git_sync/providers.json и services/web-app/src/entities/git-remote/model/providers.json, тесты требуют побайтного совпадения. Векторы: provider_cases.json. Параметры ссылок проверены по официальной документации 26.10.2026: всё непроверенное остаётся простой ссылкой (kind plain) и шагами в интерфейсе. Плейсхолдеры: {web_base} {path} в путях и {name} {description} {scopes} {expires_in} {target_name} в значениях параметров; значение без данных отбрасывается вместе с ключом, остальное кодируется строго, запятая между {scopes} остаётся запятой; {scopes} это required и затем optional. Профили прав (profiles) задают права и ссылки на токен под задачу: packs это репозиторий паков Студии шаблонов (ветка, PR, статус проверок); у профиля без token_links ссылки основные, но {scopes} из профиля; провайдер без профиля даёт основной набор прав.",
   "version": 1,
   "detected_by": ["override", "host", "api", "unknown"],
   "auth_variants": ["token", "ssh_user_key", "deploy_key", "device"],
@@ -73,6 +73,52 @@
           "en": "Contents: Read and write (fine-grained) or repo (classic)"
         }
       },
+      "profiles": {
+        "packs": {
+          "permissions": {
+            "required": ["repo"],
+            "optional": [],
+            "too_broad": [
+              "admin:org",
+              "admin:repo_hook",
+              "admin:public_key",
+              "admin:gpg_key",
+              "delete_repo"
+            ],
+            "implies": {},
+            "human": {
+              "ru": "Contents: Read and write, Pull requests: Read and write, Commit statuses: Read, Metadata: Read (точный токен) или repo (классический, нужен для PR из форка и статуса check-runs)",
+              "en": "Contents: Read and write, Pull requests: Read and write, Commit statuses: Read, Metadata: Read (fine-grained) or repo (classic, needed for a pull request from a fork and check-runs status)"
+            }
+          },
+          "token_links": {
+            "primary": {
+              "kind": "prefilled",
+              "broad": false,
+              "path": "/settings/personal-access-tokens/new",
+              "query": [
+                { "key": "name", "value": "{name}" },
+                { "key": "description", "value": "{description}" },
+                { "key": "target_name", "value": "{target_name}" },
+                { "key": "expires_in", "value": "{expires_in}" },
+                { "key": "contents", "value": "write" },
+                { "key": "pull_requests", "value": "write" },
+                { "key": "statuses", "value": "read" },
+                { "key": "metadata", "value": "read" }
+              ]
+            },
+            "fallback": {
+              "kind": "prefilled",
+              "broad": true,
+              "path": "/settings/tokens/new",
+              "query": [
+                { "key": "scopes", "value": "repo" },
+                { "key": "description", "value": "{description}" }
+              ]
+            }
+          }
+        }
+      },
       "introspection": {
         "method": "github_user",
         "path": "/user",
@@ -138,6 +184,24 @@
           "en": "read_repository and write_repository, without api"
         }
       },
+      "profiles": {
+        "packs": {
+          "permissions": {
+            "required": ["read_repository", "write_repository"],
+            "optional": ["read_api"],
+            "too_broad": ["api", "sudo", "admin_mode"],
+            "implies": {
+              "api": ["read_repository", "write_repository", "read_api"],
+              "write_repository": ["read_repository"]
+            },
+            "human": {
+              "ru": "read_repository и write_repository (MR через push options), по желанию read_api для статуса конвейера; без api",
+              "en": "read_repository and write_repository (merge request via push options), optionally read_api for the pipeline status; without api"
+            }
+          },
+          "token_links": null
+        }
+      },
       "introspection": {
         "method": "gitlab_self",
         "path": "/personal_access_tokens/self",
@@ -189,6 +253,21 @@
         "human": {
           "ru": "Репозиторий: чтение и запись (write:repository)",
           "en": "Repository: read and write (write:repository)"
+        }
+      },
+      "profiles": {
+        "packs": {
+          "permissions": {
+            "required": ["write:repository"],
+            "optional": [],
+            "too_broad": [],
+            "implies": {},
+            "human": {
+              "ru": "Репозиторий: чтение и запись (write:repository); PR открывается в браузере",
+              "en": "Repository: read and write (write:repository); the pull request is opened in the browser"
+            }
+          },
+          "token_links": null
         }
       },
       "introspection": {

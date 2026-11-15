@@ -145,7 +145,7 @@ class CheckCredentialUC:
         self._resolver = resolver
         self._tokens = token_checker
 
-    async def execute(self, credential_id: UUID) -> CredentialCheckView:
+    async def execute(self, credential_id: UUID, profile: str | None = None) -> CredentialCheckView:
         credential = await self._credentials.get(credential_id)
         if credential is None:
             raise NotFoundError(localized_error("Доступ не найден", "Credential not found"))
@@ -155,7 +155,7 @@ class CheckCredentialUC:
                 localized_error("Проверяются только токены", "Only tokens can be checked"),
             )
         resolved = await self._resolve(credential)
-        check = await self._tokens.check(credential, resolved)
+        check = await self._tokens.check(credential, resolved, profile)
         if check is not None and check.state is TokenState.expired:
             raise git_error(GitErrorCode.token_expired)
         if check is not None and check.state is TokenState.rejected:

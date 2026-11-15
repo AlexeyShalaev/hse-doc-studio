@@ -61,17 +61,21 @@ class PackWorkspaceResponse(StrictModel):
     packs_path: str
     url: str | None
     credential_id: str | None
+    # Срез T6: пространство ходит служебным доступом репозитория (4.2), а не личным.
+    service_access: bool
     insecure_http: bool
     # Папка для показа (путь хоста); только у `folder`.
     folder: str | None
     base_branch: str | None
     base_sha: str | None
     fetched_at: datetime | None
-    # Срез T6: рабочая ветка, запрос на слияние и статус проверок; до него всегда null.
+    # Срез T6: рабочая ветка, запрос на слияние, последняя сводка проверок (`CiStateName`), форк и отправленная вершина.
     work_branch: str | None
     pr_url: str | None
     pr_number: int | None
     ci_status: str | None
+    fork_url: str | None
+    pushed_sha: str | None
     error: PackWorkspaceErrorBody | None
     created_at: datetime
     updated_at: datetime
@@ -82,6 +86,8 @@ class CreatePackWorkspaceRequest(StrictModel):
     label: str | None = Field(default=None, max_length=120)
     url: str | None = Field(default=None, max_length=2048)
     credential_id: UUID | None = None
+    # Служебный доступ репозитория вместо личного (только сервер, его задаёт админ установки).
+    service_access: bool = False
     insecure_http: bool = False
     base_branch: str | None = Field(default=None, max_length=255)
     folder: str | None = Field(default=None, max_length=4096)
@@ -93,6 +99,8 @@ class CreatePackWorkspaceRequest(StrictModel):
             raise ValueError("url is required for a git workspace")
         if self.kind == "folder" and not (self.folder or "").strip():
             raise ValueError("folder is required for a folder workspace")
+        if self.service_access and (self.kind != "git" or self.credential_id is not None):
+            raise ValueError("service_access is for a git workspace without credential_id")
         return self
 
 
@@ -208,6 +216,166 @@ class CreatePackStudioGrantRequest(StrictModel):
         if (self.user_id is None) == (self.group_id is None):
             raise ValueError("exactly one of user_id and group_id")
         return self
+
+
+# ── срез T6: git рабочего пространства ──────────────────────────────────────
+
+ChangeStatusName = Literal["added", "modified", "deleted"]
+GitProviderName = Literal["github", "gitlab", "gitea", "bitbucket", "hse_studio", "other"]
+CiStateName = Literal["none", "pending", "success", "failure", "unknown"]
+CheckStateName = Literal["queued", "running", "success", "failure", "neutral", "skipped", "cancelled"]
+
+
+class PackFileChange(StrictModel):
+    # Путь от папки паков пространства.
+    path: str
+    status: ChangeStatusName
+
+
+class PackGitResponse(StrictModel):
+    """`GET /workspaces/{id}/git`: ветка, правки и PR. `branch` null: дерево на вершине базы без ветки."""
+
+    workspace: PackWorkspaceResponse
+    provider: GitProviderName
+    head_sha: str
+    branch: str | None
+    base_branch: str | None
+    # Правки на диске после последнего коммита; `dirty` это непустой список.
+    uncommitted: list[PackFileChange]
+    dirty: bool
+    # Всё, чем пространство отличается от базы (коммиты и правки).
+    changed: list[PackFileChange]
+    ahead: int
+    behind: int
+    # Ветка отправлена, PR нет: ссылка «Открыть PR в браузере» (compare); иначе null.
+    compare_url: str | None
+
+
+class PackBranchRequest(StrictModel):
+    """Создать или перейти на рабочую ветку; без имени Студия называет её сама (`pack-studio/<человек>/...`)."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+
+
+class PackCommitRequest(StrictModel):
+    message: str | None = Field(default=None, max_length=2000)
+
+
+class PackCommitResponse(StrictModel):
+    git: PackGitResponse
+    # Коммитить было нечего: null и `committed` false.
+    sha: str | None
+    committed: bool
+
+
+class PackForkChoice(StrictModel):
+    """Нет права push: свой форк по адресу или создать форк токеном (только GitHub)."""
+
+    url: str | None = Field(default=None, max_length=2048)
+    create: bool = False
+
+    @model_validator(mode="after")
+    def _one(self) -> PackForkChoice:
+        if (self.url is None) == (not self.create):
+            raise ValueError("exactly one of url and create")
+        return self
+
+
+class PackProposeRequest(StrictModel):
+    # Заголовок PR или MR; без него сообщение по conventional commits из изменённых версий.
+    title: str | None = Field(default=None, max_length=200)
+    # Текст перед сводкой, которую Студия собирает сама (версии, класс, заметки, проверки).
+    description: str | None = Field(default=None, max_length=20000)
+    # Сообщение коммита несохранённых правок.
+    message: str | None = Field(default=None, max_length=2000)
+    fork: PackForkChoice | None = None
+
+
+class PackPullRequest(StrictModel):
+    number: int
+    url: str
+    # false: PR из этой ветки уже был открыт, найден существующий.
+    created: bool
+
+
+class PackCheckFinding(StrictModel):
+    severity: Literal["error", "warning"]
+    check: str
+    path: str
+    message: str
+
+
+class PackVersionClass(StrictModel):
+    path: str
+    base: str
+    minimum: str
+    suggested: str
+    by_number: str | None
+    headline: dict[str, str]
+
+
+class PackCheckSummary(StrictModel):
+    errors: int
+    warnings: int
+    findings: list[PackCheckFinding]
+    classes: list[PackVersionClass]
+
+
+class PackProposeResponse(StrictModel):
+    git: PackGitResponse
+    pushed_sha: str
+    # Куда ушла ветка: сам репозиторий или форк (адрес без секретов).
+    pushed_to: str
+    pull_request: PackPullRequest | None
+    compare_url: str | None
+    # Ветка отправлена, а PR открыть не дали: `{code: pr_permission_missing, detail}`; иначе null.
+    pr_error: PackWorkspaceErrorBody | None
+    checks: PackCheckSummary
+
+
+class PackCiCheck(StrictModel):
+    name: str
+    state: CheckStateName
+    url: str | None
+    summary: str | None
+
+
+class PackCiResponse(StrictModel):
+    """`GET /workspaces/{id}/git/checks`: статус проверок хостинга по отправленной вершине."""
+
+    state: CiStateName
+    sha: str | None
+    checks: list[PackCiCheck]
+    # false: хостинг не отдаёт статус этому токену (GitLab без read_api, точный токен GitHub без прав) или провайдеру.
+    available: bool
+    reason: str | None
+    web_url: str | None
+
+
+class PackStartOverRequest(StrictModel):
+    # Отбросить несохранённые правки; без него при правках `workspace_dirty`.
+    discard: bool = False
+
+
+class PackDiffResponse(StrictModel):
+    diff: str
+    truncated: bool
+
+
+class PackServiceAccessResponse(StrictModel):
+    id: str
+    url: str
+    label: str
+    token_family: str | None
+    created_by: str | None
+    created_by_name: str | None
+    created_at: datetime
+
+
+class CreatePackServiceAccessRequest(StrictModel):
+    url: str = Field(min_length=1, max_length=2048)
+    token: str = Field(min_length=1, max_length=4096)
+    label: str | None = Field(default=None, max_length=120)
 
 
 # ── Предпросмотр (раздел 6, срез T7) ─────────────────────────────────────────

@@ -35,5 +35,12 @@
   "preview_not_found",
   "preview_invalid",
   "preview_not_ready",
-  "version_unreadable"
+  "version_unreadable",
+  "workspace_dirty",
+  "branch_name_invalid",
+  "merge_conflict",
+  "nothing_to_propose",
+  "service_access_missing",
+  "service_access_exists",
+  "service_access_not_found"
 ]

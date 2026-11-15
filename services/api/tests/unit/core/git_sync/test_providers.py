@@ -116,6 +116,7 @@ def test__token_links__shared_vector__matches_expected(case: dict[str, Any]) -> 
         owner=case["owner"],
         repo=case["repo"],
         expires_in_days=case["expires_in_days"],
+        profile=case.get("profile"),
     )
 
     assert {"primary": _link(links.primary), "fallback": _link(links.fallback)} == case["expect"]
@@ -128,9 +129,11 @@ def test__ssh_links__shared_vector__matches_expected(case: dict[str, Any]) -> No
     assert {"user_keys": _link(links.user_keys), "deploy_key": _link(links.deploy_key)} == case["expect"]
 
 
-@pytest.mark.parametrize("case", _CASES["scope_cases"], ids=lambda c: f"{c['provider']}-{c['scopes']}")
+@pytest.mark.parametrize(
+    "case", _CASES["scope_cases"], ids=lambda c: f"{c['provider']}-{c.get('profile', '')}-{c['scopes']}"
+)
 def test__assess_scopes__shared_vector__matches_expected(case: dict[str, Any]) -> None:
-    result = p.assess_scopes(case["provider"], case["scopes"])
+    result = p.assess_scopes(case["provider"], case["scopes"], case.get("profile"))
 
     assert {"sufficiency": result.sufficiency.value, "missing": list(result.missing)} == case["expect"]
 

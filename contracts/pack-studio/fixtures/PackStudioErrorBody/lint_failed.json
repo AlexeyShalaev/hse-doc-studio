@@ -1,0 +1,14 @@
+{
+  "detail": "Пак не прошёл проверку.",
+  "code": "lint_failed",
+  "errors": 1,
+  "warnings": 0,
+  "findings": [
+    {
+      "severity": "error",
+      "check": "lint",
+      "path": "hse-cs-sse/templates/coursework/versions/2026.1.7",
+      "message": "documents[0].id: обязательное поле"
+    }
+  ]
+}

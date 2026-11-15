@@ -22,6 +22,7 @@ from hse_doc_studio.infra.db.orm import (
     MailLogRow,
     OrgMemberRow,
     OrgRow,
+    PackWorkspaceRow,
     ProjectMemberRow,
     ProjectRow,
     QuotaRow,
@@ -105,9 +106,16 @@ class SqlUserLifecycle:
             )
             await db.execute(update(SubmissionRow).where(SubmissionRow.actor_id == user_id).values(actor_name=None))
             await db.execute(delete(QuotaRow).where(QuotaRow.owner_kind == "user", QuotaRow.owner_id == user_id))
+            # Клоны рабочих пространств Студии шаблонов лежат на диске; строки уйдут каскадом, папки убираются ниже.
+            workspaces = (
+                (await db.execute(select(PackWorkspaceRow.id).where(PackWorkspaceRow.owner_id == user_id)))
+                .scalars()
+                .all()
+            )
             # Остальное уходит каскадом по внешним ключам на users.id (тест архитектуры следит, что их не забыли).
             await db.execute(delete(UserRow).where(UserRow.id == user_id))
         self._remove_personal_folder(user_id)
+        self._remove_pack_workspaces([str(workspace_id) for workspace_id in workspaces])
         return ErasureReport(
             audit_anonymized=anonymized, api_tokens=int(tokens), sessions=int(sessions), settings=int(settings)
         )
@@ -116,6 +124,15 @@ class SqlUserLifecycle:
         """Личные роли агента лежат файлом вне базы (`users/<хеш>`): без этого после удаления остаётся текст."""
         if self._data_dir is not None:
             shutil.rmtree(user_data_folder(self._data_dir, user_id), ignore_errors=True)
+
+    def _remove_pack_workspaces(self, workspace_ids: list[str]) -> None:
+        """Клоны git-пространств Студии шаблонов (`pack-studio/workspaces/<id>`); папки пользователя (`folder`) бывают
+        только локально и не удаляются никогда."""
+        if self._data_dir is None:
+            return
+        root = self._data_dir / "pack-studio" / "workspaces"
+        for workspace_id in workspace_ids:
+            shutil.rmtree(root / workspace_id, ignore_errors=True)
 
     def _personas(self, user_id: str) -> list[dict[str, object]]:
         if self._data_dir is None:

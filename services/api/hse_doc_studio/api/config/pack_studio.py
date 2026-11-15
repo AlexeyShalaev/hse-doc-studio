@@ -47,3 +47,9 @@ class PackStudioConfig(BaseModel):
     preview_keep_hours: float = Field(
         default=24.0, gt=0, description="How long preview build records, logs and leftover folders are kept."
     )
+    hosting_timeout_s: float = Field(
+        default=20.0, gt=0, description="Timeout for one request to the git hosting API (pull request, CI status)."
+    )
+    max_diff_bytes: int = Field(
+        default=1_048_576, ge=1024, description="Largest diff of a workspace against its base branch shown at once."
+    )
