@@ -4,6 +4,9 @@
   номер считается по классу (`patch`, `minor`, `major`) от последней версии шаблона или задаётся явно. В копии
   `version.yaml` правится точечно (`yaml_edits`), остальные байты те же: `id`, `status: beta`, `released_at`
   сегодня, блок `release` убран (класс и объяснение пишет автор), заметки `changes` и `breaking_changes` пусты.
+* `copy_version`: копия каталога в новый номер с черновым манифестом; `create_version` и «Перенести правки в новую
+  версию» (7.3) идут через неё.
+* `renumber_version`: черновик переезжает на другой номер (класс поднят или номер занят в базе, 4.3).
 * `release_version`: шаг 5 мастера и `releases freeze`. По желанию отмечает версию выпущенной (`status: stable`,
   `released_at`, `release.kind`) и ставит её `default_version` шаблона, затем гоняет линтер и схемы и вносит версию в
   `releases.yaml`. Запись уже внесённой версии заменяется только с `replace`, и только пока версия не выпущена
@@ -16,6 +19,7 @@ from __future__ import annotations
 
 import shutil
 import tempfile
+from collections.abc import Collection, Mapping
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -36,7 +40,14 @@ from hse_doc_studio.infra.pack_studio.layout import (
     template_versions,
 )
 from hse_doc_studio.infra.pack_studio.yaml_edits import YamlEditError, delete, set_value
-from hse_doc_studio.infra.template.releases import ReleaseEntry, freeze, load_releases
+from hse_doc_studio.infra.template.pack_lint import class_base
+from hse_doc_studio.infra.template.releases import (
+    RELEASES_FILE,
+    ReleaseEntry,
+    freeze,
+    load_releases,
+    write_releases,
+)
 
 _JUNK = ("__pycache__", ".DS_Store", "Thumbs.db", "desktop.ini")
 
@@ -56,6 +67,32 @@ def next_number(latest: str, update_class: TemplateUpdateClass) -> str:
     if update_class is TemplateUpdateClass.minor:
         return f"{year}.{minor + 1}.0"
     return f"{year}.{minor}.{patch + 1}"
+
+
+def previous_version(template_dir: Path, version: str) -> str | None:
+    """Предыдущая выпущенная версия ниже `version` (её каталог есть), а если такой нет, предыдущая по номеру."""
+    key = parse_version_key(version)
+    if key is None:
+        return None
+    released = [v for v in load_releases(template_dir) if (k := parse_version_key(v)) is not None and k < key]
+    versions = template_versions(template_dir)
+    others = [v for v, k in versions.items() if k < key]
+    pool = [v for v in released if v in versions] or others
+    return max(pool, key=lambda v: parse_version_key(v) or (0, 0, 0)) if pool else None
+
+
+def class_base_of(version_dir: Path) -> str | None:
+    """С какой версией сверяется класс: как у линтера (`class_base`), иначе предыдущая (`previous_version`)."""
+    return class_base(version_dir) or previous_version(version_dir.parent.parent, version_dir.name)
+
+
+def free_number(latest: str, update_class: TemplateUpdateClass, taken: Collection[str]) -> str:
+    """Следующий номер по классу после `latest`, который ещё не занят: занятый сдвигается следующим patch."""
+    taken_keys = {k for v in taken if (k := parse_version_key(v)) is not None}
+    number = next_number(latest, update_class)
+    while parse_version_key(number) in taken_keys:
+        number = next_number(number, TemplateUpdateClass.patch)
+    return number
 
 
 @dataclass(frozen=True)
@@ -88,7 +125,12 @@ def _empty_notes(text: str, data: dict[str, Any]) -> str:
     return text
 
 
-def _draft_manifest(text: str, version: str, today: date) -> str:
+def _latest(versions: Collection[str]) -> str:
+    keyed = {v: k for v in versions if (k := parse_version_key(v)) is not None}
+    return max(keyed, key=lambda v: keyed[v])
+
+
+def _draft_manifest(text: str, version: str, today: date, *, keep_notes: bool = False) -> str:
     """`version.yaml` черновика: точечные правки копии базы, остальной текст байт в байт."""
     data = yaml.safe_load(text) or {}
     if not isinstance(data, dict):
@@ -97,32 +139,39 @@ def _draft_manifest(text: str, version: str, today: date) -> str:
     text = set_value(text, ("status",), "beta", after="id")
     if "released_at" in data:
         text = set_value(text, ("released_at",), today)
+    if keep_notes:
+        return text
     if "release" in data:
         text = delete(text, ("release",))
     return _empty_notes(text, data)
 
 
 def _plan_number(
-    template_dir: Path, base: str | None, to: str | None, update_class: TemplateUpdateClass | None
+    template_dir: Path,
+    base: str | None,
+    to: str | None,
+    update_class: TemplateUpdateClass | None,
+    taken: Collection[str] = (),
 ) -> tuple[str, str, TemplateUpdateClass, list[str]]:
     """База, номер, класс по номеру и замечания для новой версии; номер свободен и выше базы."""
     versions = template_versions(template_dir)
     if not versions:
         raise PackPathError(f"{template_dir}: в versions/ нет версий для копии")
-    latest = next(reversed(versions))
-    base = base or latest
+    latest = _latest([*versions, *taken])
+    base = base or next(reversed(versions))
     if base not in versions:
         raise PackPathError(f"{template_dir.name}: версии {base} нет в versions/")
-    to = to or next_number(latest, update_class or TemplateUpdateClass.patch)
+    to = to or free_number(latest, update_class or TemplateUpdateClass.patch, [*versions, *taken])
     to_key = parse_version_key(to)
     if to_key is None:
         raise PackVersionError(f"номер {to} не разобран (нужен ГОД.MINOR.PATCH)")
-    if (template_dir / VERSIONS_DIR / to).exists() or to_key in versions.values():
+    taken_keys = {k for v in taken if (k := parse_version_key(v)) is not None}
+    if (template_dir / VERSIONS_DIR / to).exists() or to_key in versions.values() or to_key in taken_keys:
         raise PackVersionError(f"{template_dir.name}@{to}: такая версия уже есть")
     by_number = classify_update(base, to)
     if by_number is None:
         raise PackVersionError(f"{template_dir.name}: номер {to} должен быть выше базы {base}")
-    notes = [f"номер {to} ниже последней версии {latest}"] if to_key < versions[latest] else []
+    notes = [f"номер {to} ниже последней версии {latest}"] if to_key < (parse_version_key(latest) or to_key) else []
     unreleased = [v for v in versions if v not in load_releases(template_dir)]
     if unreleased:
         notes.append("уже есть невыпущенные версии: " + ", ".join(unreleased))
@@ -136,27 +185,136 @@ def create_version(
     to: str | None = None,
     update_class: TemplateUpdateClass | None = None,
     today: date | None = None,
+    taken: Collection[str] = (),
 ) -> NewVersion:
     """Копия версии `base` (по умолчанию последней) в новый номер: `to` или следующий по `update_class` (patch).
 
+    `taken` номера, занятые вне рабочего дерева (выпущенные в базовой ветке, 4.3): их нельзя выбрать.
     Копия собирается во временном каталоге рядом и переименовывается целиком: при ошибке новой версии нет.
     """
     require_template(template_dir)
-    base, to, by_number, notes = _plan_number(template_dir, base, to, update_class)
+    base, to, by_number, notes = _plan_number(template_dir, base, to, update_class, taken)
+    path = copy_version(template_dir, base, to, keep_notes=False, today=today)
+    return NewVersion(template_dir, base, to, by_number, path, tuple(notes))
+
+
+def copy_version(template_dir: Path, source: str, to: str, *, keep_notes: bool, today: date | None = None) -> Path:
+    """Каталог `source` целиком в `versions/<to>/` черновиком (`id`, `status: beta`, `released_at` сегодня).
+
+    Без `keep_notes` блок `release` убран, а заметки пусты (копия чужой версии); с ним заметки и `release` остаются:
+    так правки переезжают на другой номер (7.3). Номер проверяет вызывающий.
+    """
     target = template_dir / VERSIONS_DIR / to
+    if target.exists():
+        raise PackVersionError(f"{template_dir.name}@{to}: такая версия уже есть")
     staging = Path(tempfile.mkdtemp(prefix=f".{to}.", dir=template_dir / VERSIONS_DIR))
     try:
         copy = staging / "v"
-        shutil.copytree(template_dir / VERSIONS_DIR / base, copy, symlinks=True, ignore=shutil.ignore_patterns(*_JUNK))
+        shutil.copytree(
+            template_dir / VERSIONS_DIR / source, copy, symlinks=True, ignore=shutil.ignore_patterns(*_JUNK)
+        )
         manifest = copy / VERSION_MANIFEST
-        draft = _draft_manifest(_read(manifest), to, today or date.today())  # noqa: DTZ011 — местный календарь автора
+        day = today or date.today()  # noqa: DTZ011 — местный календарь автора
+        draft = _draft_manifest(_read(manifest), to, day, keep_notes=keep_notes)
         manifest.write_bytes(draft.encode("utf-8"))
         copy.rename(target)
     except (OSError, YamlEditError, yaml.YAMLError) as exc:
         raise PackVersionError(f"{template_dir.name}@{to}: копия не создана ({exc})") from exc
     finally:
         shutil.rmtree(staging, ignore_errors=True)
-    return NewVersion(template_dir, base, to, by_number, target, tuple(notes))
+    return target
+
+
+@dataclass(frozen=True)
+class Renumbered:
+    template_dir: Path
+    previous: str
+    version: str
+    path: Path
+    # Запись выпуска в ветке снята: версия снова черновик и выпускается заново.
+    unreleased: bool
+    edited: tuple[str, ...]
+
+
+def renumber_version(
+    template_dir: Path, version: str, to: str, *, taken: Collection[str] = (), today: date | None = None
+) -> Renumbered:
+    """Черновик `version` переезжает в `versions/<to>/` (4.3, 7.1 шаг 3): `id` новый, остальное как было.
+
+    Внесённая в реестр рабочего дерева версия (выпуск ещё не слит) теряет запись и снова становится `beta`: выпуск
+    повторяется под новым номером. `default_version` шаблона, если указывал на старый номер, переезжает следом.
+    Выпущенную в базе версию сюда передавать нельзя: это решает вызывающий (защита 4.5).
+    """
+    source = _check_renumber(template_dir, version, to, taken)
+    entries = load_releases(template_dir)
+    registered = version in entries
+    edits = _Edits()
+    target = template_dir / VERSIONS_DIR / to
+    source.rename(target)
+    try:
+        _renumber_files(edits, template_dir, version, to, today or date.today())  # noqa: DTZ011
+        if registered:
+            remaining = {v: e for v, e in entries.items() if v != version}
+            edits.write(template_dir / RELEASES_FILE, _registry_text(remaining))
+    except (OSError, YamlEditError, yaml.YAMLError) as exc:
+        edits.rollback()
+        target.rename(source)
+        raise PackVersionError(f"{template_dir.name}@{version}: номер не изменён ({exc})") from exc
+    return Renumbered(template_dir, version, to, target, registered, tuple(edits.edited))
+
+
+def _check_renumber(template_dir: Path, version: str, to: str, taken: Collection[str]) -> Path:
+    require_template(template_dir)
+    source = template_dir / VERSIONS_DIR / version
+    if not (source / VERSION_MANIFEST).is_file():
+        raise PackPathError(f"{template_dir.name}: версии {version} нет")
+    to_key = parse_version_key(to)
+    if to_key is None:
+        raise PackVersionError(f"номер {to} не разобран (нужен ГОД.MINOR.PATCH)")
+    others = {k for v, k in template_versions(template_dir).items() if v != version}
+    taken_keys = {k for v in taken if (k := parse_version_key(v)) is not None}
+    if (template_dir / VERSIONS_DIR / to).exists() or to_key in others or to_key in taken_keys:
+        raise PackVersionError(f"{template_dir.name}@{to}: такая версия уже есть")
+    base = class_base_of(source)
+    if base is not None and classify_update(base, to) is None:
+        raise PackVersionError(f"{template_dir.name}: номер {to} должен быть выше базы {base}")
+    return source
+
+
+def _renumber_files(edits: _Edits, template_dir: Path, version: str, to: str, today: date) -> None:
+    """`id` переехавшей версии; внесённая в реестр снова `beta`; `default_version` шаблона следом за номером."""
+    manifest_path = template_dir / VERSIONS_DIR / to / VERSION_MANIFEST
+    text = set_value(_read(manifest_path), ("id",), to)
+    if version in load_releases(template_dir):
+        text = set_value(text, ("status",), "beta", after="id")
+        if "released_at" in (yaml.safe_load(text) or {}):
+            text = set_value(text, ("released_at",), today)
+    edits.write(manifest_path, text)
+    template_path = template_dir / TEMPLATE_MANIFEST
+    if template_path.is_file():
+        data = yaml.safe_load(_read(template_path)) or {}
+        if isinstance(data, dict) and str(data.get("default_version")) == version:
+            edits.write(template_path, set_value(_read(template_path), ("default_version",), to))
+
+
+def _registry_text(entries: dict[str, ReleaseEntry]) -> str:
+    """Текст реестра из записей тем же писателем, что у `freeze` (во временном каталоге)."""
+    with tempfile.TemporaryDirectory() as tmp:
+        write_releases(Path(tmp), entries)
+        return _read(Path(tmp) / RELEASES_FILE)
+
+
+def restore_registry(template_dir: Path, base: Mapping[str, ReleaseEntry]) -> bool:
+    """Записи выпущенных в базе версий в реестре рабочего дерева как в базе, свои невыпущенные остаются (4.5, 7.3).
+
+    True, если реестр переписан.
+    """
+    current = load_releases(template_dir)
+    merged = {**{v: e for v, e in current.items() if v not in base}, **dict(base)}
+    if merged == current:
+        return False
+    write_releases(template_dir, merged)
+    return True
 
 
 @dataclass(frozen=True)

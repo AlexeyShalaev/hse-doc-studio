@@ -522,3 +522,140 @@ class PackPreviewBuildResponse(StrictModel):
 
 class PackPreviewStartResponse(StrictModel):
     builds: list[PackPreviewBuildResponse]
+
+
+# ── Срез T10: мастер «Новая версия» ─────────────────────────────────────────
+
+UpdateClassName = Literal["patch", "minor", "major"]
+
+
+class PackLocalizedList(StrictModel):
+    """Пункты по языкам: списки ru и en параллельны (`pack_lint`)."""
+
+    ru: list[StrictStr] = Field(default_factory=list, max_length=50)
+    en: list[StrictStr] = Field(default_factory=list, max_length=50)
+
+
+class PackVersionNumbers(StrictModel):
+    """Номер по классу: свободный, после последней известной версии (на диске и в базовой ветке)."""
+
+    patch: str | None
+    minor: str | None
+    major: str | None
+
+
+class PackVersionChoice(StrictModel):
+    version: str
+    status: str | None
+    released: bool
+    registered: bool
+    modified: bool
+
+
+class PackVersionOptionsResponse(StrictModel):
+    pack: str
+    template: str
+    versions: list[PackVersionChoice]
+    default_base: str | None
+    default_version: str | None
+    numbers: PackVersionNumbers
+
+
+class CreatePackVersionRequest(StrictModel):
+    # База копии: по умолчанию последняя выпущенная.
+    base: StrictStr | None = Field(default=None, max_length=64)
+    # Номер явно или по классу (по умолчанию patch).
+    version: StrictStr | None = Field(default=None, max_length=64)
+    update_class: UpdateClassName | None = None
+
+
+class PackVersionRef(StrictModel):
+    pack: str
+    template: str
+    version: str
+    path: str
+
+
+class PackVersionCreatedResponse(StrictModel):
+    version: PackVersionRef
+    base: str
+    update_class: UpdateClassName | None
+    warnings: list[str]
+
+
+class PackVersionReason(StrictModel):
+    code: str
+    path: str
+    change: str
+    minimum: UpdateClassName
+    suggested: UpdateClassName
+    hard: bool
+    exception: bool
+    message: dict[str, str]
+
+
+class PackVersionStateResponse(StrictModel):
+    version: PackVersionRef
+    status: str | None
+    released: bool
+    modified: bool
+    registered: bool
+    release_outdated: bool
+    is_default: bool
+    base: str | None
+    minimum: UpdateClassName | None
+    suggested: UpdateClassName | None
+    by_number: UpdateClassName | None
+    declared: UpdateClassName | None
+    note: str | None
+    number_ok: bool
+    headline: dict[str, str]
+    reasons: list[PackVersionReason]
+    numbers: PackVersionNumbers
+    changes: PackLocalizedList
+    breaking_changes: PackLocalizedList
+    draft_changes: PackLocalizedList
+    draft_breaking: PackLocalizedList
+    move_to: str | None
+    error: str | None
+
+
+class PackVersionNotesRequest(StrictModel):
+    """Поле не передано или null: не менять. Пустая `note` убирает объяснение класса."""
+
+    changes: PackLocalizedList | None = None
+    breaking_changes: PackLocalizedList | None = None
+    note: StrictStr | None = Field(default=None, max_length=2000)
+
+
+class PackRenumberRequest(StrictModel):
+    version: StrictStr = Field(min_length=1, max_length=64)
+
+
+class PackMoveEditsRequest(StrictModel):
+    # Без номера: следующий свободный того же класса, что у номера выпущенной версии.
+    version: StrictStr | None = Field(default=None, max_length=64)
+
+
+class PackVersionMovedResponse(StrictModel):
+    version: PackVersionRef
+    previous: str
+    unreleased: bool
+    restored: bool
+
+
+class PackReleaseRequest(StrictModel):
+    # Класс выпуска (`release.kind`): по умолчанию по номеру; мягче минимума нельзя.
+    kind: UpdateClassName | None = None
+    set_default: bool = False
+
+
+class PackReleaseResponse(StrictModel):
+    version: PackVersionRef
+    digest: str
+    kind: UpdateClassName | None
+    previous: str | None
+    replaced: bool
+    default_set: bool
+    edited: list[str]
+    warnings: list[str]

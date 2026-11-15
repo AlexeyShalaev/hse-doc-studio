@@ -1,0 +1,11 @@
+{
+  "version": {
+    "pack": "hse-cs-sse",
+    "template": "coursework",
+    "version": "2026.2.0",
+    "path": "hse-cs-sse/templates/coursework/versions/2026.2.0"
+  },
+  "previous": "2026.1.7",
+  "unreleased": false,
+  "restored": false
+}
