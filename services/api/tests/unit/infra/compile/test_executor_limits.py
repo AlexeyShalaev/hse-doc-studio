@@ -103,9 +103,30 @@ async def test__run__non_root_runner__format_built_before_latexmk(tmp_path: Path
     assert tail[3:5] == ["xelatex", "latexmk"]
 
 
-async def test__run__embedded_profile__latexmk_runs_directly(tmp_path: Path, docker_log: Path) -> None:
+async def test__run__embedded_profile__format_built_only_when_missing(tmp_path: Path, docker_log: Path) -> None:
+    # Образ без готового формата (TL2024-historic): root строит его вне `-output-directory`, а не mktexfmt при сборке.
     await _compile(None, tmp_path)
 
     first_run = next(call for call in recorded_calls(docker_log) if call[:1] == ["run"])
-    assert "fmtutil-user" not in " ".join(first_run)
-    assert "latexmk" in first_run
+    tail = first_run[first_run.index("sh") :]
+    assert tail[:2] == ["sh", "-c"]
+    script = tail[2]
+    assert script.startswith('kpsewhich -engine="$1" "$0.fmt"')
+    assert '|| (cd /tmp && fmtutil-user --byfmt "$0" >&2)' in script
+    assert script.endswith('shift; exec "$@"')
+    assert tail[3:6] == ["xelatex", "xetex", "latexmk"]
+
+
+@pytest.mark.parametrize(("engine", "kpse_engine"), [("lualatex", "luahbtex"), ("pdflatex", "pdftex")])
+async def test__run__embedded_profile__format_engine_per_engine(
+    tmp_path: Path, docker_log: Path, engine: str, kpse_engine: str
+) -> None:
+    project = tmp_path / "project"
+    (project / "tz").mkdir(parents=True)
+    (project / "tz" / "main.tex").write_text("x", encoding="utf-8", newline="\n")
+    lines = await DockerCompileExecutor(HostPathResolver()).run(project, "tz/main.tex", engine, 3, "tz", uuid4())
+    _ = [line async for line in lines]
+
+    first_run = next(call for call in recorded_calls(docker_log) if call[:1] == ["run"])
+    tail = first_run[first_run.index("sh") :]
+    assert tail[3:6] == [engine, kpse_engine, "latexmk"]
