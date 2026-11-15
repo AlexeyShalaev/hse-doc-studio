@@ -6,6 +6,26 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.34.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.33.0...v0.34.0) (2026-11-15)
+
+
+### Features
+
+* **files:** validate uploaded paths, cap file size and track user PDFs in history ([c4c7528](https://github.com/AlexeyShalaev/hse-doc-studio/commit/c4c75283231fd09c9043edfedcadb7a20a373268))
+* upload files into a project from the browser ([30dc4bc](https://github.com/AlexeyShalaev/hse-doc-studio/commit/30dc4bc1267a98ae40493b024c6c1e0136d80cc9))
+* **web:** upload files and folders into the project file tree ([6d227eb](https://github.com/AlexeyShalaev/hse-doc-studio/commit/6d227ebc9f3558d38790def75c0a9ef9cea23ed6))
+
+
+### Bug Fixes
+
+* **compile:** checks failure keeps the built PDF, documents report the build result ([feeab37](https://github.com/AlexeyShalaev/hse-doc-studio/commit/feeab37021d85daa6c842b1e9f377bad737ad161))
+* **pack-studio:** git state of a partial clone without base blobs ([ffd9765](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ffd9765e6e2610db5aa0faa8ff91055ee534f420))
+* **pack-studio:** git state of a partial clone without base blobs ([5f1777d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/5f1777dea60095f697e77dafbb6a4df8f9c3c571))
+* preview shows the built PDF when checks find errors ([c8c7b93](https://github.com/AlexeyShalaev/hse-doc-studio/commit/c8c7b93482c048c937d8d797e4881a00edb05daa))
+* **vcs:** keep sync local copies of built PDFs out of history ([547a957](https://github.com/AlexeyShalaev/hse-doc-studio/commit/547a957c845309a1a28ff4bbed38beaa4f12dae9))
+* **web:** a successful status still counts as a build in the preview ([3b271f8](https://github.com/AlexeyShalaev/hse-doc-studio/commit/3b271f894c59a36c9b7c1b94297021bbd7b0ae4c))
+* **web:** preview shows the built PDF of a document with check errors ([b24b92d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/b24b92db9adc5430995930f13a4765f4e5a853b9))
+
 ## [0.33.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.32.0...v0.33.0) - 2026-11-15
 
 - Template Studio: a Form tab for version.yaml and doc.yaml. Fields and groups, questionnaires, documents, languages and translations, and variants are edited with the mouse, no hand-written YAML. A field preview and where it is printed are shown alongside. YAML comments and order are kept, and an edit that breaks the pack is not saved.
