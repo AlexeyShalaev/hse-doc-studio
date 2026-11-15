@@ -1,0 +1,28 @@
+{
+  "id": "1c4d8e2f-7b3a-4e5d-9f60-8a2b3c4d5e6f",
+  "workspace_id": "4f0c2a8e-1b7d-4c55-9a51-3b8d6f0e2c11",
+  "pack": "hse-cs-sse",
+  "template": "coursework",
+  "version": "2026.1.7",
+  "document": "report",
+  "example": "approval-gate",
+  "combination": {
+    "academic_supervisor": "yes",
+    "co_supervisor": "no",
+    "kind": "project",
+    "lang": "ru",
+    "meta.proposal_stage": "Предварительная",
+    "staffing": "solo",
+    "supervisor": "university"
+  },
+  "key": "3f2a3f2a3f2a3f2a3f2a3f2a3f2a3f2a3f2a3f2a3f2a3f2a3f2a3f2a3f2a3f2a",
+  "status": "succeeded",
+  "cached": true,
+  "created_at": "2026-11-15T09:31:00Z",
+  "started_at": "2026-11-15T09:31:00Z",
+  "finished_at": "2026-11-15T09:31:00Z",
+  "pages": 14,
+  "error": null,
+  "source_file": "report/report.tex",
+  "has_anchors": true
+}

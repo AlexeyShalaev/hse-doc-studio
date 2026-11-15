@@ -7,6 +7,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from dishka import Provider, Scope, provide
 
 from hse_doc_studio.api.config import settings
@@ -19,14 +21,18 @@ from hse_doc_studio.core.git_sync.protocols import (
     IGitTransport,
 )
 from hse_doc_studio.core.identity.protocols import IAuditLog
+from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.pack_studio.protocols import (
     IPackChecker,
     IPackHosting,
+    IPackPreviewRenderer,
     IPackStudioSectionStore,
     IPackWorkspaceFiles,
     IPackWorkspaceGit,
     IPackWorkspaceRepository,
+    IPreviewDispatcher,
+    IPreviewStore,
     IServiceAccessRepository,
     WorkspaceLimits,
 )
@@ -36,6 +42,10 @@ from hse_doc_studio.core.vcs.protocols import ICommitAuthorProvider
 from hse_doc_studio.infra.pack_studio.hosting import HttpPackHosting
 from hse_doc_studio.infra.pack_studio.local_store import JsonPackWorkspaceRepository, LocalSectionStore
 from hse_doc_studio.infra.pack_studio.plumbing import PackGitPlumbing
+from hse_doc_studio.infra.pack_studio.preview_dispatch import PreviewJobDispatcher
+from hse_doc_studio.infra.pack_studio.preview_renderer import PackPreviewRenderer, PreviewRenderLimits
+from hse_doc_studio.infra.pack_studio.preview_store import FsPreviewStore
+from hse_doc_studio.infra.pack_studio.preview_worker import StageLimits
 from hse_doc_studio.infra.pack_studio.workspace_check import WorkspacePackChecker
 from hse_doc_studio.infra.pack_studio.workspace_files import LocalPackWorkspaceFiles
 from hse_doc_studio.infra.pack_studio.workspace_git import PackWorkspaceGit, workspace_dirs
@@ -44,6 +54,7 @@ from hse_doc_studio.use_cases.git_sync.provider_resolver import ProviderResolver
 from hse_doc_studio.use_cases.pack_studio.access import PackStudioAccess
 from hse_doc_studio.use_cases.pack_studio.files import PackFilesService
 from hse_doc_studio.use_cases.pack_studio.git import PackGitService
+from hse_doc_studio.use_cases.pack_studio.preview import PackPreviewService, PreviewLimits
 from hse_doc_studio.use_cases.pack_studio.workspaces import PackWorkspaceService, WorkspaceTasks
 
 
@@ -55,6 +66,17 @@ def workspace_limits() -> WorkspaceLimits:
         max_clone_bytes=cfg.max_clone_bytes,
         max_tree_bytes=cfg.max_tree_bytes,
         max_tree_files=cfg.max_tree_files,
+    )
+
+
+def previews_root() -> Path:
+    return settings.data_dir / "pack-studio" / "previews"
+
+
+def preview_store() -> FsPreviewStore:
+    cfg = settings.pack_studio
+    return FsPreviewStore(
+        previews_root(), max_cache_entries=cfg.preview_cache_entries, max_age_s=cfg.preview_keep_hours * 3600
     )
 
 
@@ -170,6 +192,37 @@ class PackStudioProvider(Provider):
     @provide
     def get_files_service(self, workspaces: PackWorkspaceService, files: IPackWorkspaceFiles) -> PackFilesService:
         return PackFilesService(workspaces, files, PackYamlEditor())
+
+    @provide
+    def get_preview_store(self) -> IPreviewStore:
+        return preview_store()
+
+    @provide
+    def get_preview_renderer(self) -> IPackPreviewRenderer:
+        cfg = settings.pack_studio
+        limits = PreviewRenderLimits(
+            describe_timeout_s=cfg.preview_describe_timeout_s,
+            materialize_timeout_s=cfg.preview_render_timeout_s,
+            memory_bytes=cfg.preview_render_memory_bytes,
+            stage=StageLimits(max_bytes=cfg.max_tree_bytes, max_files=cfg.max_tree_files),
+        )
+        return PackPreviewRenderer(previews_root() / "tmp", limits)
+
+    @provide
+    def get_preview_dispatcher(self, dispatcher: IJobDispatcher) -> IPreviewDispatcher:
+        # Локально сборка предпросмотра идёт тем же встроенным раннером, что и сборки проектов.
+        return PreviewJobDispatcher(dispatcher)
+
+    @provide
+    def get_preview_service(
+        self,
+        workspaces: PackWorkspaceService,
+        renderer: IPackPreviewRenderer,
+        store: IPreviewStore,
+        dispatcher: IPreviewDispatcher,
+    ) -> PackPreviewService:
+        limits = PreviewLimits(max_concurrent=settings.pack_studio.preview_max_concurrent)
+        return PackPreviewService(workspaces, renderer, store, dispatcher, limits=limits)
 
     @staticmethod
     def build_service(  # noqa: PLR0913 — те же порты, что у провайдера

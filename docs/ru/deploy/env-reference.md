@@ -428,6 +428,12 @@ tags:
 | `HSE_STUDIO__PACK_STUDIO__MAX_TREE_BYTES` | int | `268435456` | оба | Largest total size of the files under the packs folder. |
 | `HSE_STUDIO__PACK_STUDIO__MAX_TREE_FILES` | int | `20000` | оба | Most files under the packs folder. |
 | `HSE_STUDIO__PACK_STUDIO__DEFAULT_PACKS_PATH` | str | `packs` | оба | Packs folder inside a repository by default. |
+| `HSE_STUDIO__PACK_STUDIO__PREVIEW_MAX_CONCURRENT` | int | `2` | оба | Running preview builds one person may have. |
+| `HSE_STUDIO__PACK_STUDIO__PREVIEW_DESCRIBE_TIMEOUT_S` | float | `20.0` | оба | Time limit of the isolated process that reads a draft version. |
+| `HSE_STUDIO__PACK_STUDIO__PREVIEW_RENDER_TIMEOUT_S` | float | `30.0` | оба | Time limit of the isolated process that renders the synthetic project. |
+| `HSE_STUDIO__PACK_STUDIO__PREVIEW_RENDER_MEMORY_BYTES` | int | `536870912` | оба | Memory limit of the isolated render process (Linux). |
+| `HSE_STUDIO__PACK_STUDIO__PREVIEW_CACHE_ENTRIES` | int | `200` | оба | Built preview PDFs kept by cache key. |
+| `HSE_STUDIO__PACK_STUDIO__PREVIEW_KEEP_HOURS` | float | `24.0` | оба | How long preview build records, logs and leftover folders are kept. |
 | `HSE_STUDIO__PACK_STUDIO__HOSTING_TIMEOUT_S` | float | `20.0` | оба | Timeout for one request to the git hosting API (pull request, CI status). |
 | `HSE_STUDIO__PACK_STUDIO__MAX_DIFF_BYTES` | int | `1048576` | оба | Largest diff of a workspace against its base branch shown at once. |
 | `HSE_STUDIO__MODE` | local / server | `local` | оба | Instance mode: 'local' (single-user install) or 'server' (shared; not supported yet). |

@@ -43,6 +43,10 @@ _SCHEMAS: dict[str, Any] = {
     "PackServiceAccess": s.PackServiceAccessResponse,
     "PackServiceAccessList": list[s.PackServiceAccessResponse],
     "CreatePackServiceAccessRequest": s.CreatePackServiceAccessRequest,
+    "PackPreviewOptions": s.PackPreviewOptionsResponse,
+    "StartPackPreviewRequest": s.StartPackPreviewRequest,
+    "PackPreviewBuild": s.PackPreviewBuildResponse,
+    "PackPreviewStart": s.PackPreviewStartResponse,
 }
 
 

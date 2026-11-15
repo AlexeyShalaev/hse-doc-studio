@@ -1,0 +1,12 @@
+{
+  "documents": [
+    "project_proposal",
+    "report"
+  ],
+  "example": "auto:long",
+  "combination": {
+    "lang": "en",
+    "supervisor": "company",
+    "meta.proposal_stage": "Доработанная"
+  }
+}

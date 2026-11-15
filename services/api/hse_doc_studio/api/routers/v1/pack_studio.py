@@ -7,6 +7,9 @@
 
 Файлы адресуются путём от папки паков пространства:
 `files/hse-cs-sse/templates/coursework/versions/2026.1.5/version.yaml`.
+
+Предпросмотр (срез T7): `versions/{pack}/{template}/{version}/preview` отдаёт документы, переключатели и наборы данных
+(GET) и запускает сборку (POST); ход сборки, PDF, журнал и якоря мест подписей по `previews/{build_id}`.
 """
 
 from __future__ import annotations
@@ -16,6 +19,7 @@ from uuid import UUID
 
 from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, Depends, Header, Request, Response
+from fastapi.responses import FileResponse, PlainTextResponse
 
 from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.routers.v1.files import _content_type_for
@@ -32,6 +36,13 @@ from hse_doc_studio.api.schemas.pack_studio import (
     PackFileChange,
     PackFileVersionResponse,
     PackGitResponse,
+    PackPreviewBuildResponse,
+    PackPreviewDocument,
+    PackPreviewErrorBody,
+    PackPreviewExample,
+    PackPreviewOptionsResponse,
+    PackPreviewStartResponse,
+    PackPreviewSwitch,
     PackProposeRequest,
     PackProposeResponse,
     PackPullRequest,
@@ -48,14 +59,17 @@ from hse_doc_studio.api.schemas.pack_studio import (
     PackYamlPatchRequest,
     PackYamlPatchResponse,
     ReadOnlyReason,
+    StartPackPreviewRequest,
     UpdatePackStudioSectionRequest,
 )
 from hse_doc_studio.core.access.context import require_actor
 from hse_doc_studio.core.pack_studio.entities import PackTree, WorkspaceKind
 from hse_doc_studio.core.pack_studio.errors import PackStudioError, PackStudioErrorCode
+from hse_doc_studio.core.pack_studio.preview import PreviewBuild
 from hse_doc_studio.use_cases.pack_studio.access import PackStudioAccess, SectionView
 from hse_doc_studio.use_cases.pack_studio.files import PackFilesService, YamlOp
 from hse_doc_studio.use_cases.pack_studio.git import ForkChoice, GitView, PackGitService, ProposeInput
+from hse_doc_studio.use_cases.pack_studio.preview import PackPreviewService, PreviewOptions, StartPreviewInput
 from hse_doc_studio.use_cases.pack_studio.workspaces import (
     CreateWorkspaceInput,
     PackWorkspaceService,
@@ -431,3 +445,148 @@ async def start_over(
 ) -> PackGitResponse:
     """«Начать заново от базовой ветки» после слияния PR: дерево на свежую базу, ветка и PR забываются."""
     return git_response(await git.start_over(require_actor(), workspace_id, discard=body.discard))
+
+
+# ── предпросмотр ────────────────────────────────────────────────────────────
+
+_PREVIEW = "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/preview"
+_BUILD = "/pack-studio/workspaces/{workspace_id}/previews/{build_id}"
+
+
+def preview_options_response(
+    workspace_id: UUID, pack: str, template: str, version: str, options: PreviewOptions
+) -> PackPreviewOptionsResponse:
+    return PackPreviewOptionsResponse(
+        workspace_id=str(workspace_id),
+        pack=pack,
+        template=template,
+        version=version,
+        pack_id=options.pack_id,
+        template_id=options.template_id,
+        version_id=options.version_id,
+        documents=[
+            PackPreviewDocument(
+                id=doc.id, name=dict(doc.name), kinds=list(doc.supported_kinds), staffing=list(doc.supported_staffing)
+            )
+            for doc in options.documents
+        ],
+        switches=[
+            PackPreviewSwitch(
+                id=sw.id, values=list(sw.values), default=sw.default, label=dict(sw.label) if sw.label else None
+            )
+            for sw in options.switches
+        ],
+        examples=[
+            PackPreviewExample(
+                id=ex.id,
+                source="file" if ex.source == "file" else "auto",
+                label=dict(ex.label) if ex.label else None,
+                error=ex.error,
+                defaults=dict(ex.data.defaults) if ex.data is not None else {},
+            )
+            for ex in options.examples
+        ],
+        default_example=options.default_example,
+        combination=dict(options.combination),
+    )
+
+
+def preview_build_response(build: PreviewBuild) -> PackPreviewBuildResponse:
+    return PackPreviewBuildResponse(
+        id=str(build.id),
+        workspace_id=str(build.workspace_id),
+        pack=build.pack,
+        template=build.template,
+        version=build.version,
+        document=build.document,
+        example=build.example,
+        combination=dict(build.combination),
+        key=build.key,
+        status=build.status.value,
+        cached=build.cached,
+        created_at=build.created_at,
+        started_at=build.started_at,
+        finished_at=build.finished_at,
+        pages=build.pages,
+        error=None if build.error is None else PackPreviewErrorBody(code=build.error.code, detail=build.error.detail),
+        source_file=build.source_file,
+        has_anchors=build.has_anchors,
+    )
+
+
+@router.get(_PREVIEW, response_model=PackPreviewOptionsResponse)
+async def get_preview_options(  # noqa: PLR0913 — путь версии
+    workspace_id: UUID,
+    pack: str,
+    template: str,
+    version: str,
+    previews: FromDishka[PackPreviewService],
+    response: Response,
+) -> PackPreviewOptionsResponse:
+    """Документы версии, переключатели комбинаций, наборы данных и комбинация по умолчанию (6.1, 6.2)."""
+    response.headers.update(_NO_STORE)
+    options = await previews.options(require_actor(), workspace_id, pack, template, version)
+    return preview_options_response(workspace_id, pack, template, version, options)
+
+
+@router.post(_PREVIEW, status_code=202, response_model=PackPreviewStartResponse)
+async def start_preview(  # noqa: PLR0913 — путь версии и тело
+    workspace_id: UUID,
+    pack: str,
+    template: str,
+    version: str,
+    body: StartPackPreviewRequest,
+    previews: FromDishka[PackPreviewService],
+    response: Response,
+) -> PackPreviewStartResponse:
+    """Сборка документов в комбинации: 202, ход по `previews/{id}`; 200, если всё взято из кэша."""
+    builds = await previews.start(
+        require_actor(),
+        workspace_id,
+        pack,
+        template,
+        version,
+        StartPreviewInput(documents=body.documents, example=body.example, combination=body.combination),
+    )
+    if all(build.status.is_terminal for build in builds):
+        response.status_code = 200
+    return PackPreviewStartResponse(builds=[preview_build_response(build) for build in builds])
+
+
+@router.get(_BUILD, response_model=PackPreviewBuildResponse)
+async def get_preview(
+    workspace_id: UUID, build_id: UUID, previews: FromDishka[PackPreviewService], response: Response
+) -> PackPreviewBuildResponse:
+    response.headers.update(_NO_STORE)
+    return preview_build_response(await previews.get(require_actor(), workspace_id, build_id))
+
+
+@router.delete(_BUILD, response_model=PackPreviewBuildResponse)
+async def cancel_preview(
+    workspace_id: UUID, build_id: UUID, previews: FromDishka[PackPreviewService]
+) -> PackPreviewBuildResponse:
+    """Отмена идущей сборки; законченную возвращает как есть."""
+    return preview_build_response(await previews.cancel(require_actor(), workspace_id, build_id))
+
+
+@router.get(_BUILD + "/pdf", response_model=None)
+async def get_preview_pdf(workspace_id: UUID, build_id: UUID, previews: FromDishka[PackPreviewService]) -> Response:
+    """PDF удачной сборки; иначе 409 `preview_not_ready`. Содержимое по id сборки не меняется."""
+    path = await previews.pdf(require_actor(), workspace_id, build_id)
+    return FileResponse(path, media_type="application/pdf", headers={"Cache-Control": "private, max-age=3600"})
+
+
+@router.get(_BUILD + "/log", response_class=PlainTextResponse)
+async def get_preview_log(
+    workspace_id: UUID, build_id: UUID, previews: FromDishka[PackPreviewService]
+) -> PlainTextResponse:
+    """Журнал сборки: предупреждения рендера (`[render]`), вывод latexmk и объяснение неудачи."""
+    text = await previews.log(require_actor(), workspace_id, build_id)
+    return PlainTextResponse(text, headers=_NO_STORE)
+
+
+@router.get(_BUILD + "/anchors", response_model=None)
+async def get_preview_anchors(workspace_id: UUID, build_id: UUID, previews: FromDishka[PackPreviewService]) -> Response:
+    """Якоря мест подписей и меток даты собранного PDF (тот же `anchors.json`, что у сборки проекта)."""
+    data = await previews.anchors(require_actor(), workspace_id, build_id)
+    return Response(content=data, media_type="application/json", headers=_NO_STORE)

@@ -285,6 +285,13 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/pack-studio/workspaces/{workspace_id}/git/checks"): _A,
     ("POST", "/pack-studio/workspaces/{workspace_id}/git/merge-base"): _A,
     ("POST", "/pack-studio/workspaces/{workspace_id}/git/start-over"): _A,
+    ("GET", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/preview"): _A,
+    ("POST", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/preview"): _A,
+    ("GET", "/pack-studio/workspaces/{workspace_id}/previews/{build_id}"): _A,
+    ("DELETE", "/pack-studio/workspaces/{workspace_id}/previews/{build_id}"): _A,
+    ("GET", "/pack-studio/workspaces/{workspace_id}/previews/{build_id}/pdf"): _A,
+    ("GET", "/pack-studio/workspaces/{workspace_id}/previews/{build_id}/log"): _A,
+    ("GET", "/pack-studio/workspaces/{workspace_id}/previews/{build_id}/anchors"): _A,
     # Профиль подписанта: только свой, путь без id пользователя (только сервер)
     ("GET", "/account/signer-profile"): _A,
     ("GET", "/account/signer-profile/image"): _A,
