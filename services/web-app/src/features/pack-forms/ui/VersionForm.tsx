@@ -1,6 +1,8 @@
 import { useState, type ComponentType } from "react";
 import { clsx } from "clsx";
 import { useTranslation } from "react-i18next";
+import { DocumentsSection } from "./documents/DocumentsSection";
+import { LanguagesSection } from "./documents/LanguagesSection";
 import { FieldsSection } from "./fields/FieldsSection";
 import { ChecksSection } from "./checks/ChecksSections";
 import { FormsSection } from "./forms/FormsSection";
@@ -11,6 +13,8 @@ export type VersionSectionProps = {
   workspaceId: string;
   path: string;
   onSaved: (changed: string[]) => void;
+  /** Открыть файл пространства в редакторе (манифест документа из ростера). */
+  onOpenFile?: ((path: string) => void) | undefined;
 };
 
 /**
@@ -23,6 +27,8 @@ export const VERSION_SECTIONS: {
 }[] = [
   { id: "fields", Component: FieldsSection },
   { id: "forms", Component: FormsSection },
+  { id: "documents", Component: DocumentsSection },
+  { id: "languages", Component: LanguagesSection },
   { id: "submission", Component: SubmissionSection },
   { id: "checks", Component: ChecksSection },
 ];

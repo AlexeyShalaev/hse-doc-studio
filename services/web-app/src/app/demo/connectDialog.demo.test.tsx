@@ -229,7 +229,7 @@ describe("окно подключения поверх демо-транспор
     });
     expect(replace).toBeDisabled();
     await user.type(
-      within(hostDialog).getByLabelText(/введи имя сервера/),
+      within(hostDialog).getByLabelText(/введите имя сервера/),
       "github.com",
     );
     await user.click(replace);
@@ -404,7 +404,7 @@ describe("окно подключения поверх демо-транспор
     ).toBeInTheDocument();
     await user.click(within(dialog).getByTestId("tls-pin-confirm"));
     await user.type(
-      within(dialog).getByLabelText(/введи имя сервера/),
+      within(dialog).getByLabelText(/введите имя сервера/),
       "gitlab.rotated.local",
     );
     await user.click(within(dialog).getByTestId("tls-submit"));

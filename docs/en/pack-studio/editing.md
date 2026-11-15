@@ -22,7 +22,7 @@ tags:
 - **Save** writes the file. **Discard changes** brings back the saved text. The Studio will not let you leave a file with unsaved edits silently.
 - If the file changed since you opened it (another tab, an edit in the folder), the Studio offers **Take their version**, **Keep mine** or **Compare**.
 - Completion: in Jinja templates (`{{ }}`, `((* *))`) the context variables, the form fields `project.meta.<key>` and the pack filters; in the version's LaTeX the `\hse...` macros and the fields they print.
-- Manifests (`version.yaml`, `doc.yaml`) and rules files `checks/*.yaml` have the **Source** and **Form** tabs. `version.yaml` and rules files have a form; other manifests have only "Source" for now.
+- Version and document manifests (`version.yaml`, `doc.yaml`) and rules files `checks/*.yaml` have the **Source** and **Form** tabs.
 
 <!-- T11, T12 (forms): add fields and groups, questionnaires, documents to the "Forms" section below, next to "Submission and signing". -->
 

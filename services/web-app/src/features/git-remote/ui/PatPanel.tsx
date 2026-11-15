@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, type ReactNode } from "react";
 import { Eye, EyeOff, Lock, ScanSearch } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { GitCredential, PermissionProfile } from "@entities/git-remote";
@@ -35,6 +35,10 @@ export type PatPanelProps = {
   onCheckToken?: () => void;
   /** Профиль прав каталога для памятки о токене (packs). */
   profile?: PermissionProfile | null;
+  /** Фокус в поле токена при показе: выключают, когда форма появляется во время ввода в другом поле. */
+  autoFocus?: boolean;
+  /** Итог проверки токена: показывается сразу под полем. */
+  feedback?: ReactNode;
 };
 
 // Форма токена. Сам токен живёт только в состоянии шага и очищается сразу, как
@@ -54,6 +58,8 @@ export const PatPanel = ({
   onPasteToken,
   onCheckToken,
   profile = null,
+  autoFocus = true,
+  feedback = null,
 }: PatPanelProps) => {
   const { t } = useTranslation("gitAccess");
   const uid = useId();
@@ -115,7 +121,7 @@ export const PatPanel = ({
             className="input mono"
             style={{ flex: 1, minWidth: 0 }}
             value={draft.token}
-            autoFocus
+            autoFocus={autoFocus}
             autoComplete="off"
             spellCheck={false}
             autoCapitalize="off"
@@ -167,6 +173,7 @@ export const PatPanel = ({
       </div>
 
       {error && <Notice tone="err" role="alert" text={error} />}
+      {feedback}
 
       {existing && (
         <TokenLinkCard

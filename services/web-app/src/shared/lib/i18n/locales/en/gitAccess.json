@@ -3,7 +3,7 @@
   "subtitle": "Tokens and keys Studio uses to connect to GitHub, GitLab and other servers.",
   "credentials": {
     "title": "Tokens and keys",
-    "empty": "No access yet. It appears when you connect a repository.",
+    "empty": "No access yet. Add a token with the “Add token” button below: you can then pick it in projects and in the Template Studio.",
     "usedBy_one": "Used in {{count}} project",
     "usedBy_other": "Used in {{count}} projects",
     "unused": "Not in use",
@@ -124,6 +124,11 @@
       "userKey": {
         "open": "Open Settings, SSH and GPG keys (button below) and click New SSH key.",
         "paste": "Paste the public key from the field above. The key works for all your repositories on GitHub."
+      },
+      "classic": {
+        "open": "Open Settings, Developer settings, Personal access tokens, Tokens (classic) and click Generate new token (classic). The link above has already filled in the description and the public_repo scope.",
+        "scope": "Under Select scopes only public_repo is ticked (inside the repo group). No other scopes are needed.",
+        "copy": "Choose an Expiration, click Generate token and copy the value: GitHub shows it once."
       }
     },
     "gitlab": {
@@ -327,7 +332,7 @@
       },
       "paste": {
         "title": "Paste",
-        "text": "Paste it in the field below: Studio checks it for you."
+        "text": "Paste it into the token field: Studio checks it for you."
       }
     },
     "githubRepo": "On the page choose \"Only select repositories\" and tick this repository: it cannot be filled in through the link.",
@@ -344,12 +349,17 @@
       "gitlabNew": {
         "lead": "The page did not open? The server may be newer than it looks.",
         "link": "Open the page for newer versions"
+      },
+      "githubFineGrained": {
+        "lead": "Are you an owner or maintainer of this repository?",
+        "link": "Fine-grained token for this repository only"
       }
     },
     "broad": "A classic token gives access to all your repositories. Choose a fine-grained one if you can.",
     "steps": "Detailed steps",
     "docs": "{{provider}} documentation",
-    "legacyGitlab": "This is GitLab {{version}}, an old version: its token page is different. We open the address for older versions."
+    "legacyGitlab": "This is GitLab {{version}}, an old version: its token page is different. We open the address for older versions.",
+    "forkNote": "This repository is not yours, so a fine-grained token for it cannot be issued. Studio creates a fork in your account, pushes the branch there and opens a pull request: a classic token with the public_repo scope is enough for that. It works for all your public repositories, so set an expiry date and revoke the token when you no longer need it."
   },
   "tokenCheck": {
     "running": {
@@ -531,5 +541,15 @@
       "save": "Save",
       "cancel": "Cancel"
     }
+  },
+  "addToken": {
+    "title": "Add token",
+    "lead": "The token is stored encrypted under Git access. You can pick it when connecting a project and in the Template Studio.",
+    "server": "Server or repository address",
+    "serverHint": "For example github.com or gitlab.hse.ru. You can also paste the whole repository address.",
+    "serverInvalid": "A server name is needed, for example github.com.",
+    "submit": "Check and save",
+    "saved": "Token “{{label}}” checked and saved",
+    "close": "Close"
   }
 }
