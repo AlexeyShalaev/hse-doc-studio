@@ -6,6 +6,13 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.31.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.30.0...v0.31.0) - 2026-11-15
+
+- Pack catalogs: an administrator connects packs from a git repository or an archive in the new admin section "Pack catalogs". The Studio checks the packs and shows a plan (new, changed and incompatible versions); after "Apply" they appear in the project wizard without a restart. Once a day the Studio picks up newly released versions on its own.
+- Template Studio: signature places and dates are now placed with the mouse right on the preview PDF.
+- Template Studio can run on your own machine: a docker compose profile in deploy/pack-studio or make pack-studio. It opens your packs folder and hides projects.
+- Official packs: changes can be proposed only with your own GitHub account, through your fork. The service bot was removed for security, together with its daily limit and admin settings.
+
 ## [0.30.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.29.0...v0.30.0) - 2026-11-15
 
 - Fixed: notification emails (signature requests, "Everyone has signed" and others) were not sent and showed up in the mail log with an InterfaceError. Now an email is sent after the action is saved, and not at all if the action was rolled back.
