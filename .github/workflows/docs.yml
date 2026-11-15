@@ -26,10 +26,12 @@ permissions:
   id-token: write
 
 # Один активный деплой Pages; при новом push в master отменяем ещё не завершившийся
-# предыдущий — иначе релизный коммит следом за merge гонится с ним на окружении
+# предыдущий: иначе релизный коммит следом за merge гонится с ним на окружении
 # github-pages, и опоздавший падает с «Deployment failed, try again later».
+# Сборки PR в общую группу pages не попадают: у каждого PR своя группа, иначе
+# параллельные PR отменяют проверки друг друга.
 concurrency:
-  group: pages
+  group: ${{ github.event_name == 'pull_request' && format('docs-pr-{0}', github.ref) || 'pages' }}
   cancel-in-progress: true
 
 jobs:
