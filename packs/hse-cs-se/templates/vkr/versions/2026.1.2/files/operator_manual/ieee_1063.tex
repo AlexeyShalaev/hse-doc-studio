@@ -1,0 +1,298 @@
+% !TeX program = xelatex
+% ============================================================
+% operator_manual/ieee_1063.tex — Software User Documentation
+% IEEE Std 1063-2001 «Software User Documentation».
+%
+% English international-standard ANALOG of the ЕСПД Operator's
+% Manual (РО). Per §2.3.4.2 of the HSE SE practice program,
+% students writing in English may submit this form instead of
+% the translated GOST 19.505-79 manual.
+%
+% Switchable VARIANT of operator_manual.tex — English only, no
+% Russian branch, no project.lang conditionals.
+% ============================================================
+\documentclass[12pt,a4paper]{extarticle}
+\newcommand{\hseDefaultMono}{Consolas}
+\input{../common/fonts}
+\usepackage[english]{babel}
+\usepackage[a4paper,left=25mm,right=15mm,top=20mm,bottom=20mm]{geometry}
+\usepackage{setspace}\onehalfspacing
+\usepackage{indentfirst}\setlength{\parindent}{1.25cm}\setlength{\parskip}{6pt}
+\usepackage{microtype}\usepackage{csquotes}\usepackage{amsmath}\usepackage{graphicx}
+\usepackage{xcolor}\usepackage{float}\usepackage{array}\usepackage{booktabs}
+\usepackage{longtable}\usepackage{tabularx}\usepackage{adjustbox}\usepackage{xurl}\urlstyle{same}
+\usepackage{hyphenat}\usepackage{caption}\usepackage{enumitem}\setlist{nosep}
+\usepackage{titlesec}\usepackage{hyperref}
+\hypersetup{unicode=true,colorlinks=true,linkcolor=black,urlcolor=blue}
+\input{../common/meta}    % provides \hseFill, \projectname, \hseProjectNameEn, \hseAuthorName, \hseGroup, \hseYear ...
+\input{../common/commands}
+\begin{document}\sloppy
+
+% ============================================================
+% TITLE BLOCK
+% ============================================================
+\begin{center}
+{\large\scshape Software User Documentation}\\[2mm]
+{\normalsize IEEE Std 1063-2001}\\[10mm]
+{\Large\bfseries \hseProjectNameEn}\\[2mm]
+{\normalsize Operator's Manual}\\[12mm]
+{\normalsize Author: \hseAuthorName \quad Group: \hseGroup}\\[1mm]
+{\normalsize \hseYear}
+\end{center}
+
+\vspace{6mm}
+\hrule
+\vspace{6mm}
+
+% Hint: the system name above is taken from the project setting
+% "name_en"; if it is empty, fill it in the project settings (or
+% replace \hseProjectNameEn with \projectname to reuse the main name).
+
+% ============================================================
+% 1. IDENTIFICATION DATA
+% ============================================================
+\section{Identification data}
+
+This section identifies the software product this manual documents.
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{0.32\textwidth}|X|}
+\hline
+\textbf{Attribute} & \textbf{Value} \\
+\hline
+Product name & \hseProjectNameEn \\
+\hline
+Software version & \hseFill{release version, e.g. 1.0.0} \\
+\hline
+Document version & \hseFill{document revision} \\
+\hline
+Release date & \hseFill{date} \\
+\hline
+Intended audience & \hseFill{operators / administrators / operations engineers} \\
+\hline
+Assumed prior knowledge & \hseFill{skills the reader is expected to have} \\
+\hline
+\end{tabularx}
+\end{center}
+
+% ============================================================
+% 2. INTRODUCTION
+% ============================================================
+\section{Introduction}
+
+\subsection{Purpose of the document}
+This manual describes how to operate the software product \hseProjectNameEn. It provides the information an operator needs to install, start, use and troubleshoot the software during normal operation. It is written in accordance with IEEE Std 1063-2001, Software User Documentation.
+
+\subsection{Scope}
+The document covers \hseFill{scope: which subsystems / modules are described}. It does not cover \hseFill{out-of-scope topics, e.g. source-code development}. For those topics, refer to the reference material listed in Section~\ref{sec:reference}.
+
+\subsection{Who should read this document}
+This manual is intended for \hseFill{primary audience}. Readers are expected to be familiar with \hseFill{prerequisite tools or concepts}. Sections~\ref{sec:concept} and~\ref{sec:procedures} are essential for first-time operators; experienced operators may go directly to Section~\ref{sec:reference}.
+
+% ============================================================
+% 3. INFORMATION FOR USE OF THE DOCUMENTATION
+% ============================================================
+\section{Information for use of the documentation}
+
+\subsection{Typographic conventions}
+The following conventions are used throughout this manual.
+
+\begin{center}
+\small
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{0.30\textwidth}|X|}
+\hline
+\textbf{Convention} & \textbf{Meaning} \\
+\hline
+\texttt{monospaced} & Commands, file names, parameters and literal input the operator types \\
+\hline
+\textit{italic} & A value the operator replaces with a real one (a placeholder) \\
+\hline
+\textbf{bold} & A user-interface element or an emphasised term \\
+\hline
+Numbered steps & An ordered procedure to be performed in sequence \\
+\hline
+\end{tabularx}
+\end{center}
+
+\subsection{Symbols and admonitions}
+The following labels mark important passages: \textbf{Note} — additional information; \textbf{Caution} — an action that may cause data loss or an outage if performed incorrectly; \textbf{Tip} — an optional shortcut. Add or remove admonition types as your product requires: \hseFill{list any product-specific symbols}.
+
+% ============================================================
+% 4. CONCEPT OF OPERATIONS
+% ============================================================
+\section{Concept of operations}\label{sec:concept}
+
+\subsection{What the software does}
+\hseProjectNameEn{} is intended for \hseFill{brief statement of purpose}. From the operator's point of view it provides \hseFill{main capabilities}. The operator interacts with the software mainly through \hseFill{primary interface, e.g. REST API or web console}.
+
+\subsection{Key concepts}
+Understanding the following concepts is required before performing the procedures.
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item \textbf{\hseFill{concept 1}} --- \hseFill{short definition};
+    \item \textbf{\hseFill{concept 2}} --- \hseFill{short definition};
+    \item \textbf{\hseFill{concept 3}} --- \hseFill{short definition}.
+\end{itemize}
+
+\subsection{Operating environment}
+The software runs in the following environments: \hseFill{e.g. local, staging, production}. This manual assumes the operator works in \hseFill{the environment described here}.
+
+% ============================================================
+% 5. PROCEDURES
+% ============================================================
+\section{Procedures}\label{sec:procedures}
+
+\subsection{Installation and setup}
+Perform the following steps once, before first use.
+
+\begin{enumerate}[label=\arabic*., leftmargin=1.25cm]
+    \item Verify that the workstation meets the prerequisites: \hseFill{hardware and OS requirements}.
+    \item Install the required software: \hseFill{runtime, container engine, client tools}.
+    \item Obtain access credentials for the environment: \hseFill{account, token or key}.
+    \item Download or clone the distribution from \hseFill{source location}.
+    \item Configure the environment variables described in Section~\ref{sec:reference}.
+    \item Verify the installation with the command \texttt{\hseFill{verification command}}; the expected output is \hseFill{expected result}.
+\end{enumerate}
+
+\subsection{Getting started}
+The typical first session proceeds as follows.
+
+\begin{enumerate}[label=\arabic*., leftmargin=1.25cm]
+    \item Start the software with \texttt{\hseFill{start command}}.
+    \item Confirm that the service is ready by checking \hseFill{readiness endpoint or status}.
+    \item Authenticate and obtain an access token, if required: \hseFill{authentication step}.
+    \item Open \hseFill{entry point, e.g. web console or OpenAPI page}.
+\end{enumerate}
+
+\subsection{Main task: \hseFill{name the primary task}}
+Follow these steps to \hseFill{goal of the task}.
+
+\begin{enumerate}[label=\arabic*., leftmargin=1.25cm]
+    \item \hseFill{first action};
+    \item \hseFill{second action};
+    \item \hseFill{third action};
+    \item verify the result: \hseFill{expected outcome}.
+\end{enumerate}
+
+\subsection{Main task: \hseFill{name a second task}}
+Follow these steps to \hseFill{goal of the second task}.
+
+\begin{enumerate}[label=\arabic*., leftmargin=1.25cm]
+    \item \hseFill{first action};
+    \item \hseFill{second action};
+    \item verify the result: \hseFill{expected outcome}.
+\end{enumerate}
+
+\subsection{Shutting down}
+To finish a session safely:
+
+\begin{enumerate}[label=\arabic*., leftmargin=1.25cm]
+    \item save any pending results: \hseFill{how to save};
+    \item revoke temporary tokens and remove sensitive files;
+    \item stop the software with \texttt{\hseFill{stop command}}.
+\end{enumerate}
+
+% ============================================================
+% 6. ERROR MESSAGES AND PROBLEM RESOLUTION
+% ============================================================
+\section{Error messages and problem resolution}
+
+The table below lists the messages the operator may encounter, their meaning and the recommended action. Message identifiers (MSG-01, …) allow cross-referencing from incident reports.
+
+\begin{longtable}{|>{\raggedright\arraybackslash}p{0.10\textwidth}|>{\raggedright\arraybackslash}p{0.24\textwidth}|>{\raggedright\arraybackslash}p{0.28\textwidth}|>{\raggedright\arraybackslash}p{0.26\textwidth}|}
+\caption{Error messages and operator actions}\label{tab:messages}\\
+\hline
+\textbf{ID} & \textbf{Message} & \textbf{Meaning} & \textbf{User action} \\
+\hline
+\endfirsthead
+\caption*{Continuation of Table \thetable}\\
+\hline
+\textbf{ID} & \textbf{Message} & \textbf{Meaning} & \textbf{User action} \\
+\hline
+\endhead
+MSG-01 & \texttt{401 Unauthorized} & The request has no valid token & Authenticate again and check the \texttt{Authorization} header \\
+\hline
+MSG-02 & \texttt{403 Forbidden} & The account lacks permission for the operation & Check the account role and the selected environment \\
+\hline
+MSG-03 & \texttt{404 Not Found} & The requested object does not exist & Verify the identifier and the environment \\
+\hline
+MSG-04 & \texttt{409 Conflict} & The operation conflicts with the current state & Do not retry unchanged; resolve the conflicting object first \\
+\hline
+MSG-05 & \texttt{500 Internal Server Error} & An unexpected server failure & Record the request id, check the logs and report the incident \\
+\hline
+MSG-06 & \texttt{503 Service Unavailable} & A dependency is unavailable: \hseFill{DB, cache, broker} & Check the state of the dependency and retry later \\
+\hline
+MSG-07 & \hseFill{product-specific message} & \hseFill{what it means} & \hseFill{what the operator should do} \\
+\hline
+\end{longtable}
+
+If the problem persists after the recommended action, collect the request identifier, timestamp and logs, then escalate to \hseFill{responsible contact or team}.
+
+% ============================================================
+% 7. REFERENCE MATERIAL
+% ============================================================
+\section{Reference material}\label{sec:reference}
+
+\subsection{Commands}
+The commands used in the procedures above are summarised below.
+
+\begin{longtable}{|>{\raggedright\arraybackslash}p{0.36\textwidth}|>{\raggedright\arraybackslash}p{0.54\textwidth}|}
+\caption{Command reference}\label{tab:commands}\\
+\hline
+\textbf{Command} & \textbf{Description} \\
+\hline
+\endfirsthead
+\caption*{Continuation of Table \thetable}\\
+\hline
+\textbf{Command} & \textbf{Description} \\
+\hline
+\endhead
+\texttt{\hseFill{start command}} & Starts the software \\
+\hline
+\texttt{\hseFill{status command}} & Shows the current status \\
+\hline
+\texttt{\hseFill{stop command}} & Stops the software \\
+\hline
+\end{longtable}
+
+\subsection{Configuration parameters}
+The following environment variables and settings control the software.
+
+\begin{longtable}{|>{\raggedright\arraybackslash}p{0.28\textwidth}|>{\raggedright\arraybackslash}p{0.20\textwidth}|>{\raggedright\arraybackslash}p{0.40\textwidth}|}
+\caption{Configuration parameters}\label{tab:config}\\
+\hline
+\textbf{Parameter} & \textbf{Default} & \textbf{Description} \\
+\hline
+\endfirsthead
+\caption*{Continuation of Table \thetable}\\
+\hline
+\textbf{Parameter} & \textbf{Default} & \textbf{Description} \\
+\hline
+\endhead
+\texttt{\hseFill{PARAM\_NAME}} & \hseFill{default} & \hseFill{what it controls} \\
+\hline
+\texttt{\hseFill{PARAM\_NAME}} & \hseFill{default} & \hseFill{what it controls} \\
+\hline
+\end{longtable}
+
+\subsection{Related documents}
+\begin{itemize}[leftmargin=1.25cm]
+    \item \hseFill{link to the project repository};
+    \item \hseFill{link to the API reference};
+    \item IEEE Std 1063-2001, \enquote{IEEE Standard for Software User Documentation}.
+\end{itemize}
+
+% ============================================================
+% 8. GLOSSARY
+% ============================================================
+\section{Glossary}
+
+\begin{description}[leftmargin=1.25cm,style=nextline]
+    \item[\hseFill{term}] \hseFill{definition}.
+    \item[\hseFill{term}] \hseFill{definition}.
+    \item[API] Application Programming Interface, the interface through which the operator issues requests to the software.
+    \item[\hseFill{abbreviation}] \hseFill{expansion and short definition}.
+\end{description}
+
+\end{document}

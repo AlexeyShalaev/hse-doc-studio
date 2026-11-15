@@ -634,3 +634,78 @@ def test__release_class__first_version_and_dir_outside_a_template__are_skipped(t
 
     assert _release_errors(first) == []
     assert _release_errors(tmp_path / "loose") == []
+
+
+# ── тексты `{ ru, en }` в однострочных словарях (`flow_text_lint`) ──
+
+_SPLIT_LABEL = "    label:       { ru: Моноширинный шрифт (код, листинги), en: Monospace font }\n"
+_QUOTED_LABEL = '    label:       { ru: "Моноширинный шрифт (код, листинги)", en: Monospace font }\n'
+
+
+def _flow_version(
+    version_dir: Path,
+    label_line: str,
+    *,
+    title: str = "{ ru: Поля, en: Margins }",
+    doc_name: str = "{ ru: Отчёт, en: Report }",
+) -> Path:
+    (version_dir / "files" / "report").mkdir(parents=True, exist_ok=True)
+    (version_dir / "version.yaml").write_text(
+        f'id: "{version_dir.name}"\nlangs: [ru]\ndocuments: []\nmeta_fields:\n  font_mono:\n    type: font\n'
+        f"{label_line}    required_at: never\n",
+        encoding="utf-8",
+    )
+    (version_dir / "checks").mkdir(exist_ok=True)
+    (version_dir / "checks" / "gost.yaml").write_text(
+        "label: { ru: ГОСТ, en: GOST }\nref: { ru: ГОСТ 7.32, en: GOST 7.32 }\n"
+        f"rules:\n  - id: gost/margins\n    title:       {title}\n",
+        encoding="utf-8",
+    )
+    (version_dir / "files" / "report" / "doc.yaml").write_text(f"name: {doc_name}\n", encoding="utf-8")
+    return version_dir
+
+
+def _flow_errors(version_dir: Path) -> list[str]:
+    return [e for e in lint_version_dir(version_dir).errors if "запятая без кавычек" in e]
+
+
+def test__flow_texts__comma_split_label_title_and_doc_name__report_errors(tmp_path: Path) -> None:
+    version_dir = _flow_version(
+        tmp_path / "v",
+        _SPLIT_LABEL,
+        title="{ ru: Предметная область, актуальность, en: Subject area }",
+        doc_name="{ ru: Отчёт (НИР, КП), en: Report }",
+    )
+
+    errors = _flow_errors(version_dir)
+
+    assert any(e.startswith("version.yaml:7: ru «Моноширинный шрифт (код» со скобкой без пары") for e in errors)
+    assert any(e.startswith("version.yaml:7: лишний ключ «листинги)»") for e in errors)
+    assert any(e.startswith("checks/gost.yaml:5: лишний ключ «актуальность»") for e in errors)
+    assert any(e.startswith("files/report/doc.yaml:1: лишний ключ «КП)»") for e in errors)
+    assert len(errors) == 5
+
+
+def test__flow_texts__quoted_values_and_block_mappings__are_quiet(tmp_path: Path) -> None:
+    version_dir = _flow_version(tmp_path / "v", _QUOTED_LABEL, title='{ ru: "Поля (ЕСПД, рамка)", en: Margins }')
+    (version_dir / "files" / "report" / "doc.yaml").write_text(
+        "name:\n  ru: Отчёт (НИР, КП)\n  en: Report\noutput_name: { ru: Отчёт.pdf, en: Report.pdf, de: Bericht.pdf }\n",
+        encoding="utf-8",
+    )
+
+    assert _flow_errors(version_dir) == []
+
+
+def test__flow_texts__released_history_warns_but_the_newest_release_errors(tmp_path: Path) -> None:
+    old = _flow_version(tmp_path / "versions" / "2026.1", _SPLIT_LABEL)
+    freeze(tmp_path, "2026.1")
+
+    assert _flow_errors(old)  # последняя выпущенная проверяется наравне с черновиком
+
+    _flow_version(tmp_path / "versions" / "2026.1.1", _QUOTED_LABEL)
+    freeze(tmp_path, "2026.1.1")
+
+    report = lint_version_dir(old)
+    assert _flow_errors(old) == []
+    assert any("листинги)" in w and "выпущенная версия неизменна" in w for w in report.warnings)
+    assert _flow_errors(tmp_path / "versions" / "2026.1.1") == []

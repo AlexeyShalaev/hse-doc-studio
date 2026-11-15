@@ -1,0 +1,551 @@
+% !TeX program = xelatex
+% ============================================================
+% ro/ro.tex — Руководство оператора
+% ГОСТ 19.505-79 «Руководство оператора. Требования к содержанию
+% и оформлению» (ЕСПД).
+% ============================================================
+\documentclass[12pt,a4paper]{extarticle}
+
+% 1. Подключение общей преамбулы (пакеты)
+\input{../common/preamble}
+
+% 2. Определение переменных для конкретного документа.
+%    Базовый код RU.… приходит из \hseDocCodeBase (common/meta.tex);
+%    здесь задаётся только суффикс типа документа по ГОСТ 19.103-77.
+\newcommand{\docname}{Operator's Manual}
+\newcommand{\doccode}{\hseDocCodeBase\ 34 01-1}
+\newcommand{\doccodelu}{\hseDocCodeBase\ 34 01-1-ЛУ}
+
+% 3. Подключение общих команд (проект, студент, руководитель)
+\input{../common/commands}
+
+% 4. Подключение стилей (колонтитулы, заголовки)
+\input{../common/styles}
+
+\begin{document}
+\sloppy
+
+% 5. Генерация титульных листов по шаблону
+\input{../common/title_template}
+
+
+% ============================================================
+%  ENGLISH OPERATOR'S MANUAL BODY (project.lang == en)
+%  «Переведённый ГОСТ 19» option (§2.3.4.2 HSE SE practice
+%  program); GOST 19.505-79 section order preserved, references
+%  and in-text citations follow IEEE style.
+%  Fill the yellow \hseFill placeholders with your own text.
+% ============================================================
+
+% ============================================================
+% ABSTRACT
+% ============================================================
+\section*{ABSTRACT}
+\addcontentsline{toc}{section}{ABSTRACT}
+
+% Hint: refine the wording for your own system (what exactly the
+% operator launches and monitors).
+This document, \enquote{\projectname. Operator's Manual}, provides the information the operator needs to start the program, monitor the state of the system, and perform routine operational checks within the software suite.
+
+The document describes the purpose of the program, the conditions of its execution, the sequence of operator actions when working with the system, as well as the messages issued by the program while user and operational scenarios are carried out.
+
+The manual is intended for operators, administrators, and operations engineers who perform initial health checks, verify system objects, and review logs, metrics, and operation results.
+
+The document has been developed in accordance with the requirements of GOST 19.505-79\cite{gost19505}.
+
+\clearpage
+
+% ============================================================
+% LIST OF APPLICABLE STANDARDS
+% ============================================================
+\noindent
+This document has been developed in accordance with the requirements of:
+
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+\item GOST 19.101-77 Types of programs and program documents\cite{gost19101}.
+\item GOST 19.103-77 Designation of programs and program documents\cite{gost19103}.
+\item GOST 19.104-78 Basic inscriptions\cite{gost19104}.
+\item GOST 19.105-78 General requirements for program documents\cite{gost19105}.
+\item GOST 19.106-78 Requirements for program documents produced in printed form\cite{gost19106}.
+\item GOST 19.505-79 Operator's manual. Requirements for content and presentation\cite{gost19505}.
+\end{enumerate}
+
+Changes to this document are made in accordance with GOST\,19.604-78\cite{gost19604}.
+
+\clearpage
+
+% ============================================================
+% CONTENTS
+% ============================================================
+\hypersetup{linkcolor=black}
+\tableofcontents
+\hypersetup{linkcolor=blue}
+\thispagestyle{fancy}
+\clearpage
+
+% ============================================================
+% 1. PURPOSE OF THE PROGRAM
+% ============================================================
+\section{PURPOSE OF THE PROGRAM}
+
+\subsection{Purpose of the program}
+
+% Hint: describe what the program is intended for, which main parts
+% (services, modules) it consists of, and through which interface the
+% operator interacts with it.
+\begin{hseExample}
+The program \enquote{\projectname} is intended for \hseFill{brief purpose of the system}. The implemented part of the system includes \hseFill{list the main services or modules}. Through \hseFill{the main module or subsystem}, \hseFill{list the key operations of the system} are performed.
+
+The operator uses the program to monitor the state of the system, perform routine verification actions, check operation results, and carry out initial failure analysis. The main interaction is performed through \hseFill{interaction interface, e.g. REST API}. In the local environment, individual services may be checked directly according to the project repository instructions.
+\end{hseExample}
+
+\subsection{Main operational functions}
+
+\begin{hseExample}
+From the operator's point of view, the program performs the following functions:
+
+% Hint: replace the first items with operations on the objects and
+% scenarios of your system; the last two items are universal and may
+% be kept as is.
+\begin{itemize}[leftmargin=1.25cm]
+    \item creating, viewing, modifying, and deleting \hseFill{main objects of the system} through the available APIs;
+    \item running user scenarios \hseFill{list the key scenarios};
+    \item monitoring the state of services through logs, metrics, traces, and error messages;
+    \item checking the readiness of services and infrastructure dependencies.
+\end{itemize}
+
+This manual describes only the functions confirmed by the implementation and by the deployable configurations.
+\end{hseExample}
+
+\subsection{Operating modes}
+
+\begin{hseExample}
+The program can be used in the following modes:
+
+% Hint: adjust the list of modes to fit your project.
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+    \item \textbf{Local mode}: services and infrastructure dependencies run in a containerized development environment. The mode is used for initial verification and scenario demonstration.
+    \item \textbf{Staging mode}: services are deployed in \hseFill{deployment environment, e.g. Kubernetes}; access to APIs and observability tools is provided through dedicated staging addresses.
+    \item \textbf{Acceptance mode}: the operator performs control actions according to the test program and methodology, recording the state of services and the results of checks.
+\end{enumerate}
+\end{hseExample}
+
+\clearpage
+
+% ============================================================
+% 2. CONDITIONS FOR PROGRAM EXECUTION
+% ============================================================
+\section{CONDITIONS FOR PROGRAM EXECUTION}
+
+\subsection{Hardware requirements}
+
+\begin{hseExample}
+For the operator to work with the program, a workstation with the following characteristics is required:
+
+% Hint: specify the minimum requirements for the operator's workstation.
+\begin{itemize}[leftmargin=1.25cm]
+    \item processor: at least \hseFill{number of cores} x86\_64 cores;
+    \item RAM: at least \hseFill{amount of memory} GB;
+    \item disk space: at least \hseFill{amount of disk space} GB of free space for logs, temporary files, and exported reports;
+    \item network access to \hseFill{staging, repository, observability tools}.
+\end{itemize}
+
+When performing a local launch or container diagnostics, a workstation with \hseFill{recommended workstation characteristics} and an installed container runtime is recommended.
+\end{hseExample}
+
+\subsection{Software requirements}
+
+\begin{hseExample}
+The following software is required for operator actions:
+
+% Hint: list the software the operator needs (browser, request
+% clients, container runtime, diagnostic utilities).
+\begin{itemize}[leftmargin=1.25cm]
+    \item a modern browser to access \hseFill{web interfaces and staging documentation};
+    \item an HTTP request client: \hseFill{e.g. curl, Postman} or the built-in OpenAPI interface;
+    \item access to the \hseFill{specify the git hosting} repository and project artifacts if the operator is tasked with CI/CD verification;
+    \item \hseFill{container runtime, e.g. Docker} for local service checks;
+    \item tools for viewing logs, metrics, and traces: \hseFill{specify the observability tools}.
+\end{itemize}
+
+Access to the source code and operational configurations is provided through the private repository \hseFill{specify the project git hosting}. The repository is private; access is granted on request to the responsible project members.
+\end{hseExample}
+
+\subsection{Access requirements}
+
+\begin{hseExample}
+Before starting work, the operator must obtain:
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item a user account for the program \enquote{\projectname} or test credentials for the staging environment;
+    \item a set of permissions sufficient for the actions to be checked: \hseFill{list the roles and access levels};
+    \item the address of \hseFill{entry point, e.g. API gateway} and, if necessary, the addresses of the observability services;
+    \item information about the test environment: the environment, deployment version, the set of available services, and access restrictions;
+    \item secrets, tokens, or access keys only if they are required for the assigned operational actions.
+\end{itemize}
+
+The operator must not store passwords, tokens, and keys in clear text in the repository, documents, messages, or logs. When transferring diagnostic materials, sensitive data must be removed or masked.
+\end{hseExample}
+
+\subsection{Readiness check before starting work}
+
+\begin{hseExample}
+Before performing the main actions, the operator checks the readiness of the program:
+
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+    \item make sure the correct environment is selected: local, staging, or acceptance;
+    \item check the availability of \hseFill{entry point, e.g. API gateway} at the staging address, or the direct address of the service under check in the local environment;
+    \item check the availability of the OpenAPI page, if it is enabled for the service, or of the readiness check endpoint;
+    \item make sure the main services are in a ready state;
+    \item open the \hseFill{monitoring tool} dashboard and check that metrics are being received;
+    \item if necessary, check the service logs and application errors in \hseFill{log and error collection tools}.
+\end{enumerate}
+
+% Hint: replace the sample table rows with the objects of your system
+% (entry point, services, dependencies, observability tools).
+% The table is typeset with \captionof (not \begin{table}[H]): floating
+% environments inside the yellow example block are not allowed.
+\begin{center}
+\small
+\captionof{table}{Readiness indicators of the program}
+\label{tab:ro_readiness}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{0.28\textwidth}|X|X|}
+\hline
+\textbf{Object under check} & \textbf{Expected result} & \textbf{Action on deviation} \\
+\hline
+\hseFill{entry point, e.g. API gateway} & Available at the environment address, returns a response to the readiness check request & Check the route, DNS, TLS certificate, and component state \\
+\hline
+Services \hseFill{list of services} & Services are in a ready state, no restart loops & Check the logs, environment variables, and availability of dependencies \\
+\hline
+\hseFill{dependencies, e.g. DBMS and broker} & Dependencies are available to the services, no connection errors & Check the state of the containers or workloads \\
+\hline
+\hseFill{observability tools} & Metrics, logs, and traces are received by the observability environment & Check the collection agents, data sources, and network policies \\
+\hline
+\end{tabularx}
+\end{center}
+\end{hseExample}
+
+\clearpage
+
+% ============================================================
+% 3. PROGRAM EXECUTION
+% ============================================================
+\section{PROGRAM EXECUTION}
+
+\subsection{General order of operator work}
+
+\begin{hseExample}
+The operator's work is performed in the following sequence:
+
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+    \item prepare the workplace and verify access to the staging environment;
+    \item check the readiness of the system entry point, as well as the state of the services and infrastructure dependencies;
+    \item log in to the system or obtain an access token through the agreed authentication scenario;
+    \item perform the required operator action: viewing, creating, modifying, or checking an object;
+    \item verify the operation result through the API response, logs, events, and metrics;
+    \item record the check result or hand the incident over to the responsible engineer if a failure is detected.
+\end{enumerate}
+\end{hseExample}
+
+\subsection{Launching the program in the local environment}
+
+\begin{hseExample}
+The local launch is used for demonstration and verification actions. Before launching, the operator must make sure that \hseFill{container runtime, e.g. Docker} is installed and that access to the project repository has been obtained.
+
+% Hint: replace the placeholders with the real commands of your project,
+% formatting them with \texttt{...}.
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+    \item obtain the current version of the repository;
+    \item prepare the environment variables file according to the project instructions;
+    \item start the infrastructure dependencies with the command \hseFill{infrastructure start command};
+    \item start the services with the command \hseFill{services start command};
+    \item check that the services have started with the command \hseFill{check command};
+    \item if necessary, stop the local environment with the command \hseFill{stop command}.
+\end{enumerate}
+\end{hseExample}
+
+\subsection{Launching the program in the staging environment}
+
+\begin{hseExample}
+In the staging environment, the program is deployed in \hseFill{deployment environment, e.g. Kubernetes}. The operator does not develop source code but monitors the state of the already deployed components:
+
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+    \item check the state of \hseFill{namespace or resource group};
+    \item make sure that all required deployments are ready;
+    \item check the services and routes \hseFill{entry point and key routes};
+    \item open \hseFill{monitoring tool} and make sure that metrics are being received;
+    \item run a control user or administrative scenario.
+\end{enumerate}
+
+% Hint: if operations permissions are granted, provide the diagnostic
+% commands (e.g. kubectl get pods, kubectl logs) in a verbatim environment.
+If operations permissions are granted, the diagnostic commands \hseFill{list the diagnostic commands} may be used.
+\end{hseExample}
+
+\subsection{Operator login to the system}
+
+\begin{hseExample}
+To perform actions through the API, the operator must obtain an access token. The login sequence depends on the enabled authentication scenario:
+
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+    \item open the authorization page or send an HTTP request to the authentication service;
+    \item provide the user identifier and password;
+    \item if necessary, confirm the login with a one-time code or an additional factor;
+    \item obtain the access token and use it in the \texttt{Authorization} header;
+    \item make sure that a request to a protected API returns a successful response.
+\end{enumerate}
+
+The access token is used only within the agreed test or staging environment. Before publishing diagnostic materials, tokens must be removed.
+\end{hseExample}
+
+\subsection{Managing organizations and members}
+
+% Hint: if your system has no organizations and members, replace this
+% subsection with the management of the main objects of your system.
+\begin{hseExample}
+To work with the organizational structure, the operator performs the following actions:
+
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+    \item create or select an organization;
+    \item check the availability of the organization in the list of organizations of the current user;
+    \item form an invitation for a new member;
+    \item check the invitation status through the API response;
+    \item if necessary, accept the invitation and remove a member through the provided API endpoints.
+\end{enumerate}
+
+Expected result: created organizations are shown through the API, accepting an invitation returns a member record, and removing a member completes with a successful HTTP response.
+\end{hseExample}
+
+\subsection{Managing the infrastructure topology}
+
+% Hint: list the entities of your domain and the order in which they are
+% created; if there is no topology, describe the maintenance of your main entities.
+\begin{hseExample}
+The operator can check and maintain the topology:
+
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+    \item create or select \hseFill{parent topology entity};
+    \item create \hseFill{child entities} and register \hseFill{end nodes or elements};
+    \item make sure that the topology is available for viewing through the API.
+\end{enumerate}
+
+Expected result: the topology entities are linked, and the response lists them in the correct hierarchy; validation errors are returned for incorrect identifiers and attributes.
+\end{hseExample}
+
+\subsection{Managing the service catalogue}
+
+\begin{hseExample}
+When working with the service catalogue, the operator checks:
+
+% Hint: adjust the list of checks to fit your service catalogue.
+\begin{itemize}[leftmargin=1.25cm]
+    \item the creation of \hseFill{service types or catalogue objects};
+    \item the recording of dependencies between services;
+    \item the viewing of the dependency graph or the list of related services;
+    \item the correct rejection of invalid dependencies.
+\end{itemize}
+
+Expected result: services and dependencies are stored in the system, and invalid dependencies are rejected with a controlled error.
+\end{hseExample}
+
+\subsection{Monitoring user scenarios}
+
+\begin{hseExample}
+The operator can run control user scenarios without modifying the source code:
+
+% Hint: replace the list with the control scenarios of your system.
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+    \item user registration;
+    \item confirmation of an email address or phone number;
+    \item login with a password and an additional check;
+    \item access recovery;
+    \item verification of an active session;
+    \item logout or token revocation.
+\end{enumerate}
+
+For each scenario, the operator checks the HTTP response code, the response body, the sending of a notification in scenarios with one-time codes, the session state, and the absence of unexpected errors in \hseFill{error collection tool}.
+\end{hseExample}
+
+\subsection{Viewing logs, metrics, and traces}
+
+\begin{hseExample}
+For initial diagnostics, the operator uses:
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item \hseFill{monitoring tool} to view the metrics of services and infrastructure;
+    \item \hseFill{log collection tool} to search for logs by request identifier, service name, or error level;
+    \item \hseFill{tracing tool} to view the distributed trace of a request;
+    \item \hseFill{error collection tool} to analyse groups of application errors.
+\end{itemize}
+
+When analysing an incident, the operator records the event time, the service name, the request identifier, the user, the error code, and a link to the corresponding dashboard or trace.
+\end{hseExample}
+
+\subsection{Finishing work}
+
+\begin{hseExample}
+After performing the operator actions, it is necessary to:
+
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+    \item save the check results or a link to the test artifacts;
+    \item delete temporary tokens and files containing sensitive data;
+    \item stop the local containers if they are no longer required;
+    \item hand over the identified errors to the responsible engineer, attaching logs, metrics, or traces;
+    \item record the state of the staging environment if the check was performed in the acceptance environment.
+\end{enumerate}
+\end{hseExample}
+
+\clearpage
+
+% ============================================================
+% 4. OPERATOR MESSAGES
+% ============================================================
+\section{OPERATOR MESSAGES}
+
+\subsection{General message handling rules}
+
+% Hint: adjust the list of message types to fit your system
+% (HTTP responses, log records, task statuses, notifications).
+\begin{hseExample}
+Messages to the operator are issued as HTTP codes and JSON API responses, log records, notifications in observability tools, and CI/CD task statuses.
+
+When receiving an error, the operator must:
+
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+    \item determine the source of the message: API, service, infrastructure, CI/CD, or the observability system;
+    \item record the response code, the message text, the time, the user, and the request identifier;
+    \item retry the operation only if the message allows a retry;
+    \item in the case of a system error, check the logs, metrics, and the state of the dependencies;
+    \item hand the information over to the responsible engineer if the error is not resolved by operator actions.
+\end{enumerate}
+\end{hseExample}
+
+\subsection{API messages and operator actions}
+
+% Hint: the typical HTTP codes are universal — adjust the wording to fit
+% your system and add project-specific messages.
+\begin{longtable}{|>{\raggedright\arraybackslash}p{0.22\textwidth}|>{\raggedright\arraybackslash}p{0.35\textwidth}|>{\raggedright\arraybackslash}p{0.33\textwidth}|}
+\caption{Typical program messages and operator actions}
+\label{tab:ro_messages}\\
+\hline
+\textbf{Message / code} & \textbf{Message content} & \textbf{Operator actions} \\
+\hline
+\endfirsthead
+\caption*{Table \thetable\ (continued)}\\
+\hline
+\textbf{Message / code} & \textbf{Message content} & \textbf{Operator actions} \\
+\hline
+\endhead
+\texttt{200 OK} & The operation completed successfully, the response body carries the data & Check the expected state of the object and, if the scenario is connected to audit, the presence of an audit event \\
+\hline
+\texttt{201 Created} & Object created: \hseFill{list the object types} & Save the object identifier and check its availability with a read request \\
+\hline
+\texttt{204 No Content} & The operation completed without a response body & Check the result with a repeated request or through an audit event \\
+\hline
+\texttt{400 Bad Request} & Invalid request: format error, invalid parameter, missing field & Check the request body, the required fields, the data types, and the identifier format \\
+\hline
+\texttt{401 Unauthorized} & The user is not authenticated, or the token is invalid & Log in again, check the token expiry and the correctness of the \texttt{Authorization} header \\
+\hline
+\texttt{403 Forbidden} & The user does not have permissions to perform the operation & Check the user's access permissions and the correctness of the selected environment \\
+\hline
+\texttt{404 Not Found} & The requested entity was not found & Check the identifier, the environment, and the presence of the object in the list \\
+\hline
+\texttt{409 Conflict} & State conflict: the object already exists, the operation violates a domain rule & Check the uniqueness of the name or identifier; the request should not be retried without changing the parameters \\
+\hline
+\texttt{422 Validation Error} & The request does not conform to the API schema & Compare the request with the OpenAPI description and fix the JSON structure \\
+\hline
+\texttt{429 Too Many Requests} & The request rate limit or notification sending limit has been exceeded & Wait for the limit interval to expire; do not start a mass retry without coordination \\
+\hline
+\texttt{500 Internal Server Error} & An unexpected service error & Record the request identifier, check the service logs and \hseFill{error collection tool}, hand the incident over to the engineer \\
+\hline
+\texttt{503 Service Unavailable} & A dependency is unavailable: \hseFill{DBMS, cache, message broker} & Check the state of the dependencies, the readiness of the services, and the infrastructure logs \\
+\hline
+\texttt{Health check not ready} & The service has started but is not yet ready to accept traffic & Wait for readiness or check the migrations and connections to the dependencies \\
+\hline
+\texttt{Pipeline failed} & A CI/CD job completed with an error & Open the job log, determine the failed stage, and hand the link over to the responsible engineer \\
+\hline
+\texttt{Alert firing} & A monitoring rule has fired & Check the monitoring dashboard, the logs, and the traces; record the start time and the affected services \\
+\hline
+\end{longtable}
+
+\subsection{Notification messages}
+
+\begin{hseExample}
+In the registration, access recovery, and operation confirmation scenarios, the program may generate notifications with one-time codes through \hseFill{notification service or channel}. The operator must account for the following cases:
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item the message was sent successfully: the API response contains the message identifier or a delivery confirmation;
+    \item the destination address is invalid: the request is rejected with a validation error;
+    \item the sending limit has been exceeded: the operator waits for the limit window to expire;
+    \item the delivery provider is unavailable: the operator checks the notification service logs and the state of the external integration;
+    \item the confirmation code has expired: the user must request a new code.
+\end{itemize}
+\end{hseExample}
+
+\subsection{Audit messages}
+
+\begin{hseExample}
+Audit events are used by the operator to confirm security scenarios. The operator checks the event log through \hseFill{audit endpoint or interface} and records the following fields of the event:
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item the subject of the action: a user or a service account;
+    \item the type of action;
+    \item the resource and the resource identifier;
+    \item the result of execution;
+    \item the event time;
+    \item the request context, if available.
+\end{itemize}
+
+If an expected security event is missing, the operator must check whether the request was actually executed, whether the environment was selected correctly, whether an event publication error occurred, and whether the audit service is available.
+\end{hseExample}
+
+\clearpage
+
+% Source pages are printed without the bottom stamp (as in real
+% document sets) — only the sheet number and the document code at the top.
+\pagestyle{appendix}
+
+% ============================================================
+% LIST OF REFERENCES
+% ============================================================
+\section*{LIST OF REFERENCES}
+\addcontentsline{toc}{section}{LIST OF REFERENCES}
+
+% Hint: add the sources on your project's technologies BEFORE the
+% standards, in alphabetical order, following the pattern (IEEE style):
+% \bibitem{grafana_docs}
+% Grafana Documentation. [Online]. Available: \url{https://grafana.com/docs/grafana/latest/}. Accessed: Mar.~14, 2026.
+\renewcommand{\refname}{}
+\begin{thebibliography}{99}
+\bibitem{gost19101}
+\emph{GOST 19.101-77. Unified System for Program Documentation. Types of Programs and Program Documents}. Moscow, Russia: Standartinform, 2001.
+
+\bibitem{gost19103}
+\emph{GOST 19.103-77. Unified System for Program Documentation. Designation of Programs and Program Documents}. Moscow, Russia: Standartinform, 2001.
+
+\bibitem{gost19104}
+\emph{GOST 19.104-78. Unified System for Program Documentation. Basic Inscriptions}. Moscow, Russia: Standartinform, 2001.
+
+\bibitem{gost19105}
+\emph{GOST 19.105-78. Unified System for Program Documentation. General Requirements for Program Documents}. Moscow, Russia: Standartinform, 2001.
+
+\bibitem{gost19106}
+\emph{GOST 19.106-78. Unified System for Program Documentation. Requirements for Program Documents Produced in Printed Form}. Moscow, Russia: Standartinform, 2001.
+
+\bibitem{gost19505}
+\emph{GOST 19.505-79. Unified System for Program Documentation. Operator's Manual. Requirements for Content and Presentation}. Moscow, Russia: Standartinform, 2001.
+
+\bibitem{gost19604}
+\emph{GOST 19.604-78. Unified System for Program Documentation. Rules for Making Changes to Program Documents Produced in Printed Form}. Moscow, Russia: Standartinform, 2001.
+\end{thebibliography}
+
+
+
+\clearpage
+
+% ============================================================
+% ЛИСТ РЕГИСТРАЦИИ ИЗМЕНЕНИЙ
+% ============================================================
+\input{../common/change_log}
+
+\end{document}

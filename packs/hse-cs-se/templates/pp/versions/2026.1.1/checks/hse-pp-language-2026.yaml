@@ -1,0 +1,65 @@
+# packs/hse-cs-se/templates/pp/versions/2026.1/checks/hse-pp-language-2026.yaml
+# Лингвистическая проверка Project Proposal через LanguageTool (en-US).
+#
+# Правило-«шлюз»: его наличие включает прогон LanguageTool для документа.
+# Язык зафиксирован (en-US): PP пишется только на английском, а авто-
+# детект на LaTeX-исходнике с русскими комментариями ненадёжен (сами
+# комментарии из текста вырезаются препроцессором до отправки в LT).
+
+# label — короткая подпись группы в UI; ref — полная ссылка на документ.
+label:
+  ru: Язык (английский)
+  en: Language (English)
+ref:
+  ru: LanguageTool — грамматика, орфография и стиль английского текста
+  en: LanguageTool — English grammar, spelling and style
+source:
+  url: https://languagetool.org/
+
+rules:
+  - id: hse-pp-lang/languagetool
+    title:       { ru: "LanguageTool: английская грамматика и стиль", en: "LanguageTool: English grammar & style" }
+    description: { ru: "Проверка английского текста статьи через LanguageTool: орфография, грамматика, пунктуация и стиль. Оценка Language — 3 из 10 баллов PP, поэтому вычитка обязательна.", en: "Checks the paper's English via LanguageTool: spelling, grammar, punctuation and style. Language is worth 3 of the 10 PP points, so proofreading matters." }
+    category:    language
+    applies_to:  [project_proposal]
+    default_severity: warn
+    engine:      external
+    params:
+      # Язык — только 'auto': preferred_variants работает ТОЛЬКО в паре с ним
+      # (при явном языке LT отвечает 400). Проектное предложение пишется по
+      # британской норме и следует официальным формулировкам НИУ ВШЭ
+      # («educational programme», «defence», «artefact») — в en-US каждая такая
+      # форма приходила опечаткой. То же исправление уже сделано в vkr и
+      # coursework; здесь его пропустили.
+      language: auto
+      preferred_variants: en-GB
+      # Отключённые правила LT:
+      #  - WHITESPACE_RULE          — отступы/выравнивание в LaTeX-исходнике;
+      #  - UPPERCASE_SENTENCE_START — пункты списков — фрагменты предложений;
+      #  - OXFORD_SPELLING_Z_NOT_S  — оксфордское «-ize»: у en-GB это домашний
+      #                               стиль издательства, а не ошибка.
+      disabled_rules: WHITESPACE_RULE,UPPERCASE_SENTENCE_START,OXFORD_SPELLING_Z_NOT_S
+      # Слова, которых нет в словаре LT, но которые корректны в статьях
+      # ОП ПИ (термины и названия инструментов). Запись с «*» — префикс.
+      ignore_words:
+        # Сокращение из строки состава отчёта по ГОСТ 7.32 («…~источн.»).
+        - источн
+        - ArgoCD
+        - Authentik
+        - Crossplane
+        - FastAPI
+        - GitOps
+        - Humanitec
+        - IaC
+        - OpenTelemetry
+        - Protobuf
+        - Pydantic
+        - Redis
+        - SQLAlchemy
+        - VictoriaMetrics
+        - ltree
+        - testbed*
+        - microservice*
+        - Kubernetes
+        - PostgreSQL
+        - gRPC

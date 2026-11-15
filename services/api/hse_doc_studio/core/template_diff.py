@@ -606,10 +606,17 @@ class _Differ:
 
 
 def _is_text_map(segments: tuple[str, ...], old: Any, new: Any) -> bool:
-    """Текст по языкам (`help: {ru, en}`): одна причина на текст, а не по строке на язык."""
+    """Текст по языкам (`help: {ru, en}`): одна причина на текст, а не по строке на язык.
+
+    Ключ без значения тоже часть текста: так YAML разбирает запятую без кавычек в `{ ru: А (б, в), en: ... }`
+    (ru «А (б» и ключ «в)»), и исправление кавычками остаётся правкой текста (`pack_lint`, `flow_text_lint`).
+    """
     if not segments or segments[-1] not in _TEXT_KEYS:
         return False
-    return all(isinstance(v, dict) and all(_LOCALE_RE.match(str(k)) for k in v) for v in (old, new))
+    return all(
+        isinstance(v, dict) and all(_LOCALE_RE.match(str(k)) or item is None for k, item in v.items())
+        for v in (old, new)
+    )
 
 
 def _fallback(segments: tuple[str, ...]) -> _Verdict:

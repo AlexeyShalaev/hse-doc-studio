@@ -1,0 +1,29 @@
+# Манифест документа (bundle-раскладка v2): всё про документ — в этой папке.
+# В бланке SmartLMS две редакции формы, русская и английская. Исходник один,
+# без языковых суффиксов: он печатает одну страницу на языке проекта
+# (\ifhseLangEn из common/meta.tex, project.lang), поэтому supported_langs
+# у документа оба языка.
+name:
+  ru: Заявление о выборе темы КП
+  en: Topic application
+code:
+  ru: ЗАЯВЛ
+  en: APP
+source_file: topic_application/topic_application.tex
+output_file: topic_application/topic_application.pdf
+output_name:
+  ru: Заявление о выборе темы курсового проекта.pdf
+  en: Course project topic application.pdf
+required: true
+supported_langs:
+- ru
+- en
+scope: personal
+supported_kinds:
+- project
+- research
+# Форма, а не текст работы: вёрстка и ГОСТ-проверки к ней не применяются.
+checks:
+  disabled_categories:
+  - formatting
+group: topic

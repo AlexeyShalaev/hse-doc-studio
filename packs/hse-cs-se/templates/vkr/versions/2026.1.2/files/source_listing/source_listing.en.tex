@@ -1,0 +1,257 @@
+% !TeX program = xelatex
+\documentclass[12pt,a4paper]{extarticle}
+
+% 1. Подключение общей преамбулы (пакеты)
+\input{../common/preamble}
+
+% 2. Определение переменных для конкретного документа
+\newcommand{\docname}{Source Listing}
+\newcommand{\doccode}{\hseDocCodeBase\ 12 01-1}
+\newcommand{\doccodelu}{\hseDocCodeBase\ 12 01-1-ЛУ}
+
+% 3. Подключение общих команд (проект, студент, руководитель)
+\input{../common/commands}
+
+% 4. Подключение стилей (колонтитулы, заголовки)
+\input{../common/styles}
+
+\begin{document}
+\sloppy
+
+% 5. Генерация титульных листов по шаблону
+\input{../common/title_template}
+
+
+% ============================================================
+%  ENGLISH SOURCE LISTING BODY (project.lang == en)
+%  §2.3.4.2 / §2.5.3.1: an English applied project renders its ESPD
+%  documentation in English; the ГОСТ 19 structure is preserved. The
+%  reference list follows IEEE citation style. Fill the yellow placeholders.
+% ============================================================
+
+% ============================================
+% ANNOTATION
+% ============================================
+
+\section*{ANNOTATION}
+\addcontentsline{toc}{section}{ANNOTATION}
+
+% Hint: list the information about the program provided in this document
+% (repository map, purpose of services, libraries, contracts, etc.).
+This document, \enquote{\projectname. Source Listing}, provides information on the composition, hierarchical structure and software used in the system being developed. The document contains a repository map, the purpose of the implemented components, a description of the shared libraries and a description of the infrastructure layer.
+
+% Hint: the sentence about a private repository is optional — remove it
+% if your repository is public.
+The complete source code of the program is located in a remote Git repository. \hseOptional{The repository is private; access is granted on request to verify the composition and implementation of the program.}
+
+\clearpage
+
+% ============================================
+% CONTENTS
+% ============================================
+\hypersetup{linkcolor=black}
+\tableofcontents
+\hypersetup{linkcolor=blue}
+\thispagestyle{fancy}
+\clearpage
+
+% ============================================
+% 1. INTRODUCTION
+% ============================================
+\section{INTRODUCTION}
+
+\subsection{Program name}
+
+The name of the program is \enquote{\projectname}.
+
+% The English and short names are substituted automatically from the
+% project settings (the fields \enquote{English work title} and \enquote{Short
+% program name}) — nothing to edit here.
+The name of the program in English is \enquote{\hseProjectNameEn}.
+
+The short name of the program is \enquote{\hseProjectNameShort}.
+
+\subsection{Brief description of the program's application area}
+
+% Hint: in 2–3 sentences describe the purpose of the program and its
+% application area; state the architectural style (monolith, microservices,
+% monorepository) and the key technologies.
+The program \enquote{\projectname} serves the following purpose: \hseFill{brief description of the application area}. It implements mechanisms for \hseFill{list of the key functions of the program}. The architectural style of the system is \hseFill{name the architectural style}; the system uses \hseFill{key technologies and protocols}.
+
+\clearpage
+
+% ============================================
+% 2. SOURCE LISTING
+% ============================================
+\section{SOURCE LISTING}
+
+((* if project.meta.nda *))
+% NDA (LMS CP4/pre-defence): under an NDA the Source Listing document IS
+% produced, but it must state that the source text is withheld for
+% confidentiality reasons. The branch is rendered at project creation
+% (meta.nda at that moment); if the NDA is enabled later, add the
+% paragraph manually.
+\textbf{The source text of the program is not included in this document
+due to the restrictions imposed by the confidential nature of the work
+(non-disclosure agreement, NDA).} The composition and structure of the
+program are given below to the extent permitted by the confidentiality
+agreement.
+
+((* endif *))
+% Hint: state that the full source of the program is located in the
+% repository, and, if required, give its address and access conditions.
+% Hint: the sentence about a private repository is optional — remove it
+% if your repository is public.
+The complete source of the program is located in a remote Git repository at the following address: \hseFill{Git repository address}. \hseOptional{The repository is private; access is granted on request to verify the composition and implementation of the program.}
+
+\subsection{Repository structure}
+
+% Hint: describe the top-level directory structure of the project.
+% List the purpose of the main directories of your repository.
+\begin{hseExample}
+The software system is organised on the principle of \hseFill{repository organisation principle}. The top-level directory structure:
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item \texttt{src/} --- application source code: services, modules and background workers;
+    \item \texttt{libs/} --- shared libraries, client SDKs and runtime components;
+    \item \texttt{infra/} --- infrastructure-as-code, configurations and deployment utilities;
+    \item \texttt{docs/} --- sources of the technical, product and operational documentation;
+    \item \texttt{scripts/} --- auxiliary development, build and artifact-generation scripts;
+    \item \texttt{tests/} --- integration and system test materials.
+\end{itemize}
+\end{hseExample}
+
+\subsection{Module (service) descriptions}
+
+% Hint: for each key module (service) give its purpose. Fill the table
+% below with your own data.
+\begin{hseExample}
+The modules (services) of the program are divided into domains: \hseFill{list of domains or module groups}. The purpose of the key modules is given in Table~\ref{tab:modules}.
+
+% The table is set with \captionof (not \begin{table}[H]): floating
+% environments inside the yellow sample block are not allowed.
+\begin{center}
+\small
+\captionof{table}{Purpose of the program modules}
+\label{tab:modules}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{0.32\textwidth}|X|}
+\hline
+\textbf{Module} & \textbf{Purpose} \\
+\hline
+\texttt{\hseFill{module name}} & \hseFill{brief purpose of the module} \\
+\hline
+\texttt{\hseFill{module name}} & \hseFill{brief purpose of the module} \\
+\hline
+\end{tabularx}
+\end{center}
+\end{hseExample}
+
+\subsection{Shared libraries}
+
+% Hint: describe the shared (internal) libraries in use and their purpose.
+% If there are no shared libraries, this subsection may be removed.
+\begin{hseExample}
+To ensure consistency of development and code reuse, a set of internal libraries grouped by purpose is used.
+
+\begin{center}
+\small
+\captionof{table}{Purpose of the shared library groups}
+\label{tab:libs}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{0.32\textwidth}|X|}
+\hline
+\textbf{Group} & \textbf{Composition and purpose} \\
+\hline
+\texttt{\hseFill{library group}} & \hseFill{composition and purpose of the group} \\
+\hline
+\texttt{\hseFill{library group}} & \hseFill{composition and purpose of the group} \\
+\hline
+\end{tabularx}
+\end{center}
+\end{hseExample}
+
+\subsection{API contracts and client interaction}
+
+% Hint: describe the way of external and inter-service interaction
+% (REST, gRPC, data formats, location of the contract schemas).
+\begin{hseExample}
+External interaction with the program is described through \hseFill{external API protocols}. The endpoints accept and return data in \hseFill{data format} format, consumed by client systems. Inter-service interaction is built on \hseFill{inter-module interaction mechanism}: the source contract schema files are stored in the \texttt{\hseFill{schema directory}} directory, and the client and server stubs are generated by \hseFill{code generation tool}.
+\end{hseExample}
+
+\subsection{Data storage and event-driven interaction}
+
+% Hint: state the DBMS, caching and messaging tools used, as well as the
+% storage and delivery patterns applied.
+\begin{hseExample}
+The server-side components are implemented primarily in \hseFill{specify the languages and frameworks}. Business data is stored in \hseFill{DBMS used}, caching and short-lived state use \hseFill{caching tool}, and asynchronous event exchange uses \hseFill{message broker}.
+
+% Hint: describe how reliable event delivery and data consistency are
+% ensured (e.g. the Transactional Outbox/Inbox pattern); if there is no
+% event exchange, this paragraph may be removed.
+Reliable event delivery is ensured by \hseFill{event delivery patterns used}: the domain change and the event record are written in a single transaction, after which a background process publishes the event to \hseFill{message broker}.
+\end{hseExample}
+
+\subsection{Infrastructure and deployment}
+
+% Hint: briefly describe the infrastructure layer: containerisation,
+% orchestration tools, build and deployment automation.
+\begin{hseExample}
+The infrastructure layer automates deployment and operation:
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item \textbf{\hseFill{orchestration tooling directory}} --- manifests, configurations and operational scripts for \hseFill{infrastructure components};
+    \item \textbf{scripts/} --- CI/CD and operational scripts;
+    \item \textbf{docker-compose.yml} --- local infrastructure environment for development and debugging.
+\end{itemize}
+\end{hseExample}
+
+\subsection{Contracts and documentation}
+
+% Hint: describe where the contract schemas and the project documentation
+% are stored; if this subsection is not relevant, it may be removed.
+\begin{hseExample}
+\begin{itemize}[leftmargin=1.25cm]
+    \item \textbf{\hseFill{contract schema directory}} --- a hierarchical file structure defining the interfaces of \hseFill{list of the main interfaces};
+    \item \textbf{docs/} --- a structured knowledge base split by domain: \hseFill{list of documentation domains};
+    \item \textbf{README.md} and per-service \textbf{README.md} --- instructions for launching, developing, the API composition and the operational specifics of the individual components.
+\end{itemize}
+\end{hseExample}
+
+\clearpage
+\pagestyle{appendix}
+
+% ============================================
+% 3. REFERENCES
+% ============================================
+\section*{REFERENCES}
+\addcontentsline{toc}{section}{REFERENCES}
+
+% Hint: give the list of references. Below the mandatory ESPD normative
+% documents and one software-source example are kept (IEEE citation style) —
+% replace or extend them with your own.
+\renewcommand{\refname}{}
+\begin{thebibliography}{99}
+\vspace{-1cm}
+
+\bibitem{python_docs}
+\emph{Python Documentation}. Accessed: Jan.~1, 2026. [Online]. Available: \url{https://docs.python.org/3/}
+
+\bibitem{gost19101}
+\emph{GOST 19.101-77. Unified System for Program Documentation. Types of Programs and Program Documents}. Moscow, Russia: Standards Publishing House, 2001.
+
+\bibitem{gost19105}
+\emph{GOST 19.105-78. Unified System for Program Documentation. General Requirements for Program Documents}. Moscow, Russia: Standards Publishing House, 2001.
+
+\bibitem{gost19401}
+\emph{GOST 19.401-78. Unified System for Program Documentation. Source Listing. Requirements for Content and Presentation}. Moscow, Russia: Standards Publishing House, 2001.
+
+\end{thebibliography}
+
+\clearpage
+
+
+% ============================================
+% ЛИСТ РЕГИСТРАЦИИ ИЗМЕНЕНИЙ
+% ============================================
+\input{../common/change_log}
+
+\end{document}

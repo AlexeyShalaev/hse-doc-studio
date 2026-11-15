@@ -1,0 +1,530 @@
+<!doctype html>
+<!--
+  pres/reveal/index.html — Project Proposal defence slides (RevealJS 5, English)
+
+  HSE-branded deck (16:9, corporate blue #102D69, frame/logo images from
+  ../assets/) matching the beamer and pptx variants: 11 slides following the
+  canonical PP defence scenario. Jinja2 placeholders are substituted ONCE at
+  project creation (variables via the xmlesc filter; conditional blocks use the
+  renderer's LaTeX-safe block delimiters — see template_renderer.py).
+
+  Guidance sits in speaker notes (<aside class="notes">): press S for the
+  speaker window. Replace every "TODO: …" with your own content. To work fully
+  offline, swap the CDN links for local copies of reveal.js.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PP Defence — {{ project.name | xmlesc }}</title>
+
+  <!-- RevealJS 5 (CDN) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reset.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reveal.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/theme/white.css">
+
+  <style>
+    /* ─── HSE corporate style ─────────────────────────────────────── */
+    :root {
+      --hse-blue: #102D69;
+      --hse-muted: #8a90a0;
+    }
+
+    .reveal-viewport { background: #fff; }
+
+    .reveal {
+      /* HSE Sans is licensed and not bundled: used if installed, else a
+         system sans-serif. */
+      font-family: "HSE Sans", Arial, Helvetica, sans-serif;
+      font-size: 22px;
+      color: #000;
+    }
+
+    .reveal h1, .reveal h2, .reveal h3 {
+      font-family: inherit;
+      text-transform: none;
+      letter-spacing: normal;
+    }
+
+    .reveal .slides section {
+      height: 720px;
+      box-sizing: border-box;
+      text-align: left;
+      padding: 150px 72px 44px;
+      overflow: hidden;
+    }
+
+    .reveal h2 {
+      color: var(--hse-blue);
+      font-size: 34px;
+      font-weight: 500;
+      line-height: 1.15;
+      margin: 0 0 30px;
+    }
+
+    .reveal p { margin: 0 0 12px; }
+    .reveal ul, .reveal ol { display: block; margin: 0 0 0 1.1em; }
+    .reveal li { margin: 0 0 14px; line-height: 1.35; }
+
+    .todo { color: var(--hse-muted); font-style: italic; }
+
+    .subhead {
+      color: var(--hse-blue);
+      font-weight: 700;
+      font-size: 24px;
+      margin: 0 0 10px;
+    }
+
+    .cols { display: flex; gap: 48px; }
+    .col { flex: 1; min-width: 0; }
+
+    .goal-box {
+      border-left: 5px solid var(--hse-blue);
+      background: #eef2fa;
+      padding: 14px 20px;
+      margin: 0 0 26px;
+    }
+
+    .figure-box {
+      border: 1.5px dashed #9aa3b5;
+      border-radius: 6px;
+      color: var(--hse-muted);
+      font-style: italic;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 190px;
+      margin: 4px 0 20px;
+      text-align: center;
+    }
+
+    table.cmp { width: 100%; border-collapse: collapse; font-size: 19px; }
+    table.cmp th {
+      background: var(--hse-blue);
+      color: #fff;
+      font-weight: 600;
+      text-align: left;
+      padding: 10px 14px;
+      border: 1px solid var(--hse-blue);
+    }
+    table.cmp td { border: 1px solid #c9cfdd; padding: 10px 14px; vertical-align: top; }
+    table.cmp td.c { text-align: center; }
+
+    .refs p { font-size: 19px; line-height: 1.4; margin: 0 0 16px; }
+
+    /* ─── Content-slide running header (injected by JS) ───────────── */
+    .slide-header {
+      position: absolute;
+      top: 26px;
+      left: 36px;
+      right: 36px;
+      height: 76px;
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      font-size: 13px;
+      line-height: 1.3;
+      color: #1a1a1a;
+      text-align: left;
+      font-weight: 400;
+    }
+    .slide-header img { height: 52px; width: 52px; flex: 0 0 auto; }
+    .slide-header .hb {
+      border-left: 1.5px solid var(--hse-blue);
+      padding-left: 18px;
+      height: 58px;
+      display: flex;
+      align-items: center;
+    }
+    .slide-header .hb.first { border-left: none; padding-left: 0; }
+    .slide-header .h-fac { max-width: 220px; }
+    .slide-header .h-topic, .slide-header .h-name { color: var(--hse-blue); }
+    .slide-header .h-topic span {
+      display: block;
+      max-width: 360px;
+      max-height: 54px;
+      overflow: hidden;
+    }
+    .slide-header .spacer { flex: 1; }
+    .slide-header .hdr-num {
+      font-size: 30px;
+      color: var(--hse-blue);
+      padding-right: 20px;
+    }
+    .slide-header .hb.end { padding-left: 0; }
+
+    /* ─── Title slide ─────────────────────────────────────────────── */
+    .reveal .slides section.title-slide { padding: 0; }
+
+    .title-slide .t-top {
+      position: absolute;
+      left: 104px;
+      right: 104px;
+      top: 96px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      text-align: left;
+    }
+    .t-top img { height: 88px; width: 88px; flex: 0 0 auto; }
+    .t-top .tb { font-size: 19px; line-height: 1.3; }
+    .t-top .fac { color: #1a1a1a; max-width: 340px; }
+    .t-top .sep {
+      border-left: 1.5px solid var(--hse-blue);
+      padding-left: 22px;
+      height: 76px;
+      display: flex;
+      align-items: center;
+      color: var(--hse-blue);
+    }
+    .t-top .dep { max-width: 260px; }
+
+    .t-topic {
+      position: absolute;
+      left: 104px;
+      width: 640px;
+      top: 210px;
+      bottom: 96px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      text-align: left;
+    }
+    .t-kicker {
+      color: var(--hse-blue);
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+    .t-topic .topic {
+      color: var(--hse-blue);
+      font-size: 42px;
+      font-weight: 500;
+      line-height: 1.2;
+    }
+
+    .t-author {
+      position: absolute;
+      right: 104px;
+      bottom: 100px;
+      width: 440px;
+      text-align: right;
+      color: var(--hse-blue);
+      font-weight: 700;
+      font-size: 19px;
+      line-height: 1.4;
+    }
+    .t-author p { margin: 0 0 18px; }
+    .t-author p:last-child { margin-bottom: 0; }
+
+    /* ─── Final slide ─────────────────────────────────────────────── */
+    .reveal .slides section.final-slide { padding: 110px 120px 60px; }
+    .final-slide .f-wrap {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+    .final-slide .f-thanks {
+      color: var(--hse-blue);
+      font-size: 46px;
+      font-weight: 500;
+      margin: 0 0 48px;
+    }
+    .final-slide .f-meta {
+      color: var(--hse-blue);
+      font-size: 26px;
+      line-height: 1.45;
+    }
+    .final-slide .f-email { margin-top: 22px; font-size: 22px; color: #1a1a1a; }
+  </style>
+</head>
+<body>
+
+<!-- Content-slide header template: cloned by JS into every section without
+     the no-header class (see injectHeaders below). -->
+<div id="hdr-template" hidden>
+  <div class="slide-header">
+    <img src="../assets/hse-logo-small.png" alt="HSE University">
+    <div class="hb first h-fac">{{ project.meta.faculty_en | default('Faculty of Computer Science', true) | xmlesc }},<br>Software Engineering</div>
+    <div class="hb h-topic"><span>{{ project.name | xmlesc }}</span></div>
+    <div class="hb h-name">{{ project.meta.author_name_en | default('', true) | xmlesc }}</div>
+    <div class="spacer"></div>
+    <div class="hdr-num">1</div>
+    <div class="hb end"></div>
+  </div>
+</div>
+
+<div class="reveal">
+  <div class="slides">
+
+    <!-- ══════════════════════════════════════════════════ -->
+    <!-- Slide 1: Title -->
+    <!-- ══════════════════════════════════════════════════ -->
+    <section class="title-slide no-header"
+             data-background-image="../assets/hse-frame-title.jpg"
+             data-background-size="cover">
+      <div class="t-top">
+        <img src="../assets/hse-logo-full.png" alt="HSE University">
+        <div class="tb fac">{{ project.meta.faculty_en | default('Faculty of Computer Science', true) | xmlesc }}</div>
+        <div class="tb sep dep">BSc Programme<br>&laquo;Software Engineering&raquo;</div>
+        <div class="tb sep">{{ project.meta.city_en | default('Moscow, Russia', true) | xmlesc }}, {{ project.meta.year | default('', true) | xmlesc }}</div>
+      </div>
+
+      <div class="t-topic">
+        <div class="t-kicker">Project Proposal</div>
+        <div class="topic">{{ project.name | xmlesc }}</div>
+      </div>
+
+      <div class="t-author">
+        <p>
+          Presented by {{ project.meta.author_name_en | default('your name in English', true) | xmlesc }}<br>
+          group {{ author.group | default('', true) | xmlesc }}
+        </p>
+        ((* if project.supervisor.name *))
+        <p>
+          Supervisor:<br>
+          {{ project.supervisor.name | xmlesc }}
+        </p>
+        ((* endif *))
+      </div>
+
+      <aside class="notes">
+        Greet the panel, give your name and the project title in one sentence.
+        The supervisor block appears only when a supervisor is set in the
+        project settings. Keep the whole talk to 5–7 minutes.
+      </aside>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════ -->
+    <!-- Slide 2: Problem and Motivation -->
+    <!-- ══════════════════════════════════════════════════ -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>Problem and Motivation</h2>
+      <p class="todo">TODO: state the problem in one or two plain sentences.</p>
+      <ul>
+        <li class="todo">TODO: pain point 1 — who suffers from it</li>
+        <li class="todo">TODO: pain point 2</li>
+        <li class="todo">TODO: why existing workarounds are not enough</li>
+      </ul>
+      <aside class="notes">
+        Two or three pains and why they matter. Say who the affected users are.
+      </aside>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════ -->
+    <!-- Slide 3: Aim and Objectives -->
+    <!-- ══════════════════════════════════════════════════ -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>Aim and Objectives</h2>
+      <div class="goal-box"><strong>Aim:</strong> <span class="todo">TODO: one sentence — what you build and why</span></div>
+      <p class="subhead">Objectives</p>
+      <ol>
+        <li class="todo">TODO: objective 1</li>
+        <li class="todo">TODO: objective 2</li>
+        <li class="todo">TODO: objective 3</li>
+        <li class="todo">TODO: objective 4</li>
+      </ol>
+      <aside class="notes">
+        One aim, several objectives that together achieve it. The rest of the
+        talk can follow the objectives.
+      </aside>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════ -->
+    <!-- Slide 4: Existing Solutions -->
+    <!-- ══════════════════════════════════════════════════ -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>Existing Solutions</h2>
+      <table class="cmp">
+        <thead>
+          <tr>
+            <th>Criterion</th>
+            <th>Tool A</th>
+            <th>Tool B</th>
+            <th>Proposed</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="todo">TODO: criterion 1</td><td class="c">+</td><td class="c">&ndash;</td><td class="c">+</td></tr>
+          <tr><td class="todo">TODO: criterion 2</td><td class="c">&ndash;</td><td class="c">+</td><td class="c">+</td></tr>
+          <tr><td class="todo">TODO: criterion 3</td><td class="c">&ndash;</td><td class="c">&ndash;</td><td class="c">+</td></tr>
+        </tbody>
+      </table>
+      <p style="margin-top:22px;"><strong>Takeaway:</strong> <span class="todo">TODO: why a new solution is needed.</span></p>
+      <aside class="notes">
+        Compare the closest analogues on the criteria that matter. For each
+        tool name the developer, version and year. End with why a new solution
+        is justified.
+      </aside>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════ -->
+    <!-- Slide 5: Proposed Approach -->
+    <!-- ══════════════════════════════════════════════════ -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>Proposed Approach</h2>
+      <p class="todo">TODO: one sentence — the essence of your approach.</p>
+      <div class="figure-box">[Architecture / high-level idea diagram]</div>
+      <ul>
+        <li class="todo">TODO: key component or idea 1</li>
+        <li class="todo">TODO: key component or idea 2</li>
+        <li class="todo">TODO: key component or idea 3</li>
+      </ul>
+      <aside class="notes">
+        One clear diagram beats a paragraph of text. Highlight the parts you
+        design yourself.
+      </aside>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════ -->
+    <!-- Slide 6: Methodology and Technology Stack -->
+    <!-- ══════════════════════════════════════════════════ -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>Methodology and Technology Stack</h2>
+      <div class="cols">
+        <div class="col">
+          <p class="subhead">How you validate</p>
+          <ul>
+            <li class="todo">TODO: hypothesis and how it is validated</li>
+            <li class="todo">TODO: metrics you will measure</li>
+          </ul>
+        </div>
+        <div class="col">
+          <p class="subhead">Stack</p>
+          <ul>
+            <li class="todo">TODO: languages, frameworks, infrastructure</li>
+            <li class="todo">TODO: data and where it comes from; experiment / testbed</li>
+          </ul>
+        </div>
+      </div>
+      <aside class="notes">
+        What you study, what you measure and why, the stack and where the data
+        and infrastructure come from. Add technology logos.
+      </aside>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════ -->
+    <!-- Slide 7: Work Plan and Progress -->
+    <!-- ══════════════════════════════════════════════════ -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>Work Plan and Progress</h2>
+      <ul>
+        <li><strong>Done:</strong> <span class="todo">TODO: research, design, foundation already completed</span></li>
+        <li><strong>Now:</strong> <span class="todo">TODO: what you are implementing at the moment</span></li>
+        <li><strong>Next:</strong> <span class="todo">TODO: remaining steps until the thesis defence</span></li>
+      </ul>
+      <aside class="notes">
+        A proposal need not be finished — be clear about what is done and what
+        is planned, with a realistic horizon to the thesis defence.
+      </aside>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════ -->
+    <!-- Slide 8: Expected Results -->
+    <!-- ══════════════════════════════════════════════════ -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>Expected Results</h2>
+      <ol>
+        <li class="todo">TODO: main deliverable, e.g. a working prototype</li>
+        <li class="todo">TODO: secondary results</li>
+        <li class="todo">TODO: how success will be measured (and what would falsify the hypothesis)</li>
+      </ol>
+      <aside class="notes">
+        Results must trace back to the objectives. Name the metrics that decide
+        success or failure.
+      </aside>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════ -->
+    <!-- Slide 9: Conclusion -->
+    <!-- ══════════════════════════════════════════════════ -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>Conclusion</h2>
+      <p class="todo">TODO: restate the core idea of the project in one sentence.</p>
+      <ul>
+        <li class="todo">TODO: why the result matters</li>
+        <li class="todo">TODO: future work after the proposal</li>
+      </ul>
+      <aside class="notes">
+        Revisit the core idea and its significance; point to the next steps.
+      </aside>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════ -->
+    <!-- Slide 10: References -->
+    <!-- ══════════════════════════════════════════════════ -->
+    <section data-background-image="../assets/hse-frame-content.jpg" data-background-size="cover">
+      <h2>References</h2>
+      <div class="refs">
+        <p>[1] <span class="todo">TODO: Author, Title, Publisher, Year (IEEE style).</span></p>
+        <p>[2] <span class="todo">TODO: Author, &ldquo;Paper title,&rdquo; Journal, vol., no., pp., Year.</span></p>
+        <p>[3] <span class="todo">TODO: Title, Website, Year. [Online]. Available: URL. [Accessed: date].</span></p>
+      </div>
+      <aside class="notes">
+        Cite the key sources behind the proposal in IEEE style (numbered in the
+        order first mentioned).
+      </aside>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════ -->
+    <!-- Slide 11: Thank you -->
+    <!-- ══════════════════════════════════════════════════ -->
+    <section class="final-slide"
+             data-background-image="../assets/hse-frame-content.jpg"
+             data-background-size="cover">
+      <div class="f-wrap">
+        <div class="f-thanks">Thank you for your attention!</div>
+        <div class="f-meta">
+          {{ project.meta.author_name_en | default('', true) | xmlesc }}<br>
+          {{ project.name | xmlesc }}
+          ((* if author.email *))
+          <div class="f-email">{{ author.email | xmlesc }}</div>
+          ((* endif *))
+        </div>
+      </div>
+      <aside class="notes">
+        Invite questions. Expect two or three; they may touch the wider research
+        area, not only your slides.
+      </aside>
+    </section>
+
+  </div><!-- /slides -->
+</div><!-- /reveal -->
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5/dist/reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5/plugin/notes/notes.js"></script>
+<script>
+  // Injects a running header (small logo + faculty | topic | name + number)
+  // into every slide except the title (class="no-header").
+  function injectHeaders() {
+    var tpl = document.getElementById('hdr-template');
+    var sections = document.querySelectorAll('.reveal .slides > section');
+    Array.prototype.forEach.call(sections, function (sec, i) {
+      if (sec.classList.contains('no-header')) return;
+      var hdr = tpl.firstElementChild.cloneNode(true);
+      hdr.querySelector('.hdr-num').textContent = i + 1;
+      sec.appendChild(hdr);
+    });
+  }
+
+  Reveal.initialize({
+    hash: true,
+    width: 1280,
+    height: 720,
+    margin: 0,
+    center: false,
+    controls: false,
+    progress: false,
+    slideNumber: false,
+    transition: 'none',
+    plugins: [RevealNotes]
+  }).then(function () {
+    injectHeaders();
+  });
+</script>
+
+</body>
+</html>
