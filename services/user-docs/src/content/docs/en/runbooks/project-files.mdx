@@ -1,0 +1,54 @@
+---
+title: 'Project files'
+description: 'How to open the project file tree, upload your own images, PDFs, .bib and .tex files from your computer, and what to do if a file did not upload.'
+sidebar:
+  order: 16
+access: user
+help:
+  routes: ['/projects/:projectId/files']
+  summary: 'The **Files** section shows the whole project folder. Upload your own files with **Upload files** in the tree header, with **Upload files here** in a folder menu, or by dragging them from your computer.'
+  steps:
+    - text: 'In the project open **Files** in the left panel: the selected file opens to the right of the tree.'
+      hint: 'Text files open in the editor, images and PDFs are shown as they are, anything else can be downloaded.'
+    - text: 'Click **Upload files** in the tree header and pick one or more files. **Upload folder** brings a whole folder with its subfolders.'
+      hint: 'To put files into a specific folder, right-click it and choose **Upload files here** or **Upload folder here**.'
+    - text: 'Or drag files and folders from your computer right into the tree: onto a folder to put them there, or onto empty space to put them in the project root.'
+    - text: 'If a file with the same name already exists, choose **Replace**, **Keep both** (the new one gets a name like `fig (1).png`) or **Skip**. The **For all matches** checkbox applies the answer to the rest.'
+    - text: 'Wait for the upload to finish. If something did not upload, the **Upload result** window shows which files and why.'
+      hint: 'Uploaded files go into the version history and the git sync like any other project file.'
+verified:
+  at: 2026-11-16
+  app_version: '0.33.0'
+  sources:
+    - services/web-app/src/features/project-file-upload
+    - services/web-app/src/widgets/FileTree
+    - services/web-app/src/pages/WorkspacePage/panels/FilesPanel.tsx
+---
+
+import Steps from '~/components/Steps.astro'
+
+The **Files** section shows the whole project folder: `.tex` sources, the `.bib` bibliography,
+figures and appendices. This is also where you upload your own files from your computer: images (PNG,
+JPG, SVG), figures and scans in PDF, `.bib`, `.tex` and anything else. Files are stored byte for byte
+and the build can use them right away.
+
+<Steps />
+
+## Limits
+
+- One file is at most the server limit (50 MB by default). The Studio refuses a larger file before
+  sending it: git hosting services reject files near 100 MB, and the project would stop syncing.
+- On a server a project has a space limit. If space runs out, the upload stops and tells you how
+  much is left.
+- The service folders `.hse-studio`, `.git` and `.build` cannot be uploaded, nor names with `..`.
+- Anyone who can edit the project can upload. Readers and reviewers do not see the upload buttons.
+
+## If something goes wrong
+
+- **"The file is larger than …: the server will not accept it"**: make the file smaller (compress
+  the PDF or the image) or split the appendix into parts.
+- **"Not enough space in the project"**: delete files you do not need or ask the owner to free space.
+- **"No write access to this folder"**: in a team project an author writes only to their own folder
+  and `shared/`. Ask the owner for the right to edit the whole project.
+- **A document is out for signing**: before uploading into its folder the Studio asks you to confirm,
+  just as for a normal edit.

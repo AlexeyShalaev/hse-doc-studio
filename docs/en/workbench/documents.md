@@ -32,3 +32,5 @@ tags:
 ## Files under the hood
 
 Every document is plain `.tex` files in the project folder; the full tree lives in the Files mode on the rail. The folder layout is in the [reference](../reference/layout.md).
+
+Your own files (PNG, JPG and SVG images, figures and scans in PDF, `.bib`, `.tex` and anything else) are uploaded in Files: with "Upload files" or "Upload folder" in the tree header, with "Upload files here" in a folder menu, or by dragging them from your computer onto a folder or empty space in the tree. If the name is taken, the Studio asks: replace, keep both or skip. One file is at most `HSE_STUDIO__SERVER__PROJECT_FILE_MAX_BYTES` (50 MB by default, below the roughly 100 MB limit of git hosting services), and on a server the project space limit applies too. Uploaded files, including a PDF without a same-named source next to it, go into the version history and the git sync; built document PDFs stay out of history unless "Keep built PDFs in history" is on.
