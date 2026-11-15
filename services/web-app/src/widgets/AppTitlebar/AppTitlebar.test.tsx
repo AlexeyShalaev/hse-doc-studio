@@ -89,6 +89,22 @@ describe("AppTitlebar on a phone", () => {
     ).not.toHaveClass("titlebar-secondary");
   });
 
+  it("hides the Projects crumb in the Pack Studio standalone profile", () => {
+    viewport = installViewport(1360);
+    mount(LOCAL_BOOTSTRAP);
+    expect(screen.getByRole("button", { name: "Проекты" })).toBeInTheDocument();
+    cleanup();
+    mount({
+      ...LOCAL_BOOTSTRAP,
+      capabilities: {
+        ...LOCAL_BOOTSTRAP.capabilities,
+        pack_studio: true,
+        pack_studio_standalone: true,
+      },
+    });
+    expect(screen.queryByRole("button", { name: "Проекты" })).toBeNull();
+  });
+
   it("moves the project actions to their own row under the header", () => {
     viewport = installViewport(360);
     mount(serverUser, <span data-testid="actions">people</span>);

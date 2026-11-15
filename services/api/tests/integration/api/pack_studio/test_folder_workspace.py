@@ -7,7 +7,11 @@ from pathlib import Path
 
 import pytest
 import yaml
+from hse_doc_studio.api.config import settings as app_settings
+from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.file_version import file_etag
+from hse_doc_studio.core.pack_studio.errors import PackStudioError, PackStudioErrorCode
+from hse_doc_studio.use_cases.pack_studio.workspaces import PackWorkspaceService
 
 from tests.integration.api.pack_studio.conftest import (
     API,
@@ -386,3 +390,58 @@ async def test__unknown_released_version_name_case__in_tree_reads_from_disk(stan
 
     assert resp.status_code == 409
     assert resp.json()["code"] == "version_released"
+
+
+async def test__standalone__section_is_on_and_locked__bootstrap_says_standalone(
+    stand: Stand, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(app_settings.pack_studio, "standalone", True)
+
+    section = await stand.client.get(f"{API}/section")
+    boot = await stand.client.get("/api/v1/session/bootstrap")
+
+    assert section.json()["enabled"] is True
+    assert section.json()["locked"] is True
+    assert section.json()["standalone"] is True
+    assert boot.json()["capabilities"]["pack_studio"] is True
+    assert boot.json()["capabilities"]["pack_studio_standalone"] is True
+
+
+async def test__not_standalone__bootstrap_does_not_say_standalone(stand: Stand) -> None:
+    await stand.enable()
+
+    boot = await stand.client.get("/api/v1/session/bootstrap")
+
+    assert boot.json()["capabilities"]["pack_studio_standalone"] is False
+
+
+async def test__ensure_folder__opens_the_profile_folder_once(stand: Stand) -> None:
+    root = stand.root / "repo"
+    write_pack(root / "packs")
+    await stand.enable()
+    assert stand.container is not None
+
+    async with stand.container() as request:
+        service = await request.get(PackWorkspaceService)
+        first = await service.ensure_folder(Actor.local(), str(root))
+        again = await service.ensure_folder(Actor.local(), str(root / "packs" / ".."))
+    listed = (await stand.client.get(f"{API}/workspaces")).json()
+
+    assert first is not None
+    assert first.workspace.packs_path == "packs"
+    assert again is None
+    assert [ws["folder"] for ws in listed] == [str(root.resolve())]
+
+
+async def test__ensure_folder__folder_without_packs__is_refused(stand: Stand) -> None:
+    folder = stand.root / "home"
+    folder.mkdir()
+    (folder / "notes.txt").write_text("x", encoding="utf-8")
+    assert stand.container is not None
+
+    async with stand.container() as request:
+        service = await request.get(PackWorkspaceService)
+        with pytest.raises(PackStudioError) as caught:
+            await service.ensure_folder(Actor.local(), str(folder))
+
+    assert caught.value.code is PackStudioErrorCode.not_a_pack_repo

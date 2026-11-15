@@ -91,6 +91,8 @@ export const AppTitlebar = ({
   // Студия шаблонов: кнопка есть только у того, кому раздел открыт (capabilities.pack_studio).
   const packStudio = bootstrap?.capabilities.pack_studio === true && !isGuest;
   const packStudioActive = location.pathname.startsWith("/pack-studio");
+  // Профиль standalone (deploy/pack-studio): проектов нет, крошки «Проекты» тоже.
+  const standalone = bootstrap?.capabilities.pack_studio_standalone === true;
   // The one agent adapts to context — its tooltip says so.
   const inProject = location.pathname.startsWith("/projects/");
   const agentTooltip = inProject
@@ -162,26 +164,28 @@ export const AppTitlebar = ({
             alignItems: "center",
           }}
         >
-          <button
-            type="button"
-            className={clsx(
-              "row-btn shrink-0",
-              projectName && "titlebar-crumb-root",
-            )}
-            style={{
-              width: "auto",
-              padding: "0.3125rem 0.625rem",
-              color: isOnWelcome ? "var(--fg-0)" : "var(--fg-2)",
-            }}
-            onClick={handleBackToWelcome}
-            aria-label={t("titlebar.projects")}
-          >
-            <GraduationCap size="0.9375rem" />
-            {/* Телефон: рядом с именем проекта остаётся значок, на главной подпись нужна как заголовок */}
-            <span className={clsx(!isOnWelcome && "titlebar-crumb-label")}>
-              {t("titlebar.projects")}
-            </span>
-          </button>
+          {!standalone && (
+            <button
+              type="button"
+              className={clsx(
+                "row-btn shrink-0",
+                projectName && "titlebar-crumb-root",
+              )}
+              style={{
+                width: "auto",
+                padding: "0.3125rem 0.625rem",
+                color: isOnWelcome ? "var(--fg-0)" : "var(--fg-2)",
+              }}
+              onClick={handleBackToWelcome}
+              aria-label={t("titlebar.projects")}
+            >
+              <GraduationCap size="0.9375rem" />
+              {/* Телефон: рядом с именем проекта остаётся значок, на главной подпись нужна как заголовок */}
+              <span className={clsx(!isOnWelcome && "titlebar-crumb-label")}>
+                {t("titlebar.projects")}
+              </span>
+            </button>
+          )}
           {projectName && (
             <>
               <ChevronRight

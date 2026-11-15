@@ -72,6 +72,7 @@ nav = [
         { "Updates and key loss" = "deploy/operations.md" },
         { "Official packs without a GitHub account" = "deploy/pack-studio-bot.md" },
         { "Pack catalogs" = "deploy/pack-catalogs.md" },
+        { "Template Studio on your computer" = "deploy/pack-studio-local.md" },
         { "Autonomy and data retention" = "deploy/autonomy.md" },
     ] },
     { "Reference" = [

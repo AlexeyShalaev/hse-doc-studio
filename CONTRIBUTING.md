@@ -124,6 +124,11 @@ users with the next Studio release. Anyone can propose a change, also without a 
 this repository: open **Pack Studio, Official packs** in a Studio instance (your own GitHub
 token, or the instance service account if its administrator set one up).
 
+No Studio server at hand? Start the Pack Studio on your own computer with one command:
+`docker compose -f deploy/pack-studio/docker-compose.yml up -d`, then open
+<http://localhost:17260> (see [Template Studio on your computer](docs/en/deploy/pack-studio-local.md)).
+In a checkout of this repository, `make pack-studio` runs it from sources over `packs/`.
+
 - Contributions are public and are made under the repository license (Apache-2.0, see
   `LICENSE`); the Pack Studio asks for this consent before the first proposal.
 - Change only `packs/**`. A PR sent through an instance service account may not touch

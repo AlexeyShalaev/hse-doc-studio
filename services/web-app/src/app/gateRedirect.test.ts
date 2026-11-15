@@ -162,6 +162,25 @@ describe("resolveGateRedirect", () => {
     expect(resolveGateRedirect(LOCAL_BOOTSTRAP, at("/"))).toBeNull();
     expect(resolveGateRedirect(LOCAL_BOOTSTRAP, at("/login"))).toBe("/");
   });
+
+  it("sends project screens to the Pack Studio in the standalone profile", () => {
+    const standalone = {
+      ...LOCAL_BOOTSTRAP,
+      capabilities: {
+        ...LOCAL_BOOTSTRAP.capabilities,
+        pack_studio: true,
+        pack_studio_standalone: true,
+      },
+    };
+    for (const path of ["/", "/projects/x", "/wizard", "/inbox", "/login"]) {
+      expect(resolveGateRedirect(standalone, at(path))).toBe("/pack-studio");
+    }
+    expect(resolveGateRedirect(standalone, at("/pack-studio"))).toBeNull();
+    expect(
+      resolveGateRedirect(standalone, at("/pack-studio/workspaces/w")),
+    ).toBeNull();
+    expect(resolveGateRedirect(standalone, at("/settings/git"))).toBeNull();
+  });
 });
 
 describe("isPublicPath", () => {
