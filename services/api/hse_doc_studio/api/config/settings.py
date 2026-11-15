@@ -27,6 +27,7 @@ from hse_doc_studio.api.config.lifecycle import LifecycleConfig
 from hse_doc_studio.api.config.mail import MailConfig
 from hse_doc_studio.api.config.model_servers import ModelServersConfig
 from hse_doc_studio.api.config.observability import ObservabilityConfig
+from hse_doc_studio.api.config.pack_catalog import PackCatalogConfig
 from hse_doc_studio.api.config.pack_studio import PackStudioConfig
 from hse_doc_studio.api.config.rate_limit import RateLimitConfig
 from hse_doc_studio.api.config.runner_cluster import RunnerClusterConfig
@@ -131,6 +132,7 @@ class Settings(BaseSettings):
     signing_route: SigningRouteConfig = Field(default_factory=SigningRouteConfig)
     checkpoint: CheckpointConfig = Field(default_factory=CheckpointConfig)
     pack_studio: PackStudioConfig = Field(default_factory=PackStudioConfig)
+    pack_catalog: PackCatalogConfig = Field(default_factory=PackCatalogConfig)
 
     # Режим инстанса (HSE_STUDIO__MODE). Не путать с DeploymentMode (all-in-one/standard/native):
     # тот описывает, где запущен бэкенд, этот — одна локальная установка или общий сервер.

@@ -70,6 +70,7 @@ from hse_doc_studio.infra.di.providers.pack_studio import PackStudioProvider
 from hse_doc_studio.infra.di.providers.services import DomainServiceProvider
 from hse_doc_studio.infra.di.providers.use_cases import UseCaseProvider
 from hse_doc_studio.infra.identity.project_access import LocalProjectAccessChecker
+from hse_doc_studio.infra.pack_catalog.store import PacksStore
 from hse_doc_studio.infra.persistence.agent_persona import JsonAgentPersonaRepository
 from hse_doc_studio.infra.persistence.ai_provider import JsonAIProviderRepository
 from hse_doc_studio.infra.persistence.changelog import JsonChangeLogRepository
@@ -303,7 +304,11 @@ def create_test_container(  # noqa: C901 — one @provide per repo; flat by desi
 
         @provide
         def get_template_repo(self) -> ITemplateRepository:
-            repo = YamlTemplateRepository(packs_dir or _PACKS_DIR)
+            # Подключённые паки (срез T17) в хранилище data_dir стенда; отпечаток каталога сверяется при каждом
+            # обращении, чтобы «Применить» было видно сразу.
+            repo = YamlTemplateRepository(
+                packs_dir or _PACKS_DIR, store=PacksStore(data_dir / "packs-store"), recheck_s=0.0
+            )
             repo.load()
             return repo
 

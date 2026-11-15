@@ -55,7 +55,9 @@ def _switch_env(tmp_path: Path) -> tuple[Project, MagicMock]:
     (project.folder / "pres" / "pptx" / "presentation.pptx").write_bytes(b"edited by student")
 
     template_repo = MagicMock()
-    template_repo._packs_dir = str(tmp_path / "packs")
+    template_repo.version_dir.side_effect = lambda p, t, v, root=Path(tmp_path / "packs"): (
+        root / p / "templates" / t / "versions" / v
+    )
     template_repo.list_packs.return_value = [SimpleNamespace(id="hse-cs-se", templates=[SimpleNamespace(id="vkr")])]
     return project, template_repo
 
@@ -128,7 +130,7 @@ async def test__update_document__same_variant__noop_keeps_status(pres_definition
 
 @pytest.mark.unit
 async def test__update_document__materialisation_failure_does_not_fail_patch(pres_definition) -> None:
-    # Пака на диске нет (кривой _packs_dir) — смена варианта всё равно
+    # Пака на диске нет (каталога версии нет) — смена варианта всё равно
     # применяется: материализация best-effort.
     project = make_project(documents=[make_document("pres", status=DocumentStatus.ok, chosen_variant="pptx")])
     uc = _make_uc(project, documents=(pres_definition,))
