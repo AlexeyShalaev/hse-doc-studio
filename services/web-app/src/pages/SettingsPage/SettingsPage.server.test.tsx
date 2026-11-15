@@ -64,6 +64,7 @@ const SERVER: Bootstrap = {
     remote_runner: false,
     git_remote: false,
     git_server_login: false,
+    pack_studio: false,
   },
 };
 

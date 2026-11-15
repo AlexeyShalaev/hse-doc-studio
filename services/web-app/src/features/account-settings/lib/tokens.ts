@@ -8,6 +8,7 @@ export const TOKEN_SCOPES: readonly TokenScope[] = [
   "mcp",
   "mcp:admin",
   "sign",
+  "packs",
 ];
 
 /** Срок жизни при создании: дни, null это бессрочный. Больше года сервер не принимает. */
@@ -22,6 +23,7 @@ const SCOPE_KEYS: Record<TokenScope, string> = {
   mcp: "mcp",
   "mcp:admin": "mcpAdmin",
   sign: "sign",
+  packs: "packs",
 };
 
 export const scopeKey = (scope: TokenScope): string => SCOPE_KEYS[scope];

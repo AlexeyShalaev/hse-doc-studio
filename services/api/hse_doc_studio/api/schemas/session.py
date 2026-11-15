@@ -28,7 +28,7 @@ SetupState = Literal["needs_admin", "ready"]
 RegistrationMode = Literal["open", "domains", "invite", "closed"]
 OrgRoleName = Literal["owner", "admin", "member"]
 AccountStatus = Literal["active", "pending_verification", "pending_approval", "disabled"]
-TokenScope = Literal["api", "git:read", "git:write", "mcp", "mcp:admin", "sign"]
+TokenScope = Literal["api", "git:read", "git:write", "mcp", "mcp:admin", "sign", "packs"]
 ProjectRoleName = Literal["reader", "reviewer", "editor", "owner"]
 
 
@@ -51,6 +51,8 @@ class Capabilities(StrictModel):
     git_remote: bool = False
     # Локально: вход на сервер Студии по коду устройства и клонирование его проектов.
     git_server_login: bool = False
+    # Студия шаблонов (`/pack-studio`): раздел включён и у человека есть право «Автор шаблонов» (локально: включён).
+    pack_studio: bool = False
 
 
 class OidcProviderOption(StrictModel):
@@ -334,7 +336,7 @@ class ApiToken(StrictModel):
 
 class CreateApiTokenRequest(StrictModel):
     name: str = Field(min_length=1, max_length=80)
-    scopes: list[TokenScope] = Field(min_length=1, max_length=6)
+    scopes: list[TokenScope] = Field(min_length=1, max_length=7)
     expires_in_days: int | None = Field(ge=1, le=365)
 
 

@@ -24,7 +24,8 @@
     "personal_runners": false,
     "remote_runner": false,
     "git_remote": false,
-    "git_server_login": false
+    "git_server_login": false,
+    "pack_studio": false
   },
   "csrf_token": "Gq8vT1mZ3xK0cR7bN5yH2wLsJp9eDf4a",
   "guest": {

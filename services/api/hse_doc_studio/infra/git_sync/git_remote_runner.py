@@ -20,6 +20,7 @@ import structlog
 from hse_doc_studio.api.config import GitConfig
 from hse_doc_studio.core.egress import IEgressPolicy
 from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.git_sync.credential_match import check_credential_matches
 from hse_doc_studio.core.git_sync.entities import (
     CredentialStatus,
     GitCredential,
@@ -52,7 +53,6 @@ from hse_doc_studio.core.git_sync.url import RemoteKind, RemoteUrl, is_loopback_
 from hse_doc_studio.infra.git_sync.auth_env import (
     allowed_protocols,
     build_http_auth,
-    check_credential_matches,
 )
 from hse_doc_studio.infra.git_sync.credential_access import DirectCredentialAccess
 from hse_doc_studio.infra.git_sync.egress_guard import authorize_git_host

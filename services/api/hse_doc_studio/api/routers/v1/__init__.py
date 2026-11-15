@@ -37,6 +37,7 @@ from hse_doc_studio.api.routers.v1 import (
     oidc,
     onboarding,
     orgs,
+    pack_studio,
     passkeys,
     profile,
     project_artifacts,
@@ -148,3 +149,6 @@ api_router.include_router(review.router, tags=["review"])
 api_router.include_router(account_invitations.router, tags=["account"])
 # quotas: использование квот человека и организации
 api_router.include_router(usage.router, tags=["quotas"])
+# Студия шаблонов (template-studio.md, T5): состояние раздела открыто всем, остальное под гардом раздела
+api_router.include_router(pack_studio.section_router, tags=["pack-studio"])
+api_router.include_router(pack_studio.router, tags=["pack-studio"])

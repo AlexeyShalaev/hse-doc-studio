@@ -50,6 +50,7 @@ from hse_doc_studio.infra.db.orm.mail_log import MailLogRow, MailRetryRow
 from hse_doc_studio.infra.db.orm.model_servers import ModelServerRow
 from hse_doc_studio.infra.db.orm.onboarding import UserOnboardingRow
 from hse_doc_studio.infra.db.orm.orgs import GroupMemberRow, GroupRow, OrgMemberRow, OrgRow
+from hse_doc_studio.infra.db.orm.pack_studio import PackStudioGrantRow, PackWorkspaceRow
 from hse_doc_studio.infra.db.orm.passkeys import PasskeyRow
 from hse_doc_studio.infra.db.orm.project_usage import ProjectUsageRow
 from hse_doc_studio.infra.db.orm.projects import ProjectMemberRow, ProjectRow
@@ -117,6 +118,8 @@ __all__ = [
     "OidcProviderRow",
     "OrgMemberRow",
     "OrgRow",
+    "PackStudioGrantRow",
+    "PackWorkspaceRow",
     "PasskeyRow",
     "PasswordCredentialRow",
     "ProjectArtifactRow",

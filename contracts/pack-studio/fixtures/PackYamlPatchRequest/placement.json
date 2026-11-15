@@ -1,0 +1,52 @@
+{
+  "ops": [
+    {
+      "op": "set",
+      "path": [
+        "signatures",
+        "slots",
+        1,
+        "placements",
+        "project_proposal"
+      ],
+      "value": {
+        "page": 1,
+        "x_mm": 80,
+        "y_mm": 139,
+        "width_mm": 40
+      }
+    },
+    {
+      "op": "insert",
+      "path": [
+        "meta_groups"
+      ],
+      "index": 2,
+      "value": {
+        "id": "extra",
+        "label": {
+          "ru": "Дополнительно",
+          "en": "Extra"
+        }
+      }
+    },
+    {
+      "op": "move",
+      "path": [
+        "documents"
+      ],
+      "index": 0,
+      "to": 3
+    },
+    {
+      "op": "delete",
+      "path": [
+        "signatures",
+        "slots",
+        2,
+        "default_dates",
+        "topic_application"
+      ]
+    }
+  ]
+}

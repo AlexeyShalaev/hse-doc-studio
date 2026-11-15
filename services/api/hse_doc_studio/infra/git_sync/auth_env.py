@@ -12,6 +12,7 @@ from __future__ import annotations
 import base64
 from dataclasses import dataclass
 
+from hse_doc_studio.core.git_sync.credential_match import check_credential_matches
 from hse_doc_studio.core.git_sync.entities import GitCredential, GitCredentialKind
 from hse_doc_studio.core.git_sync.error_messages import git_error
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
@@ -42,20 +43,6 @@ def allowed_protocols(remote: RemoteUrl) -> str:
 
 def _mismatch(ru: str, en: str, code: GitErrorCode = GitErrorCode.credential_host_mismatch) -> GitSyncError:
     return GitSyncError(code, localized_error(ru, en))
-
-
-def check_credential_matches(remote: RemoteUrl, credential: GitCredential) -> None:
-    """Доступ годится только для своего хоста: токен GitHub не уйдёт на чужой сервер по правке адреса."""
-    if remote.host is None or credential.host.lower() != remote.host.lower():
-        raise _mismatch(
-            "Этот доступ создан для другого сервера",
-            "This access was created for a different server",
-        )
-    if remote.kind is RemoteKind.ssh and credential.port is not None and credential.port != (remote.port or 22):  # noqa: PLR2004
-        raise _mismatch(
-            "Этот ключ создан для другого порта сервера",
-            "This key was created for a different server port",
-        )
 
 
 def build_http_auth(remote: RemoteUrl, credential: GitCredential, secret: Secret) -> HttpAuth:

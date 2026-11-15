@@ -1,0 +1,74 @@
+{
+  "workspace_id": "5f0c1c8e-1b7a-4d51-9a43-0a5b2f3c4d10",
+  "base_sha": "4f2a9c0d8e7b6a5f4e3d2c1b0a9f8e7d6c5b4a39",
+  "packs": [
+    {
+      "id": "hse-cs-sse",
+      "path": "hse-cs-sse",
+      "name": {
+        "ru": "МИЭМ, Системная и программная инженерия",
+        "en": "MIEM, Systems and Software Engineering"
+      },
+      "templates": [
+        {
+          "id": "coursework",
+          "path": "hse-cs-sse/templates/coursework",
+          "name": {
+            "ru": "Курсовой проект",
+            "en": "Course project"
+          },
+          "default_version": "2026.1.5",
+          "versions": [
+            {
+              "version": "2026.1.5",
+              "path": "hse-cs-sse/templates/coursework/versions/2026.1.5",
+              "status": "stable",
+              "released": true,
+              "modified": false
+            },
+            {
+              "version": "2026.1.6",
+              "path": "hse-cs-sse/templates/coursework/versions/2026.1.6",
+              "status": "beta",
+              "released": false,
+              "modified": false
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "hse-cs-sse",
+      "is_dir": true,
+      "size": 0,
+      "read_only": null
+    },
+    {
+      "path": "hse-cs-sse/pack.yaml",
+      "is_dir": false,
+      "size": 412,
+      "read_only": null
+    },
+    {
+      "path": "hse-cs-sse/templates/coursework/releases.yaml",
+      "is_dir": false,
+      "size": 980,
+      "read_only": "releases_read_only"
+    },
+    {
+      "path": "hse-cs-sse/templates/coursework/versions/2026.1.5/version.yaml",
+      "is_dir": false,
+      "size": 30512,
+      "read_only": "version_released"
+    },
+    {
+      "path": "hse-cs-sse/templates/coursework/versions/2026.1.6/version.yaml",
+      "is_dir": false,
+      "size": 30733,
+      "read_only": null
+    }
+  ],
+  "truncated": false
+}

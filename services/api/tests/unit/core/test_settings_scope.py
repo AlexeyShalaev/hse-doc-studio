@@ -5,7 +5,7 @@ from hse_doc_studio.core.settings_scope import SETTING_SCOPES, SettingScope, set
 from hse_doc_studio.use_cases.settings.get_settings import _DEFAULTS
 
 # Ключи, которые читаются из настроек, но не входят в _DEFAULTS: у них нет значения по умолчанию.
-_UNDEFAULTED_KEYS = {"languagetool_image", "office_convert_image", "office_editor_image"}
+_UNDEFAULTED_KEYS = {"languagetool_image", "office_convert_image", "office_editor_image", "pack_studio_enabled"}
 
 
 def test__scopes__every_default_key_has_a_scope() -> None:

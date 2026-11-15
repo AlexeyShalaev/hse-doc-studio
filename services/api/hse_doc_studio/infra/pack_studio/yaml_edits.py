@@ -706,3 +706,19 @@ def _move(text: str, path: YamlPath, src: int, dst: int) -> str:
     rest, lines = _block_remove(doc, seq, src, separated)
     rest_doc = _Doc(rest)
     return _block_insert(rest_doc, _sequence(rest_doc, path)[1], dst, [lines], separated)
+
+
+class PackYamlEditor:
+    """Реализация порта `IYamlEditor` (core/pack_studio/protocols.py) функциями этого модуля."""
+
+    def set_value(self, text: str, path: YamlPath, value: Any) -> str:
+        return set_value(text, path, value)
+
+    def insert_item(self, text: str, path: YamlPath, index: int, value: Any) -> str:
+        return insert_item(text, path, index, value)
+
+    def delete(self, text: str, path: YamlPath) -> str:
+        return delete(text, path)
+
+    def move_item(self, text: str, path: YamlPath, src: int, dst: int) -> str:
+        return move_item(text, path, src, dst)

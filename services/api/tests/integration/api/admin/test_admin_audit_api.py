@@ -322,6 +322,10 @@ _AUDITED_ELSEWHERE: dict[tuple[str, str], str] = {
     ("DELETE", "/api/admin/model-servers/{id}"): "model_server.remove",
     ("PUT", "/api/admin/model-servers/settings"): "model_server.hf_token_set",
     ("DELETE", "/api/admin/model-servers/settings"): "model_server.hf_token_clear",
+    # Студия шаблонов (template-studio.md, T5): проверяет tests/integration/api/pack_studio/test_pack_studio_server_pg.
+    ("PUT", "/api/admin/pack-studio"): "pack_studio.section_update",
+    ("POST", "/api/admin/pack-studio/grants"): "pack_studio.grant_add",
+    ("DELETE", "/api/admin/pack-studio/grants/{id}"): "pack_studio.grant_remove",
 }
 
 # Изменяющие ручки без записи в журнале осознанно: только проверка соединения, состояние не меняется.
