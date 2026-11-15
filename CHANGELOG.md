@@ -6,6 +6,14 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.33.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.32.0...v0.33.0) - 2026-11-15
+
+- Template Studio: a Form tab for version.yaml and doc.yaml. Fields and groups, questionnaires, documents, languages and translations, and variants are edited with the mouse, no hand-written YAML. A field preview and where it is printed are shown alongside. YAML comments and order are kept, and an edit that breaks the pack is not saved.
+- Template Studio: forms for submission checkpoints and the signing route (items, submission methods, signature slots with conditions and optional ones) and a "Route in this combination" block showing the route for the selected preview switches.
+- Template Studio: forms for checks and rules, and running the checks on the preview with findings shown next to each rule.
+- Template Studio: New pack and New template, from scratch with the Minimal scaffold (a GOST 7.32 report) or as a copy of an existing version with new ids.
+- MCP: pack_* tools for the Template Studio: reading and editing pack files, checks, preview, signature places, the new version wizard, creating a pack and a template, git and Propose changes. They need the packs token scope and the Template author right; sending a PR is off by default and needs confirmation.
+
 ## [0.32.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.31.0...v0.32.0) - 2026-11-15
 
 - A GitHub token can now be pasted right where it is needed: in the Official packs dialog, in New workspace of the Template Studio and in Git access (the Add token button). The Studio checks the token and selects it right away. The hint for official packs suggests a classic token with the public_repo scope.
