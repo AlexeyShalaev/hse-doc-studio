@@ -9,8 +9,9 @@ import { expectNoHorizontalScroll, loginOnPhone } from "./phoneHelpers";
  * Сценарий: новое пространство над git, клон, дерево с замком у выпущенной версии, файл с находками в «Проблемах»,
  * переход к файлу другой находки, сохранение с If-Match; панель git показывает правку, «Предложить изменения» сперва
  * упирается в проверку пака (находки в «Проблемах»), затем открывает PR со статусом CI; предпросмотр собирает
- * документ, неудача с журналом. На телефоне дерево в шторке, панель git и ничего не торчит за край. В конце раздел
- * выключается обратно. Скриншоты: screenshots/<язык>/ps-*.png.
+ * документ, неудача с журналом. Мастер «Новая версия» (T10): живой класс черновика с причинами, заметки из отчёта,
+ * выпуск в рабочей ветке, «Новая версия» у шаблона в дереве. На телефоне дерево в шторке, панели git и версии и
+ * ничего не торчит за край. В конце раздел выключается обратно. Скриншоты: screenshots/<язык>/ps-*.png.
  */
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? "admin@example.org";
 const adminPassword = (): string => {
@@ -119,6 +120,75 @@ const PREVIEW_FAILED = {
   has_anchors: false,
 };
 
+const ref = (version: string) => ({
+  pack: "hse-cs-sse",
+  template: "coursework",
+  version,
+  path: `${TPL}/versions/${version}`,
+});
+const NO_NOTES = { ru: [], en: [] };
+const DRAFT_NOTES = {
+  ru: ["Исправлены файлы документов: общие файлы."],
+  en: ["Document files are fixed: common files."],
+};
+
+/** Состояние версии в мастере (T10): черновик 2026.1.6 класса patch или выпущенная 2026.1.5. */
+const versionState = (version: string, notes: typeof NO_NOTES, registered: boolean) => {
+  const released = version === "2026.1.5";
+  return {
+    version: ref(version),
+    status: released || registered ? "stable" : "beta",
+    released,
+    modified: false,
+    registered,
+    release_outdated: false,
+    is_default: released,
+    base: released ? null : "2026.1.5",
+    minimum: released ? null : "patch",
+    suggested: released ? null : "patch",
+    by_number: released ? null : "patch",
+    declared: registered ? "patch" : null,
+    note: null,
+    number_ok: true,
+    headline: released ? {} : { ru: "patch: файлы шаблона", en: "patch: template files" },
+    reasons: released
+      ? []
+      : [
+          {
+            code: "file_changed",
+            path: "files/common/meta.tex.j2",
+            change: "changed",
+            minimum: "patch",
+            suggested: "patch",
+            hard: false,
+            exception: false,
+            message: { ru: "Изменён файл files/common/meta.tex.j2", en: "Changed file files/common/meta.tex.j2" },
+          },
+        ],
+    numbers: released
+      ? { patch: null, minor: null, major: null }
+      : { patch: version, minor: "2026.2.0", major: "2027.1" },
+    changes: notes,
+    breaking_changes: NO_NOTES,
+    draft_changes: released ? NO_NOTES : DRAFT_NOTES,
+    draft_breaking: NO_NOTES,
+    move_to: null,
+    error: null,
+  };
+};
+
+const VERSION_OPTIONS = {
+  pack: "hse-cs-sse",
+  template: "coursework",
+  versions: [
+    { version: "2026.1.5", status: "stable", released: true, registered: true, modified: false },
+    { version: "2026.1.6", status: "beta", released: false, registered: false, modified: false },
+  ],
+  default_base: "2026.1.5",
+  default_version: "2026.1.5",
+  numbers: { patch: "2026.1.7", minor: "2026.2.0", major: "2027.1" },
+};
+
 const file = (path: string, size: number, readOnly: string | null = null) => ({
   path,
   is_dir: false,
@@ -189,12 +259,16 @@ type Fake = {
   writes: { path: string; ifMatch: string | null; body: string }[];
   proposals: unknown[];
   previews: unknown[];
+  notes: unknown[];
+  releases: unknown[];
+  created: unknown[];
 };
 
 /** Подмена /api/v1/pack-studio/workspaces*: клон идёт два опроса, файлы с ETag, запись с If-Match. */
 const mockWorkspaces = async (page: Page): Promise<Fake> => {
-  const fake: Fake = { calls: [], writes: [], proposals: [], previews: [] };
+  const fake: Fake = { calls: [], writes: [], proposals: [], previews: [], notes: [], releases: [], created: [] };
   let created = false;
+  let notes = NO_NOTES;
   let polls = 0;
   let proposed = false;
   const files: Record<string, { content: string; etag: string }> = {
@@ -267,6 +341,39 @@ const mockWorkspaces = async (page: Page): Promise<Fake> => {
       if (req.method() === "GET") return json(route, PREVIEW_OPTIONS);
       fake.previews.push(req.postDataJSON());
       return json(route, { builds: [PREVIEW_FAILED] }, 202);
+    }
+    // Мастер «Новая версия» (T10).
+    const state = /^\/[^/]+\/versions\/hse-cs-sse\/coursework\/([^/]+)\/(state|notes|release)$/.exec(rest);
+    if (state) {
+      const [, version = "", step] = state;
+      if (step === "notes") {
+        fake.notes.push(req.postDataJSON());
+        notes = (req.postDataJSON() as { changes: typeof NO_NOTES }).changes;
+      }
+      if (step === "release") {
+        fake.releases.push(req.postDataJSON());
+        return json(route, {
+          version: ref(version),
+          digest: "sha256:e2e",
+          kind: "patch",
+          previous: "2026.1.5",
+          replaced: false,
+          default_set: true,
+          edited: [MANIFEST, `${TPL}/template.yaml`],
+          warnings: [],
+        });
+      }
+      return json(route, versionState(version, version === "2026.1.6" ? notes : NO_NOTES, fake.releases.length > 0));
+    }
+    if (rest === `/${WS}/templates/hse-cs-sse/coursework/versions`) {
+      if (req.method() === "GET") return json(route, VERSION_OPTIONS);
+      fake.created.push(req.postDataJSON());
+      files[`${TPL}/versions/2026.2.0/version.yaml`] = { content: 'id: "2026.2.0"\nstatus: beta\n', etag: '"n1"' };
+      return json(
+        route,
+        { version: ref("2026.2.0"), base: "2026.1.5", update_class: "minor", warnings: [] },
+        201,
+      );
     }
     if (rest === `/${WS}/previews/b1`) return json(route, PREVIEW_FAILED);
     if (rest === `/${WS}/previews/b1/log`) {
@@ -521,6 +628,54 @@ for (const lang of LANGS) {
       await shot(page, L, "ps-60-preview");
     });
 
+    test("мастер «Новая версия»: живой класс, заметки из отчёта, выпуск в ветке, новая версия у шаблона", async ({
+      page,
+    }) => {
+      const fake = await mockWorkspaces(page);
+      await login(page);
+      await setSection(page, true);
+      await page.goto("/pack-studio");
+      await page.getByTestId("ws-create-empty").click();
+      await page.getByTestId("ws-create-url").fill("https://github.com/e2e/packs");
+      await page.getByTestId("ws-create-submit").click();
+      await expect(page.getByTestId("pack-tree")).toBeVisible({ timeout: 15_000 });
+      await expandToDraft(page);
+      await page.getByTestId(`tree-file-${MANIFEST}`).click();
+
+      // Полоса версии: класс по классификатору, причины ведут в файл.
+      const bar = page.getByTestId("version-bar");
+      await expect(page.getByTestId("version-class")).toContainText(text("файлы шаблона", "template files"));
+      await expect(page.getByTestId("version-number")).toContainText("2026.1.6");
+      await page.getByTestId("version-class").click();
+      await expect(page.getByTestId("version-reasons")).toContainText("meta.tex.j2");
+      await shot(page, L, "ps-70-version");
+
+      // Заметки: черновик из отчёта, пары ru и en.
+      await bar.getByTestId("version-notes-open").click();
+      await page.getByTestId("version-notes-fill").click();
+      await expect(page.getByTestId("version-notes-ru")).toHaveValue(DRAFT_NOTES.ru[0] ?? "");
+      await shot(page, L, "ps-72-notes");
+      await page.getByTestId("version-notes-save").click();
+      await expect(page.getByTestId("version-notes-save")).toBeHidden();
+      expect(fake.notes[0]).toMatchObject({ changes: DRAFT_NOTES });
+
+      // Выпуск: класс номера и версия по умолчанию, дальше это правки рабочей ветки.
+      await bar.getByTestId("version-release-open").click();
+      await shot(page, L, "ps-74-release");
+      await page.getByTestId("version-release-submit").click();
+      await expect(page.getByTestId("version-registered")).toBeVisible();
+      expect(fake.releases[0]).toEqual({ kind: "patch", set_default: true });
+
+      // «Новая версия» у шаблона в дереве: база последняя выпущенная, класс minor даёт 2026.2.0.
+      await page.getByTestId(`tree-new-version-${TPL}`).click();
+      await page.getByTestId("new-version-class-minor").click();
+      await expect(page.getByTestId("new-version-submit")).toContainText("2026.2.0");
+      await shot(page, L, "ps-76-new-version");
+      await page.getByTestId("new-version-submit").click();
+      await expect(page).toHaveURL(/2026\.2\.0%2Fversion\.yaml|2026\.2\.0\/version\.yaml/);
+      expect(fake.created[0]).toEqual({ base: "2026.1.5", update_class: "minor" });
+    });
+
     test("места подписей на собранном PDF: рамка по умолчанию становится местом документа", async ({ page }) => {
       await mockWorkspaces(page);
       const places = await mockPlaces(page);
@@ -580,6 +735,7 @@ for (const lang of LANGS) {
         await page.getByTestId(`tree-file-${MANIFEST}`).click();
         await expect(page.getByTestId("problems-panel")).toContainText("/status");
         await expect(page.getByTestId("git-bar")).toBeVisible();
+        await expect(page.getByTestId("version-bar")).toBeVisible();
         await expectNoHorizontalScroll(page);
         await shot(page, L, "ps-40-phone");
       });

@@ -47,6 +47,10 @@ export const PACK_STUDIO_ERROR_CODES = [
   "service_access_missing",
   "service_access_exists",
   "service_access_not_found",
+  "version_not_found",
+  "version_taken",
+  "version_number_invalid",
+  "version_not_modified",
   "place_invalid",
 ] as const;
 

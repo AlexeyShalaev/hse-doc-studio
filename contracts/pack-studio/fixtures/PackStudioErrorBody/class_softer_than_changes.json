@@ -1,0 +1,6 @@
+{
+  "detail": "Номер версии мягче, чем требуют изменения.",
+  "code": "class_softer_than_changes",
+  "minimum": "minor",
+  "chosen": "patch"
+}

@@ -50,6 +50,17 @@ _SCHEMAS: dict[str, Any] = {
     "StartPackPreviewRequest": s.StartPackPreviewRequest,
     "PackPreviewBuild": s.PackPreviewBuildResponse,
     "PackPreviewStart": s.PackPreviewStartResponse,
+    # Срез T10: мастер «Новая версия»
+    "PackVersionOptions": s.PackVersionOptionsResponse,
+    "CreatePackVersionRequest": s.CreatePackVersionRequest,
+    "PackVersionCreated": s.PackVersionCreatedResponse,
+    "PackVersionState": s.PackVersionStateResponse,
+    "PackVersionNotesRequest": s.PackVersionNotesRequest,
+    "PackRenumberRequest": s.PackRenumberRequest,
+    "PackMoveEditsRequest": s.PackMoveEditsRequest,
+    "PackVersionMoved": s.PackVersionMovedResponse,
+    "PackReleaseRequest": s.PackReleaseRequest,
+    "PackRelease": s.PackReleaseResponse,
     # Срез T9: места подписей и метки даты на PDF предпросмотра
     "PackSignatures": s.PackSignaturesResponse,
     "PackSignaturesPatchRequest": s.PackSignaturesPatchRequest,

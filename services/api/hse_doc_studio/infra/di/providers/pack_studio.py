@@ -28,6 +28,7 @@ from hse_doc_studio.core.pack_studio.protocols import (
     IPackHosting,
     IPackPreviewRenderer,
     IPackStudioSectionStore,
+    IPackVersions,
     IPackWorkspaceFiles,
     IPackWorkspaceGit,
     IPackWorkspaceRepository,
@@ -48,6 +49,7 @@ from hse_doc_studio.infra.pack_studio.preview_dispatch import PreviewJobDispatch
 from hse_doc_studio.infra.pack_studio.preview_renderer import PackPreviewRenderer, PreviewRenderLimits
 from hse_doc_studio.infra.pack_studio.preview_store import FsPreviewStore
 from hse_doc_studio.infra.pack_studio.preview_worker import StageLimits
+from hse_doc_studio.infra.pack_studio.version_wizard import PackVersionWizard
 from hse_doc_studio.infra.pack_studio.workspace_check import WorkspacePackChecker
 from hse_doc_studio.infra.pack_studio.workspace_files import LocalPackWorkspaceFiles
 from hse_doc_studio.infra.pack_studio.workspace_git import PackWorkspaceGit, workspace_dirs
@@ -59,6 +61,7 @@ from hse_doc_studio.use_cases.pack_studio.git import PackGitService
 from hse_doc_studio.use_cases.pack_studio.insight import PackInsightService
 from hse_doc_studio.use_cases.pack_studio.places import PackPlacesService
 from hse_doc_studio.use_cases.pack_studio.preview import PackPreviewService, PreviewLimits
+from hse_doc_studio.use_cases.pack_studio.versions import PackVersionService
 from hse_doc_studio.use_cases.pack_studio.workspaces import PackWorkspaceService, WorkspaceTasks
 
 
@@ -200,6 +203,16 @@ class PackStudioProvider(Provider):
     @provide
     def get_insight_service(self, workspaces: PackWorkspaceService) -> PackInsightService:
         return PackInsightService(workspaces, PackInspector())
+
+    @provide
+    def get_pack_versions(self) -> IPackVersions:
+        return PackVersionWizard()
+
+    @provide
+    def get_version_service(
+        self, workspaces: PackWorkspaceService, versions: IPackVersions, git: IPackWorkspaceGit
+    ) -> PackVersionService:
+        return PackVersionService(workspaces, versions, git)
 
     @provide
     def get_preview_store(self) -> IPreviewStore:

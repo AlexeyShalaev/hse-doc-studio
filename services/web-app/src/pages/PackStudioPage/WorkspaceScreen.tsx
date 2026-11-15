@@ -29,6 +29,11 @@ import { PackPlacesEditor } from "@features/pack-places";
 import { PackPreviewPane } from "@features/pack-preview";
 import { PackTreePanel, versionStatusVariant } from "@features/pack-tree";
 import {
+  NewVersionDialog,
+  VersionBar,
+  type NewVersionTarget,
+} from "@features/pack-version";
+import {
   WorkspaceStateBadge,
   workspaceSource,
 } from "@features/pack-workspaces";
@@ -154,6 +159,8 @@ export const WorkspaceScreen = () => {
   const [problemsFocus, setProblemsFocus] = useState(0);
   // Операция git поменяла файлы на диске: редактор открывает файл заново.
   const [reload, setReload] = useState(0);
+  // Мастер «Новая версия»: шаблон, для которого открыт шаг 1.
+  const [newVersion, setNewVersion] = useState<NewVersionTarget | null>(null);
   // Места подписей записаны в манифест версии: проверки заново, PDF при этом не устаревает.
   const [placesSaves, setPlacesSaves] = useState(0);
   const client = useQueryClient();
@@ -267,6 +274,10 @@ export const WorkspaceScreen = () => {
       onSelect={(path) => {
         open(path);
       }}
+      onNewVersion={(pack, template) => {
+        setTreeOpen(false);
+        setNewVersion({ pack, template });
+      }}
     />
   );
 
@@ -347,6 +358,18 @@ export const WorkspaceScreen = () => {
             {file ? (
               <>
                 <FileCrumbs workspaceId={ws.id} path={file} />
+                <VersionBar
+                  workspaceId={ws.id}
+                  git={ws.kind === "git"}
+                  path={file}
+                  revision={epoch + placesSaves}
+                  onOpenFile={(path) => {
+                    open(path);
+                  }}
+                  onNewVersion={setNewVersion}
+                  onFilesChanged={onFilesChanged}
+                  editorDirty={editorDirty}
+                />
                 <PackFileEditor
                   key={`${file}:${String(reload)}`}
                   workspaceId={ws.id}
@@ -422,6 +445,17 @@ export const WorkspaceScreen = () => {
           <div className="ps-tree-sheet">{tree}</div>
         </Modal>
       )}
+      <NewVersionDialog
+        workspaceId={ws.id}
+        target={newVersion}
+        onClose={() => {
+          setNewVersion(null);
+        }}
+        onCreated={(created) => {
+          setNewVersion(null);
+          open(`${created.version.path}/version.yaml`);
+        }}
+      />
       <Modal
         isOpen={pending !== null}
         onClose={() => {

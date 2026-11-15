@@ -276,6 +276,10 @@
     "service_access_missing": "This repository has no service access. The instance administrator sets it up.",
     "service_access_exists": "This repository already has a service access.",
     "service_access_not_found": "The service access is already removed.",
+    "version_not_found": "Template or version not found.",
+    "version_taken": "This version number is taken.",
+    "version_number_invalid": "The version number does not fit: it must be YEAR.MINOR.PATCH above the base.",
+    "version_not_modified": "The released version folder has not changed: there is nothing to move.",
     "place_invalid": "The signature place cannot be written: the box is off the page or the slot does not apply to the document."
   }
 }

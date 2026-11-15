@@ -225,7 +225,7 @@
     "name": "Студия шаблонов (lazy, pages/PackStudioPage и фичи pack-*)",
     "path": "dist/assets/pack-studio-app-*.js",
     "gzip": true,
-    "limit": "23 kB"
+    "limit": "27 kB"
   },
   {
     "name": "Админка, «Студия шаблонов» (lazy, features/pack-studio-admin)",
@@ -237,6 +237,6 @@
     "name": "Словарь Студии шаблонов (ru и en)",
     "path": "dist/assets/locale-packStudio-*.js",
     "gzip": true,
-    "limit": "14.5 kB"
+    "limit": "18 kB"
   }
 ]
