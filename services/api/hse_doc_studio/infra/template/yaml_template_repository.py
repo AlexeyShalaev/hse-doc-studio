@@ -1323,6 +1323,23 @@ def _load_builtin_template(
         )
 
 
+def parse_pack_manifest(pack_yaml: Path) -> PackInfo | None:
+    """`pack.yaml` тем же разбором, что каталог (без шаблонов); None: каталог пак не покажет (`pack check`)."""
+    return _parse_pack_manifest(pack_yaml, lambda _pack_id: [])
+
+
+def parse_template_manifest(tpl_yaml: Path, pack_id: str) -> TemplateInfo | None:
+    """`template.yaml` тем же разбором, что каталог; None: шаблон в каталог не попадёт (`pack check`)."""
+    return _parse_template_manifest(tpl_yaml, pack_id)
+
+
+def parse_version_dir(
+    version_dir: Path, pack_id: str, template_id: str, release: ReleaseEntry | None = None
+) -> TemplateVersion | None:
+    """Каталог версии тем же разбором, что каталог шаблонов; None: версию Студия не покажет (`pack check`)."""
+    return _parse_version(version_dir, pack_id=pack_id, template_id=template_id, release=release)
+
+
 def _load_stored_pack(store: PacksStore, stored: StoredPack) -> _Part:
     """Пак из хранилища по записи `catalog.json`; битая запись или каталог выпадает, остальное работает."""
     pack_yaml = store.resolve(stored.meta)
