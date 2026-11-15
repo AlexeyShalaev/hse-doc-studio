@@ -205,11 +205,13 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
   );
   // Есть что показать: сервер видит выпущенный файл в проекте. Статус сюда не
   // годится: `err` ставят и упавшая сборка, и ошибки проверок при готовом PDF,
-  // а упавшая сборка не стирает PDF прошлой удачной. Старый сервер без поля:
-  // как раньше, по статусу.
+  // а упавшая сборка не стирает PDF прошлой удачной. Удачный статус, как и
+  // раньше, тоже значит «есть сборка» (старый сервер поля не шлёт).
   const hasBuild =
-    doc.output_available ??
-    (doc.status === "ok" || doc.status === "warn" || doc.status === "locked");
+    doc.output_available === true ||
+    doc.status === "ok" ||
+    doc.status === "warn" ||
+    doc.status === "locked";
   // Пометка над PDF: он не от последней сборки или проверки нашли ошибки.
   const lastBuildFailed =
     doc.last_compile_status === "failure" ||
