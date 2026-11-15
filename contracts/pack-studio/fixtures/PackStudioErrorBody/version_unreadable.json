@@ -1,0 +1,5 @@
+{
+  "detail": "Версию шаблона не удалось разобрать.",
+  "code": "version_unreadable",
+  "reason": "ValueError: version.yaml не разобран: проверьте манифест линтером"
+}

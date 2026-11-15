@@ -1,0 +1,167 @@
+{
+  "workspace_id": "4f0c2a8e-1b7d-4c55-9a51-3b8d6f0e2c11",
+  "pack": "hse-cs-sse",
+  "template": "coursework",
+  "version": "2026.1.7",
+  "pack_id": "hse-cs-sse",
+  "template_id": "coursework",
+  "version_id": "2026.1.7",
+  "documents": [
+    {
+      "id": "project_proposal",
+      "name": {
+        "ru": "Заявка на проект",
+        "en": "Project proposal"
+      },
+      "kinds": [
+        "project"
+      ],
+      "staffing": [
+        "solo"
+      ]
+    },
+    {
+      "id": "report",
+      "name": {
+        "ru": "Отчёт",
+        "en": "Report"
+      },
+      "kinds": [
+        "research",
+        "project"
+      ],
+      "staffing": [
+        "solo"
+      ]
+    }
+  ],
+  "switches": [
+    {
+      "id": "lang",
+      "values": [
+        "ru",
+        "en"
+      ],
+      "default": "ru",
+      "label": null
+    },
+    {
+      "id": "kind",
+      "values": [
+        "project",
+        "research"
+      ],
+      "default": "project",
+      "label": null
+    },
+    {
+      "id": "staffing",
+      "values": [
+        "solo"
+      ],
+      "default": "solo",
+      "label": null
+    },
+    {
+      "id": "supervisor",
+      "values": [
+        "university",
+        "company",
+        "none"
+      ],
+      "default": "university",
+      "label": null
+    },
+    {
+      "id": "co_supervisor",
+      "values": [
+        "no",
+        "yes"
+      ],
+      "default": "no",
+      "label": null
+    },
+    {
+      "id": "academic_supervisor",
+      "values": [
+        "yes",
+        "no"
+      ],
+      "default": "yes",
+      "label": null
+    },
+    {
+      "id": "meta.proposal_stage",
+      "values": [
+        "Предварительная",
+        "Доработанная"
+      ],
+      "default": "Предварительная",
+      "label": {
+        "ru": "Редакция заявки",
+        "en": "Proposal stage"
+      }
+    }
+  ],
+  "examples": [
+    {
+      "id": "approval-gate",
+      "source": "file",
+      "label": {
+        "ru": "Контур согласования",
+        "en": "Approval gate"
+      },
+      "error": null,
+      "defaults": {
+        "lang": "ru"
+      }
+    },
+    {
+      "id": "broken",
+      "source": "file",
+      "label": null,
+      "error": "authors: ожидается список",
+      "defaults": {}
+    },
+    {
+      "id": "auto:normal",
+      "source": "auto",
+      "label": {
+        "ru": "Обычный",
+        "en": "Typical"
+      },
+      "error": null,
+      "defaults": {}
+    },
+    {
+      "id": "auto:long",
+      "source": "auto",
+      "label": {
+        "ru": "Длинные значения",
+        "en": "Long values"
+      },
+      "error": null,
+      "defaults": {}
+    },
+    {
+      "id": "auto:empty",
+      "source": "auto",
+      "label": {
+        "ru": "Пустой",
+        "en": "Empty"
+      },
+      "error": null,
+      "defaults": {}
+    }
+  ],
+  "default_example": "approval-gate",
+  "combination": {
+    "academic_supervisor": "yes",
+    "co_supervisor": "no",
+    "kind": "project",
+    "lang": "ru",
+    "meta.proposal_stage": "Предварительная",
+    "staffing": "solo",
+    "supervisor": "university"
+  }
+}
