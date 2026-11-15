@@ -234,16 +234,35 @@ The command works on a packs folder without the Studio and without TeX. A direct
 | Command | What it does |
 |---|---|
 | `pack lint <dir>...` | the linter for every version under the directory, the class of an unreleased version included |
-| `pack check <dir>... [--base REF]` | the linter, immutability of released versions (`releases.yaml`), manifest schemas, the class of unreleased versions. With `--base origin/master` the released versions are those in `releases.yaml` of the base branch, and the entry of a version released there cannot be removed or recomputed |
+| `pack check <dir>... [--base REF]` | the linter, immutability of released versions (`releases.yaml`), manifest schemas, the class of unreleased versions and parsing by the loader of this Studio: a pack, template or version the catalog will not show (a manifest not parsed, `manifest_format` newer than the Studio, an id that differs from the folder name) is an error. With `--base origin/master` the released versions are those in `releases.yaml` of the base branch, and the entry of a version released there cannot be removed or recomputed |
 | `pack classify <template> [<base>] <new>` | the class of a new version with its reasons; without a base it compares with the previous released version |
 | `pack new-version <template> [--from V] [--to V] [--class C]` | a copy of the latest version (or `--from`) under the number `--to` or by the class `--class` (patch, minor, major; patch by default): patch and minor count from the latest version, major is `<year+1>.1`. Only `id`, `status: beta` and `released_at` change in the copy; the `release` block is removed, `changes` and `breaking_changes` are empty, all other bytes stay the same |
 | `pack freeze <template> <version> [--release] [--default] [--kind K] [--replace]` | a release: `--release` sets `status: stable`, `released_at` to today and `release.kind`, `--default` makes the version the template `default_version`, then the linter and schemas run and the version goes into `releases.yaml`. On an error every edit is undone. `--replace` recomputes the entry of the last entered version while the release is not merged (with `--base`, only for a version that is not in the base) |
+| `pack ci init [<repository>] [--provider P]` | puts a CI file into a packs repository (GitHub Actions or GitLab CI), see [below](#pack-ci) |
 
 The usual course: `pack new-version`, edits and `changes` notes, `pack classify` (if the class is above the number, run `pack new-version --class minor` again or set `release.kind` and `release.note`), `pack freeze --release --default`, `pack check`.
 
 The release class in `releases.yaml` is `--kind`, else `release.kind`, else the class of the number. It cannot be softer than the class of the number. A schema error in a released version is a warning: only a new version fixes such a version.
 
 `--json` prints one JSON object to stdout, `--strict` makes `lint` and `check` treat warnings as errors too. Exit codes: 0 all fine; 1 errors found, the number is softer than the class or the command refused; 2 wrong arguments, a directory not found or a git ref not resolved. The old `python -m hse_doc_studio.infra.template.pack_lint` works as `pack lint`.
+
+### CI for a packs repository { #pack-ci }
+
+`hse-doc-studio pack ci init` in the root of your packs repository puts a ready CI file there:
+
+- `--provider github` (default): `.github/workflows/hse-packs.yml`, runs on PRs, pushes to the main branch and by hand;
+- `--provider gitlab`: `.gitlab-ci.yml`, the `hse-packs` job on MRs, the main branch and runs from the web interface.
+
+The job runs `hse-doc-studio pack check <packs folder>` in the published Studio image of the same version as the command (`ghcr.io/alexeyshalaev/hse-doc-studio:<version>`). On a PR or MR the released versions come from the base branch (`--base`). No TeX and no secrets are needed. Options: `--packs-path` (`packs` by default), `--image`, `--branch` (the main branch for GitHub, from `origin/HEAD` by default), `--stdout` (print only), `--force` (replace the file). An existing file is left alone without `--force`: `.gitlab-ci.yml` may hold your own jobs, so print the file with `--stdout` and move the job yourself. After a Studio update run the command again with `--force` to put the new image into CI.
+
+Without a Python install the command is in the same image:
+
+```bash
+docker run --rm -v "$PWD:/repo" -w /repo --user "$(id -u)" ghcr.io/alexeyshalaev/hse-doc-studio:<version> \
+  hse-doc-studio pack ci init
+```
+
+In the Studio repository the `Packs · Check` job of the same CI checks the packs: `pack check` against the base branch on every change to `packs/`, without TeX or a database.
 
 ## For pack authors: one-line texts { #flow-texts }
 

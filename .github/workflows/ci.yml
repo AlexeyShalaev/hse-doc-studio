@@ -32,6 +32,7 @@ jobs:
       tex: ${{ github.event_name != 'pull_request' || steps.filter.outputs.tex == 'true' }}
       frontend: ${{ github.event_name != 'pull_request' || steps.filter.outputs.frontend == 'true' }}
       user-docs: ${{ github.event_name != 'pull_request' || steps.filter.outputs.user_docs == 'true' }}
+      packs: ${{ github.event_name != 'pull_request' || steps.filter.outputs.packs == 'true' }}
     steps:
       # Third-party actions запинены на commit-SHA (supply-chain); комментарий # vX — для Dependabot.
       # На pull_request список файлов берётся из API, checkout не нужен.
@@ -72,6 +73,16 @@ jobs:
               - "services/web-app/**"
               # Тесты фронта читают фикстуры и коды ошибок контрактов.
               - "contracts/**"
+            # Быстрая проверка паков: сами паки, их схемы и код линтера, реестра выпусков и лоадера.
+            packs:
+              - *workflow
+              - "packs/**"
+              - "contracts/pack/**"
+              - "services/api/hse_doc_studio/cli_pack.py"
+              - "services/api/hse_doc_studio/infra/pack_studio/**"
+              - "services/api/hse_doc_studio/infra/template/**"
+              - "services/api/hse_doc_studio/core/template_diff.py"
+              - "services/api/hse_doc_studio/core/template_versions.py"
             # Справка сверяется с маршрутами приложения, а verified.sources статей могут указывать на любой файл
             # репозитория: удаление или переименование где угодно тоже повод для проверки (переименование
             # paths-filter отдаёт как удаление старого пути).
@@ -398,6 +409,40 @@ jobs:
           HSE_TEST_TEX_IMAGE: texlive/texlive:TL2024-historic
         run: uv run pytest tests/integration/tex -m tex --no-cov
 
+  # ── Паки ─────────────────────────────────────────────────────────────────
+  # Быстрый ответ на правку паков (template-studio.md, 4.4, срез T18): `hse-doc-studio pack check` без extras, Postgres
+  # и TeX, минута вместо полного бэкенда. Lint всех версий, `releases check` (дайджест каталога выпущенной версии
+  # совпадает с releases.yaml), схемы манифестов, класс невыпущенных версий, разбор лоадером Студии и на PR сверка
+  # реестров выпусков с базовой веткой: запись выпущенной версии нельзя ни убрать, ни пересчитать. Полный бэкенд на
+  # правку паков всё равно идёт (снимки рендера и пресеты подписей читают настоящие паки), этот джоб не ждёт его lint.
+
+  packs:
+    name: Packs · Check
+    needs: changes
+    if: needs.changes.outputs.packs == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: services/api
+    steps:
+      - uses: actions/checkout@v7
+      # Выпущенные версии берутся из releases.yaml базовой ветки: хватает её вершины.
+      - name: Fetch the base branch
+        if: github.event_name == 'pull_request'
+        run: git fetch --no-tags --depth=1 origin "+refs/heads/${GITHUB_BASE_REF}:refs/remotes/origin/${GITHUB_BASE_REF}"
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.14"
+      # Только базовые зависимости: CLI паков не нужны ни api, ни server, ни тесты.
+      - name: Sync
+        run: uv sync --frozen
+      - name: Pack check
+        run: |
+          base=()
+          if [ -n "${GITHUB_BASE_REF:-}" ]; then base=(--base "origin/${GITHUB_BASE_REF}"); fi
+          uv run --frozen --no-sync hse-doc-studio pack check ../../packs "${base[@]}"
+
   # ── Frontend ─────────────────────────────────────────────────────────────
   # Два джоба параллельно: статические проверки со сборкой и vitest. `pnpm install` берёт пакеты из кэша
   # setup-node (секунды), а vitest на 4 vCPU идёт ~6 минут, поэтому он ещё и делится на два шарда по файлам.
@@ -524,6 +569,7 @@ jobs:
     if: always()
     needs:
       - changes
+      - packs
       - backend-lint
       - backend-test-unit
       - backend-full
