@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate, type RouteObject } from "react-router";
-import { i18n } from "@shared/lib";
+import { i18n, loadAdminNamespaces } from "@shared/lib";
+import { loadPackStudioNamespace } from "@shared/lib/i18n/packStudioNamespace";
 import { loadSigningNamespace } from "@shared/lib/i18n/signingNamespace";
 import { AuthErrorPage } from "@pages/AuthErrorPage";
 import { DevicePage } from "@pages/DevicePage";
@@ -24,6 +25,7 @@ import { WorkspacePage } from "@pages/WorkspacePage";
 import { CONNECT_SERVER_PATH, LOCAL_STUDIO_PATH } from "@entities/local-studio";
 import { AuthLayout } from "@widgets/AuthLayout";
 import { AdminGate } from "./AdminGate";
+import { PackStudioGate } from "./PackStudioGate";
 import { ProjectAccessGate } from "./ProjectAccessGate";
 import { HomeRoute } from "./HomeRoute";
 import { ProjectIndexRedirect } from "./ProjectIndexRedirect";
@@ -61,6 +63,7 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
             { getGitServerGallery },
             { getSigningPageGallery },
             { getCheckpointDeadlineGallery },
+            { getPackStudioGallery },
             demo,
           ] = await Promise.all([
             import("@pages/DevServerScreens"),
@@ -72,8 +75,11 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
             import("@features/git-server"),
             import("@pages/SigningPage/gallery"),
             import("@features/checkpoint-deadline/gallery"),
+            import("@pages/PackStudioPage/gallery"),
             import("./demo"),
             loadSigningNamespace(),
+            loadPackStudioNamespace(),
+            loadAdminNamespaces(["packStudio"]),
           ]);
           const extraSections = [
             {
@@ -110,6 +116,11 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
               id: "checkpoint-deadlines",
               title: "Сроки контрольных точек",
               groups: getCheckpointDeadlineGallery(),
+            },
+            {
+              id: "pack-studio",
+              title: "Студия шаблонов",
+              groups: getPackStudioGallery(),
             },
           ];
           // Серверные записи ходят в демо-мир, даже если приложение запущено без него.
@@ -297,6 +308,8 @@ export const router = createBrowserRouter([
       },
       // Админка: отдельный lazy-чанк за охранником по capabilities.admin.
       { path: "/admin/*", element: <AdminGate /> },
+      // Студия шаблонов: свой lazy-чанк за охранником по capabilities.pack_studio.
+      { path: "/pack-studio/*", element: <PackStudioGate /> },
       ...devRoutes,
       {
         path: "*",

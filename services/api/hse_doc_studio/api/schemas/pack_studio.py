@@ -19,6 +19,9 @@ WorkspaceStateName = Literal["cloning", "ready", "failed"]
 ReadOnlyReason = Literal["version_released", "releases_read_only"]
 YamlOpName = Literal["set", "insert", "delete", "move"]
 GrantSubjectName = Literal["user", "group"]
+DiagnosticSeverityName = Literal["error", "warning"]
+DiagnosticCheckName = Literal["lint", "schema"]
+LintScopeName = Literal["version", "file", "none"]
 
 
 class PackStudioErrorBody(BaseModel):
@@ -182,6 +185,52 @@ class PackYamlPatchResponse(StrictModel):
     size: int
     # Текст файла после правок: вкладка «Исходник» обновляется без второго запроса.
     content: str
+
+
+class PackLintRequest(StrictModel):
+    # Открытый файл или каталог версии, от папки паков пространства.
+    path: str = Field(min_length=1, max_length=1024)
+
+
+class PackDiagnosticResponse(StrictModel):
+    severity: DiagnosticSeverityName
+    check: DiagnosticCheckName
+    message: str
+    # Файл находки от папки паков; null: версия целиком (файл не определён).
+    path: str | None
+    # Строка с единицы, если её удалось найти.
+    line: int | None
+    # Путь в данных манифеста у находок схемы: `/meta_fields/year`.
+    pointer: str | None
+
+
+class PackLintResponse(StrictModel):
+    scope: LintScopeName
+    target: str | None
+    released: bool
+    errors: int
+    warnings: int
+    findings: list[PackDiagnosticResponse]
+
+
+class PackMetaFieldHintResponse(StrictModel):
+    key: str
+    type: str | None
+    label: dict[str, str] | None
+    group: str | None
+
+
+class PackMacroHintResponse(StrictModel):
+    name: str
+    keys: list[str]
+    source: str
+
+
+class PackEditorHintsResponse(StrictModel):
+    # Каталог версии открытого файла; null: файл вне версии, подсказок нет.
+    version: str | None
+    meta_fields: list[PackMetaFieldHintResponse]
+    macros: list[PackMacroHintResponse]
 
 
 class PackStudioGrantResponse(StrictModel):

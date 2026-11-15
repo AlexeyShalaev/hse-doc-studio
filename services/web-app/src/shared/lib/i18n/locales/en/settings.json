@@ -556,6 +556,15 @@
     "remoteRunner": "Cloud builds on this machine",
     "mcp": "AI clients (MCP): Claude, Cursor and others",
     "accountPasskeys": "Passkeys",
-    "gitAccessProjectsDir": "Folder for cloud projects"
+    "gitAccessProjectsDir": "Folder for cloud projects",
+    "packStudio": "Template Studio: template author tools"
+  },
+  "packStudio": {
+    "title": "Template Studio",
+    "lead": "Template author tools: edit packs in an editor with checks, in workspaces over a packs git repository or a folder on disk.",
+    "toggle": "Template author tools",
+    "toggleHint": "Adds the “Template Studio” section and a header button. Projects are not affected.",
+    "locked": "Set when the Studio started (an environment variable or the Template Studio profile).",
+    "open": "Open Template Studio"
   }
 }

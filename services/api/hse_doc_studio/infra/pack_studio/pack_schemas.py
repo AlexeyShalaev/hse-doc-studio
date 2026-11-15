@@ -62,8 +62,18 @@ def as_json(value: Any) -> Any:
     return value
 
 
+def validation_errors(name: str, data: Any) -> list[tuple[tuple[str | int, ...], str]]:
+    """Ошибки данных по схеме `name`: путь в данных (ключи и индексы) и сообщение, в порядке путей."""
+    errors = _validators()[name].iter_errors(as_json(data))
+    found = [(tuple(error.absolute_path), error.message) for error in errors]
+    return sorted(found, key=lambda item: (pointer_of(item[0]), item[1]))
+
+
+def pointer_of(path: tuple[str | int, ...]) -> str:
+    """JSON-указатель пути в данных: `/meta_fields/year`, корень `/`."""
+    return "".join(f"/{part}" for part in path) or "/"
+
+
 def validate(name: str, data: Any) -> list[str]:
     """Ошибки данных по схеме `name`: «/путь/в/файле: сообщение», в порядке путей."""
-    errors = _validators()[name].iter_errors(as_json(data))
-    found = [("".join(f"/{part}" for part in error.absolute_path) or "/", error.message) for error in errors]
-    return [f"{pointer}: {message}" for pointer, message in sorted(found)]
+    return [f"{pointer_of(path)}: {message}" for path, message in validation_errors(name, data)]

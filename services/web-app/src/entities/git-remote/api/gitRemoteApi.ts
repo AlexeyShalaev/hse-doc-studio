@@ -5,6 +5,7 @@ import {
   OperationStartedSchema,
 } from "@entities/git-sync";
 import type { CiRequest, CiWriteRequest } from "@entities/git-sync";
+import type { PermissionProfile } from "../model/providerCatalog";
 import {
   CloneDefaultsSchema,
   GitCredentialCheckSchema,
@@ -62,9 +63,11 @@ export const gitRemoteApi = {
   // Проверка сохранённого токена: чей он, какие права, до какого срока. Отказ
   // сервера (токен не принят, истёк, сертификат) приходит ошибкой с кодом: её
   // разбирает вызывающий. Сам токен в ответ не попадает.
-  checkCredential: (id: string) =>
+  // `profile`: права оцениваются под задачу (packs: репозиторий паков Студии шаблонов).
+  checkCredential: (id: string, profile?: PermissionProfile | null) =>
     apiClient
       .post(`/git/credentials/${id}/check`, undefined, {
+        ...(profile ? { params: { profile } } : {}),
         silentError: true,
         timeout: 60_000,
       })

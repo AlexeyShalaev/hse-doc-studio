@@ -23,6 +23,7 @@ import {
   HeartPulse,
   KeyRound,
   LayoutDashboard,
+  LayoutTemplate,
   Mail,
   Plug,
   Server,
@@ -64,6 +65,7 @@ export type AdminSection =
   | "aiProviders"
   | "modelServers"
   | "mcp"
+  | "packStudio"
   | "audit"
   | "mail";
 
@@ -112,6 +114,7 @@ const ADMIN_NAV: readonly NavGroup[] = [
       { id: "aiProviders", to: "/admin/ai-providers", icon: Bot },
       { id: "modelServers", to: "/admin/model-servers", icon: Cpu },
       { id: "mcp", to: "/admin/mcp", icon: Plug },
+      { id: "packStudio", to: "/admin/pack-studio", icon: LayoutTemplate },
     ],
   },
   {

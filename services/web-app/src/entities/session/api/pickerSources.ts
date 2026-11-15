@@ -7,6 +7,7 @@ import {
 import type { PickerItem, PickerPage } from "@shared/lib";
 import type { PickerSource } from "@shared/ui";
 import {
+  AdminGroupPageSchema,
   AdminOrgMemberPageSchema,
   AdminOrgSchema,
   AdminUserSchema,
@@ -129,6 +130,27 @@ export const adminPickers = {
           has_more: page.total > page.items.length,
         })),
     resolve: resolveUser,
+  }),
+  /** Группы организации: кому выдать право (например, «Автор шаблонов»). */
+  orgGroups: (slug: string): PickerSource => ({
+    key: ["admin", "pickers", "org-groups", slug],
+    search: (q, { limit, signal }) =>
+      adminClient
+        .get(`/orgs/${enc(slug)}/groups`, {
+          ...quiet,
+          signal,
+          params: { ...(q ? { q } : {}), limit, offset: 0 },
+        })
+        .then(parseResp(AdminGroupPageSchema))
+        .then((page): PickerPage => ({
+          items: page.items.map((g) => ({
+            kind: "group",
+            id: g.id,
+            name: g.name,
+            detail: null,
+          })),
+          has_more: page.total > page.items.length,
+        })),
   }),
 };
 

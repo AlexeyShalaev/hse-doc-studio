@@ -1,0 +1,58 @@
+// Закрытый список кодов ошибок Студии шаблонов. Источник правды:
+// contracts/pack-studio/error_codes.json; контрактный тест сверяет этот список с JSON
+// и с ключами errors:code.* в ru и en. Сбои git рабочего пространства идут кодами
+// git-синхронизации (contracts/git-sync/error_codes.json).
+export const PACK_STUDIO_ERROR_CODES = [
+  "pack_studio_disabled",
+  "pack_studio_forbidden",
+  "pack_scope_required",
+  "workspace_not_found",
+  "workspace_not_ready",
+  "workspace_busy",
+  "workspace_limit",
+  "workspace_too_large",
+  "workspace_interrupted",
+  "folder_not_allowed",
+  "folder_unavailable",
+  "not_a_git_workspace",
+  "not_a_pack_repo",
+  "file_not_found",
+  "path_not_allowed",
+  "file_too_large",
+  "stale_file",
+  "version_released",
+  "releases_read_only",
+  "not_yaml",
+  "yaml_patch_conflict",
+  "grant_subject_not_found",
+  "grant_exists",
+  "grant_not_found",
+  "section_locked",
+  "pack_id_taken",
+  "push_denied",
+  "pr_permission_missing",
+  "fork_required",
+  "ci_status_unavailable",
+  "lint_failed",
+  "class_softer_than_changes",
+  "preview_quota",
+  "preview_not_found",
+  "preview_invalid",
+  "preview_not_ready",
+  "version_unreadable",
+  "workspace_dirty",
+  "branch_name_invalid",
+  "merge_conflict",
+  "nothing_to_propose",
+  "service_access_missing",
+  "service_access_exists",
+  "service_access_not_found",
+] as const;
+
+export type PackStudioErrorCode = (typeof PACK_STUDIO_ERROR_CODES)[number];
+
+export const isPackStudioErrorCode = (
+  value: unknown,
+): value is PackStudioErrorCode =>
+  typeof value === "string" &&
+  (PACK_STUDIO_ERROR_CODES as readonly string[]).includes(value);

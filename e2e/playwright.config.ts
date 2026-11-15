@@ -110,6 +110,16 @@ export default defineConfig({
       },
     },
     {
+      // Студия шаблонов: включение в админке настоящим API, пространства, дерево, «Проблемы» и запись на
+      // подменённом API (клон git на стенде не нужен); десктоп и телефон.
+      name: "pack-studio",
+      testMatch: /pack-studio\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        channel: process.env.E2E_CHANNEL || undefined,
+      },
+    },
+    {
       // Админка, «Серверы моделей», на подменённом API (стенд server-lite без Docker): десктоп и телефон.
       name: "model-servers",
       testMatch: /model-servers\.spec\.ts/,

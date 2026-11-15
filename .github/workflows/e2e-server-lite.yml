@@ -141,6 +141,12 @@ jobs:
           PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ env.BLOB_DIR }}/model-servers
         run: make e2e-model-servers
 
+      - name: Template Studio (admin switch, mocked workspaces)
+        if: matrix.shard == 'core'
+        env:
+          PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ env.BLOB_DIR }}/pack-studio
+        run: make e2e-pack-studio
+
       - name: Passkeys (virtual authenticator)
         if: matrix.shard == 'core'
         env:

@@ -276,6 +276,8 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("PUT", "/pack-studio/workspaces/{workspace_id}/files/{path:path}"): _A,
     ("PATCH", "/pack-studio/workspaces/{workspace_id}/files/{path:path}"): _A,
     ("DELETE", "/pack-studio/workspaces/{workspace_id}/files/{path:path}"): _A,
+    ("POST", "/pack-studio/workspaces/{workspace_id}/lint"): _A,
+    ("GET", "/pack-studio/workspaces/{workspace_id}/hints"): _A,
     # Срез T6: git рабочего пространства (ветка, коммит, предложение, проверки хостинга)
     ("GET", "/pack-studio/workspaces/{workspace_id}/git"): _A,
     ("GET", "/pack-studio/workspaces/{workspace_id}/git/diff"): _A,

@@ -23,6 +23,8 @@ API `/api/v1/pack-studio/*` и `/api/admin/pack-studio*` (`docs/design/template-
 | `PUT /pack-studio/workspaces/{id}/files/{path}` | `PackFileVersion` | файл целиком, `If-Match` по желанию |
 | `PATCH /pack-studio/workspaces/{id}/files/{path}` | `PackYamlPatchResponse` | `PackYamlPatchRequest`: точечные правки YAML, весь набор или ничего |
 | `DELETE /pack-studio/workspaces/{id}/files/{path}` | 204 | файл (`If-Match` по желанию) или папка |
+| `POST /pack-studio/workspaces/{id}/lint` | `PackLint` | `PackLintRequest`: файл версии даёт `pack_lint` всей версии и схемы её манифестов, `pack.yaml`, `template.yaml`, `releases.yaml` схему файла, прочее `scope: none`; находки с файлом и строкой для редактора (срез T8) |
+| `GET /pack-studio/workspaces/{id}/hints?path=` | `PackEditorHints` | автодополнение: поля анкеты версии файла и макросы `\hse...` её динамических инклудов (срез T8) |
 | `GET /pack-studio/workspaces/{id}/git` | `PackGit` | ветка (null: вершина базы без ветки), правки после коммита, отличия от базы, ahead и behind, ссылка compare, если ветка отправлена без PR |
 | `GET /pack-studio/workspaces/{id}/git/diff` | `PackDiff` | единый diff от базы (коммиты и правки, новые файлы тоже), обрезан по `max_diff_bytes` |
 | `POST /pack-studio/workspaces/{id}/git/branch` | `PackGit` | `PackBranchRequest`: без имени Студия называет ветку сама; новая ветка на текущей вершине (правки остаются), своя прежняя или ветка с сервера только при чистом дереве (`workspace_dirty`) |

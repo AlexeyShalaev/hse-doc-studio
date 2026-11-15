@@ -33,6 +33,7 @@ export type SettingsSectionId =
   | "runners"
   | "remote-runner"
   | "mcp"
+  | "pack-studio"
   | "about";
 
 export type SettingSearchEntry = {
@@ -608,6 +609,21 @@ export const SETTINGS_SEARCH_INDEX: readonly SettingSearchEntry[] = [
       "ai client",
       "токен",
       "token",
+    ],
+  },
+  // ── Студия шаблонов (локальная Студия) ───────────────────────
+  {
+    sectionId: "pack-studio",
+    anchorId: "pack-studio",
+    labelKey: "search.packStudio",
+    keywords: [
+      "студия шаблонов",
+      "автор шаблонов",
+      "пак",
+      "шаблон",
+      "template studio",
+      "pack",
+      "template author",
     ],
   },
   // ── Облачные сборки (локальная Студия) ───────────────────────

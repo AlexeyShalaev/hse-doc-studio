@@ -30,6 +30,9 @@ _SCHEMAS: dict[str, Any] = {
     "PackStudioAdmin": s.PackStudioAdminResponse,
     "UpdatePackStudioAdminRequest": s.UpdatePackStudioAdminRequest,
     "CreatePackStudioGrantRequest": s.CreatePackStudioGrantRequest,
+    "PackLintRequest": s.PackLintRequest,
+    "PackLint": s.PackLintResponse,
+    "PackEditorHints": s.PackEditorHintsResponse,
     # Срез T6: git рабочего пространства и служебный доступ
     "PackGit": s.PackGitResponse,
     "PackBranchRequest": s.PackBranchRequest,

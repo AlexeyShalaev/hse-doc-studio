@@ -284,7 +284,7 @@ describe("оболочка админки на телефоне", () => {
       expect(within(menu).getByText(group)).toBeInTheDocument();
     }
     // Все разделы и возврат в Студию.
-    expect(within(menu).getAllByRole("link")).toHaveLength(20);
+    expect(within(menu).getAllByRole("link")).toHaveLength(21);
     expect(
       await screen.findByTestId("admin-nav-count-services"),
     ).toHaveTextContent("4");

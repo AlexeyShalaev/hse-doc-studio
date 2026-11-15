@@ -1,6 +1,10 @@
 import { ExternalLink, KeyRound, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { providerSpec } from "@entities/git-remote";
+import {
+  permissionsFor,
+  providerSpec,
+  type PermissionProfile,
+} from "@entities/git-remote";
 import type { ParsedRemoteUrl } from "../lib/parseRemoteUrl";
 import { TOKEN_STEPS, tokenLinksFor } from "../lib/providerHelp";
 import { useInstancePathStore } from "../model/useInstancePathStore";
@@ -14,6 +18,8 @@ export type TokenLinkCardProps = {
   defaultOpen?: boolean;
   /** Версия сервера, если она известна: у старого GitLab другая страница токенов. */
   serverVersion?: string | null;
+  /** Профиль прав каталога: ссылка и список прав под задачу (packs: ветка, PR, статус проверок). */
+  profile?: PermissionProfile | null;
 };
 
 // Страница токенов переехала в «/-/user_settings» в GitLab 16; на более старых
@@ -40,6 +46,7 @@ export const TokenLinkCard = ({
   projectName = null,
   defaultOpen = false,
   serverVersion = null,
+  profile = null,
 }: TokenLinkCardProps) => {
   const { t, i18n } = useTranslation("gitAccess");
   const { t: tRemote } = useTranslation("gitRemote");
@@ -49,7 +56,14 @@ export const TokenLinkCard = ({
     url.host ? (state.paths[url.host.toLowerCase()] ?? "") : "",
   );
   const lang = i18n.language.startsWith("en") ? "en" : "ru";
-  const links = tokenLinksFor(url, { provider, subpath, projectName, lang });
+  const permissions = permissionsFor(spec, profile);
+  const links = tokenLinksFor(url, {
+    provider,
+    subpath,
+    projectName,
+    lang,
+    profile,
+  });
   const major = majorOf(serverVersion);
   const legacy =
     provider === "gitlab" &&
@@ -149,18 +163,16 @@ export const TokenLinkCard = ({
         <span className="dim" style={{ fontSize: "0.71875rem" }}>
           {t("tokenLink.rights")}
         </span>
-        {spec.permissions.required.length > 0 && provider !== "other" && (
+        {permissions.required.length > 0 && provider !== "other" && (
           <span className="flex" style={{ gap: "0.25rem", flexWrap: "wrap" }}>
-            {spec.permissions.required.map((scope) => (
+            {permissions.required.map((scope) => (
               <span key={scope} className="chip accent mono">
                 {scope}
               </span>
             ))}
           </span>
         )}
-        <span style={{ fontSize: "0.75rem" }}>
-          {spec.permissions.human[lang]}
-        </span>
+        <span style={{ fontSize: "0.75rem" }}>{permissions.human[lang]}</span>
       </div>
 
       <ol

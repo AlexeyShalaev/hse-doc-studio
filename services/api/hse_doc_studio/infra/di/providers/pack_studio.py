@@ -40,6 +40,7 @@ from hse_doc_studio.core.paths import PathMapping
 from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.core.vcs.protocols import ICommitAuthorProvider
 from hse_doc_studio.infra.pack_studio.hosting import HttpPackHosting
+from hse_doc_studio.infra.pack_studio.inspector import PackInspector
 from hse_doc_studio.infra.pack_studio.local_store import JsonPackWorkspaceRepository, LocalSectionStore
 from hse_doc_studio.infra.pack_studio.plumbing import PackGitPlumbing
 from hse_doc_studio.infra.pack_studio.preview_dispatch import PreviewJobDispatcher
@@ -54,6 +55,7 @@ from hse_doc_studio.use_cases.git_sync.provider_resolver import ProviderResolver
 from hse_doc_studio.use_cases.pack_studio.access import PackStudioAccess
 from hse_doc_studio.use_cases.pack_studio.files import PackFilesService
 from hse_doc_studio.use_cases.pack_studio.git import PackGitService
+from hse_doc_studio.use_cases.pack_studio.insight import PackInsightService
 from hse_doc_studio.use_cases.pack_studio.preview import PackPreviewService, PreviewLimits
 from hse_doc_studio.use_cases.pack_studio.workspaces import PackWorkspaceService, WorkspaceTasks
 
@@ -192,6 +194,10 @@ class PackStudioProvider(Provider):
     @provide
     def get_files_service(self, workspaces: PackWorkspaceService, files: IPackWorkspaceFiles) -> PackFilesService:
         return PackFilesService(workspaces, files, PackYamlEditor())
+
+    @provide
+    def get_insight_service(self, workspaces: PackWorkspaceService) -> PackInsightService:
+        return PackInsightService(workspaces, PackInspector())
 
     @provide
     def get_preview_store(self) -> IPreviewStore:

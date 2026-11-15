@@ -1,0 +1,389 @@
+{
+  "title": "Template Studio",
+  "lead": "Template packs in workspaces: edit files with linter and schema checks. Released versions are read-only.",
+  "common": {
+    "cancel": "Cancel"
+  },
+  "workspaces": {
+    "state": {
+      "cloning": "Cloning",
+      "failed": "Failed",
+      "fetching": "Updating",
+      "ready": "Ready"
+    },
+    "fetched": "base updated {{when}}",
+    "packsPath": "packs folder: {{path}}",
+    "open": "Open",
+    "retry": "Retry",
+    "actions": "Actions for “{{name}}”",
+    "refresh": "Update base",
+    "refreshHint": "Fetch the latest base branch and recount released versions",
+    "delete": "Delete",
+    "deleteTitle": "Delete “{{name}}”?",
+    "deleteGitHint": "The clone in the Studio is deleted. The repository on the host does not change.",
+    "deleteFolderHint": "Only the Studio record is deleted; the folder on disk stays.",
+    "emptyTitle": "No workspaces yet",
+    "emptyLead": "Open a packs git repository or a folder with packs to edit templates.",
+    "create": "New workspace"
+  },
+  "create": {
+    "title": "New workspace",
+    "lead": "Where the packs come from. The repository is cloned partially: only the packs folder.",
+    "kind": {
+      "folder": "Folder on disk",
+      "git": "Git repository"
+    },
+    "url": "Repository address",
+    "credential": "Access",
+    "noCredential": "No access (public repository)",
+    "credentialHint": "Tokens are added in Settings, “Git access”. The token never goes into the clone.",
+    "insecureHttp": "Allow plain http (no encryption)",
+    "branch": "Base branch",
+    "branchHint": "Empty: the server's default branch.",
+    "folder": "Folder",
+    "folderHint": "The repository root or the packs folder itself.",
+    "pickFolder": "Choose folder",
+    "packsPath": "Packs folder",
+    "packsPathGitHint": "The folder with packs inside the repository; “.” means the root.",
+    "packsPathFolderHint": "Leave “packs”: the Studio finds the packs folder itself.",
+    "label": "Name",
+    "labelHint": "Empty: from the address or the folder name.",
+    "submitGit": "Clone",
+    "submitFolder": "Open folder",
+    "access": {
+      "personal": "My git access",
+      "service": "Service access",
+      "serviceHint": "The branch is pushed with the instance token the administrator set up for this repository. Commits are signed by you. Forks are not available with service access."
+    },
+    "tokenHelp": "Which token branches and pull requests need"
+  },
+  "workspace": {
+    "back": "Back to workspaces",
+    "cloningTitle": "Cloning the repository",
+    "cloningLead": "This takes up to a couple of minutes. The page updates by itself.",
+    "failedTitle": "Clone failed",
+    "failedLead": "Check the address and access, then retry.",
+    "pickTitle": "Pick a file",
+    "pickLead": "Open a file in the tree on the left: a version manifest, a document or a Jinja template."
+  },
+  "tree": {
+    "title": "Files",
+    "reload": "Reload the tree",
+    "empty": "The packs folder is empty so far.",
+    "truncated": "Too many files: not all are shown.",
+    "released": "Released version: read-only",
+    "modified": "modified",
+    "modifiedHint": "The released version folder was edited outside the Studio: it no longer matches the release registry",
+    "binary": "Binary file: does not open in the editor",
+    "readOnly": {
+      "versionReleased": "File of a released version: read-only",
+      "releasesRegistry": "Release registry: changed by the “New version” wizard"
+    }
+  },
+  "crumbs": {
+    "label": "File location"
+  },
+  "editor": {
+    "views": "File view",
+    "source": "Source",
+    "form": "Form",
+    "formSoon": "A form over YAML is coming in future releases",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "unsaved": "Unsaved changes",
+    "revert": "Discard changes",
+    "readOnlyReleased": "This version is released: its files are read-only. Edits go into a new template version.",
+    "readOnlyRegistry": "The “New version” wizard keeps the release registry: it is not edited by hand.",
+    "binaryTitle": "Binary file",
+    "binaryLead": "Images, fonts and office files do not open in the code editor."
+  },
+  "stale": {
+    "title": "The file changed since you opened it.",
+    "deleted": "The file was deleted since you opened it.",
+    "takeDisk": "Take their version",
+    "keepMine": "Keep mine",
+    "compare": "Compare",
+    "diffTitle": "Their version and yours",
+    "diffLegend": "Left: the line number in their version, right: in yours. “−” only theirs, “+” only yours.",
+    "diffEmpty": "The texts match."
+  },
+  "problems": {
+    "title": "Problems",
+    "errors_one": "{{count}} error",
+    "errors_other": "{{count}} errors",
+    "warnings_one": "{{count}} warning",
+    "warnings_other": "{{count}} warnings",
+    "recheck": "Check again",
+    "scopeVersion": "Linter and schemas of version {{version}} over saved files.",
+    "scopeFile": "Manifest schema over the saved file.",
+    "scopeNone": "This file is not checked: checks run for version files and pack manifests.",
+    "released": "The version is released: schema errors in it are warnings only; fixes go into a new version.",
+    "clean": "No problems found.",
+    "thisFile": "This file",
+    "otherFiles": "Other files of the version",
+    "wholeVersion": "Whole version",
+    "line": "line {{line}}",
+    "check": {
+      "lint": "linter",
+      "schema": "schema"
+    },
+    "gate": {
+      "title": "Checks before sending",
+      "lead_one": "“Propose changes” stopped: {{count}} error in the pack. Fix it and propose again.",
+      "lead_other": "“Propose changes” stopped: {{count}} errors in the pack. Fix them and propose again.",
+      "dismiss": "Hide check findings"
+    }
+  },
+  "preview": {
+    "title": "Preview",
+    "soon": "Preview is not available for this file.",
+    "outside": "Preview builds a template version. Open a file inside a version: the manifest, a document or a template.",
+    "document": "Document",
+    "documentOff": "{{name}} (not in this combination)",
+    "example": "Sample data",
+    "autoExample": "Auto set: {{name}}",
+    "switches": "Combination",
+    "switch": {
+      "lang": "Language",
+      "kind": "Kind of work",
+      "staffing": "Team",
+      "supervisor": "Supervisor",
+      "co_supervisor": "Co-supervisor",
+      "academic_supervisor": "Academic supervisor",
+      "nda": "NDA"
+    },
+    "value": {
+      "solo": "Single author",
+      "team2": "Team of two",
+      "team3": "Team of three",
+      "university": "From HSE",
+      "company": "From a company",
+      "none": "Not set",
+      "yes": "Yes",
+      "no": "No"
+    },
+    "build": "Build",
+    "rebuild": "Build again",
+    "resetSwitches": "Reset combination",
+    "hint": "Pick a document, data and a combination, then press “Build”. The build runs on a runner, as for projects.",
+    "status": {
+      "queued": "Queued",
+      "running": "Building",
+      "cancelled": "The build was cancelled."
+    },
+    "cancel": "Cancel",
+    "log": "Log",
+    "logEmpty": "The log is empty.",
+    "full": "Open full screen",
+    "cached": "from cache",
+    "stale": "Files changed after this build: build again to see the edits.",
+    "quota": "{{limit}} preview builds are already running, no more are allowed. Wait for one to finish or cancel it.",
+    "noDocuments": "The version has no documents to build.",
+    "error": {
+      "render_failed": "The pack template did not render: a Jinja error or the time limit. Details are in the log.",
+      "interrupted": "A Studio restart interrupted the build. Build again.",
+      "pdf_missing": "The build finished but no PDF was produced. Check the document in the log.",
+      "build_failed": "LaTeX finished with an error. The first line starting with “!” in the log points at the spot.",
+      "font_missing": "The build container lacks a font the document asks for. Details are in the log.",
+      "generic": "The build failed (code {{code}}). Details are in the log."
+    },
+    "pages_one": "{{count}} page",
+    "pages_other": "{{count}} pages"
+  },
+  "propose": {
+    "label": "Propose changes"
+  },
+  "leave": {
+    "title": "Unsaved changes",
+    "lead": "If you open another file, the changes to this one are lost.",
+    "stay": "Stay",
+    "discard": "Discard"
+  },
+  "completion": {
+    "context": "template context",
+    "filter": "filter",
+    "macro": "include macro",
+    "prints": "prints: {{keys}}"
+  },
+  "git": {
+    "loading": "Reading git state",
+    "noBranch": "no branch, at {{base}}",
+    "clean": "all saved",
+    "uncommitted_one": "{{count}} edit since the version",
+    "uncommitted_other": "{{count}} edits since the version",
+    "ahead": "ahead",
+    "behind": "behind",
+    "aheadBehind": "{{ahead}} commits ahead of {{base}}, {{behind}} behind",
+    "serviceAccess": "Service access",
+    "openCompare": "Open PR in the browser",
+    "menu": "Branch actions",
+    "dismiss": "Hide",
+    "editorDirty": "The editor has an unsaved edit: it will not get into the version. Press “Save” first.",
+    "status": {
+      "added": "new",
+      "modified": "changed",
+      "deleted": "deleted"
+    },
+    "commit": {
+      "button": "Save version",
+      "title": "Save version",
+      "leadBranch": "Commit to branch {{branch}} on your behalf.",
+      "leadNoBranch": "There is no branch yet: the Studio creates one and commits on your behalf.",
+      "message": "Message",
+      "messageHint": "Empty: the Studio writes the message from the changed versions. You can write your own.",
+      "messagePlaceholder": "fix(packs): ...",
+      "submit": "Save version",
+      "done": "Version saved: {{sha}}",
+      "nothing": "Nothing to save: no edits since the last version."
+    },
+    "branch": {
+      "title": "Branch",
+      "current": "Current branch: {{branch}}.",
+      "none": "No branch: the tree is at {{base}}.",
+      "auto": "New branch, the Studio picks the name",
+      "autoHint": "The branch starts at the current commit, edits on disk stay.",
+      "named": "Own name or an existing branch",
+      "namedHint": "A new name creates a branch. The name of your earlier branch or a server branch switches to it.",
+      "name": "Branch name",
+      "dirtyHint": "Switching to an existing branch needs no unsaved edits: save a version first.",
+      "create": "Create branch",
+      "switch": "Switch",
+      "done": "Branch {{branch}}"
+    },
+    "merge": {
+      "button": "Update from {{base}}",
+      "done": "{{base}} merged into the work branch.",
+      "upToDate": "The work branch already has everything from {{base}}.",
+      "conflictTitle": "Conflict with the base branch",
+      "conflictLead": "{{base}} changes the same lines as your branch. The merge was cancelled, your branch is unchanged.",
+      "conflictHint": "Edit these files in your branch so they agree with the base branch, save a version and update again.",
+      "ok": "Got it"
+    },
+    "startOver": {
+      "title": "Start over",
+      "lead": "The tree goes back to a fresh {{base}} without a branch.",
+      "remote": "The Studio forgets the pull request and the pushed branch. On the hosting the branch and the request stay as they are.",
+      "dirty_one": "There is {{count}} unsaved edit.",
+      "dirty_other": "There are {{count}} unsaved edits.",
+      "discard_one": "Discard {{count}} unsaved edit",
+      "discard_other": "Discard {{count}} unsaved edits",
+      "submit": "Start over",
+      "done": "The tree is at a fresh {{base}}."
+    },
+    "diff": {
+      "button": "Changes",
+      "title": "Changes from the base branch",
+      "lead": "Branch commits and edits on disk compared to {{base}}.",
+      "emptyTitle": "No changes",
+      "emptyLead": "The workspace matches {{base}}.",
+      "truncated": "Too many changes: only the beginning is shown."
+    },
+    "ci": {
+      "title": "Hosting checks",
+      "lead": "For the pushed commit {{sha}}.",
+      "notPushed": "The branch is not pushed yet.",
+      "open": "Hosting checks",
+      "loading": "Checks",
+      "state": {
+        "none": "No checks",
+        "pending": "Checks running",
+        "success": "Checks passed",
+        "failure": "Checks failed",
+        "unknown": "Status unknown"
+      },
+      "check": {
+        "queued": "queued",
+        "running": "running",
+        "success": "passed",
+        "failure": "failed",
+        "neutral": "no verdict",
+        "skipped": "skipped",
+        "cancelled": "cancelled"
+      },
+      "none": "The hosting has not started any checks yet.",
+      "polling": "While checks run, the status refreshes every 30 seconds.",
+      "unavailable": "The hosting does not share the checks status with this access (GitLab needs read_api). See them on the hosting page.",
+      "web": "Open on the hosting",
+      "refresh": "Refresh"
+    },
+    "fork": {
+      "title": "Push to a fork",
+      "chip": "Fork",
+      "lead": "You cannot write to this repository. The branch can go to your fork, and the pull request opens from it.",
+      "create": "Create a fork with my token",
+      "createHint": "The Studio creates a fork on GitHub and pushes the branch there.",
+      "own": "Use my fork",
+      "ownHint": "A fork on the same server as the repository.",
+      "url": "Fork address",
+      "urlHint": "The same server as the repository. The Studio remembers the fork for this workspace.",
+      "back": "Back",
+      "submit": "Push to fork",
+      "reason": {
+        "fork_host_mismatch": "The fork must be on the same server as the repository: the token is bound to the server.",
+        "fork_unavailable": "The fork could not be created or found. Enter the address of your fork."
+      }
+    },
+    "propose": {
+      "where": {
+        "pr": "Branch {{branch}} goes to the hosting, and a pull request (PR) into {{base}} opens.",
+        "mr": "Branch {{branch}} goes to the hosting, and a merge request (MR) into {{base}} opens."
+      },
+      "autoBranch": "(the Studio creates it)",
+      "service": "The push uses the instance service access, commits are signed by you.",
+      "viaFork": "Via fork {{url}}",
+      "files_one": "{{count}} file differs from the base branch",
+      "files_other": "{{count}} files differ from the base branch",
+      "title": {
+        "pr": "PR title",
+        "mr": "MR title"
+      },
+      "titleHint": "Empty: the Studio writes the title from the changed versions.",
+      "description": "Description",
+      "descriptionHint": "Goes before the summary the Studio adds itself: versions, change class, notes and checks.",
+      "message": "Commit message",
+      "messageHint_one": "For {{count}} unsaved edit. Empty: the Studio writes it.",
+      "messageHint_other": "For {{count}} unsaved edits. Empty: the Studio writes it.",
+      "checksHint": "Before pushing, the Studio checks the changed packs. Errors show up under “Problems”.",
+      "submit": {
+        "pr": "Push and open PR",
+        "mr": "Push and open MR"
+      },
+      "sending": "Sending",
+      "opened": {
+        "pr": "PR #{{number}} opened",
+        "mr": "MR !{{number}} opened"
+      },
+      "existing": {
+        "pr": "Branch updated, PR #{{number}} was already open",
+        "mr": "Branch updated, MR !{{number}} was already open"
+      },
+      "pushed": "Branch pushed",
+      "toRepo": "To repository {{url}}",
+      "toFork": "To fork {{url}}",
+      "openPr": {
+        "pr": "Open PR #{{number}}",
+        "mr": "Open MR !{{number}}"
+      },
+      "compare": {
+        "pr": "Open PR in the browser",
+        "mr": "Open MR in the browser"
+      },
+      "classes": "Change class",
+      "ciHint": "The hosting checks status shows up in the git bar and refreshes by itself.",
+      "close": "Done"
+    },
+    "access": {
+      "title": "Repository access",
+      "close": "Close",
+      "serviceTitle": "Instance service access is in use",
+      "serviceLead": "Branches are pushed with the token the administrator set up for this repository. Commits are signed by you, forks are not available.",
+      "noneLead": "The workspace has no token: a public repository can be read, but a branch cannot be pushed and no pull request can be opened. Add a token in Settings, “Git access”, and create the workspace with it.",
+      "missing": "The workspace access was removed from “Git access”. Add the token again and create the workspace with it.",
+      "replace": "Replace token",
+      "checkLead": "The template studio needs write access to the repository, pull requests and reading checks status.",
+      "check": "Check rights for the template studio",
+      "newToken": "Issue a token with the right permissions"
+    }
+  }
+}

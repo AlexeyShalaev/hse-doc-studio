@@ -5,6 +5,7 @@ import {
   useHostSettings,
   useUpdateCredential,
   type GitCredential,
+  type PermissionProfile,
 } from "@entities/git-remote";
 import { describeGitError } from "@entities/git-sync";
 import { toast } from "@shared/lib";
@@ -16,6 +17,8 @@ import { PatPanel, type PatDraft } from "./PatPanel";
 export type ReplaceTokenDialogProps = {
   credential: GitCredential;
   onClose: () => void;
+  /** Профиль прав для памятки о новом токене (packs: репозиторий паков). */
+  profile?: PermissionProfile | null;
 };
 
 const EMPTY_DRAFT: PatDraft = { token: "", username: "", label: "" };
@@ -25,6 +28,7 @@ const EMPTY_DRAFT: PatDraft = { token: "", username: "", label: "" };
 export const ReplaceTokenDialog = ({
   credential,
   onClose,
+  profile = null,
 }: ReplaceTokenDialogProps) => {
   const { t } = useTranslation("gitAccess");
   const update = useUpdateCredential();
@@ -112,6 +116,7 @@ export const ReplaceTokenDialog = ({
         disabled={update.isPending}
         error={error}
         helpOpen={false}
+        profile={profile}
       />
     </Modal>
   );
