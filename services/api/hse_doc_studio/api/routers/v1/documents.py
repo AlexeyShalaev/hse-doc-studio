@@ -85,7 +85,13 @@ def _map_doc_list_item(entry: DocumentListEntry) -> DocumentListItemResponse:
         last_compile_error=map_compile_error(
             entry.failure.code if entry.failure else None, entry.failure.detail if entry.failure else None
         ),
+        last_compile_status=_status_str(entry.build.last_compile_status),
+        output_available=entry.build.output_available,
     )
+
+
+def _status_str(status: object | None) -> str | None:
+    return str(status) if status is not None else None
 
 
 def _map_doc_detail(
@@ -114,6 +120,8 @@ def _map_doc_detail(
         status=str(doc.status),
         chosen_variant=doc.chosen_variant,
         last_compile_id=str(doc.last_compile_id) if doc.last_compile_id is not None else None,
+        last_compile_status=_status_str(resolution.build.last_compile_status) if resolution is not None else None,
+        output_available=resolution.build.output_available if resolution is not None else False,
         checks_override={
             "disabled_categories": list(co.disabled_categories),
             "disabled": list(co.disabled),

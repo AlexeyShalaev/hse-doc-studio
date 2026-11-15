@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from uuid import UUID
 
+import structlog
+
 from hse_doc_studio.core.checks.protocols import ICheckRunner
 from hse_doc_studio.core.compile.failure import BUILD_FAILED, FONT_MISSING
 from hse_doc_studio.core.enums import CheckSeverity, Lang
@@ -38,6 +40,8 @@ from hse_doc_studio.infra.compile.latexmk import SENTINEL_PAGES as _SENTINEL_PAG
 from hse_doc_studio.infra.compile.latexmk import SENTINEL_WORDS as _SENTINEL_WORDS
 from hse_doc_studio.infra.jobs.office_convert import convert_office_to_sibling
 
+logger = structlog.get_logger()
+
 # Пока сборка ждёт слот в очереди, поток логов пустой — фронтовый сторож
 # (90с тишины → «похоже, зависла») сработал бы ложно. Heartbeat каждые ~25с
 # держит SSE-поток живым, сколько бы очередь ни длилась.
@@ -47,6 +51,9 @@ QUEUE_HEARTBEAT_INTERVAL_S = 25.0
 # а вместо результатов проверок одно предупреждение `CHECKS_TIMEOUT_RULE`.
 CHECKS_TIMEOUT_S = 180.0
 CHECKS_TIMEOUT_RULE = "checks:TIMEOUT"
+# Проверки упали с исключением (LanguageTool не поднялся, сбой движка): PDF тоже остаётся, сборка успешна,
+# вместо результатов одно предупреждение. Иначе исключение роняло задачу целиком и готовый PDF не публиковался.
+CHECKS_FAILED_RULE = "checks:FAILED"
 
 
 def pdf_page_count(pdf_path: Path) -> int | None:
@@ -354,6 +361,9 @@ async def run_checks(  # noqa: PLR0913
         )
     except TimeoutError:
         return [_checks_timeout_result(payload.source_file, limit, log)]
+    except Exception as exc:  # noqa: BLE001 — проверки вторичны: их сбой не отменяет собранный PDF
+        logger.warning("compile checks failed", doc_id=payload.doc_id, exc_info=True)
+        return [_checks_failed_result(payload.source_file, exc, log)]
     # Отдельно проигнорированные находки снимаем здесь: id вида `lt:<RULE>`
     # в каталоге не объявлены, поэтому сопоставляем с rule_id результата.
     if plan.ignored_rule_ids:
@@ -390,6 +400,30 @@ async def _run_check_rules(  # noqa: PLR0913
         custom_mode=payload.custom_mode,
     )
     return check_results
+
+
+def _checks_failed_result(source_file: str, exc: Exception, log: JobLogSink) -> CheckResult:
+    """Проверки упали: строка в журнал и предупреждение вместо результатов; сборку это не роняет."""
+    en = current_interface_language() is Lang.en
+    reason = f"{type(exc).__name__}: {exc}"[:300]
+    log.emit(
+        f"[checks] checks failed ({reason}); the PDF is kept"
+        if en
+        else f"[checks] проверки упали ({reason}); PDF сохранён"
+    )
+    message = (
+        "Checks failed with an internal error, so their results are missing. "
+        "The PDF was built and kept. Build again to rerun the checks."
+        if en
+        else "Проверки завершились внутренней ошибкой, их результатов нет. "
+        "PDF собран и сохранён. Соберите ещё раз, чтобы повторить проверки."
+    )
+    return CheckResult(
+        rule_id=CHECKS_FAILED_RULE,
+        severity=CheckSeverity.warn,
+        message=message,
+        location=CheckLocation(file=source_file, line=None),
+    )
 
 
 def _checks_timeout_result(source_file: str, limit: float, log: JobLogSink) -> CheckResult:

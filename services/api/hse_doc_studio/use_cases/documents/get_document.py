@@ -18,6 +18,7 @@ from hse_doc_studio.core.repositories import (
 )
 from hse_doc_studio.core.services import ProjectTemplateService
 from hse_doc_studio.use_cases.compile.last_compile import with_effective_last_compile
+from hse_doc_studio.use_cases.documents.build_view import DocumentBuildView, build_view_of, last_compile_record
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
 logger = structlog.get_logger()
@@ -59,6 +60,8 @@ class GetDocumentOutput:
     # док), ИЛИ custom_file.ext == ".pdf", ИЛИ существует sibling-превью.
     # Не блокирует ничего — чисто сигнал для UI.
     signing_available: bool = True
+    # Итог последней сборки и наличие выпущенного файла: превью показывает PDF и при `err` от проверок.
+    build: DocumentBuildView = DocumentBuildView()
 
 
 class GetDocumentUC:
@@ -148,9 +151,11 @@ class GetDocumentUC:
             # после сохранения из office-редактора (OfficeEditorCallbackUC).
             preview_file, preview_updated_at = self._sibling_pdf_preview(project.folder, output_file)
 
+        # Ссылка на сборку с другой стороны синхронизации заменяется своей (use_cases/compile/last_compile.py).
+        effective = await with_effective_last_compile(self._compile_repo, project.folder, doc)
+        record = await last_compile_record(self._compile_repo, project.folder, effective)
         return GetDocumentOutput(
-            # Ссылка на сборку с другой стороны синхронизации заменяется своей (use_cases/compile/last_compile.py).
-            document=await with_effective_last_compile(self._compile_repo, project.folder, doc),
+            document=effective,
             name=dict(doc_def.name) if doc_def is not None else None,
             code=dict(doc_def.code) if doc_def is not None else None,
             source_file=source_file,
@@ -161,4 +166,5 @@ class GetDocumentUC:
             preview_updated_at=preview_updated_at,
             custom_preview_available=custom_preview_available,
             signing_available=signing_available,
+            build=build_view_of(record, project.folder, output_file),
         )

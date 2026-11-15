@@ -11,15 +11,17 @@ from collections.abc import AsyncIterator, Iterator
 from dataclasses import replace
 from pathlib import Path, PurePosixPath
 from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
-from hse_doc_studio.core.jobs.entities import compile_payload_of
+from hse_doc_studio.core.jobs.entities import CompileResult, compile_payload_of
 from hse_doc_studio.core.jobs.enums import JobStatus
 from hse_doc_studio.core.jobs.errors import JobFailure
 from hse_doc_studio.core.jobs.files import ManifestFile
 from hse_doc_studio.core.jobs.wire import FEATURE_BUILD_ANCHORS, JobEnvelope
 from hse_doc_studio.infra.di.containers.runner import create_runner_container
 from hse_doc_studio.infra.docker.cli import configure_docker_binary
+from hse_doc_studio.infra.jobs.compile_body import CHECKS_FAILED_RULE
 from hse_doc_studio.infra.jobs.embedded_runner import EmbeddedCompileRunner
 from hse_doc_studio.infra.runner import compile_executor
 from hse_doc_studio.infra.runner.capabilities import detect_tags
@@ -150,6 +152,26 @@ async def test__execute__latexmk_fails__failed_result_without_outputs(
     assert outcome.result.data.build_ok is False  # type: ignore[union-attr]
     assert outcome.outputs == ()
     assert any("boom" in line for line in lines)
+
+
+async def test__execute__checks_crash__pdf_still_uploaded_and_build_succeeds(
+    tmp_path: Path, docker_log: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Облако: PDF выгружается после проверок. Исключение в проверках роняло задачу, и готовый PDF не доходил до api.
+    executor, _ = await _executor(_config(tmp_path))
+    broken = MagicMock()
+    broken.run_all.side_effect = RuntimeError("checks exploded")
+    monkeypatch.setattr(executor._runner, "_check_runner", broken)  # noqa: SLF001
+    lines: list[str] = []
+
+    outcome = await executor.execute(_envelope(), _ctx(lines))
+
+    assert outcome.result.status is JobStatus.succeeded
+    data = outcome.result.data_as(CompileResult)
+    assert data.build_ok is True
+    assert [r.rule_id for r in data.check_results] == [CHECKS_FAILED_RULE]
+    assert [o.ref.path for o in outcome.outputs][0] == "tz/main.pdf"
+    assert any(line.startswith("[checks] ") and "RuntimeError: checks exploded" in line for line in lines)
 
 
 async def test__execute__image_missing__typed_failure_before_any_build(
