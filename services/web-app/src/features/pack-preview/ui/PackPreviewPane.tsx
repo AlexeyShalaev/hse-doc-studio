@@ -205,7 +205,12 @@ const BuildView = ({
             </span>
           }
           action={
-            <Button size="xs" variant="secondary" onClick={onLog}>
+            <Button
+              size="xs"
+              variant="secondary"
+              onClick={onLog}
+              data-testid="preview-failed-log"
+            >
               <ScrollText size="0.6875rem" />
               {t("preview.log")}
             </Button>

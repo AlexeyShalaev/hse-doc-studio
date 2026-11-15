@@ -3,12 +3,14 @@ import { LANGS, shot, type Lang } from "./helpers";
 import { expectNoHorizontalScroll, loginOnPhone } from "./phoneHelpers";
 
 /**
- * Студия шаблонов (срез T8) на стенде server-lite: админ включает раздел настоящим API (у админа установки право
- * «Автор шаблонов» есть всегда), открывает Студию шаблонов кнопкой в заголовке; рабочие пространства, дерево, файлы и
- * проверки подменены (клон git на стенде не нужен). Сценарий: новое пространство над git, клон, дерево с замком у
- * выпущенной версии, файл с находками в «Проблемах», переход к файлу другой находки, сохранение с If-Match; на
- * телефоне дерево в шторке и ничего не торчит за край. В конце раздел выключается обратно.
- * Скриншоты: screenshots/<язык>/ps-*.png.
+ * Студия шаблонов (срезы T6, T7, T8) на стенде server-lite: админ включает раздел настоящим API (у админа установки
+ * право «Автор шаблонов» есть всегда), видит «Служебные доступы», открывает Студию шаблонов кнопкой в заголовке;
+ * рабочие пространства, дерево, файлы, проверки, git и предпросмотр подменены (клон git и раннер на стенде не нужны).
+ * Сценарий: новое пространство над git, клон, дерево с замком у выпущенной версии, файл с находками в «Проблемах»,
+ * переход к файлу другой находки, сохранение с If-Match; панель git показывает правку, «Предложить изменения» сперва
+ * упирается в проверку пака (находки в «Проблемах»), затем открывает PR со статусом CI; предпросмотр собирает
+ * документ, неудача с журналом. На телефоне дерево в шторке, панель git и ничего не торчит за край. В конце раздел
+ * выключается обратно. Скриншоты: screenshots/<язык>/ps-*.png.
  */
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? "admin@example.org";
 const adminPassword = (): string => {
@@ -27,7 +29,11 @@ const MANIFEST = `${DRAFT}/version.yaml`;
 const META = `${DRAFT}/files/common/meta.tex.j2`;
 const NOW = "2026-11-14T09:30:00Z";
 
-const workspace = (state: "cloning" | "ready") => ({
+const PR_URL = "https://github.com/e2e/packs/pull/7";
+const PUSHED = "9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b";
+const BRANCH = "pack-studio/admin/hse-cs-sse-coursework-2026.1.6";
+
+const workspace = (state: "cloning" | "ready", proposed = false) => ({
   id: WS,
   kind: "git",
   label: "e2e/packs",
@@ -36,19 +42,82 @@ const workspace = (state: "cloning" | "ready") => ({
   packs_path: "packs",
   url: "https://github.com/e2e/packs.git",
   credential_id: null,
+  service_access: false,
   insecure_http: false,
   folder: null,
   base_branch: "master",
   base_sha: state === "ready" ? "4f2a9c0d8e7b6a5f4e3d2c1b0a9f8e7d6c5b4a39" : null,
   fetched_at: state === "ready" ? NOW : null,
-  work_branch: null,
-  pr_url: null,
-  pr_number: null,
-  ci_status: null,
+  work_branch: proposed ? BRANCH : null,
+  pr_url: proposed ? PR_URL : null,
+  pr_number: proposed ? 7 : null,
+  ci_status: proposed ? "pending" : null,
+  fork_url: null,
+  pushed_sha: proposed ? PUSHED : null,
   error: null,
   created_at: NOW,
   updated_at: NOW,
 });
+
+/** Состояние git пространства: правки после версии появляются с первой записью, PR после «Предложить». */
+const gitState = (dirty: boolean, proposed: boolean) => {
+  const changes = dirty ? [{ path: META, status: "modified" }] : [];
+  return {
+    workspace: workspace("ready", proposed),
+    provider: "github",
+    head_sha: proposed ? PUSHED : "4f2a9c0d8e7b6a5f4e3d2c1b0a9f8e7d6c5b4a39",
+    branch: proposed ? BRANCH : null,
+    base_branch: "master",
+    uncommitted: proposed ? [] : changes,
+    dirty: dirty && !proposed,
+    changed: changes,
+    ahead: proposed ? 1 : 0,
+    behind: 0,
+    compare_url: null,
+  };
+};
+
+const PREVIEW_OPTIONS = {
+  workspace_id: WS,
+  pack: "hse-cs-sse",
+  template: "coursework",
+  version: "2026.1.6",
+  pack_id: "hse-cs-sse",
+  template_id: "coursework",
+  version_id: "2026.1.6",
+  documents: [{ id: "report", name: { ru: "Отчёт", en: "Report" }, kinds: [], staffing: [] }],
+  switches: [
+    { id: "lang", values: ["ru", "en"], default: "ru", label: null },
+    { id: "supervisor", values: ["university", "company", "none"], default: "university", label: null },
+  ],
+  examples: [
+    { id: "auto:normal", source: "auto", label: { ru: "Обычный", en: "Typical" }, error: null, defaults: {} },
+    { id: "auto:long", source: "auto", label: { ru: "Длинные значения", en: "Long values" }, error: null, defaults: {} },
+  ],
+  default_example: "auto:normal",
+  combination: { lang: "ru", supervisor: "university" },
+};
+
+const PREVIEW_FAILED = {
+  id: "b1",
+  workspace_id: WS,
+  pack: "hse-cs-sse",
+  template: "coursework",
+  version: "2026.1.6",
+  document: "report",
+  example: "auto:normal",
+  combination: PREVIEW_OPTIONS.combination,
+  key: "k1",
+  status: "failed",
+  cached: false,
+  created_at: NOW,
+  started_at: NOW,
+  finished_at: NOW,
+  pages: null,
+  error: { code: "build_failed", detail: "! Undefined control sequence." },
+  source_file: null,
+  has_anchors: false,
+};
 
 const file = (path: string, size: number, readOnly: string | null = null) => ({
   path,
@@ -115,13 +184,19 @@ const LINT = {
   ],
 };
 
-type Fake = { calls: string[]; writes: { path: string; ifMatch: string | null; body: string }[] };
+type Fake = {
+  calls: string[];
+  writes: { path: string; ifMatch: string | null; body: string }[];
+  proposals: unknown[];
+  previews: unknown[];
+};
 
 /** Подмена /api/v1/pack-studio/workspaces*: клон идёт два опроса, файлы с ETag, запись с If-Match. */
 const mockWorkspaces = async (page: Page): Promise<Fake> => {
-  const fake: Fake = { calls: [], writes: [] };
+  const fake: Fake = { calls: [], writes: [], proposals: [], previews: [] };
   let created = false;
   let polls = 0;
+  let proposed = false;
   const files: Record<string, { content: string; etag: string }> = {
     [MANIFEST]: { content: 'id: "2026.1.6"\nstatus: draft\n', etag: '"m1"' },
     [META]: { content: "\\newcommand{\\hseYear}{{{ project.meta.year\n", etag: '"j1"' },
@@ -141,7 +216,65 @@ const mockWorkspaces = async (page: Page): Promise<Fake> => {
     }
     if (rest === `/${WS}` && req.method() === "GET") {
       polls += 1;
-      return json(route, workspace(polls > 1 ? "ready" : "cloning"));
+      return json(route, workspace(polls > 1 ? "ready" : "cloning", proposed));
+    }
+    if (rest === `/${WS}/git`) return json(route, gitState(fake.writes.length > 0, proposed));
+    if (rest === `/${WS}/git/propose`) {
+      fake.proposals.push(req.postDataJSON());
+      // Первая попытка упирается в проверку пака, вторая открывает PR.
+      if (fake.proposals.length === 1) {
+        return json(
+          route,
+          {
+            detail: "Пак не прошёл проверку.",
+            code: "lint_failed",
+            errors: 1,
+            warnings: 0,
+            findings: [
+              {
+                severity: "error",
+                check: "lint",
+                path: DRAFT,
+                message: "common/meta.tex.j2:2: Jinja TemplateSyntaxError (unexpected end of template)",
+              },
+            ],
+          },
+          409,
+        );
+      }
+      proposed = true;
+      return json(route, {
+        git: gitState(true, true),
+        pushed_sha: PUSHED,
+        pushed_to: "https://github.com/e2e/packs.git",
+        pull_request: { number: 7, url: PR_URL, created: true },
+        compare_url: null,
+        pr_error: null,
+        checks: { errors: 0, warnings: 0, findings: [], classes: [] },
+      });
+    }
+    if (rest === `/${WS}/git/checks`) {
+      return json(route, {
+        state: "pending",
+        sha: PUSHED,
+        checks: [{ name: "packs", state: "running", url: null, summary: null }],
+        available: true,
+        reason: null,
+        web_url: `https://github.com/e2e/packs/commit/${PUSHED}/checks`,
+      });
+    }
+    if (rest === `/${WS}/versions/hse-cs-sse/coursework/2026.1.6/preview`) {
+      if (req.method() === "GET") return json(route, PREVIEW_OPTIONS);
+      fake.previews.push(req.postDataJSON());
+      return json(route, { builds: [PREVIEW_FAILED] }, 202);
+    }
+    if (rest === `/${WS}/previews/b1`) return json(route, PREVIEW_FAILED);
+    if (rest === `/${WS}/previews/b1/log`) {
+      return route.fulfill({
+        status: 200,
+        contentType: "text/plain; charset=utf-8",
+        body: "! Undefined control sequence.\nl.12 \\hseOops",
+      });
     }
     if (rest === `/${WS}/tree`) return json(route, TREE);
     if (rest === `/${WS}/lint`) return json(route, LINT);
@@ -214,6 +347,8 @@ for (const lang of LANGS) {
       await expect(toggle).toBeVisible();
       if ((await toggle.getAttribute("aria-checked")) !== "true") await toggle.click();
       await expect(toggle).toHaveAttribute("aria-checked", "true");
+      // Служебные доступы репозиториев паков: раздел настоящим API админки.
+      await expect(page.getByTestId("ps-service-open")).toBeVisible();
       await shot(page, L, "ps-05-admin");
 
       await page.goto("/");
@@ -251,6 +386,38 @@ for (const lang of LANGS) {
       expect(fake.writes[0]?.path).toBe(META);
       expect(fake.writes[0]?.ifMatch).toBe('"j1"');
       await shot(page, L, "ps-30-saved");
+
+      // Панель git: правка после версии, ветки ещё нет.
+      await expect(page.getByTestId("git-bar")).toBeVisible();
+      await expect(page.getByTestId("git-dirty")).toHaveAttribute("data-dirty", "true");
+      await expect(page.getByTestId("git-branch")).toContainText("master");
+
+      // «Предложить изменения»: проверка пака не прошла, находка в «Проблемах» с переходом к файлу и строке.
+      await page.getByTestId("propose-changes").click();
+      await page.getByTestId("git-propose-submit").click();
+      const gate = page.getByTestId("problems-gate");
+      await expect(gate).toContainText("TemplateSyntaxError");
+      await shot(page, L, "ps-50-gate");
+
+      // Повтор: PR открыт, статус проверок идёт.
+      await page.getByTestId("propose-changes").click();
+      await page.getByTestId("git-propose-submit").click();
+      await expect(page.getByTestId("git-propose-done")).toContainText("#7");
+      await expect(page.getByTestId("git-propose-pr-link")).toHaveAttribute("href", PR_URL);
+      await shot(page, L, "ps-55-proposed");
+      await page.keyboard.press("Escape");
+      await expect(page.getByTestId("git-pr-link")).toHaveAttribute("href", PR_URL);
+      await expect(page.getByTestId("git-ci")).toHaveAttribute("data-state", "pending");
+      expect(fake.proposals).toHaveLength(2);
+
+      // Предпросмотр: сборка документа на автонаборе, неудача по коду и журнал.
+      await page.getByTestId("side-tab-preview").click();
+      await page.getByTestId("preview-build").click();
+      await expect(page.getByTestId("preview-failed")).toContainText("LaTeX");
+      expect(fake.previews[0]).toMatchObject({ documents: ["report"], example: "auto:normal" });
+      await page.getByTestId("preview-failed-log").click();
+      await expect(page.getByTestId("preview-log")).toContainText("Undefined control sequence");
+      await shot(page, L, "ps-60-preview");
     });
 
     test.describe("телефон 360", () => {
@@ -270,6 +437,7 @@ for (const lang of LANGS) {
         await page.getByTestId("ws-tree-open").click();
         await page.getByTestId(`tree-file-${MANIFEST}`).click();
         await expect(page.getByTestId("problems-panel")).toContainText("/status");
+        await expect(page.getByTestId("git-bar")).toBeVisible();
         await expectNoHorizontalScroll(page);
         await shot(page, L, "ps-40-phone");
       });
