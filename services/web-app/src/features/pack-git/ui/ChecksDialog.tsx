@@ -4,6 +4,7 @@ import {
   CircleMinus,
   CircleX,
   ExternalLink,
+  Hourglass,
   LoaderCircle,
   RefreshCw,
   type LucideIcon,
@@ -27,6 +28,7 @@ const CHECK_ICON: Record<PackCiCheck["state"], LucideIcon> = {
   neutral: CircleMinus,
   skipped: CircleMinus,
   cancelled: CircleMinus,
+  awaiting_approval: Hourglass,
 };
 
 const CHECK_TONE: Record<PackCiCheck["state"], string> = {
@@ -37,11 +39,13 @@ const CHECK_TONE: Record<PackCiCheck["state"], string> = {
   neutral: "ps-ci-dim",
   skipped: "ps-ci-dim",
   cancelled: "ps-ci-dim",
+  awaiting_approval: "ps-ci-wait",
 };
 
 const STATE_TONE: Record<PackCiStatus["state"], string> = {
   none: "ps-ci-dim",
   pending: "ps-ci-wait",
+  awaiting_approval: "ps-ci-wait",
   success: "ps-ci-ok",
   failure: "ps-ci-err",
   unknown: "ps-ci-dim",
@@ -154,6 +158,11 @@ export const ChecksDialog = ({
         )}
         {data?.state === "pending" && (
           <p className="ps-dialog-text">{t("git.ci.polling")}</p>
+        )}
+        {data?.state === "awaiting_approval" && (
+          <div data-testid="git-ci-approval">
+            <Notice tone="info" role="status" text={t("git.ci.approval")} />
+          </div>
         )}
         {data?.available && data.checks.length === 0 && (
           <p className="ps-pane-empty" data-testid="git-ci-none">

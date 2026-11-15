@@ -1,0 +1,10 @@
+{
+  "repo": null,
+  "bot": {
+    "available": false,
+    "reason": "not_configured",
+    "daily_limit": null,
+    "used": null
+  },
+  "workspace_id": null
+}

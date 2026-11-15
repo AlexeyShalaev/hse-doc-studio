@@ -14,6 +14,8 @@ API `/api/v1/pack-studio/*` и `/api/admin/pack-studio*` (`docs/design/template-
 | `GET /pack-studio/section` | `PackStudioSection` | раздел включён, задан ли окружением, есть ли право; открыт любому вошедшему |
 | `PUT /pack-studio/section` | `PackStudioSection` | только локально: переключатель «Инструменты автора шаблонов» |
 | `GET /pack-studio/workspaces` | `PackWorkspaceList` | пространства человека |
+| `GET /pack-studio/official` | `PackOfficial` | срез T22: официальный репозиторий установки (null: кнопки нет), доступность бота с причиной и остатком лимита, уже созданное официальное пространство |
+| `POST /pack-studio/official/workspace` | `PackWorkspace` | `OpenPackOfficialRequest`: `{access: bot}` или `{access: token, credential_id}`; 200 уже созданное, 202 новое (клон в фоне); `official_unavailable`, `official_bot_unavailable` (`reason`) |
 | `POST /pack-studio/workspaces` | `PackWorkspace` | `CreatePackWorkspaceRequest`; папка 201 `ready`, git 202 `cloning` (клон в фоне) |
 | `GET /pack-studio/workspaces/{id}` | `PackWorkspace` | опрос до `ready` или `failed` (`busy` false) |
 | `DELETE /pack-studio/workspaces/{id}` | 204 | у git удаляется клон, у папки только запись |
@@ -53,6 +55,8 @@ API `/api/v1/pack-studio/*` и `/api/admin/pack-studio*` (`docs/design/template-
 | `GET /api/admin/pack-studio/service-access` | `PackServiceAccessList` | служебные доступы репозиториев паков (секрет не отдаётся) |
 | `POST /api/admin/pack-studio/service-access` | `PackServiceAccess` | `CreatePackServiceAccessRequest`: токен репозитория уровня установки, один на репозиторий (`service_access_exists`) |
 | `DELETE /api/admin/pack-studio/service-access/{id}` | 204 | убрать; пространства на нём теряют доступ |
+| `POST /api/admin/pack-studio/service-access/{id}/check` | `PackServiceAccessCheck` | срез T22: аккаунт токена, области, право push, у бота форк (находится или создаётся и запоминается), проблемы кодами |
+| `GET/PUT /api/admin/pack-studio/official` | `PackStudioOfficialAdmin` | срез T22: `UpdatePackStudioOfficialRequest`, вклад через бота включён и лимит предложений на человека в сутки |
 
 ## Предпросмотр
 
@@ -65,5 +69,7 @@ API `/api/v1/pack-studio/*` и `/api/admin/pack-studio*` (`docs/design/template-
 Пути файлов идут от папки паков пространства (`hse-cs-sse/templates/coursework/versions/2026.1.5/version.yaml`): без `..`, абсолютных путей, обратных слешей, `.git` и символьных ссылок.
 
 Операции git идут под замком пространства: вторая одновременная отвечает `workspace_busy`. Пространство со служебным доступом (`service_access: true` при создании, только сервер) отправляет ветку токеном установки, а коммит подписан человеком; форк ему недоступен (`push_denied`).
+
+Официальные паки (срез T22, `docs/design/template-studio.md`, 4.7): служебный доступ с `fork_mode: true` это бот, ветка уходит только в его форк (`fork_url`), PR из форка. У пространства `official` (адрес совпадает с официальным репозиторием установки) и `license_accepted_at`; первое «Предложить» из официального пространства без `accept_license: true` отвечает `license_consent_required` (`license`, `license_url`, `contributing_url`). Через бота: `proposal_limit` (`limit`), `official_bot_unavailable`; для любого служебного доступа `paths_outside_packs` (`files`). Статус проверок: `awaiting_approval` (запуск ждёт одобрения сопровождающего) и `pr_state` (`open`, `merged`, `closed`).
 
 Форму меняют так: сначала эталоны, затем модели и клиент, тесты в том же коммите.

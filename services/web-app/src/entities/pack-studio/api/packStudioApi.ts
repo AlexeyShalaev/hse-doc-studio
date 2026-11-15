@@ -1,6 +1,9 @@
 import { adminClient, apiClient, ApiError, parseResp } from "@shared/api";
 import { env } from "@shared/config";
 import {
+  PackOfficialSchema,
+  PackServiceAccessCheckSchema,
+  PackStudioOfficialAdminSchema,
   PackCiStatusSchema,
   PackCommitResponseSchema,
   PackDiffSchema,
@@ -27,6 +30,11 @@ import {
   PackWorkspaceSchema,
   PackYamlPatchResponseSchema,
   type CreatePackServiceAccessRequest,
+  type OpenPackOfficialRequest,
+  type PackOfficial,
+  type PackServiceAccessCheck,
+  type PackStudioOfficialAdmin,
+  type UpdatePackStudioOfficialRequest,
   type CreatePackStudioGrantRequest,
   type CreatePackVersionRequest,
   type CreatePackWorkspaceRequest,
@@ -153,6 +161,17 @@ export const packStudioApi = {
   },
   refreshWorkspace: (id: string): Promise<PackWorkspace> =>
     apiClient.post(`${ws(id)}/refresh`).then(parseResp(PackWorkspaceSchema)),
+
+  // Официальные паки (срез T22): репозиторий установки, доступ бота и
+  // своё пространство; открыть отвечает уже созданным или новым (клон в фоне).
+  official: (): Promise<PackOfficial> =>
+    apiClient
+      .get(`${BASE}/official`, quiet)
+      .then(parseResp(PackOfficialSchema)),
+  openOfficial: (body: OpenPackOfficialRequest): Promise<PackWorkspace> =>
+    apiClient
+      .post(`${BASE}/official/workspace`, body, quiet)
+      .then(parseResp(PackWorkspaceSchema)),
 
   tree: (id: string): Promise<PackTree> =>
     apiClient.get(`${ws(id)}/tree`, quiet).then(parseResp(PackTreeSchema)),
@@ -380,4 +399,26 @@ export const packStudioApi = {
   removeServiceAccess: async (accessId: string): Promise<void> => {
     await adminClient.delete(`${BASE}/service-access/${enc(accessId)}`, quiet);
   },
+  /** Проверка у хостинга: чей токен, области, у бота форк (находится или создаётся). */
+  checkServiceAccess: (accessId: string): Promise<PackServiceAccessCheck> =>
+    adminClient
+      .post(
+        `${BASE}/service-access/${enc(accessId)}/check`,
+        {},
+        {
+          ...quiet,
+          timeout: 60_000,
+        },
+      )
+      .then(parseResp(PackServiceAccessCheckSchema)),
+  officialAdmin: (): Promise<PackStudioOfficialAdmin> =>
+    adminClient
+      .get(`${BASE}/official`, quiet)
+      .then(parseResp(PackStudioOfficialAdminSchema)),
+  setOfficialAdmin: (
+    body: UpdatePackStudioOfficialRequest,
+  ): Promise<PackStudioOfficialAdmin> =>
+    adminClient
+      .put(`${BASE}/official`, body, quiet)
+      .then(parseResp(PackStudioOfficialAdminSchema)),
 };

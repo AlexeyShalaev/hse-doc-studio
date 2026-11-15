@@ -23,7 +23,7 @@ from hse_doc_studio.core.egress import EgressBlockedError, IEgressPolicy
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.git_sync.entities import RemoteTarget
 from hse_doc_studio.core.git_sync.error_messages import git_error
-from hse_doc_studio.core.git_sync.errors import GitErrorCode
+from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
 from hse_doc_studio.core.git_sync.protocols import ICredentialAccess
 from hse_doc_studio.core.git_sync.providers import GitProvider
 from hse_doc_studio.core.git_sync.untrusted_json import loads_untrusted
@@ -35,8 +35,10 @@ from hse_doc_studio.core.pack_studio.git_flow import (
     CiReport,
     CiState,
     ForkRef,
+    HostingAccount,
     HostingRepo,
     PullRequestRef,
+    PullRequestState,
     RepoPermissions,
     checks_page_url,
     summarize_checks,
@@ -96,6 +98,7 @@ _GITLAB_STATUS = {
 class _Reply:
     status: int
     data: Any
+    headers: Mapping[str, str] | None = None
 
     @property
     def ok(self) -> bool:
@@ -215,6 +218,42 @@ class HttpPackHosting:
             return await self._gitlab_pipeline(repo, target, sha, page) or unavailable
         return unavailable
 
+    async def pull_request_state(self, repo: HostingRepo, target: RemoteTarget, number: int) -> PullRequestState | None:
+        if repo.provider is not GitProvider.github or repo.api_base is None:
+            return None
+        reply = await self._call(repo, target, "GET", f"/repos/{repo.path}/pulls/{number}")
+        body = reply.obj()
+        if reply.status != _OK:
+            return None
+        if body.get("merged") is True or _text(body.get("merged_at")):
+            return PullRequestState.merged
+        state = body.get("state")
+        if state == "open":
+            return PullRequestState.open
+        return PullRequestState.closed if state == "closed" else None
+
+    async def account(self, repo: HostingRepo, target: RemoteTarget) -> HostingAccount | None:
+        if repo.provider is not GitProvider.github or repo.api_base is None:
+            return None
+        reply = await self._call(repo, target, "GET", "/user")
+        login = _text(reply.obj().get("login"))
+        if reply.status != _OK or login is None:
+            return None
+        raw = (reply.headers or {}).get("x-oauth-scopes")
+        scopes = None if raw is None else tuple(part.strip() for part in raw.split(",") if part.strip())
+        return HostingAccount(login=login, scopes=scopes)
+
+    async def sync_fork(self, fork: HostingRepo, target: RemoteTarget, *, branch: str) -> bool:
+        if fork.provider is not GitProvider.github or fork.api_base is None:
+            return False
+        try:
+            reply = await self._call(
+                fork, target, "POST", f"/repos/{fork.path}/merge-upstream", json={"branch": branch}
+            )
+        except GitSyncError:
+            return False
+        return reply.ok
+
     # ── GitHub и GitLab ──
 
     async def _github_checks(
@@ -229,7 +268,7 @@ class HttpPackHosting:
         )
         if _OK not in (runs.status, statuses.status):
             return None
-        checks: list[CiCheck] = []
+        checks: list[CiCheck] = await self._github_awaiting_approval(repo, target, sha)
         raw_runs = runs.obj().get("check_runs") if runs.status == _OK else None
         for run in raw_runs if isinstance(raw_runs, list) else []:
             if not isinstance(run, dict):
@@ -260,6 +299,34 @@ class HttpPackHosting:
                 )
             )
         return CiReport(state=summarize_checks(checks), sha=sha, checks=tuple(checks), web_url=page)
+
+    async def _github_awaiting_approval(self, repo: HostingRepo, target: RemoteTarget, sha: str) -> list[CiCheck]:
+        """Запуски Actions по коммиту, которые ждут одобрения сопровождающего (PR из форка нового участника, T22).
+
+        Такие запуски не создают проверок (`check-runs` пуст), поэтому без этого запроса статус выглядел бы вечным
+        «нет проверок». GitHub помечает их `conclusion: action_required` (или `status: action_required`).
+        """
+        try:
+            reply = await self._call(
+                repo, target, "GET", f"/repos/{repo.path}/actions/runs?head_sha={sha}&per_page={_PER_PAGE}"
+            )
+        except GitSyncError:
+            return []
+        raw = reply.obj().get("workflow_runs") if reply.status == _OK else None
+        waiting: list[CiCheck] = []
+        for run in raw if isinstance(raw, list) else []:
+            if not isinstance(run, dict):
+                continue
+            if "action_required" not in {run.get("status"), run.get("conclusion")}:
+                continue
+            waiting.append(
+                CiCheck(
+                    name=_short(run.get("name"), 120) or "workflow",
+                    state=CheckState.awaiting_approval,
+                    url=_text(run.get("html_url")),
+                )
+            )
+        return waiting
 
     async def _gitlab_pipeline(
         self, repo: HostingRepo, target: RemoteTarget, sha: str, page: str | None
@@ -315,7 +382,7 @@ class HttpPackHosting:
                     body += chunk
                     if len(body) > _MAX_BODY_BYTES:
                         return _Reply(response.status_code, None)
-                return _Reply(response.status_code, _parse(bytes(body)))
+                return _Reply(response.status_code, _parse(bytes(body)), _kept_headers(response.headers))
         except EgressBlockedError:
             raise egress_error() from None
         except (httpx.TimeoutException, TimeoutError):
@@ -352,6 +419,14 @@ class HttpPackHosting:
         except NotFoundError:
             raise git_error(GitErrorCode.credentials_missing) from None
         return secret.reveal()
+
+
+_KEPT_HEADERS = ("x-oauth-scopes",)
+
+
+def _kept_headers(headers: httpx.Headers) -> dict[str, str]:
+    """Только заголовки, которые нужны сценариям (области классического токена GitHub)."""
+    return {name: headers[name] for name in _KEPT_HEADERS if name in headers}
 
 
 def _headers(provider: GitProvider, token: str | None) -> dict[str, str]:

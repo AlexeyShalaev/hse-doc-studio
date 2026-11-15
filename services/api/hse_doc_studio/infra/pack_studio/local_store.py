@@ -61,6 +61,7 @@ def _to_record(ws: PackWorkspace) -> dict[str, Any]:
         "pushed_sha": ws.pushed_sha,
         "folder": ws.folder,
         "error": None if ws.error is None else {"code": ws.error.code, "detail": ws.error.detail},
+        "license_accepted_at": _iso(ws.license_accepted_at),
         "created_at": _iso(ws.created_at),
         "updated_at": _iso(ws.updated_at),
     }
@@ -95,6 +96,7 @@ def _from_record(raw: dict[str, Any]) -> PackWorkspace:
         error=WorkspaceError(str(error["code"]), str(error.get("detail", "")))
         if isinstance(error, dict) and error.get("code")
         else None,
+        license_accepted_at=_dt(raw.get("license_accepted_at")),
     )
 
 

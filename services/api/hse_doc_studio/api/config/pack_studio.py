@@ -53,3 +53,19 @@ class PackStudioConfig(BaseModel):
     max_diff_bytes: int = Field(
         default=1_048_576, ge=1024, description="Largest diff of a workspace against its base branch shown at once."
     )
+    # Официальные паки (template-studio.md, 4.7, срез T22): репозиторий паков, в который идёт вклад через PR.
+    official_repo_url: str = Field(
+        default="https://github.com/AlexeyShalaev/hse-doc-studio",
+        description="Official packs repository (https). Empty hides the Official packs button.",
+    )
+    official_packs_path: str = Field(default="packs", description="Packs folder inside the official repository.")
+    official_base_branch: str = Field(default="master", description="Base branch of the official repository.")
+    official_license: str = Field(
+        default="Apache-2.0", description="License a contribution to the official packs goes under (its LICENSE)."
+    )
+    official_bot_daily_limit: int = Field(
+        default=5,
+        ge=1,
+        le=1000,
+        description="Proposals one person may send through the bot access per 24 hours (the admin may change it).",
+    )

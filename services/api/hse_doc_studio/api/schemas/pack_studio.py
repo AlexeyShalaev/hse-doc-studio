@@ -82,6 +82,9 @@ class PackWorkspaceResponse(StrictModel):
     error: PackWorkspaceErrorBody | None
     created_at: datetime
     updated_at: datetime
+    # Срез T22: пространство над официальным репозиторием паков установки и когда человек принял его лицензию.
+    official: bool = False
+    license_accepted_at: datetime | None = None
 
 
 class CreatePackWorkspaceRequest(StrictModel):
@@ -271,8 +274,11 @@ class CreatePackStudioGrantRequest(StrictModel):
 
 ChangeStatusName = Literal["added", "modified", "deleted"]
 GitProviderName = Literal["github", "gitlab", "gitea", "bitbucket", "hse_studio", "other"]
-CiStateName = Literal["none", "pending", "success", "failure", "unknown"]
-CheckStateName = Literal["queued", "running", "success", "failure", "neutral", "skipped", "cancelled"]
+CiStateName = Literal["none", "pending", "awaiting_approval", "success", "failure", "unknown"]
+CheckStateName = Literal[
+    "queued", "running", "success", "failure", "neutral", "skipped", "cancelled", "awaiting_approval"
+]
+PullRequestStateName = Literal["open", "merged", "closed"]
 
 
 class PackFileChange(StrictModel):
@@ -338,6 +344,8 @@ class PackProposeRequest(StrictModel):
     # Сообщение коммита несохранённых правок.
     message: str | None = Field(default=None, max_length=2000)
     fork: PackForkChoice | None = None
+    # Срез T22: официальные паки, согласие с лицензией репозитория и публичностью вклада (нужно один раз).
+    accept_license: bool = False
 
 
 class PackPullRequest(StrictModel):
@@ -399,6 +407,8 @@ class PackCiResponse(StrictModel):
     available: bool
     reason: str | None
     web_url: str | None
+    # Срез T22: открыт, слит или закрыт PR (null: PR нет или хостинг не сказал).
+    pr_state: PullRequestStateName | None = None
 
 
 class PackStartOverRequest(StrictModel):
@@ -419,12 +429,91 @@ class PackServiceAccessResponse(StrictModel):
     created_by: str | None
     created_by_name: str | None
     created_at: datetime
+    # Срез T22: доступ бота, push только в форк аккаунта токена (`fork_url`, null до первой проверки или отправки).
+    fork_mode: bool = False
+    fork_url: str | None = None
 
 
 class CreatePackServiceAccessRequest(StrictModel):
     url: str = Field(min_length=1, max_length=2048)
     token: str = Field(min_length=1, max_length=4096)
     label: str | None = Field(default=None, max_length=120)
+    fork_mode: bool = False
+
+
+ServiceAccessProblemName = Literal[
+    "token_rejected", "fine_grained_token", "scope_missing", "fork_unavailable", "bot_can_push", "provider_unsupported"
+]
+
+
+class PackServiceAccessCheckResponse(StrictModel):
+    """`POST /api/admin/pack-studio/service-access/{id}/check`: проверка доступа у хостинга (срез T22)."""
+
+    access: PackServiceAccessResponse
+    ok: bool
+    login: str | None
+    # Области классического токена GitHub; null: хостинг их не назвал (точный токен).
+    scopes: list[str] | None
+    can_push: bool | None
+    problems: list[ServiceAccessProblemName]
+
+
+# ── срез T22: официальные паки ──────────────────────────────────────────────
+
+OfficialAccessName = Literal["bot", "token"]
+BotUnavailableName = Literal["local", "not_configured", "disabled", "no_right"]
+
+
+class PackOfficialRepo(StrictModel):
+    url: str
+    web_url: str
+    packs_path: str
+    base_branch: str
+    license: str
+    license_url: str
+    contributing_url: str
+
+
+class PackOfficialBot(StrictModel):
+    available: bool
+    reason: BotUnavailableName | None
+    daily_limit: int | None
+    used: int | None
+
+
+class PackOfficialResponse(StrictModel):
+    """`GET /pack-studio/official`: официальный репозиторий паков установки (null: кнопки нет), доступ бота и уже
+    созданное пространство человека."""
+
+    repo: PackOfficialRepo | None
+    bot: PackOfficialBot
+    workspace_id: str | None
+
+
+class OpenPackOfficialRequest(StrictModel):
+    access: OfficialAccessName
+    credential_id: UUID | None = None
+
+    @model_validator(mode="after")
+    def _token_needs_credential(self) -> OpenPackOfficialRequest:
+        if (self.access == "token") != (self.credential_id is not None):
+            raise ValueError("credential_id goes with access=token only")
+        return self
+
+
+class PackStudioOfficialAdminResponse(StrictModel):
+    """`GET/PUT /api/admin/pack-studio/official`: вклад через бота (срез T22)."""
+
+    repo: PackOfficialRepo | None
+    bot_enabled: bool
+    daily_limit: int
+    default_daily_limit: int
+    service_access: PackServiceAccessResponse | None
+
+
+class UpdatePackStudioOfficialRequest(StrictModel):
+    bot_enabled: bool
+    daily_limit: int = Field(ge=1, le=1000)
 
 
 # ── Предпросмотр (раздел 6, срез T7) ─────────────────────────────────────────

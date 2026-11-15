@@ -27,6 +27,7 @@ import {
 } from "@shared/ui";
 import { Switch } from "@shared/ui/Switch";
 import { Notice } from "@shared/ui/ConflictKit";
+import { OfficialSection } from "./OfficialSection";
 import { ServiceAccessSection } from "./ServiceAccessSection";
 
 type Subject = PackStudioGrant["subject"];
@@ -272,6 +273,7 @@ export const PackStudioAdminPage = () => {
           <Notice tone="err" role="alert" text={packErrorText(remove.error)} />
         )}
       </Section>
+      <OfficialSection />
       <ServiceAccessSection />
       <GrantDialog
         isOpen={granting}

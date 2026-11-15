@@ -69,6 +69,12 @@ class PackStudioErrorCode(StrEnum):
     version_taken = "version_taken"
     version_number_invalid = "version_number_invalid"
     version_not_modified = "version_not_modified"
+    # Срез T22: официальные паки и вклад через бота
+    official_unavailable = "official_unavailable"
+    official_bot_unavailable = "official_bot_unavailable"
+    license_consent_required = "license_consent_required"
+    proposal_limit = "proposal_limit"
+    paths_outside_packs = "paths_outside_packs"
 
 
 _C = PackStudioErrorCode
@@ -258,6 +264,34 @@ _TABLE: dict[PackStudioErrorCode, tuple[int, str, str]] = {
         409,
         "Каталог выпущенной версии не менялся: переносить нечего.",
         "The released version folder has not changed: there is nothing to move.",
+    ),
+    _C.official_unavailable: (
+        404,
+        "Официальный репозиторий паков в этой установке не задан.",
+        "This instance has no official packs repository.",
+    ),
+    _C.official_bot_unavailable: (
+        409,
+        "Вклад без своего аккаунта GitHub в этой установке недоступен: администратор не настроил или выключил его.",
+        (
+            "Contributing without your own GitHub account is unavailable here: the administrator has not set it up "
+            "or has turned it off."
+        ),
+    ),
+    _C.license_consent_required: (
+        409,
+        "Перед первой отправкой подтвердите, что вклад публичен и идёт под лицензией репозитория.",
+        "Before the first proposal, confirm that the contribution is public and goes under the repository license.",
+    ),
+    _C.proposal_limit: (
+        429,
+        "Предложений через служебный аккаунт за сутки больше, чем разрешено. Попробуйте позже.",
+        "Too many proposals through the service account in the last 24 hours. Try again later.",
+    ),
+    _C.paths_outside_packs: (
+        409,
+        "Ветка меняет файлы вне папки паков. Через служебный доступ можно предлагать только паки.",
+        "The branch changes files outside the packs folder. The service access only proposes packs.",
     ),
 }
 

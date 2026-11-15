@@ -291,7 +291,8 @@
         "pending": "Checks running",
         "success": "Checks passed",
         "failure": "Checks failed",
-        "unknown": "Status unknown"
+        "unknown": "Status unknown",
+        "awaiting_approval": "Awaiting approval"
       },
       "check": {
         "queued": "queued",
@@ -300,13 +301,15 @@
         "failure": "failed",
         "neutral": "no verdict",
         "skipped": "skipped",
-        "cancelled": "cancelled"
+        "cancelled": "cancelled",
+        "awaiting_approval": "waiting for run approval"
       },
       "none": "The hosting has not started any checks yet.",
       "polling": "While checks run, the status refreshes every 30 seconds.",
       "unavailable": "The hosting does not share the checks status with this access (GitLab needs read_api). See them on the hosting page.",
       "web": "Open on the hosting",
-      "refresh": "Refresh"
+      "refresh": "Refresh",
+      "approval": "GitHub waits for a repository maintainer to allow the checks to run: it does so for PRs from forks by new contributors. This is not an error in your proposal, the checks start on their own once approved. The status refreshes every 2 minutes."
     },
     "fork": {
       "title": "Push to a fork",
@@ -385,6 +388,48 @@
       "checkLead": "The template studio needs write access to the repository, pull requests and reading checks status.",
       "check": "Check rights for the template studio",
       "newToken": "Issue a token with the right permissions"
+    },
+    "official": {
+      "consent": "I agree that the contribution is public and goes under the repository license ({{license}})",
+      "repoLicense": "the repository license",
+      "consentHint": "Everyone will see the PR and its commits. You are asked once for this workspace.",
+      "license": "License",
+      "rules": "Contributing rules",
+      "bot": "The instance service account sends the branch to its fork. The PR shows your profile name, your email stays private.",
+      "quota": "You can send {{left}} more of {{limit}} proposals today.",
+      "afterMerge": "Official packs ship with the Studio: after the PR is merged, the new version reaches users with the next release."
+    },
+    "merged": {
+      "official": "The PR is merged. The new version reaches users with the next Studio release.",
+      "other": "The PR is merged. To propose something else, start over from the base branch.",
+      "closed": "The PR was closed without merging."
+    }
+  },
+  "official": {
+    "title": "Official packs",
+    "lead": "Packs from the Studio's own repository. Edit them here and propose changes through a PR: no repository of your own is needed.",
+    "start": "Start",
+    "dialogLead": "The Studio downloads only the packs folder and opens a workspace. Choose how to send your changes.",
+    "submit": "Open official packs",
+    "bot": {
+      "title": "Without your own GitHub account",
+      "hint": "The instance service account sends the changes and opens the PR. The PR shows your profile name, your email stays private.",
+      "quota": "You can send {{left}} more of {{limit}} proposals today.",
+      "reason": {
+        "not_configured": "The administrator of this instance has not set up contributing without a GitHub account.",
+        "disabled": "The administrator of this instance has turned off contributing without a GitHub account.",
+        "no_right": "Contributing without a GitHub account needs the Pack author right."
+      }
+    },
+    "token": {
+      "title": "With your own GitHub token",
+      "hint": "The branch goes to your fork on GitHub, the PR is opened from your account."
+    },
+    "none": {
+      "lead": "To propose changes you need a GitHub token. Create one, add it under Git access, then come back here.",
+      "token": "How to create a token",
+      "steps": "The token needs the packs permission profile: branch, PR and checks status. For a PR from a fork into someone else's public repository a classic token with the public_repo scope works.",
+      "settings": "Open Git access"
     }
   },
   "version": {
