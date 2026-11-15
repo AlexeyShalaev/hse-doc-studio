@@ -66,6 +66,8 @@ export const CapabilitiesSchema = z.strictObject({
   git_server_login: z.boolean(),
   // Студия шаблонов: раздел включён и есть право «Автор шаблонов» (локально: включён в Настройках).
   pack_studio: z.boolean(),
+  // Профиль deploy/pack-studio (локально): стартовая страница /pack-studio, проекты скрыты.
+  pack_studio_standalone: z.boolean(),
 });
 export type Capabilities = z.infer<typeof CapabilitiesSchema>;
 

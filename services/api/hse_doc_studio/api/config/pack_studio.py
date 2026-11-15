@@ -13,7 +13,14 @@ class PackStudioConfig(BaseModel):
         ),
     )
     standalone: bool = Field(
-        default=False, description="Pack Studio profile: the start page is /pack-studio (deploy/pack-studio)."
+        default=False,
+        description="Pack Studio profile (deploy/pack-studio): the section is on and locked; locally the start "
+        "page is /pack-studio and projects are hidden.",
+    )
+    standalone_folder: str | None = Field(
+        default=None,
+        description="Standalone profile: a packs folder (path in the container or on the host) opened as a "
+        "workspace on start, if no workspace has it yet.",
     )
     max_workspaces_per_user: int = Field(default=10, ge=1, description="Workspaces one person may keep.")
     max_file_bytes: int = Field(

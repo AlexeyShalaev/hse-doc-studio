@@ -420,7 +420,8 @@ tags:
 | `HSE_STUDIO__CHECKPOINT__REMINDER_DAYS` | int | `3` | server | За сколько суток до срока контрольной точки владелец и авторы получают напоминание, если пакет точки ещё не собран; 0 выключает напоминание. |
 | `HSE_STUDIO__CHECKPOINT__REMINDER_INTERVAL_S` | float | `900.0` | server | Как часто сервер проверяет, кому пора напомнить о сроке контрольной точки, в секундах. |
 | `HSE_STUDIO__PACK_STUDIO__ENABLED` | bool | не задано | оба | Force the section on or off. Unset: locally the Settings toggle decides, on a server the instance admin. |
-| `HSE_STUDIO__PACK_STUDIO__STANDALONE` | bool | `false` | оба | Pack Studio profile: the start page is /pack-studio (deploy/pack-studio). |
+| `HSE_STUDIO__PACK_STUDIO__STANDALONE` | bool | `false` | оба | Pack Studio profile (deploy/pack-studio): the section is on and locked; locally the start page is /pack-studio and projects are hidden. |
+| `HSE_STUDIO__PACK_STUDIO__STANDALONE_FOLDER` | str | не задано | оба | Standalone profile: a packs folder (path in the container or on the host) opened as a workspace on start, if no workspace has it yet. |
 | `HSE_STUDIO__PACK_STUDIO__MAX_WORKSPACES_PER_USER` | int | `10` | оба | Workspaces one person may keep. |
 | `HSE_STUDIO__PACK_STUDIO__MAX_FILE_BYTES` | int | `2097152` | оба | Largest file written through the Pack Studio (as pre-commit). |
 | `HSE_STUDIO__PACK_STUDIO__MAX_READ_BYTES` | int | `26214400` | оба | Largest file of a workspace the Pack Studio reads into memory. |
