@@ -87,10 +87,49 @@ describe("TokenLinkCard", () => {
     expect(url.pathname).toBe("/settings/personal-access-tokens/new");
     expect(url.searchParams.get("target_name")).toBe("hse");
     expect(screen.getByTestId("token-broad-warning")).toHaveTextContent(
-      "доступ ко всем твоим репозиториям",
+      "доступ ко всем вашим репозиториям",
     );
     expect(hrefOf(/Классический токен/).searchParams.get("scopes")).toBe(
       "repo",
+    );
+    // Поле токена рядом: шаг «Вставьте» не обещает поле «ниже».
+    expect(screen.getByTestId("token-helper-steps")).toHaveTextContent(
+      "в поле для токена",
+    );
+  });
+
+  it("github, вклад через форк (packs_fork): классический public_repo, точный только владельцу", () => {
+    render(
+      <TokenLinkCard
+        url={parse("https://github.com/AlexeyShalaev/hse-doc-studio")}
+        profile="packs_fork"
+        pasteHint="Нажмите «Заменить токен»"
+      />,
+    );
+    const url = new URL(
+      screen.getByTestId("token-create-link").getAttribute("href") ?? "",
+    );
+    expect(url.pathname).toBe("/settings/tokens/new");
+    expect(url.searchParams.get("scopes")).toBe("public_repo");
+    expect(url.searchParams.get("description")).toMatch(/HSE Doc Studio/);
+    const card = screen.getByTestId("token-link-card");
+    expect(card).toHaveTextContent("public_repo");
+    expect(card).not.toHaveTextContent(/\brepo \(/);
+    expect(screen.getByTestId("github-fork-note")).toHaveTextContent("форк");
+    expect(screen.queryByTestId("github-repo-note")).toBeNull();
+    expect(screen.queryByTestId("token-broad-warning")).toBeNull();
+    const fineGrained = hrefOf(/Точный токен только на этот репозиторий/);
+    expect(fineGrained.pathname).toBe("/settings/personal-access-tokens/new");
+    expect(fineGrained.searchParams.get("pull_requests")).toBe("write");
+    expect(screen.getByTestId("token-fallback")).toHaveTextContent(
+      "владелец или сопровождающий",
+    );
+    // Шаги для классического токена, не для точного.
+    expect(card).toHaveTextContent("Tokens (classic)");
+    expect(card).not.toHaveTextContent("Only select repositories");
+    // Поля токена рядом нет: шаг «Вставьте» говорит, куда идти.
+    expect(screen.getByTestId("token-helper-steps")).toHaveTextContent(
+      "Нажмите «Заменить токен»",
     );
   });
 

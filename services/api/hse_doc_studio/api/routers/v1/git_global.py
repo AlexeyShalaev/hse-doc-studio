@@ -157,9 +157,10 @@ async def check_git_credential(
     credential_id: UUID,
     uc: FromDishka[CheckCredentialUC],
     policy: FromDishka[GitSyncPolicy],
-    profile: Literal["packs"] | None = None,
+    profile: Literal["packs", "packs_fork"] | None = None,
 ) -> GitCredentialCheckResponse:
-    """`profile=packs`: права оцениваются под репозиторий паков Студии шаблонов (ветка, PR, статус проверок)."""
+    """`profile=packs`: права оцениваются под репозиторий паков Студии шаблонов (ветка, PR, статус проверок);
+    `profile=packs_fork`: под вклад в чужой открытый репозиторий паков через свой форк (официальные паки)."""
     policy.require_enabled()
     try:
         view = await uc.execute(credential_id, profile)

@@ -74,6 +74,14 @@ nav = [
         { "Студия шаблонов у себя" = "deploy/pack-studio-local.md" },
         { "Автономная работа и хранение данных" = "deploy/autonomy.md" },
     ] },
+    { "Студия шаблонов" = [
+        { "Что это" = "pack-studio/index.md" },
+        { "Правка пака" = "pack-studio/editing.md" },
+        { "Предпросмотр и места подписей" = "pack-studio/preview.md" },
+        { "Новая версия" = "pack-studio/versions.md" },
+        { "Предложить изменения" = "pack-studio/propose.md" },
+        { "Командная строка и CI" = "pack-studio/ci.md" },
+    ] },
     { "Справочник" = [
         { "Карта справочника" = "reference/index.md" },
         { "Пак и шаблоны" = "reference/pack.md" },

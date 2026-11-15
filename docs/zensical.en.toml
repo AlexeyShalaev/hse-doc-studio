@@ -74,6 +74,14 @@ nav = [
         { "Template Studio on your computer" = "deploy/pack-studio-local.md" },
         { "Autonomy and data retention" = "deploy/autonomy.md" },
     ] },
+    { "Template Studio" = [
+        { "What it is" = "pack-studio/index.md" },
+        { "Editing a pack" = "pack-studio/editing.md" },
+        { "Preview and signature places" = "pack-studio/preview.md" },
+        { "New version" = "pack-studio/versions.md" },
+        { "Propose changes" = "pack-studio/propose.md" },
+        { "Command line and CI" = "pack-studio/ci.md" },
+    ] },
     { "Reference" = [
         { "Reference map" = "reference/index.md" },
         { "Packs and templates" = "reference/pack.md" },

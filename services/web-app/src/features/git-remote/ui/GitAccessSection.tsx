@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   credentialExpiry,
@@ -9,9 +10,12 @@ import {
   type GitCredential,
 } from "@entities/git-remote";
 import { describeGitError } from "@entities/git-sync";
+import { toast } from "@shared/lib";
 import { Notice } from "@shared/ui/ConflictKit";
+import { Modal } from "@shared/ui/Modal";
 import { Spinner } from "@shared/ui/Spinner";
 import { AccessCard } from "./AccessCard";
+import { AddTokenForm } from "./AddTokenForm";
 import { CredentialCard } from "./CredentialCard";
 import { EncryptionCard } from "./EncryptionCard";
 import { FetchDefaultCard } from "./FetchDefaultCard";
@@ -75,6 +79,33 @@ const attentionCount = (credentials: GitCredential[]): number =>
     );
   }).length;
 
+// «Добавить токен»: сервер (github.com по умолчанию), токен, проверка и
+// сохранение. Тот же поток, что в окне подключения проекта.
+const AddTokenDialog = ({ onClose }: { onClose: () => void }) => {
+  const { t } = useTranslation("gitAccess");
+  return (
+    <Modal
+      isOpen
+      onClose={onClose}
+      width={600}
+      title={t("addToken.title")}
+      description={t("addToken.lead")}
+      footer={
+        <button type="button" className="btn" onClick={onClose}>
+          {t("addToken.close")}
+        </button>
+      }
+    >
+      <AddTokenForm
+        onSaved={(credential) => {
+          toast.success(t("addToken.saved", { label: credential.label }));
+          onClose();
+        }}
+      />
+    </Modal>
+  );
+};
+
 // Раздел настроек приложения «Доступ к репозиториям»: токены и ключи, доверенные
 // серверы, где и как всё это хранится. Якоря нужны поиску по настройкам.
 export const GitAccessSection = () => {
@@ -84,6 +115,7 @@ export const GitAccessSection = () => {
   const hostSettings = useHostSettings();
   const secrets = useSecretsStatus();
   const attention = attentionCount(credentials.data ?? []);
+  const [adding, setAdding] = useState(false);
 
   return (
     <>
@@ -149,6 +181,19 @@ export const GitAccessSection = () => {
               </>
             )}
           </QueryBody>
+          <div>
+            <button
+              type="button"
+              className="btn sm"
+              data-testid="credential-add"
+              onClick={() => {
+                setAdding(true);
+              }}
+            >
+              <Plus size="0.8125rem" aria-hidden="true" />
+              {t("addToken.title")}
+            </button>
+          </div>
         </AccessCard>
 
         <AccessCard
@@ -209,6 +254,13 @@ export const GitAccessSection = () => {
 
         <ProjectsFolderCard />
       </div>
+      {adding && (
+        <AddTokenDialog
+          onClose={() => {
+            setAdding(false);
+          }}
+        />
+      )}
     </>
   );
 };

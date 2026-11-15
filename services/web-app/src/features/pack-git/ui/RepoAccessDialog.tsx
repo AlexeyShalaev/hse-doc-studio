@@ -20,8 +20,9 @@ export type RepoAccessDialogProps = {
 /**
  * Доступ пространства к репозиторию (template-studio.md, 4.2): служебный доступ
  * установки или личный токен из «Доступов git». Токен проверяется и выпускается
- * под профиль прав «packs» (ветка, PR, статус проверок); замена токена сохраняет
- * доступ, и пространство сразу ходит с новым.
+ * под профиль прав «packs» (ветка, PR, статус проверок), у официальных паков под
+ * «packs_fork» (классический public_repo, вклад через форк); замена токена
+ * сохраняет доступ, и пространство сразу ходит с новым.
  */
 export const RepoAccessDialog = ({
   workspace,
@@ -35,6 +36,7 @@ export const RepoAccessDialog = ({
   const [replacing, setReplacing] = useState(false);
   const credential =
     credentials.data?.find((c) => c.id === workspace.credential_id) ?? null;
+  const profile = workspace.official ? "packs_fork" : "packs";
 
   let body: React.ReactNode;
   if (workspace.service_access) {
@@ -52,7 +54,12 @@ export const RepoAccessDialog = ({
       <>
         <Notice tone="info" role="status" text={t("git.access.noneLead")} />
         {workspace.url && (
-          <RepoTokenHelp url={workspace.url} profile="packs" defaultOpen />
+          <RepoTokenHelp
+            url={workspace.url}
+            profile={profile}
+            defaultOpen
+            pasteHint={t("git.access.pasteNew")}
+          />
         )}
       </>
     );
@@ -96,21 +103,26 @@ export const RepoAccessDialog = ({
         <p className="ps-dialog-text">{t("git.access.checkLead")}</p>
         <CredentialCheckCard
           credential={credential}
-          profile="packs"
+          profile={profile}
           checkLabel={t("git.access.check")}
         />
         {workspace.url && (
           <details className="sync-details">
             <summary>{t("git.access.newToken")}</summary>
             <div style={{ marginTop: "0.5rem" }}>
-              <RepoTokenHelp url={workspace.url} profile="packs" defaultOpen />
+              <RepoTokenHelp
+                url={workspace.url}
+                profile={profile}
+                defaultOpen
+                pasteHint={t("git.access.pasteReplace")}
+              />
             </div>
           </details>
         )}
         {replacing && (
           <ReplaceTokenDialog
             credential={credential}
-            profile="packs"
+            profile={profile}
             onClose={() => {
               setReplacing(false);
             }}

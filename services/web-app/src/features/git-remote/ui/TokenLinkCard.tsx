@@ -1,4 +1,4 @@
-import { ExternalLink, KeyRound, TriangleAlert } from "lucide-react";
+import { ExternalLink, GitFork, KeyRound, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   permissionsFor,
@@ -6,7 +6,7 @@ import {
   type PermissionProfile,
 } from "@entities/git-remote";
 import type { ParsedRemoteUrl } from "../lib/parseRemoteUrl";
-import { TOKEN_STEPS, tokenLinksFor } from "../lib/providerHelp";
+import { tokenStepsFor, tokenLinksFor } from "../lib/providerHelp";
 import { useInstancePathStore } from "../model/useInstancePathStore";
 
 export type TokenLinkCardProps = {
@@ -20,6 +20,11 @@ export type TokenLinkCardProps = {
   serverVersion?: string | null;
   /** Профиль прав каталога: ссылка и список прав под задачу (packs: ветка, PR, статус проверок). */
   profile?: PermissionProfile | null;
+  /**
+   * Третий шаг «Вставьте»: куда вставить токен. По умолчанию поле токена рядом;
+   * там, где поля нет, раздел передаёт свой текст.
+   */
+  pasteHint?: string | null;
 };
 
 // Страница токенов переехала в «/-/user_settings» в GitLab 16; на более старых
@@ -47,6 +52,7 @@ export const TokenLinkCard = ({
   defaultOpen = false,
   serverVersion = null,
   profile = null,
+  pasteHint = null,
 }: TokenLinkCardProps) => {
   const { t, i18n } = useTranslation("gitAccess");
   const { t: tRemote } = useTranslation("gitRemote");
@@ -75,7 +81,15 @@ export const TokenLinkCard = ({
   const fallback = (legacy ? links.primary : links?.fallback) ?? null;
   const providerName = tRemote(`provider.${provider}`);
   const prefilled = primary?.kind === "prefilled";
-  const steps = TOKEN_STEPS[provider];
+  const { steps, prefix } = tokenStepsFor(provider, profile);
+  // Вклад через форк в чужой открытый репозиторий: точный токен на него не
+  // выдать, основной путь это классический токен с public_repo.
+  const forkFlow = provider === "github" && profile === "packs_fork";
+  const fallbackKey = legacy
+    ? "gitlabNew"
+    : forkFlow
+      ? "githubFineGrained"
+      : provider;
 
   return (
     <section
@@ -220,13 +234,41 @@ export const TokenLinkCard = ({
               <strong style={{ display: "block", fontWeight: 600 }}>
                 {t(`tokenLink.helper.${id}.title`)}
               </strong>
-              <span className="dim">{t(`tokenLink.helper.${id}.text`)}</span>
+              <span className="dim">
+                {id === "paste" && pasteHint
+                  ? pasteHint
+                  : t(`tokenLink.helper.${id}.text`)}
+              </span>
             </span>
           </li>
         ))}
       </ol>
 
-      {provider === "github" && prefilled && (
+      {forkFlow && (
+        <p
+          className="flex items-start"
+          data-testid="github-fork-note"
+          style={{
+            margin: 0,
+            gap: "0.4375rem",
+            fontSize: "0.75rem",
+            lineHeight: 1.45,
+            color: "var(--fg-1)",
+          }}
+        >
+          <GitFork
+            size="0.8125rem"
+            aria-hidden="true"
+            style={{
+              color: "var(--accent)",
+              flexShrink: 0,
+              marginTop: "0.125rem",
+            }}
+          />
+          {t("tokenLink.forkNote")}
+        </p>
+      )}
+      {provider === "github" && prefilled && !forkFlow && (
         <p
           className="flex items-start"
           data-testid="github-repo-note"
@@ -263,11 +305,7 @@ export const TokenLinkCard = ({
           style={{ gap: "0.25rem", fontSize: "0.75rem" }}
         >
           <span className="dim">
-            {t(
-              legacy
-                ? "tokenLink.fallback.gitlabNew.lead"
-                : `tokenLink.fallback.${provider}.lead`,
-            )}
+            {t(`tokenLink.fallback.${fallbackKey}.lead`)}
           </span>
           <a
             href={fallback.url}
@@ -276,11 +314,7 @@ export const TokenLinkCard = ({
             className="sync-history-link"
             style={{ alignSelf: "flex-start" }}
           >
-            {t(
-              legacy
-                ? "tokenLink.fallback.gitlabNew.link"
-                : `tokenLink.fallback.${provider}.link`,
-            )}
+            {t(`tokenLink.fallback.${fallbackKey}.link`)}
           </a>
           {fallback.broad && (
             <span
@@ -308,7 +342,7 @@ export const TokenLinkCard = ({
           }}
         >
           {steps.map((step) => (
-            <li key={step}>{t(`help.${provider}.token.${step}`)}</li>
+            <li key={step}>{t(`${prefix}.${step}`)}</li>
           ))}
         </ol>
       </details>
