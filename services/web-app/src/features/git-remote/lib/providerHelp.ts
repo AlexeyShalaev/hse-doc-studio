@@ -30,6 +30,18 @@ export const TOKEN_STEPS: Record<HelpProvider, readonly string[]> = {
   other: ["create", "copy"],
 };
 
+/**
+ * Шаги инструкции по токену под профиль прав: ключи перевода `<prefix>.<шаг>`.
+ * Вклад через форк на GitHub (packs_fork) идёт классическим токеном, у него свои шаги.
+ */
+export const tokenStepsFor = (
+  provider: HelpProvider,
+  profile: PermissionProfile | null = null,
+): { steps: readonly string[]; prefix: string } =>
+  provider === "github" && profile === "packs_fork"
+    ? { steps: ["open", "scope", "copy"], prefix: "help.github.classic" }
+    : { steps: TOKEN_STEPS[provider], prefix: `help.${provider}.token` };
+
 /** Шаги инструкции по deploy-ключу: ключи help.<провайдер>.key.<шаг>. */
 export const KEY_STEPS: Record<HelpProvider, readonly string[]> = {
   github: ["open", "paste", "write"],

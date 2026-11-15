@@ -67,7 +67,7 @@ describe("TokenCheckCard", () => {
       },
     );
     expect(screen.getByTestId("token-check-too_narrow")).toHaveTextContent(
-      "Добавь права: write_repository",
+      "Добавьте права: write_repository",
     );
     expect(
       screen.getByRole("link", { name: /Создать новый токен/ }),

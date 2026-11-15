@@ -112,10 +112,9 @@ describe("рабочие пространства", () => {
     );
     const submit = screen.getByTestId("ws-create-submit");
     expect(submit).toBeDisabled();
-    await userEvent.type(
-      screen.getByTestId("ws-create-url"),
-      "https://github.com/AlexeyShalaev/hse-doc-studio",
-    );
+    // Вставка одним куском: адрес не набирается по букве, окно не пересчитывается на каждой.
+    await userEvent.click(screen.getByTestId("ws-create-url"));
+    await userEvent.paste("https://github.com/AlexeyShalaev/hse-doc-studio");
     await userEvent.type(screen.getByLabelText("Базовая ветка"), "master");
     await userEvent.click(submit);
     await waitFor(() => {
@@ -130,6 +129,72 @@ describe("рабочие пространства", () => {
       });
     });
     expect(onCreated).toHaveBeenCalledWith(created);
+  });
+
+  it("нет токена для хоста: токен вставляется в окне, проверяется и сразу выбран", async () => {
+    const fresh = {
+      id: "fresh",
+      kind: "pat",
+      label: "GitHub, github.com",
+      host: "github.com",
+      status: "ok",
+      created_at: "2026-11-15T09:00:00Z",
+      used_by: [],
+    };
+    vi.spyOn(gitRemoteApi, "listCredentials")
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([fresh]);
+    vi.spyOn(gitRemoteApi, "listHostSettings").mockResolvedValue([]);
+    const save = vi
+      .spyOn(gitRemoteApi, "createCredential")
+      .mockResolvedValue(fresh);
+    const check = vi.spyOn(gitRemoteApi, "checkCredential").mockResolvedValue({
+      credential: fresh,
+      provider_info: { id: "github", detected_by: "host", version: null },
+      token_info: {
+        login: "anna",
+        scopes: ["repo"],
+        expires_at: null,
+        sufficiency: "sufficient",
+        missing: [],
+      },
+    });
+    const create = vi
+      .spyOn(packStudioApi, "createWorkspace")
+      .mockResolvedValue(fixture("git_cloning"));
+    wrap(
+      <CreateWorkspaceDialog
+        isOpen
+        onClose={vi.fn()}
+        onCreated={vi.fn()}
+        allowFolder={false}
+      />,
+    );
+    const url = screen.getByTestId("ws-create-url");
+    await userEvent.click(url);
+    await userEvent.paste("https://github.com/anna/packs");
+    // Форма токена появилась, но фокус остался в поле адреса.
+    const form = await screen.findByTestId("ws-create-token");
+    expect(url).toHaveFocus();
+    const token = within(form).getByLabelText("Токен");
+    expect(token).toHaveAttribute("type", "password");
+    await userEvent.type(token, "ghp_secret");
+    await userEvent.click(within(form).getByTestId("add-token-submit"));
+    await waitFor(() => {
+      expect(save).toHaveBeenCalledWith(
+        expect.objectContaining({ host: "github.com", token: "ghp_secret" }),
+      );
+    });
+    expect(check).toHaveBeenCalledWith("fresh", "packs");
+    await waitFor(() => {
+      expect(screen.queryByTestId("ws-create-token")).not.toBeInTheDocument();
+    });
+    await userEvent.click(screen.getByTestId("ws-create-submit"));
+    await waitFor(() => {
+      expect(create).toHaveBeenCalledWith(
+        expect.objectContaining({ credential_id: "fresh" }),
+      );
+    });
   });
 
   it("папка на диске только локально; отказ сервера показан словами", async () => {
@@ -167,14 +232,12 @@ describe("рабочие пространства", () => {
         allowFolder={false}
       />,
     );
-    await userEvent.type(
-      screen.getByTestId("ws-create-url"),
-      "https://gitlab.hse.ru/fcs/packs.git",
-    );
-    // Памятка о токене под профиль прав «packs» для личного доступа.
-    expect(
-      screen.getByText("Какой токен нужен для веток и запросов на слияние"),
-    ).toBeInTheDocument();
+    // Вставка одним куском: адрес не набирается по букве, окно не пересчитывается на каждой.
+    await userEvent.click(screen.getByTestId("ws-create-url"));
+    await userEvent.paste("https://gitlab.hse.ru/fcs/packs.git");
+    // Подходящего токена нет: поле токена и памятка под профиль «packs» прямо в окне.
+    expect(screen.getByTestId("ws-create-token")).toBeInTheDocument();
+    expect(screen.getByTestId("token-link-card")).toBeInTheDocument();
     await userEvent.click(
       screen.getByRole("button", { name: "Служебный доступ" }),
     );

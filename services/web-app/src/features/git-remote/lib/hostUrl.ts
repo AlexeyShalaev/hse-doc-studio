@@ -27,3 +27,32 @@ export const urlForHost = (
       };
   return { ...base, provider };
 };
+
+const HOST_ONLY = /^[a-z0-9]([a-z0-9.-]*[a-z0-9])?(:\d{1,5})?$/i;
+
+/**
+ * Сервер для нового токена по тому, что ввёл человек: имя сервера
+ * (github.com, gitlab.hse.ru:8443) или адрес репозитория целиком. Для адреса
+ * репозитория остаются владелец и имя (ссылка на токен подставит владельца);
+ * для имени сервера их нет. null: разобрать нельзя.
+ */
+export const targetOfAddress = (input: string): ParsedRemoteUrl | null => {
+  const value = input.trim().replace(/\/+$/, "");
+  if (value === "") return null;
+  if (HOST_ONLY.test(value)) {
+    const parsed = parseRemoteUrl(`https://${value}/owner/repo`);
+    return parsed.ok
+      ? {
+          ...parsed.url,
+          display_url: `https://${value}`,
+          owner: null,
+          repo: null,
+          path: "",
+        }
+      : null;
+  }
+  const parsed = parseRemoteUrl(value, { allow_http: true });
+  return parsed.ok && parsed.url.kind !== "file" && parsed.url.host
+    ? parsed.url
+    : null;
+};
