@@ -158,6 +158,9 @@
 | packs | `pack_write_file` | W | раздел, область `packs`; выпущенная версия `version_released` | новый (M26) |
 | packs | `pack_lint` | R | раздел, область `packs` | новый (M26) |
 | packs | `pack_classify` | R | раздел, область `packs` | новый (M26) |
+| packs | `pack_scaffold_options` | R | раздел, область `packs` | новый (M26, T15): источники копии и умолчания |
+| packs | `pack_create` | W | раздел, область `packs` | новый (M26, T15): пак с нуля |
+| packs | `pack_new_template` | W | раздел, область `packs` | новый (M26, T15): шаблон с нуля |
 | packs | `pack_preview_build` | X | раздел, область `packs`; квота предпросмотра | новый (M26) |
 | packs | `pack_preview_read` | R | раздел, область `packs` | новый (M26): текст PDF или журнал |
 | packs | `pack_set_placement` | W | раздел, область `packs` | новый (M26) |
