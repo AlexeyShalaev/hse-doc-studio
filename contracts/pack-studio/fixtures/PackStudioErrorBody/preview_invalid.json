@@ -1,0 +1,7 @@
+{
+  "detail": "Документ, набор данных или комбинация не подходят к этой версии шаблона.",
+  "code": "preview_invalid",
+  "field": "combination.lang",
+  "value": "de",
+  "reason": "value not allowed"
+}

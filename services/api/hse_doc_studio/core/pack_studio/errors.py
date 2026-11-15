@@ -51,6 +51,11 @@ class PackStudioErrorCode(StrEnum):
     lint_failed = "lint_failed"
     class_softer_than_changes = "class_softer_than_changes"
     preview_quota = "preview_quota"
+    # Предпросмотр (раздел 6, срез T7)
+    preview_not_found = "preview_not_found"
+    preview_invalid = "preview_invalid"
+    preview_not_ready = "preview_not_ready"
+    version_unreadable = "version_unreadable"
 
 
 _C = PackStudioErrorCode
@@ -169,7 +174,27 @@ _TABLE: dict[PackStudioErrorCode, tuple[int, str, str]] = {
         "Номер версии мягче, чем требуют изменения.",
         "The version number is softer than the changes require.",
     ),
-    _C.preview_quota: (429, "Слишком много сборок предпросмотра.", "Too many preview builds."),
+    _C.preview_quota: (
+        429,
+        "Слишком много сборок предпросмотра одновременно. Дождитесь конца идущих.",
+        "Too many preview builds at once. Wait for the running ones to finish.",
+    ),
+    _C.preview_not_found: (404, "Сборка предпросмотра не найдена.", "Preview build not found."),
+    _C.preview_invalid: (
+        400,
+        "Документ, набор данных или комбинация не подходят к этой версии шаблона.",
+        "The document, example or combination does not fit this template version.",
+    ),
+    _C.preview_not_ready: (
+        409,
+        "PDF предпросмотра ещё не собран или сборка не удалась.",
+        "The preview PDF is not built yet or the build failed.",
+    ),
+    _C.version_unreadable: (
+        422,
+        "Версию шаблона не удалось разобрать.",
+        "The template version could not be read.",
+    ),
 }
 
 

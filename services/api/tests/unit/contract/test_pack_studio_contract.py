@@ -30,6 +30,10 @@ _SCHEMAS: dict[str, Any] = {
     "PackStudioAdmin": s.PackStudioAdminResponse,
     "UpdatePackStudioAdminRequest": s.UpdatePackStudioAdminRequest,
     "CreatePackStudioGrantRequest": s.CreatePackStudioGrantRequest,
+    "PackPreviewOptions": s.PackPreviewOptionsResponse,
+    "StartPackPreviewRequest": s.StartPackPreviewRequest,
+    "PackPreviewBuild": s.PackPreviewBuildResponse,
+    "PackPreviewStart": s.PackPreviewStartResponse,
 }
 
 

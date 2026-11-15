@@ -471,13 +471,20 @@ def render_isolated(
     if profile not in _PROFILES:
         raise ValueError(f"неизвестный профиль окружения: {profile}")
     limits = limits or IsolationLimits()
+    result = call_isolated(_render_in_child, (profile, source, dict(context), limits.render), limits=limits)
+    return str(result)
+
+
+def call_isolated[T](target: Callable[..., T], args: tuple[Any, ...], *, limits: IsolationLimits) -> T:
+    """Вызов `target(*args)` в отдельном процессе (spawn) с пределом времени и памяти; итог передаётся pickle.
+
+    `target` это функция верхнего уровня модуля (процесс импортирует её заново). Ошибка внутри, превышение памяти
+    или времени дают `IsolatedRenderError` с текстом причины. Так рендерится не только один шаблон, но и весь
+    синтетический проект предпросмотра (template-studio.md, 6.3).
+    """
     ctx = multiprocessing.get_context("spawn")
     parent_conn, child_conn = ctx.Pipe(duplex=False)
-    proc = ctx.Process(
-        target=_isolated_worker,
-        args=(child_conn, profile, source, dict(context), limits),
-        daemon=True,
-    )
+    proc = ctx.Process(target=_isolated_worker, args=(child_conn, target, args, limits.memory_bytes), daemon=True)
     proc.start()
     child_conn.close()
     try:
@@ -493,17 +500,19 @@ def render_isolated(
         parent_conn.close()
     if status != "ok":
         raise IsolatedRenderError(payload)
-    return str(payload)
+    return payload
 
 
-def _isolated_worker(
-    conn: Connection, profile: str, source: str, context: dict[str, Any], limits: IsolationLimits
-) -> None:
-    _limit_memory(limits.memory_bytes)
+def _render_in_child(profile: str, source: str, context: dict[str, Any], render: RenderLimits) -> str:
+    env = _PROFILES[profile]()
+    env.limits = render
+    return env.render_source(source, context)
+
+
+def _isolated_worker(conn: Connection, target: Callable[..., Any], args: tuple[Any, ...], memory_bytes: int) -> None:
+    _limit_memory(memory_bytes)
     try:
-        env = _PROFILES[profile]()
-        env.limits = limits.render
-        conn.send(("ok", env.render_source(source, context)))
+        conn.send(("ok", target(*args)))
     except MemoryError:
         conn.send(("error", "рендер превысил предел памяти"))
     except Exception as exc:  # noqa: BLE001 — ответ родителю обязан уйти при любой ошибке шаблона

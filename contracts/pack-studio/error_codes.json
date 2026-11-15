@@ -31,5 +31,9 @@
   "ci_status_unavailable",
   "lint_failed",
   "class_softer_than_changes",
-  "preview_quota"
+  "preview_quota",
+  "preview_not_found",
+  "preview_invalid",
+  "preview_not_ready",
+  "version_unreadable"
 ]
