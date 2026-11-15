@@ -10,6 +10,25 @@ export {
   PackStaleFileError,
 } from "./api/packStudioApi";
 export type { PackFile, PackVersionRef } from "./api/packStudioApi";
+// Срез T14: файлы правил проверок и checks_version формой.
+export {
+  PackChecksConfigRequestSchema,
+  PackChecksPatchRequestSchema,
+  PackChecksSchema,
+  packChecksApi,
+  packChecksKeys,
+  usePackChecksForm,
+  usePatchPackChecksForm,
+} from "./api/checks";
+export type {
+  PackCheckRule,
+  PackChecks,
+  PackChecksConfigRequest,
+  PackChecksFile,
+  PackChecksHeader,
+  PackChecksOp,
+  PackChecksPatchRequest,
+} from "./api/checks";
 // Срез T13: профили сдачи, пункты и порядок маршрута формой.
 export {
   PackSubmissionPatchRequestSchema,

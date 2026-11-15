@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { DocumentsSection } from "./documents/DocumentsSection";
 import { LanguagesSection } from "./documents/LanguagesSection";
 import { FieldsSection } from "./fields/FieldsSection";
+import { ChecksSection } from "./checks/ChecksSections";
 import { FormsSection } from "./forms/FormsSection";
 import { SubmissionSection } from "./submission/SubmissionSection";
 
@@ -29,6 +30,7 @@ export const VERSION_SECTIONS: {
   { id: "documents", Component: DocumentsSection },
   { id: "languages", Component: LanguagesSection },
   { id: "submission", Component: SubmissionSection },
+  { id: "checks", Component: ChecksSection },
 ];
 
 export const VersionForm = (props: VersionSectionProps) => {

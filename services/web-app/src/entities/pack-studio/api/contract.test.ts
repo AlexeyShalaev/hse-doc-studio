@@ -59,6 +59,11 @@ import {
   UpdatePackStudioSectionRequestSchema,
 } from "./schemas";
 import {
+  PackChecksConfigRequestSchema,
+  PackChecksPatchRequestSchema,
+  PackChecksSchema,
+} from "./checks";
+import {
   PackSubmissionPatchRequestSchema,
   PackSubmissionRoutesRequestSchema,
   PackSubmissionRoutesSchema,
@@ -143,6 +148,10 @@ const SCHEMAS: Record<string, ZodType> = {
   PackSubmissionPatchRequest: PackSubmissionPatchRequestSchema,
   PackSubmissionRoutesRequest: PackSubmissionRoutesRequestSchema,
   PackSubmissionRoutes: PackSubmissionRoutesSchema,
+  // Срез T14: файлы правил проверок и checks_version формой
+  PackChecks: PackChecksSchema,
+  PackChecksPatchRequest: PackChecksPatchRequestSchema,
+  PackChecksConfigRequest: PackChecksConfigRequestSchema,
 };
 
 const readJson = (path: string): unknown =>

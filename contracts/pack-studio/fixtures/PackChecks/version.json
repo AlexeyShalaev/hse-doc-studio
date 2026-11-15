@@ -1,0 +1,125 @@
+{
+  "workspace_id": "6f1c1c8e-1b7a-4d51-9a43-0a5b2f3c4d10",
+  "pack": "hse-cs-sse",
+  "template": "coursework",
+  "version": "2026.1.7",
+  "documents": [
+    "project_proposal",
+    "report"
+  ],
+  "files": [
+    {
+      "path": "hse-cs-sse/templates/coursework/versions/2026.1.7/checks/gost-7.32-2017.yaml",
+      "name": "gost-7.32-2017.yaml",
+      "etag": "\"sha256-c1\"",
+      "read_only": null,
+      "header": {
+        "label": {
+          "ru": "ГОСТ 7.32-2017",
+          "en": "GOST 7.32-2017"
+        },
+        "ref": {
+          "ru": "ГОСТ 7.32-2017 §6",
+          "en": "GOST 7.32-2017 §6"
+        },
+        "source": {
+          "ru": "Отчёт о НИР"
+        },
+        "url": "https://docs.cntd.ru/document/1200157208"
+      },
+      "rules": [
+        {
+          "index": 0,
+          "entry": {
+            "id": "gost-7.32-2017/page-margins",
+            "title": {
+              "ru": "Поля страницы",
+              "en": "Page margins"
+            },
+            "description": {},
+            "category": "formatting",
+            "applies_to": [
+              "report"
+            ],
+            "default_severity": "warn",
+            "engine": "structural",
+            "params": {
+              "check": "page_geometry",
+              "expected": {
+                "left_mm": 30,
+                "right_mm": 15,
+                "top_mm": 20,
+                "bottom_mm": 20
+              },
+              "tolerance_mm": 1
+            }
+          },
+          "params_yaml": "check: page_geometry\nexpected:\n  left_mm: 30\n  right_mm: 15\n  top_mm: 20\n  bottom_mm: 20\ntolerance_mm: 1\n",
+          "error": null
+        },
+        {
+          "index": 1,
+          "entry": {
+            "id": "gost-7.32-2017/intro",
+            "title": {
+              "ru": "Введение",
+              "en": "Introduction"
+            },
+            "description": {},
+            "category": null,
+            "applies_to": null,
+            "default_severity": "err",
+            "engine": "regex",
+            "params": {
+              "file_glob": "report/report.tex",
+              "pattern": "Введение"
+            }
+          },
+          "params_yaml": "file_glob: report/report.tex\npattern: Введение\n",
+          "error": null
+        },
+        {
+          "index": 2,
+          "entry": null,
+          "params_yaml": null,
+          "error": "default_severity 'fatal' is not one of ['info', 'warn', 'err']"
+        }
+      ],
+      "error": "rule gost-7.32-2017/broken: default_severity 'fatal' is not one of ['info', 'warn', 'err']"
+    }
+  ],
+  "config": {
+    "path": "hse-cs-sse/templates/coursework/versions/2026.1.7/version.yaml",
+    "etag": "\"sha256-v1\"",
+    "read_only": null,
+    "disabled_categories": [
+      "typography"
+    ],
+    "disabled": [
+      "gost-7.32-2017/font-size"
+    ],
+    "severity_override": {
+      "gost-7.32-2017/page-margins": "err"
+    }
+  },
+  "engines": [
+    "regex",
+    "structural",
+    "log_parse",
+    "external",
+    "file_exists",
+    "tex_command_count",
+    "python",
+    "reference_check",
+    "typography"
+  ],
+  "structural_checks": [
+    "page_geometry",
+    "line_spacing",
+    "font_size",
+    "paragraph_indent",
+    "page_count",
+    "figure_numbering",
+    "float_orphans"
+  ]
+}

@@ -22,9 +22,9 @@ tags:
 - **Save** writes the file. **Discard changes** brings back the saved text. The Studio will not let you leave a file with unsaved edits silently.
 - If the file changed since you opened it (another tab, an edit in the folder), the Studio offers **Take their version**, **Keep mine** or **Compare**.
 - Completion: in Jinja templates (`{{ }}`, `((* *))`) the context variables, the form fields `project.meta.<key>` and the pack filters; in the version's LaTeX the `\hse...` macros and the fields they print.
-- Version and document manifests (`version.yaml`, `doc.yaml`) have the **Source** and **Form** tabs.
+- Version and document manifests (`version.yaml`, `doc.yaml`) and rules files `checks/*.yaml` have the **Source** and **Form** tabs.
 
-<!-- T11, T12, T14 (forms): add fields and groups, questionnaires, documents, checks to the "Forms" section below, next to "Submission and signing". -->
+<!-- T11, T12 (forms): add fields and groups, questionnaires, documents to the "Forms" section below, next to "Submission and signing". -->
 
 ## Forms { #forms }
 
@@ -43,6 +43,12 @@ The **Submission and signing** section of the `version.yaml` form:
 - **Route in this combination** under each checkpoint: see [Preview](preview.md#route).
 
 Check findings about a checkpoint are shown right in its card. What the keys mean: [Packs and templates, signing presets](../reference/pack.md).
+
+### Checks and rules { #checks }
+
+- The **Checks** section of the `version.yaml` form (`checks_version`): turn a whole category off, turn a rule off, give a rule another severity in this version ("Do not check" too).
+- The form of a rules file `checks/*.yaml`: the group name and the document reference (both languages; without them a project shows the group as a raw id), the source; rules as cards. A rule has an identifier (usually starting with the file name), a title and description, a category, documents ("All documents" or chosen ones), a severity and an engine. Structural checks have parameter fields (page margins, line spacing, font size, paragraph indent, page count), other engines take YAML text. Parameter keys the form does not know (for example `message`) stay.
+- **Check on the preview**: pick a document and press **Build and check**. The document is built with the preview data set and switches, the version rules run with the same engine as in a project; findings show at their rules, rules that passed are marked "No findings". LanguageTool rules do not run on the preview.
 
 ## Problems
 

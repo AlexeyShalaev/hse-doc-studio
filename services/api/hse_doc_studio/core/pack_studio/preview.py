@@ -612,18 +612,24 @@ def document_digest(files: Mapping[str, str], version: TemplateVersion, def_id: 
     return digest.hexdigest()
 
 
-def preview_cache_key(*, doc_digest: str, def_id: str, project: SyntheticProject, engine: str) -> str:
+def preview_cache_key(
+    *, doc_digest: str, def_id: str, project: SyntheticProject, engine: str, checks: bool = False
+) -> str:
     """Ключ кэша сборки: вход документа, сам документ, синтетический проект (набор и комбинация) и движок.
 
     Правка другого набора данных или комбинации ключ не меняет: в ключ входит только то, что попало в проект.
+    Сборка с проверками (срез T14) это другой ключ: у неё есть находки, у сборки без проверок их нет. Правила
+    лежат в каталоге версии (`checks/*.yaml`, `checks_version`), их правка и так меняет вход документа.
     """
-    body = {
+    body: dict[str, Any] = {
         "salt": PREVIEW_RENDER_SALT,
         "doc": def_id,
         "inputs": doc_digest,
         "project": project.canonical(),
         "engine": engine,
     }
+    if checks:
+        body["checks"] = True
     return hashlib.sha256(json.dumps(body, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
 
 
@@ -634,6 +640,17 @@ def preview_cache_key(*, doc_digest: str, def_id: str, project: SyntheticProject
 class PreviewError:
     code: str
     detail: str | None = None
+
+
+@dataclass(frozen=True)
+class PreviewCheck:
+    """Находка проверки на сборке предпросмотра (срез T14): правило, важность, текст и место в исходнике."""
+
+    rule_id: str
+    severity: str
+    message: str
+    file: str | None = None
+    line: int | None = None
 
 
 @dataclass(frozen=True)
@@ -664,6 +681,9 @@ class PreviewBuild:
     # Путь исходника в синтетическом проекте (для перехода из журнала к строке); у отказа рендера пусто.
     source_file: str | None = None
     has_anchors: bool = False
+    # Сборка с проверками правил версии (срез T14); `checks` находки удачной сборки (None: проверок не было).
+    with_checks: bool = False
+    checks: tuple[PreviewCheck, ...] | None = None
 
     @property
     def slot(self) -> tuple[str, ...]:
@@ -676,6 +696,7 @@ class PreviewBuild:
             self.document,
             self.example,
             combination_query(self.combination),
+            "checks" if self.with_checks else "",
         )
 
 

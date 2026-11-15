@@ -1,0 +1,5 @@
+{
+  "detail": "Правку проверок нельзя записать: шаблон её не поймёт. Причина ниже.",
+  "code": "checks_invalid",
+  "reason": "rule gost-7.32-2017/x: engine 'magic' is not one of ['regex', 'structural', 'log_parse', 'external', 'file_exists', 'tex_command_count', 'python', 'reference_check', 'typography']"
+}

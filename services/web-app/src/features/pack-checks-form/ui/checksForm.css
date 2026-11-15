@@ -1,0 +1,132 @@
+/* Формы проверок Студии шаблонов (template-studio.md, 5.7, срез T14). Общие блоки формы (psf-*) из submissionForm.css. */
+
+.pcf-warn {
+  color: var(--c-warn);
+}
+.pcf-run {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.pcf-run-row,
+.pcf-actions,
+.pcf-categories,
+.pcf-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.375rem 0.5rem;
+}
+.pcf-row {
+  align-items: flex-end;
+}
+.pcf-row > .field {
+  flex: 1 1 9rem;
+  min-width: 0;
+}
+.pcf-run-row > button[role="combobox"] {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+.pcf-spacer {
+  flex: 1;
+}
+.pcf-rules-head {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.pcf-rules,
+.pcf-findings,
+.pcf-config-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pcf-rule {
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  background: var(--bg-0);
+}
+.pcf-rule-summary {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+}
+.pcf-rule-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.pcf-id {
+  font-size: 0.625rem;
+  color: var(--fg-3);
+  overflow-wrap: anywhere;
+}
+.pcf-rule-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0 0.75rem 0.75rem;
+}
+.pcf-findings {
+  font-size: 0.6875rem;
+  padding: 0.375rem 0.5rem;
+  border-left: 2px solid var(--c-warn);
+}
+.pcf-where {
+  color: var(--fg-2);
+}
+.pcf-applies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem 0.75rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.pcf-applies legend {
+  width: 100%;
+  padding: 0;
+  margin-bottom: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.pcf-params {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: 0.5rem;
+}
+.pcf-params > .field:has(textarea) {
+  grid-column: 1 / -1;
+}
+.pcf-sev-err {
+  color: var(--c-err);
+}
+.pcf-sev-warn {
+  color: var(--c-warn);
+}
+.pcf-config-rule {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.375rem 0.75rem;
+  padding: 0.375rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.pcf-config-rule > button[role="combobox"] {
+  flex: 0 1 12rem;
+}
+.pcf-config-name {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 14rem;
+  min-width: 0;
+  font-size: 0.75rem;
+}

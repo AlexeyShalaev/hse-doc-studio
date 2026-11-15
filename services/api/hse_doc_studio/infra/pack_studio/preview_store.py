@@ -26,7 +26,7 @@ from uuid import UUID
 
 import structlog
 
-from hse_doc_studio.core.pack_studio.preview import PreviewBuild, PreviewError, PreviewStatus
+from hse_doc_studio.core.pack_studio.preview import PreviewBuild, PreviewCheck, PreviewError, PreviewStatus
 from hse_doc_studio.core.pack_studio.protocols import CachedPreview
 from hse_doc_studio.core.signatures.anchors import ANCHORS_SUFFIX
 from hse_doc_studio.infra.compile.pdf_archive import built_pdf_path, final_pdf_path
@@ -41,6 +41,7 @@ _PDF = "document.pdf"
 _ANCHORS = "anchors.json"
 _LOG = "build.log"
 _META = "meta.json"
+_CHECKS = "checks.json"
 # Журнал сборки предпросмотра больше этого не хранится: хвост важнее начала.
 MAX_LOG_BYTES = 512 * 1024
 
@@ -108,10 +109,18 @@ class FsPreviewStore:
             pages=meta.get("pages"),
             source_file=str(meta.get("source_file") or ""),
             has_anchors=(folder / _ANCHORS).is_file(),
+            checks=_read_checks(folder / _CHECKS),
         )
 
     def keep(  # noqa: PLR0913 — что положить в кэш
-        self, key: str, build_id: UUID, source_file: str, doc_id: str, log: str, pages: int | None
+        self,
+        key: str,
+        build_id: UUID,
+        source_file: str,
+        doc_id: str,
+        log: str,
+        pages: int | None,
+        checks: tuple[PreviewCheck, ...] | None = None,
     ) -> CachedPreview | None:
         work = self.work_root / str(build_id)
         built = built_pdf_path(work, doc_id, source_file)
@@ -129,9 +138,17 @@ class FsPreviewStore:
         (staging / _LOG).write_text(_tail(log), encoding="utf-8")
         meta = {"pages": pages, "source_file": source_file, "build_id": str(build_id), "kept_at": time.time()}
         (staging / _META).write_text(json.dumps(meta), encoding="utf-8")
+        if checks is not None:
+            (staging / _CHECKS).write_text(json.dumps(_checks_json(checks), ensure_ascii=False), encoding="utf-8")
         shutil.rmtree(folder, ignore_errors=True)
         os.replace(staging, folder)
-        return CachedPreview(key=key, pages=pages, source_file=source_file, has_anchors=(folder / _ANCHORS).is_file())
+        return CachedPreview(
+            key=key,
+            pages=pages,
+            source_file=source_file,
+            has_anchors=(folder / _ANCHORS).is_file(),
+            checks=checks,
+        )
 
     def pdf(self, key: str) -> Path | None:
         path = self._cache_dir(key) / _PDF
@@ -238,7 +255,39 @@ def _to_json(build: PreviewBuild) -> dict[str, Any]:
         "error": None if build.error is None else {"code": build.error.code, "detail": build.error.detail},
         "source_file": build.source_file,
         "has_anchors": build.has_anchors,
+        "with_checks": build.with_checks,
+        "checks": None if build.checks is None else _checks_json(build.checks),
     }
+
+
+def _checks_json(checks: tuple[PreviewCheck, ...]) -> list[dict[str, Any]]:
+    return [
+        {"rule_id": c.rule_id, "severity": c.severity, "message": c.message, "file": c.file, "line": c.line}
+        for c in checks
+    ]
+
+
+def _checks_of(raw: Any) -> tuple[PreviewCheck, ...] | None:
+    if not isinstance(raw, list):
+        return None
+    return tuple(
+        PreviewCheck(
+            rule_id=str(item["rule_id"]),
+            severity=str(item["severity"]),
+            message=str(item.get("message") or ""),
+            file=item.get("file"),
+            line=item.get("line"),
+        )
+        for item in raw
+        if isinstance(item, dict) and "rule_id" in item and "severity" in item
+    )
+
+
+def _read_checks(path: Path) -> tuple[PreviewCheck, ...] | None:
+    try:
+        return _checks_of(json.loads(path.read_text(encoding="utf-8")))
+    except (OSError, ValueError):
+        return None
 
 
 def _from_json(raw: dict[str, Any]) -> PreviewBuild:
@@ -266,4 +315,6 @@ def _from_json(raw: dict[str, Any]) -> PreviewBuild:
         error=None if not error else PreviewError(code=str(error["code"]), detail=error.get("detail")),
         source_file=raw.get("source_file"),
         has_anchors=bool(raw.get("has_anchors")),
+        with_checks=bool(raw.get("with_checks")),
+        checks=_checks_of(raw.get("checks")),
     )

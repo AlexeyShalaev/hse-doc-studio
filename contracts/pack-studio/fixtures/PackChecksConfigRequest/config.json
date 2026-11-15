@@ -1,0 +1,12 @@
+{
+  "disabled_categories": [
+    "typography"
+  ],
+  "disabled": [
+    "gost-7.32-2017/font-size"
+  ],
+  "severity_override": {
+    "gost-7.32-2017/page-margins": "err",
+    "hse-sse-report-2026/word-count": "skipped"
+  }
+}

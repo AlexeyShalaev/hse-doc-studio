@@ -57,6 +57,7 @@ export const PACK_STUDIO_ERROR_CODES = [
   "place_invalid",
   "model_invalid",
   "submission_invalid",
+  "checks_invalid",
 ] as const;
 
 export type PackStudioErrorCode = (typeof PACK_STUDIO_ERROR_CODES)[number];

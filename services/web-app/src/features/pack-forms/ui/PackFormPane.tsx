@@ -10,6 +10,7 @@ import { ApiError } from "@shared/api";
 import { Button, ErrorState, Spinner } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import { ModelEditorProvider, useModelEditor } from "../model/modelEditor";
+import { ChecksFileSection } from "./checks/ChecksSections";
 import { DocForm } from "./documents/DocForm";
 import { VersionForm } from "./VersionForm";
 import "./packForms.css";
@@ -122,7 +123,13 @@ export const PackFormPane = ({
     >
       <div className="pf-pane" data-testid="pack-form-pane">
         <Status />
-        {kind === "doc" ? (
+        {kind === "checks" ? (
+          <ChecksFileSection
+            workspaceId={workspaceId}
+            path={path}
+            onSaved={onSaved}
+          />
+        ) : kind === "doc" ? (
           <DocForm docId={path.split("/").slice(-2)[0] ?? ""} />
         ) : (
           <VersionForm

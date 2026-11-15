@@ -79,6 +79,8 @@ class PackStudioErrorCode(StrEnum):
     model_invalid = "model_invalid"
     # Срез T13: формы профилей сдачи и порядка маршрута
     submission_invalid = "submission_invalid"
+    # Срез T14: формы проверок и правил
+    checks_invalid = "checks_invalid"
 
 
 _C = PackStudioErrorCode
@@ -298,6 +300,11 @@ _TABLE: dict[PackStudioErrorCode, tuple[int, str, str]] = {
         400,
         "Правку точки сдачи нельзя записать: шаблон её не поймёт. Причина ниже.",
         "The checkpoint change cannot be written: the template would not understand it. The reason is below.",
+    ),
+    _C.checks_invalid: (
+        400,
+        "Правку проверок нельзя записать: шаблон её не поймёт. Причина ниже.",
+        "The checks change cannot be written: the template would not understand it. The reason is below.",
     ),
 }
 

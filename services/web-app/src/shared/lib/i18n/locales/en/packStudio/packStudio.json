@@ -752,5 +752,111 @@
       "title": "Combination for the route",
       "hint": "The same switches as in the preview: the route below is calculated for these project people."
     }
+  },
+  "checksForm": {
+    "lead": "The group header and the rules of this file. Every change goes to the file as a targeted edit: comments and keys the form does not know stay, checks and the version class are recalculated.",
+    "notFound": "This rules file is not in the version.",
+    "fileError": "The template does not fully understand the file: {{error}}",
+    "rules_one": "{{count}} rule",
+    "rules_other": "{{count}} rules",
+    "findings_one": "{{count}} finding",
+    "findings_other": "{{count}} findings",
+    "passed": "No findings",
+    "header": {
+      "title": "Rule group",
+      "hint": "How projects name the group and where the requirements come from.",
+      "label": "Group name",
+      "ref": "Document reference",
+      "source": "Source",
+      "url": "Source address"
+    },
+    "run": {
+      "title": "Check on the preview",
+      "document": "Document to check",
+      "noDocuments": "No documents of these rules in this combination",
+      "start": "Build and check",
+      "hint": "The document is built with the preview data set and switches, then the version rules run with the same engine as in a project. LanguageTool rules do not run on the preview.",
+      "running": "Building…",
+      "failed": "The build failed ({{code}}): see the log on the Preview tab.",
+      "clean": "The build passed with no findings.",
+      "found_one": "The build passed: {{count}} finding, shown at its rule.",
+      "found_other": "The build passed: {{count}} findings, shown at their rules."
+    },
+    "rule": {
+      "id": "Identifier",
+      "prefixHint": "An id usually starts with the file name: {{prefix}}/…",
+      "title": "Title",
+      "description": "Description",
+      "category": "Category",
+      "severity": "Severity",
+      "engine": "Engine",
+      "appliesTo": "Which documents",
+      "allDocuments": "All documents",
+      "unknownDocument": "Document {{doc}} is not in the version",
+      "check": "Check",
+      "paramsYaml": "Parameters (YAML)",
+      "paramsYamlHint": "The engine parameters as a mapping, as in the rules file.",
+      "up": "Up",
+      "down": "Down",
+      "remove": "Delete rule",
+      "reset": "Cancel",
+      "save": "Save"
+    },
+    "newRule": {
+      "title": "New rule",
+      "taken": "This rule already exists",
+      "add": "Add rule"
+    },
+    "param": {
+      "notNumber": "A number is needed",
+      "none": "This check has no parameters.",
+      "unknownCheck": "The form does not know this check: edit its parameters in Source.",
+      "expected.left_mm": "Left margin, mm",
+      "expected.right_mm": "Right margin, mm",
+      "expected.top_mm": "Top margin, mm",
+      "expected.bottom_mm": "Bottom margin, mm",
+      "tolerance_mm": "Tolerance, mm",
+      "expected": "Expected",
+      "tolerance": "Tolerance",
+      "allowed": "Allowed values",
+      "min": "At least",
+      "max": "At most"
+    },
+    "structural": {
+      "page_geometry": "Page margins",
+      "line_spacing": "Line spacing",
+      "font_size": "Font size",
+      "paragraph_indent": "Paragraph indent",
+      "page_count": "Page count",
+      "figure_numbering": "Figure numbering",
+      "float_orphans": "Orphan figures and tables"
+    },
+    "severity": {
+      "info": "Hint",
+      "warn": "Warning",
+      "err": "Error",
+      "skipped": "Do not check"
+    },
+    "engine": {
+      "regex": "Pattern in text (regex)",
+      "structural": "Layout (structural)",
+      "log_parse": "Build log (log_parse)",
+      "external": "LanguageTool (external)",
+      "file_exists": "File exists (file_exists)",
+      "tex_command_count": "Command count (tex_command_count)",
+      "python": "Python (python)",
+      "reference_check": "References (reference_check)",
+      "typography": "Typography (typography)"
+    },
+    "config": {
+      "lead": "Which version rules are on and with what severity. Written to checks_version in version.yaml.",
+      "categories": "Categories",
+      "categoriesHint": "A ticked category is off entirely.",
+      "noCategories": "The version rules have no categories.",
+      "off": "Off",
+      "severity": "Severity in this version",
+      "asRule": "As in the rule: {{severity}}",
+      "orphans": "checks_version names rules that are not in the rules files: {{ids}}."
+    }
   }
 }

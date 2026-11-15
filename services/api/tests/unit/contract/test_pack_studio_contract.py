@@ -8,6 +8,7 @@ from typing import Any
 
 import pytest
 from hse_doc_studio.api.schemas import pack_studio as s
+from hse_doc_studio.api.schemas import pack_studio_checks as chk
 from hse_doc_studio.api.schemas import pack_studio_submission as sub
 from hse_doc_studio.core.pack_studio.errors import PackStudioErrorCode, status_of
 from pydantic import TypeAdapter
@@ -80,6 +81,10 @@ _SCHEMAS: dict[str, Any] = {
     "PackSubmissionPatchRequest": sub.PackSubmissionPatchRequest,
     "PackSubmissionRoutesRequest": sub.PackSubmissionRoutesRequest,
     "PackSubmissionRoutes": sub.PackSubmissionRoutesResponse,
+    # Срез T14: файлы правил проверок и checks_version формой
+    "PackChecks": chk.PackChecksResponse,
+    "PackChecksPatchRequest": chk.PackChecksPatchRequest,
+    "PackChecksConfigRequest": chk.PackChecksConfigRequest,
 }
 
 

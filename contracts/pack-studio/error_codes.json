@@ -52,5 +52,6 @@
   "paths_outside_packs",
   "place_invalid",
   "model_invalid",
-  "submission_invalid"
+  "submission_invalid",
+  "checks_invalid"
 ]
