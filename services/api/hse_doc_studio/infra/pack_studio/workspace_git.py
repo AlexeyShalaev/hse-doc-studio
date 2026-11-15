@@ -11,6 +11,12 @@
 - `core.symlinks=false`, `core.protectNTFS`, `core.protectHFS`, без подмодулей и без фоновой сборки мусора; хуки,
   fsmonitor и помощники учётных данных выключает сам запускатель на каждой команде;
 - адрес в конфиге без секретов: он нужен ленивой подгрузке блобов (promisor remote `origin`).
+
+Блоб, которого нет в хранилище, git подгружает сам, но только в командах с сетью (`runner.run`: доступ пространства,
+те же ограничения сети и времени, что у выборки). Локальные команды (`run_local`) идут с `GIT_ALLOW_PROTOCOL=none`
+и подгрузить ничего не могут, поэтому им нельзя читать содержимое файлов базы: после «Обновить» её блобов в
+хранилище нет. Состояние ветки (`status`) поэтому сравнивает с базой только идентификаторы объектов
+(`diff-index --raw`) и хэши файлов рабочего дерева, а не текст.
 """
 
 from __future__ import annotations
@@ -18,12 +24,14 @@ from __future__ import annotations
 import asyncio
 import shutil
 from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
 
+import structlog
 import yaml
 
 from hse_doc_studio.api.config import GitConfig
-from hse_doc_studio.core.git_sync.entities import RemoteTarget
+from hse_doc_studio.core.git_sync.entities import GitResult, RemoteTarget
 from hse_doc_studio.core.git_sync.error_classifier import GitOp
 from hse_doc_studio.core.git_sync.error_messages import git_error
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
@@ -45,11 +53,17 @@ from hse_doc_studio.core.vcs.errors import VcsInvalidRefError
 from hse_doc_studio.core.vcs.refs import validate_ref_name
 from hse_doc_studio.infra.template.releases import parse_releases
 
+logger = structlog.get_logger()
+
 _LOCAL_TIMEOUT_S = 60.0
 _REMOTE = "origin"
 # Реестр выпусков крупнее этого не читается: это не реестр, а попытка занять память api.
 _REGISTRY_MAX_BYTES = 1_048_576
 _KIB = 1024
+# Файлов в одном вызове `hash-object`: длина командной строки ограничена.
+_HASH_BATCH = 200
+# Глобальные опции git со значением: подкоманда в журнале ищется после них.
+_OPTIONS_WITH_VALUE = frozenset({"-c", "-C", "--work-tree", "--git-dir"})
 
 
 def remote_ref(branch: str) -> str:
@@ -92,15 +106,47 @@ def _parse_porcelain(raw: bytes, packs_path: str) -> list[FileChange]:
     return changes
 
 
-def _parse_name_status(raw: bytes, packs_path: str) -> list[FileChange]:
-    """`diff --name-status -z --no-renames`: `S\0path\0`."""
-    parts = raw.decode("utf-8", errors="replace").split("\0")
-    changes: list[FileChange] = []
-    for code, name in zip(parts[::2], parts[1::2], strict=False):
-        rel = _rel(name, packs_path)
-        if code and rel:
-            changes.append(FileChange(rel, _status_of(code)))
+@dataclass(frozen=True)
+class _RawChange:
+    """Строка `diff-index --raw`: идентификатор объекта в базе и в рабочем дереве (нули, если файл правлен)."""
+
+    path: str
+    status: str
+    base_oid: str
+    work_oid: str
+
+    @property
+    def work_unknown(self) -> bool:
+        """Файл на диске отличается от индекса: git не хэширует его в diff-index, а пишет нули."""
+        return self.status in {"M", "T"} and not self.work_oid.strip("0")
+
+
+def _parse_raw(raw: bytes) -> list[_RawChange]:
+    """`diff-index --raw -z --no-renames`: `:old_mode new_mode old_oid new_oid S\0path\0`."""
+    parts = iter(raw.decode("utf-8", errors="replace").split("\0"))
+    changes: list[_RawChange] = []
+    for meta in parts:
+        if not meta.startswith(":"):
+            continue
+        path = next(parts, "")
+        fields = meta[1:].split()
+        if len(fields) < 5 or not path:  # noqa: PLR2004 — пять полей формата raw
+            continue
+        changes.append(_RawChange(path=path, status=fields[4][:1], base_oid=fields[2], work_oid=fields[3]))
     return changes
+
+
+def _subcommand(args: Sequence[str]) -> str:
+    """Имя подкоманды для журнала: сами аргументы (пути, почта автора) в журнал не идут."""
+    skip = False
+    for arg in args:
+        if skip:
+            skip = False
+        elif arg in _OPTIONS_WITH_VALUE:
+            skip = True
+        elif not arg.startswith("-"):
+            return arg
+    return ""
 
 
 def _branch(name: str) -> str:
@@ -151,11 +197,7 @@ class PackWorkspaceGit:
     ) -> str:
         branch = _branch(branch)
         await asyncio.to_thread(self._fresh_dirs, dirs)
-        await self._runner.run_local(
-            ["init", "--bare", "--quiet", f"--initial-branch={branch}", str(dirs.git)],
-            git_dir=None,
-            timeout_s=_LOCAL_TIMEOUT_S,
-        )
+        await self._run_local(None, ["init", "--bare", "--quiet", f"--initial-branch={branch}", str(dirs.git)])
         for key, value in _store_config(target, packs_path):
             await self._local(dirs, ["config", key, value])
         if packs_path != ".":
@@ -219,9 +261,7 @@ class PackWorkspaceGit:
     async def status(self, dirs: WorkspaceDirs, *, base_branch: str, packs_path: str) -> WorkGitStatus:
         base = remote_ref(_branch(base_branch))
         head = (await self._local(dirs, ["rev-parse", "--verify", "HEAD^{commit}"])).decode("ascii").strip()
-        branch_out = await self._runner.run_local(
-            ["symbolic-ref", "--quiet", "--short", "HEAD"], git_dir=dirs.git, timeout_s=_LOCAL_TIMEOUT_S, check=False
-        )
+        branch_out = await self._run_local(dirs, ["symbolic-ref", "--quiet", "--short", "HEAD"], check=False)
         branch = branch_out.stdout.decode("utf-8", errors="replace").strip() if branch_out.returncode == 0 else None
         porcelain = await self._local(
             dirs,
@@ -236,10 +276,7 @@ class PackWorkspaceGit:
             ],
         )
         uncommitted = _parse_porcelain(porcelain, packs_path)
-        against_base = await self._local(
-            dirs, [*self._tree(dirs), "diff", "--name-status", "-z", "--no-renames", base, *_scope(packs_path)]
-        )
-        changed = {c.path: c for c in _parse_name_status(against_base, packs_path)}
+        changed = {c.path: c for c in await self._changed_against(dirs, base, packs_path)}
         for change in uncommitted:
             if change.status is ChangeStatus.added:
                 changed.setdefault(change.path, change)
@@ -281,11 +318,9 @@ class PackWorkspaceGit:
 
     async def commit(self, dirs: WorkspaceDirs, *, packs_path: str, message: str, author: VcsAuthor) -> str | None:
         await self._local(dirs, [*self._tree(dirs), "add", "-A", *_scope(packs_path)])
-        staged = await self._runner.run_local(
-            [*self._tree(dirs), "diff", "--cached", "--quiet"],
-            git_dir=dirs.git,
-            timeout_s=_LOCAL_TIMEOUT_S,
-            check=False,
+        # Плумбинг без поиска переименований: сравниваются только идентификаторы, блобы не читаются.
+        staged = await self._run_local(
+            dirs, [*self._tree(dirs), "diff-index", "--cached", "--quiet", "HEAD", "--"], check=False
         )
         if staged.returncode == 0:
             return None
@@ -325,9 +360,7 @@ class PackWorkspaceGit:
         self, dirs: WorkspaceDirs, target: RemoteTarget, *, base_branch: str, author: VcsAuthor, message: str
     ) -> MergeOutcome:
         base = remote_ref(_branch(base_branch))
-        contained = await self._runner.run_local(
-            ["merge-base", "--is-ancestor", base, "HEAD"], git_dir=dirs.git, timeout_s=_LOCAL_TIMEOUT_S, check=False
-        )
+        contained = await self._run_local(dirs, ["merge-base", "--is-ancestor", base, "HEAD"], check=False)
         if contained.returncode == 0:
             return MergeOutcome(sha=await self._head(dirs), merged=False)
         try:
@@ -339,16 +372,11 @@ class PackWorkspaceGit:
                 timeout_s=self._config.fetch_timeout_s,
             )
         except GitSyncError:
-            unmerged = await self._runner.run_local(
-                [*self._tree(dirs), "diff", "--name-only", "-z", "--diff-filter=U"],
-                git_dir=dirs.git,
-                timeout_s=_LOCAL_TIMEOUT_S,
-                check=False,
+            unmerged = await self._run_local(
+                dirs, [*self._tree(dirs), "diff", "--name-only", "-z", "--diff-filter=U"], check=False
             )
             conflicts = tuple(name for name in unmerged.stdout.decode("utf-8", errors="replace").split("\0") if name)
-            await self._runner.run_local(
-                [*self._tree(dirs), "merge", "--abort"], git_dir=dirs.git, timeout_s=_LOCAL_TIMEOUT_S, check=False
-            )
+            await self._run_local(dirs, [*self._tree(dirs), "merge", "--abort"], check=False)
             if not conflicts:
                 raise
             return MergeOutcome(sha=await self._head(dirs), merged=False, conflicts=conflicts)
@@ -432,6 +460,43 @@ class PackWorkspaceGit:
         raw = await self._local(dirs, ["diff", "--name-only", "-z", "--no-renames", f"{base}...HEAD"])
         return tuple(name for name in raw.decode("utf-8", errors="replace").split("\0") if name)
 
+    async def _changed_against(self, dirs: WorkspaceDirs, base: str, packs_path: str) -> list[FileChange]:
+        """Файлы рабочего дерева, которые отличаются от базы, без чтения блобов базы.
+
+        Porcelain `git diff <база>` для файла, правленого на диске, сравнивает содержимое с блобом базы, а в частичном
+        клоне после выборки базы его нет: локальная команда падала на ленивой подгрузке. `diff-index` сравнивает только
+        идентификаторы; файлы, которые на диске отличаются от индекса, хэшируются здесь же и сверяются с базой.
+        """
+        raw = await self._local(
+            dirs, [*self._tree(dirs), "diff-index", "--raw", "-z", "--no-renames", base, *_scope(packs_path)]
+        )
+        entries = _parse_raw(raw)
+        same = await self._equal_to_base(dirs, [e for e in entries if e.work_unknown])
+        changes: list[FileChange] = []
+        for entry in entries:
+            rel = _rel(entry.path, packs_path)
+            if rel and entry.path not in same:
+                changes.append(FileChange(rel, _status_of(entry.status)))
+        return changes
+
+    async def _equal_to_base(self, dirs: WorkspaceDirs, entries: Sequence[_RawChange]) -> set[str]:
+        """Пути, чей текст на диске совпадает с базой: `hash-object` с теми же преобразованиями, что у `add`."""
+        files = [e for e in entries if (dirs.tree / e.path).is_file() and not (dirs.tree / e.path).is_symlink()]
+        same: set[str] = set()
+        for start in range(0, len(files), _HASH_BATCH):
+            batch = files[start : start + _HASH_BATCH]
+            result = await self._run_local(
+                dirs,
+                ["-C", str(dirs.tree), *self._tree(dirs), "hash-object", "--", *(e.path for e in batch)],
+                check=False,
+            )
+            if result.returncode != 0:
+                # Файл успели убрать или заменить папкой: от базы он точно отличается.
+                continue
+            hashes = result.stdout.decode("ascii", errors="replace").split()
+            same.update(e.path for e, oid in zip(batch, hashes, strict=False) if oid == e.base_oid)
+        return same
+
     @staticmethod
     def _tree(dirs: WorkspaceDirs) -> list[str]:
         return ["--work-tree", str(dirs.tree)]
@@ -487,8 +552,20 @@ class PackWorkspaceGit:
         return out.decode("ascii", errors="replace").strip()
 
     async def _local(self, dirs: WorkspaceDirs, args: list[str]) -> bytes:
-        result = await self._runner.run_local(args, git_dir=dirs.git, timeout_s=_LOCAL_TIMEOUT_S)
-        return result.stdout
+        return (await self._run_local(dirs, args)).stdout
+
+    async def _run_local(self, dirs: WorkspaceDirs | None, args: list[str], *, check: bool = True) -> GitResult:
+        """Локальная команда без сети. Её сбой это состояние хранилища на сервере, а не отказ хостинга: человек
+        получает понятный код пространства, а очищенный вывод git остаётся в журнале."""
+        try:
+            return await self._runner.run_local(
+                args, git_dir=dirs.git if dirs is not None else None, timeout_s=_LOCAL_TIMEOUT_S, check=check
+            )
+        except GitSyncError as exc:
+            if exc.code is not GitErrorCode.git_error:
+                raise
+            logger.warning("pack studio: local git failed", command=_subcommand(args), detail=exc.detail)
+            raise PackStudioError(PackStudioErrorCode.workspace_git_failed) from None
 
     @staticmethod
     def _fresh_dirs(dirs: WorkspaceDirs) -> None:
