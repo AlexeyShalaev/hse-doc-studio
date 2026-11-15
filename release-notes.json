@@ -1,6 +1,28 @@
 {
   "releases": [
     {
+      "version": "0.34.0",
+      "date": "2026-11-15",
+      "notes": [
+        {
+          "ru": "Файлы: загрузка своих файлов в проект из браузера. Кнопки «Загрузить файлы» и «Загрузить папку», пункты в меню папки и перетаскивание с компьютера в дерево. При совпадении имени можно заменить, оставить оба или пропустить. Виден ход отправки, один файл до 50 МиБ.",
+          "en": "Files: upload your own files into a project from the browser. Upload files and Upload folder buttons, folder menu items and drag and drop from the computer into the tree. On a name clash you can replace, keep both or skip. Progress is shown, one file is up to 50 MiB."
+        },
+        {
+          "ru": "Файлы: картинка открывается в разделе «Файлы», PDF в просмотрщике, остальное скачивается. Загруженные PDF (рисунки, сканы) теперь попадают в историю и синхронизацию с git, исключаются только собранные PDF.",
+          "en": "Files: an image opens in Files, a PDF in the viewer, anything else is downloaded. Uploaded PDFs (figures, scans) now go into history and git sync, only built PDFs are excluded."
+        },
+        {
+          "ru": "Исправлено: превью показывало «Документ ещё не компилировался», если сборка прошла, а проверки нашли ошибки. Теперь превью показывает PDF с пометкой, а статус называется «Ошибки проверок», а не «ошибка сборки». Сбой самих проверок больше не теряет собранный PDF.",
+          "en": "Fixed: the preview said the document was never compiled when the build succeeded but checks found errors. The preview now shows the PDF with a note, and the status reads Check errors instead of build error. A failure of the checks themselves no longer loses the built PDF."
+        },
+        {
+          "ru": "Исправлено: вкладка git в пространстве Студии шаблонов падала с ошибкой 502 «transport 'https' not allowed» после обновления базы. Состояние считается без скачивания файлов, недостающие файлы для сравнения догружаются с токеном пространства, ошибки git показываются понятным сообщением.",
+          "en": "Fixed: the git tab of a Template Studio workspace failed with a 502 \"transport 'https' not allowed\" after the base was updated. The state is computed without downloading files, missing files for a diff are fetched with the workspace token, and git errors are shown as a clear message."
+        }
+      ]
+    },
+    {
       "version": "0.33.0",
       "date": "2026-11-15",
       "notes": [
