@@ -970,3 +970,111 @@ class PackDocLibraryItem(StrictModel):
 
 class PackDocLibraryResponse(StrictModel):
     documents: list[PackDocLibraryItem]
+
+
+# ── Срез T15: пак и шаблон с нуля (docs/design/template-studio.md, раздел 8) ──
+
+ScaffoldKindName = Literal["minimal", "copy"]
+SourceOriginName = Literal["workspace", "catalog"]
+
+
+class PackLocalizedText(StrictModel):
+    ru: StrictStr = Field(default="", max_length=500)
+    en: StrictStr = Field(default="", max_length=500)
+
+
+class PackScaffoldSource(StrictModel):
+    # `workspace`: пак этого пространства (имя папки); `catalog`: пак каталога этой Студии (id).
+    origin: SourceOriginName
+    pack: StrictStr = Field(min_length=1, max_length=255)
+    template: StrictStr = Field(min_length=1, max_length=255)
+    version: StrictStr = Field(min_length=1, max_length=64)
+
+
+class PackScaffoldRequest(StrictModel):
+    kind: ScaffoldKindName = "minimal"
+    # Обязателен у `copy`.
+    source: PackScaffoldSource | None = None
+
+    @model_validator(mode="after")
+    def _source_for_copy(self) -> PackScaffoldRequest:
+        if self.kind == "copy" and self.source is None:
+            raise ValueError("source is required for a copy")
+        return self
+
+
+class PackMaintainer(StrictModel):
+    name: StrictStr = Field(max_length=500)
+    email: StrictStr = Field(default="", max_length=500)
+    url: StrictStr = Field(default="", max_length=500)
+
+
+class CreatePackTemplateRequest(StrictModel):
+    id: StrictStr = Field(min_length=1, max_length=64)
+    name: PackLocalizedText
+    short_name: PackLocalizedText | None = None
+    description: PackLocalizedText | None = None
+    scaffold: PackScaffoldRequest = Field(default_factory=PackScaffoldRequest)
+    # Номер первой версии; по умолчанию `<год>.1`.
+    version: StrictStr | None = Field(default=None, max_length=64)
+
+
+class PackNewTemplate(StrictModel):
+    id: StrictStr = Field(min_length=1, max_length=64)
+    name: PackLocalizedText
+    short_name: PackLocalizedText | None = None
+    description: PackLocalizedText | None = None
+
+
+class CreatePackRequest(StrictModel):
+    id: StrictStr = Field(min_length=1, max_length=64)
+    name: PackLocalizedText
+    description: PackLocalizedText | None = None
+    maintainer: PackMaintainer | None = None
+    license: StrictStr | None = Field(default=None, max_length=500)
+    source: StrictStr | None = Field(default=None, max_length=500)
+    template: PackNewTemplate
+    scaffold: PackScaffoldRequest = Field(default_factory=PackScaffoldRequest)
+    version: StrictStr | None = Field(default=None, max_length=64)
+
+
+class PackScaffoldVersion(StrictModel):
+    version: str
+    status: str | None
+    released: bool
+    default: bool
+
+
+class PackScaffoldTemplate(StrictModel):
+    template: str
+    name: dict[str, str]
+    default_version: str | None
+    versions: list[PackScaffoldVersion]
+
+
+class PackScaffoldPack(StrictModel):
+    origin: SourceOriginName
+    pack: str
+    name: dict[str, str]
+    license: str
+    templates: list[PackScaffoldTemplate]
+
+
+class PackScaffoldOptionsResponse(StrictModel):
+    sources: list[PackScaffoldPack]
+    # Занятые id паков в нижнем регистре: папки пространства и паки каталога Студии.
+    taken_packs: list[str]
+    maintainer: PackMaintainer | None
+    license: str
+    version: str
+
+
+class PackScaffoldCreatedResponse(StrictModel):
+    version: PackVersionRef
+    pack_created: bool
+    # Манифесты пака (если создан), шаблона и версии от папки паков.
+    manifests: list[str]
+    # Что открыть: исходник первого документа или манифест версии.
+    main_file: str | None
+    files: int
+    source: PackScaffoldSource | None

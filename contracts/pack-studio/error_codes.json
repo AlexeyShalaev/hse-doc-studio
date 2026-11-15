@@ -53,5 +53,9 @@
   "place_invalid",
   "model_invalid",
   "submission_invalid",
-  "checks_invalid"
+  "checks_invalid",
+  "id_invalid",
+  "name_required",
+  "template_id_taken",
+  "pack_not_found"
 ]

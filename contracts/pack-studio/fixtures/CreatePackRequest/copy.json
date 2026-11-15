@@ -1,0 +1,12 @@
+{
+  "id": "hse-cs-sse-spb",
+  "name": { "ru": "ВШЭ Санкт-Петербург: магистратура СПИ", "en": "HSE St Petersburg: MSc SSE" },
+  "template": {
+    "id": "coursework",
+    "name": { "ru": "Курсовой проект", "en": "Course project" }
+  },
+  "scaffold": {
+    "kind": "copy",
+    "source": { "origin": "catalog", "pack": "hse-cs-sse", "template": "coursework", "version": "2026.1.6" }
+  }
+}

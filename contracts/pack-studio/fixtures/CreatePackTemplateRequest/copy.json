@@ -1,0 +1,8 @@
+{
+  "id": "vkr",
+  "name": { "ru": "ВКР", "en": "Thesis" },
+  "scaffold": {
+    "kind": "copy",
+    "source": { "origin": "workspace", "pack": "hse-cs-sse", "template": "coursework", "version": "2026.1.6" }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "version": {
+    "pack": "hse-cs-sse",
+    "template": "vkr",
+    "version": "2026.1",
+    "path": "hse-cs-sse/templates/vkr/versions/2026.1"
+  },
+  "pack_created": false,
+  "manifests": [
+    "hse-cs-sse/templates/vkr/template.yaml",
+    "hse-cs-sse/templates/vkr/versions/2026.1/version.yaml"
+  ],
+  "main_file": "hse-cs-sse/templates/vkr/versions/2026.1/files/project_proposal/project_proposal.ru.tex",
+  "files": 32,
+  "source": { "origin": "workspace", "pack": "hse-cs-sse", "template": "coursework", "version": "2026.1.6" }
+}

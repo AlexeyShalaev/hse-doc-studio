@@ -996,3 +996,109 @@ export type PackModelActionRequest = z.infer<
   typeof PackModelActionRequestSchema
 >;
 export type PackDocLibrary = z.infer<typeof PackDocLibrarySchema>;
+
+// ── Срез T15: пак и шаблон с нуля (template-studio.md, раздел 8) ──
+
+export const ScaffoldKindSchema = z.enum(["minimal", "copy"]);
+export const ScaffoldOriginSchema = z.enum(["workspace", "catalog"]);
+
+export const PackLocalizedTextSchema = z.strictObject({
+  ru: z.string().max(500).optional(),
+  en: z.string().max(500).optional(),
+});
+
+export const PackScaffoldSourceSchema = z.strictObject({
+  // `workspace`: пак этого пространства (имя папки); `catalog`: пак каталога этой Студии.
+  origin: ScaffoldOriginSchema,
+  pack: z.string(),
+  template: z.string(),
+  version: z.string(),
+});
+
+export const PackScaffoldRequestSchema = z.strictObject({
+  kind: ScaffoldKindSchema.optional(),
+  source: PackScaffoldSourceSchema.nullish(),
+});
+
+export const PackMaintainerSchema = z.strictObject({
+  name: z.string(),
+  email: z.string().optional(),
+  url: z.string().optional(),
+});
+
+const NewTemplateFields = {
+  id: z.string().min(1).max(64),
+  name: PackLocalizedTextSchema,
+  short_name: PackLocalizedTextSchema.nullish(),
+  description: PackLocalizedTextSchema.nullish(),
+};
+
+export const CreatePackTemplateRequestSchema = z.strictObject({
+  ...NewTemplateFields,
+  scaffold: PackScaffoldRequestSchema.optional(),
+  version: z.string().max(64).nullish(),
+});
+
+export const CreatePackRequestSchema = z.strictObject({
+  id: z.string().min(1).max(64),
+  name: PackLocalizedTextSchema,
+  description: PackLocalizedTextSchema.nullish(),
+  maintainer: PackMaintainerSchema.nullish(),
+  license: z.string().max(500).nullish(),
+  source: z.string().max(500).nullish(),
+  template: z.strictObject(NewTemplateFields),
+  scaffold: PackScaffoldRequestSchema.optional(),
+  version: z.string().max(64).nullish(),
+});
+
+export const PackScaffoldVersionSchema = z.strictObject({
+  version: z.string(),
+  status: z.string().nullable(),
+  released: z.boolean(),
+  default: z.boolean(),
+});
+
+export const PackScaffoldTemplateSchema = z.strictObject({
+  template: z.string(),
+  name: LocalizedSchema,
+  default_version: z.string().nullable(),
+  versions: z.array(PackScaffoldVersionSchema),
+});
+
+export const PackScaffoldPackSchema = z.strictObject({
+  origin: ScaffoldOriginSchema,
+  pack: z.string(),
+  name: LocalizedSchema,
+  license: z.string(),
+  templates: z.array(PackScaffoldTemplateSchema),
+});
+
+export const PackScaffoldOptionsSchema = z.strictObject({
+  sources: z.array(PackScaffoldPackSchema),
+  // Занятые id паков в нижнем регистре: папки пространства и паки каталога Студии.
+  taken_packs: z.array(z.string()),
+  maintainer: PackMaintainerSchema.nullable(),
+  license: z.string(),
+  version: z.string(),
+});
+
+export const PackScaffoldCreatedSchema = z.strictObject({
+  version: PackVersionRefSchema,
+  pack_created: z.boolean(),
+  manifests: z.array(z.string()),
+  // Что открыть: исходник первого документа или манифест версии.
+  main_file: z.string().nullable(),
+  files: z.number().int(),
+  source: PackScaffoldSourceSchema.nullable(),
+});
+
+export type ScaffoldKind = z.infer<typeof ScaffoldKindSchema>;
+export type ScaffoldOrigin = z.infer<typeof ScaffoldOriginSchema>;
+export type PackScaffoldSource = z.infer<typeof PackScaffoldSourceSchema>;
+export type PackScaffoldOptions = z.infer<typeof PackScaffoldOptionsSchema>;
+export type PackScaffoldPack = z.infer<typeof PackScaffoldPackSchema>;
+export type PackScaffoldCreated = z.infer<typeof PackScaffoldCreatedSchema>;
+export type CreatePackRequest = z.infer<typeof CreatePackRequestSchema>;
+export type CreatePackTemplateRequest = z.infer<
+  typeof CreatePackTemplateRequestSchema
+>;

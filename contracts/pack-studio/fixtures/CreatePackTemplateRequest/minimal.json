@@ -1,0 +1,8 @@
+{
+  "id": "practice",
+  "name": { "ru": "Отчёт о практике", "en": "Internship report" },
+  "short_name": null,
+  "description": null,
+  "scaffold": { "kind": "minimal", "source": null },
+  "version": "2027.1"
+}

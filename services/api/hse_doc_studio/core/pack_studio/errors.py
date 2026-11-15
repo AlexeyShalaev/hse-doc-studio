@@ -81,6 +81,11 @@ class PackStudioErrorCode(StrEnum):
     submission_invalid = "submission_invalid"
     # Срез T14: формы проверок и правил
     checks_invalid = "checks_invalid"
+    # Срез T15: пак и шаблон с нуля
+    id_invalid = "id_invalid"
+    name_required = "name_required"
+    template_id_taken = "template_id_taken"
+    pack_not_found = "pack_not_found"
 
 
 _C = PackStudioErrorCode
@@ -180,7 +185,11 @@ _TABLE: dict[PackStudioErrorCode, tuple[int, str, str]] = {
         "Раздел включается переменной окружения HSE_STUDIO__PACK_STUDIO__ENABLED.",
         "The section is set by the HSE_STUDIO__PACK_STUDIO__ENABLED environment variable.",
     ),
-    _C.pack_id_taken: (409, "Пак с таким id уже есть.", "A pack with this id already exists."),
+    _C.pack_id_taken: (
+        409,
+        "Пак с таким id уже есть в рабочем пространстве или в каталоге Студии.",
+        "A pack with this id already exists in the workspace or in the Studio catalog.",
+    ),
     _C.push_denied: (403, "Нет права отправлять в этот репозиторий.", "You cannot push to this repository."),
     _C.pr_permission_missing: (
         403,
@@ -306,6 +315,18 @@ _TABLE: dict[PackStudioErrorCode, tuple[int, str, str]] = {
         "Правку проверок нельзя записать: шаблон её не поймёт. Причина ниже.",
         "The checks change cannot be written: the template would not understand it. The reason is below.",
     ),
+    _C.id_invalid: (
+        400,
+        "Недопустимый id: строчная латиница и цифры, у пака через дефис, у шаблона через дефис или подчёркивание.",
+        "Invalid id: lowercase Latin letters and digits, a hyphen in a pack, a hyphen or underscore in a template.",
+    ),
+    _C.name_required: (400, "Укажите название на русском или английском.", "Enter a name in Russian or English."),
+    _C.template_id_taken: (
+        409,
+        "Шаблон с таким id в этом паке уже есть.",
+        "This pack already has a template with this id.",
+    ),
+    _C.pack_not_found: (404, "Пак не найден в рабочем пространстве.", "Pack not found in the workspace."),
 }
 
 

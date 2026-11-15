@@ -706,6 +706,23 @@ button.ps-git-file:hover {
   color: var(--fg-2);
   overflow-wrap: anywhere;
 }
+.ps-scaffold-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.ps-scaffold-title {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--fg-0);
+}
+/* Пара полей рядом, на узком экране одно под другим (без медиазапросов). */
+.ps-scaffold-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: 0.5rem 0.75rem;
+}
 .ps-choice {
   display: flex;
   align-items: flex-start;

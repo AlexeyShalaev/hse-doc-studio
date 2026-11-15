@@ -4,6 +4,10 @@ import { describe, expect, it } from "vitest";
 import type { ZodType } from "zod";
 import { PACK_STUDIO_ERROR_CODES, isPackStudioErrorCode } from "./errorCodes";
 import {
+  CreatePackRequestSchema,
+  CreatePackTemplateRequestSchema,
+  PackScaffoldCreatedSchema,
+  PackScaffoldOptionsSchema,
   OpenPackOfficialRequestSchema,
   PackOfficialSchema,
   PackServiceAccessCheckSchema,
@@ -152,6 +156,11 @@ const SCHEMAS: Record<string, ZodType> = {
   PackChecks: PackChecksSchema,
   PackChecksPatchRequest: PackChecksPatchRequestSchema,
   PackChecksConfigRequest: PackChecksConfigRequestSchema,
+  // Срез T15: пак и шаблон с нуля
+  PackScaffoldOptions: PackScaffoldOptionsSchema,
+  CreatePackRequest: CreatePackRequestSchema,
+  CreatePackTemplateRequest: CreatePackTemplateRequestSchema,
+  PackScaffoldCreated: PackScaffoldCreatedSchema,
 };
 
 const readJson = (path: string): unknown =>

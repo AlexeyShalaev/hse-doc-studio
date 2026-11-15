@@ -1,0 +1,17 @@
+# Манифест документа: всё про документ лежит в этой папке.
+name:
+  ru: Отчёт
+  en: Report
+code:
+  ru: ОТЧ
+  en: REP
+source_file: report/report.tex
+output_file: report/report.pdf
+output_name:
+  ru: Отчёт.pdf
+  en: Report.pdf
+required: true
+supported_langs:
+- ru
+scope: personal
+group: work

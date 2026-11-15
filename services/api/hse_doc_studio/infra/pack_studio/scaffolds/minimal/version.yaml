@@ -1,0 +1,95 @@
+# Манифест версии шаблона: заготовка «Минимальный» Студии шаблонов.
+# Один документ «Отчёт» по ГОСТ 7.32 с титульным листом, два поля анкеты,
+# слот подписи автора и одна точка сдачи. Ключи описаны в справке
+# docs/ru/reference/pack.md; дополняйте манифест формами Студии шаблонов
+# или во вкладке «Исходник».
+
+id: "@@VERSION@@"
+released_at: @@TODAY@@
+status: beta
+summary:
+  ru: "Отчёт по ГОСТ 7.32 с титульным листом."
+  en: "A GOST 7.32 report with a title page."
+breaking_changes:
+  ru:
+    - "Первая версия шаблона."
+  en:
+    - "The first version of the template."
+changes:
+  ru:
+    - "Первая версия шаблона."
+  en:
+    - "The first version of the template."
+
+supported_kinds: [project, research]
+supported_staffing: [solo]
+
+engine:
+  default: xelatex
+  allowed: [xelatex]
+  passes: 2
+  flags: "-interaction=nonstopmode -halt-on-error"
+
+latex_packages:
+  - scheme-basic
+  - fontspec
+  - babel-russian
+  - babel-english
+  - geometry
+  - indentfirst
+  - setspace
+  - extsizes
+  - titlesec
+  - tocloft
+  - xcolor
+  - hyperref
+  - simple-thesis-dissertation  # шрифт Tinos, замена Times New Roman
+
+langs: [ru]
+
+documents:
+  - report
+
+# Файлы `*.j2` перерисовываются перед каждой сборкой из данных проекта.
+dynamic_includes:
+  - template: common/meta.tex.j2
+    output:   common/meta.tex
+
+meta_groups:
+  - id: study
+    label: { ru: Учёба, en: Studies }
+
+meta_fields:
+  year:
+    type: string
+    group:       study
+    label:       { ru: Учебный год (год защиты), en: Academic year (defence year) }
+    placeholder: "@@NEXT_YEAR@@"
+    required_at: create
+    auto: academic_year
+  program:
+    type: string
+    group:       study
+    label:       { ru: Образовательная программа, en: Educational programme }
+    placeholder: "Программная инженерия"
+    required_at: create
+
+signatures:
+  slots:
+    - id: author
+      label:             { ru: Автор работы, en: Author }
+      applies_to:        [report]
+      default_placement: { page: 1, x_mm: 104, y_mm: 194, width_mm: 30 }
+
+pack_submission:
+  profiles:
+    - id: final
+      name:        { ru: "Сдача отчёта", en: "Report submission" }
+      description: { ru: "Итоговый отчёт с подписью автора.", en: "The final report signed by the author." }
+      items:
+        - doc_id: report
+          signatures: [author]
+          methods: { author: [image, detached] }
+      deadline_hint:
+        ru: "Срок объявляет учебный офис"
+        en: "The programme office announces the deadline"

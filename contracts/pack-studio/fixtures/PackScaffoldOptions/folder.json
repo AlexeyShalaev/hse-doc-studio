@@ -1,0 +1,42 @@
+{
+  "sources": [
+    {
+      "origin": "workspace",
+      "pack": "spbu-cs",
+      "name": { "ru": "СПбГУ: прикладная информатика", "en": "SPbU: Applied Computer Science" },
+      "license": "Apache-2.0",
+      "templates": [
+        {
+          "template": "coursework",
+          "name": { "ru": "Курсовая работа", "en": "Course paper" },
+          "default_version": "2026.1",
+          "versions": [
+            { "version": "2026.1.1", "status": "beta", "released": false, "default": false },
+            { "version": "2026.1", "status": "stable", "released": true, "default": true }
+          ]
+        }
+      ]
+    },
+    {
+      "origin": "catalog",
+      "pack": "hse-cs-sse",
+      "name": { "ru": "НИУ ВШЭ: магистратура «Системная и программная инженерия»", "en": "HSE: MSc System and Software Engineering" },
+      "license": "Apache-2.0",
+      "templates": [
+        {
+          "template": "coursework",
+          "name": { "ru": "Курсовой проект (магистратура, 1 курс)", "en": "Course Project (MSc, 1st year)" },
+          "default_version": "2026.1.6",
+          "versions": [
+            { "version": "2026.1.6", "status": null, "released": true, "default": true },
+            { "version": "2026.1.5", "status": null, "released": true, "default": false }
+          ]
+        }
+      ]
+    }
+  ],
+  "taken_packs": ["hse-cs-se", "hse-cs-sse", "spbu-cs"],
+  "maintainer": { "name": "Ирина Смирнова", "email": "author@example.org", "url": "" },
+  "license": "Apache-2.0",
+  "version": "2026.1"
+}

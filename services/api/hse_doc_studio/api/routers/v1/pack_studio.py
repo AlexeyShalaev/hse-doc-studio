@@ -12,6 +12,9 @@
 (POST); `versions/{pack}/{template}/{version}/state` живой класс, номера и заметки, дальше `notes`, `renumber`,
 `move-edits` (7.3) и `release`.
 
+Пак и шаблон с нуля (срез T15): `scaffold` даёт источники копии и значения по умолчанию, `packs` создаёт пак с первым
+шаблоном, `packs/{pack}/templates` шаблон в существующем паке (заготовка «Минимальный» или копия версии).
+
 Предпросмотр (срез T7): `versions/{pack}/{template}/{version}/preview` отдаёт документы, переключатели и наборы данных
 (GET) и запускает сборку (POST); ход сборки, PDF, журнал и якоря мест подписей по `previews/{build_id}`.
 """
@@ -30,6 +33,8 @@ from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.routers.v1.files import _content_type_for
 from hse_doc_studio.api.schemas.pack_studio import (
+    CreatePackRequest,
+    CreatePackTemplateRequest,
     CreatePackVersionRequest,
     CreatePackWorkspaceRequest,
     OpenPackOfficialRequest,
@@ -49,7 +54,9 @@ from hse_doc_studio.api.schemas.pack_studio import (
     PackLintRequest,
     PackLintResponse,
     PackLocalizedList,
+    PackLocalizedText,
     PackMacroHintResponse,
+    PackMaintainer,
     PackMetaFieldHintResponse,
     PackMoveEditsRequest,
     PackOfficialRepo,
@@ -68,6 +75,13 @@ from hse_doc_studio.api.schemas.pack_studio import (
     PackReleaseRequest,
     PackReleaseResponse,
     PackRenumberRequest,
+    PackScaffoldCreatedResponse,
+    PackScaffoldOptionsResponse,
+    PackScaffoldPack,
+    PackScaffoldRequest,
+    PackScaffoldSource,
+    PackScaffoldTemplate,
+    PackScaffoldVersion,
     PackStartOverRequest,
     PackStudioSectionResponse,
     PackTreeFile,
@@ -107,6 +121,17 @@ from hse_doc_studio.core.pack_studio.errors import PackStudioError, PackStudioEr
 from hse_doc_studio.core.pack_studio.official import OfficialRepo, official_repo
 from hse_doc_studio.core.pack_studio.paths import VersionRef
 from hse_doc_studio.core.pack_studio.preview import PreviewBuild
+from hse_doc_studio.core.pack_studio.scaffold import (
+    Maintainer,
+    NewPack,
+    NewTemplate,
+    Scaffold,
+    ScaffoldKind,
+    ScaffoldOptions,
+    ScaffoldResult,
+    ScaffoldSource,
+    SourceOrigin,
+)
 from hse_doc_studio.core.pack_studio.versions import (
     LANGS,
     LocalizedList,
@@ -120,6 +145,7 @@ from hse_doc_studio.use_cases.pack_studio.git import ForkChoice, GitView, PackGi
 from hse_doc_studio.use_cases.pack_studio.insight import PackInsightService
 from hse_doc_studio.use_cases.pack_studio.official import OfficialInfo, OfficialPacks
 from hse_doc_studio.use_cases.pack_studio.preview import PackPreviewService, PreviewOptions, StartPreviewInput
+from hse_doc_studio.use_cases.pack_studio.scaffold import CreatePackInput, CreateTemplateInput, PackScaffoldService
 from hse_doc_studio.use_cases.pack_studio.versions import CreateVersionInput, PackVersionService, ReleaseInput
 from hse_doc_studio.use_cases.pack_studio.workspaces import (
     CreateWorkspaceInput,
@@ -983,3 +1009,136 @@ async def release_pack_version(  # noqa: PLR0913 — путь версии и т
         edited=list(released.edited),
         warnings=list(released.warnings),
     )
+
+
+# ── Срез T15: пак и шаблон с нуля ──
+
+
+def scaffold_options_response(options: ScaffoldOptions) -> PackScaffoldOptionsResponse:
+    maintainer = options.maintainer
+    return PackScaffoldOptionsResponse(
+        sources=[
+            PackScaffoldPack(
+                origin=p.origin.value,
+                pack=p.pack,
+                name=dict(p.name),
+                license=p.license,
+                templates=[
+                    PackScaffoldTemplate(
+                        template=t.template,
+                        name=dict(t.name),
+                        default_version=t.default_version,
+                        versions=[
+                            PackScaffoldVersion(
+                                version=v.version, status=v.status, released=v.released, default=v.default
+                            )
+                            for v in t.versions
+                        ],
+                    )
+                    for t in p.templates
+                ],
+            )
+            for p in options.sources
+        ],
+        taken_packs=list(options.taken_packs),
+        maintainer=(
+            PackMaintainer(name=maintainer.name, email=maintainer.email, url=maintainer.url) if maintainer else None
+        ),
+        license=options.license,
+        version=options.version,
+    )
+
+
+def scaffold_created_response(result: ScaffoldResult) -> PackScaffoldCreatedResponse:
+    source = result.source
+    return PackScaffoldCreatedResponse(
+        version=_version_ref(result.ref),
+        pack_created=result.pack_created,
+        manifests=list(result.manifests),
+        main_file=result.main_file,
+        files=result.files,
+        source=(
+            PackScaffoldSource(
+                origin=source.origin.value, pack=source.pack, template=source.template, version=source.version
+            )
+            if source is not None
+            else None
+        ),
+    )
+
+
+def _text(value: PackLocalizedText | None) -> dict[str, str] | None:
+    return {"ru": value.ru, "en": value.en} if value is not None else None
+
+
+def _scaffold(body: PackScaffoldRequest) -> Scaffold:
+    source = body.source
+    return Scaffold(
+        kind=ScaffoldKind(body.kind),
+        source=(
+            ScaffoldSource(SourceOrigin(source.origin), source.pack, source.template, source.version)
+            if source is not None and body.kind == "copy"
+            else None
+        ),
+    )
+
+
+def _new_template(
+    id_: str, name: PackLocalizedText, short: PackLocalizedText | None, description: PackLocalizedText | None
+) -> NewTemplate:
+    return NewTemplate(id=id_, name=_text(name) or {}, short_name=_text(short), description=_text(description))
+
+
+@router.get("/pack-studio/workspaces/{workspace_id}/scaffold", response_model=PackScaffoldOptionsResponse)
+async def get_scaffold_options(
+    workspace_id: UUID, scaffold: FromDishka[PackScaffoldService], response: Response
+) -> PackScaffoldOptionsResponse:
+    """Источники копии (паки пространства и каталога Студии), занятые id, сопровождающий и номер по умолчанию."""
+    response.headers.update(_NO_STORE)
+    return scaffold_options_response(await scaffold.options(require_actor(), workspace_id))
+
+
+@router.post(
+    "/pack-studio/workspaces/{workspace_id}/packs", status_code=201, response_model=PackScaffoldCreatedResponse
+)
+async def create_pack(
+    workspace_id: UUID, body: CreatePackRequest, scaffold: FromDishka[PackScaffoldService]
+) -> PackScaffoldCreatedResponse:
+    """Новый пак с первым шаблоном: заготовка «Минимальный» или копия версии с новыми id (раздел 8)."""
+    maintainer = body.maintainer
+    pack = NewPack(
+        id=body.id,
+        name=_text(body.name) or {},
+        description=_text(body.description),
+        maintainer=Maintainer(maintainer.name, maintainer.email, maintainer.url) if maintainer else None,
+        license=body.license or "",
+        source=body.source,
+        template=_new_template(
+            body.template.id, body.template.name, body.template.short_name, body.template.description
+        ),
+    )
+    result = await scaffold.create_pack(
+        require_actor(),
+        workspace_id,
+        CreatePackInput(pack=pack, scaffold=_scaffold(body.scaffold), version=body.version),
+    )
+    return scaffold_created_response(result)
+
+
+@router.post(
+    "/pack-studio/workspaces/{workspace_id}/packs/{pack}/templates",
+    status_code=201,
+    response_model=PackScaffoldCreatedResponse,
+)
+async def create_pack_template(
+    workspace_id: UUID, pack: str, body: CreatePackTemplateRequest, scaffold: FromDishka[PackScaffoldService]
+) -> PackScaffoldCreatedResponse:
+    """Новый шаблон в существующем паке пространства: то же, что у нового пака, на уровне шаблона."""
+    template = _new_template(body.id, body.name, body.short_name, body.description)
+    result = await scaffold.create_template(
+        require_actor(),
+        workspace_id,
+        pack,
+        CreateTemplateInput(template=template, scaffold=_scaffold(body.scaffold), version=body.version),
+    )
+    return scaffold_created_response(result)

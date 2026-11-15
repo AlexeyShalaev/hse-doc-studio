@@ -321,6 +321,10 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("POST", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/renumber"): _A,
     ("POST", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/move-edits"): _A,
     ("POST", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/release"): _A,
+    # Срез T15: пак и шаблон с нуля
+    ("GET", "/pack-studio/workspaces/{workspace_id}/scaffold"): _A,
+    ("POST", "/pack-studio/workspaces/{workspace_id}/packs"): _A,
+    ("POST", "/pack-studio/workspaces/{workspace_id}/packs/{pack}/templates"): _A,
     # «Подключить к каталогу этой Студии» (template-studio.md, 10.3, срез T17): папка бывает только локально, на
     # сервере каталоги паков ведёт админ в `/api/admin/pack-catalog`.
     ("GET", "/pack-studio/workspaces/{workspace_id}/catalog"): _LOCAL,

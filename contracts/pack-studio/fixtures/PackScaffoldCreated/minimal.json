@@ -1,0 +1,17 @@
+{
+  "version": {
+    "pack": "spbu-cs",
+    "template": "coursework",
+    "version": "2026.1",
+    "path": "spbu-cs/templates/coursework/versions/2026.1"
+  },
+  "pack_created": true,
+  "manifests": [
+    "spbu-cs/pack.yaml",
+    "spbu-cs/templates/coursework/template.yaml",
+    "spbu-cs/templates/coursework/versions/2026.1/version.yaml"
+  ],
+  "main_file": "spbu-cs/templates/coursework/versions/2026.1/files/report/report.tex",
+  "files": 9,
+  "source": null
+}

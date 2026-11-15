@@ -85,6 +85,11 @@ _SCHEMAS: dict[str, Any] = {
     "PackChecks": chk.PackChecksResponse,
     "PackChecksPatchRequest": chk.PackChecksPatchRequest,
     "PackChecksConfigRequest": chk.PackChecksConfigRequest,
+    # Срез T15: пак и шаблон с нуля
+    "PackScaffoldOptions": s.PackScaffoldOptionsResponse,
+    "CreatePackRequest": s.CreatePackRequest,
+    "CreatePackTemplateRequest": s.CreatePackTemplateRequest,
+    "PackScaffoldCreated": s.PackScaffoldCreatedResponse,
 }
 
 
