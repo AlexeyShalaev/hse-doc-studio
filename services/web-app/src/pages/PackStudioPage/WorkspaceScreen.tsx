@@ -15,6 +15,7 @@ import {
   findVersion,
   findingTarget,
   packErrorText,
+  packFormKind,
   packStudioKeys,
   usePackTree,
   usePackWorkspace,
@@ -48,7 +49,15 @@ import {
   Spinner,
   type RevealRequest,
 } from "@shared/ui";
+import { loadPackFormsNamespace } from "@shared/lib/i18n/packFormsNamespace";
 import { Notice } from "@shared/ui/ConflictKit";
+
+// Формы манифестов (срезы T11 и дальше): свой чанк, грузится с первой открытой формой.
+const PackFormPane = lazy(() =>
+  Promise.all([import("@features/pack-forms"), loadPackFormsNamespace()]).then(
+    ([m]) => ({ default: m.PackFormPane }),
+  ),
+);
 
 // «Подключить к каталогу этой Студии»: окно и сущность каталога грузятся по первому нажатию.
 const ConnectCatalogDialog = lazy(() =>
@@ -248,6 +257,17 @@ export const WorkspaceScreen = () => {
     [client, file, workspaceId],
   );
 
+  // Форма записала файлы версии: как сохранение в редакторе, плюс места подписей и класс версии.
+  const onFormSaved = useCallback(() => {
+    setEpoch((n) => n + 1);
+    void client.invalidateQueries({
+      queryKey: packStudioKeys.git(workspaceId),
+    });
+    void client.invalidateQueries({
+      queryKey: packStudioKeys.signaturesAll(workspaceId),
+    });
+  }, [client, workspaceId]);
+
   const onFilesChanged = useCallback(() => {
     dirtyRef.current = false;
     setEditorDirty(false);
@@ -421,6 +441,26 @@ export const WorkspaceScreen = () => {
                   }}
                   problemsFocus={problemsFocus}
                   contentRevision={contentRevision}
+                  form={
+                    packFormKind(file) ? (
+                      <Suspense
+                        fallback={
+                          <div
+                            className="flex justify-center"
+                            style={{ padding: "2rem" }}
+                          >
+                            <Spinner size="md" />
+                          </div>
+                        }
+                      >
+                        <PackFormPane
+                          workspaceId={ws.id}
+                          path={file}
+                          onSaved={onFormSaved}
+                        />
+                      </Suspense>
+                    ) : undefined
+                  }
                   preview={
                     <PackPreviewPane
                       workspaceId={ws.id}

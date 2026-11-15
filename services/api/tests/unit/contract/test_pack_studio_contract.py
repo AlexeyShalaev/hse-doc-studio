@@ -69,6 +69,11 @@ _SCHEMAS: dict[str, Any] = {
     # Срез T9: места подписей и метки даты на PDF предпросмотра
     "PackSignatures": s.PackSignaturesResponse,
     "PackSignaturesPatchRequest": s.PackSignaturesPatchRequest,
+    # Срезы T11 и T12: формы версии
+    "PackVersionModel": s.PackVersionModelResponse,
+    "PackModelPatchRequest": s.PackModelPatchRequest,
+    "PackModelActionRequest": s.PackModelActionRequest,
+    "PackDocLibrary": s.PackDocLibraryResponse,
 }
 
 

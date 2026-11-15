@@ -50,5 +50,6 @@
   "official_unavailable",
   "license_consent_required",
   "paths_outside_packs",
-  "place_invalid"
+  "place_invalid",
+  "model_invalid"
 ]

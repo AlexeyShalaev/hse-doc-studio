@@ -7,6 +7,7 @@ import {
   PackCiStatusSchema,
   PackCommitResponseSchema,
   PackDiffSchema,
+  PackDocLibrarySchema,
   PackEditorHintsSchema,
   PackFileVersionSchema,
   PackGitSchema,
@@ -17,6 +18,7 @@ import {
   PackProposeResponseSchema,
   PackReleaseSchema,
   PackVersionCreatedSchema,
+  PackVersionModelSchema,
   PackVersionMovedSchema,
   PackVersionOptionsSchema,
   PackVersionStateSchema,
@@ -41,6 +43,10 @@ import {
   type PackCiStatus,
   type PackCommitResponse,
   type PackDiff,
+  type PackDocLibrary,
+  type PackModelActionRequest,
+  type PackModelPatchRequest,
+  type PackVersionModel,
   type PackEditorHints,
   type PackFileVersion,
   type PackGit,
@@ -371,6 +377,41 @@ export const packStudioApi = {
         headers: ifMatch ? { "If-Match": ifMatch } : {},
       })
       .then(parseResp(PackSignaturesSchema)),
+  // Формы версии (срезы T11 и T12): модель, правка манифеста, операции на несколько файлов.
+  versionModel: (id: string, ref: PackVersionRef): Promise<PackVersionModel> =>
+    apiClient
+      .get(`${versionPath(id, ref)}/model`, quiet)
+      .then(parseResp(PackVersionModelSchema)),
+  /** Точечные правки одного манифеста с `If-Match` по его ETag; чужая правка даёт PackStaleFileError. */
+  patchVersionModel: (
+    id: string,
+    ref: PackVersionRef,
+    body: PackModelPatchRequest,
+    ifMatch: string | null,
+  ): Promise<PackVersionModel> =>
+    apiClient
+      .patch(`${versionPath(id, ref)}/model`, body, {
+        ...quiet,
+        headers: ifMatch ? { "If-Match": ifMatch } : {},
+      })
+      .then(parseResp(PackVersionModelSchema), rethrowStale),
+  /** Переименовать поле, добавить или удалить документ, перевести файлы (`If-Match` по ETag version.yaml). */
+  versionModelAction: (
+    id: string,
+    ref: PackVersionRef,
+    body: PackModelActionRequest,
+    ifMatch: string | null,
+  ): Promise<PackVersionModel> =>
+    apiClient
+      .post(`${versionPath(id, ref)}/model/actions`, body, {
+        ...quiet,
+        headers: ifMatch ? { "If-Match": ifMatch } : {},
+      })
+      .then(parseResp(PackVersionModelSchema), rethrowStale),
+  docLibrary: (id: string): Promise<PackDocLibrary> =>
+    apiClient
+      .get(`${ws(id)}/doc-library`, quiet)
+      .then(parseResp(PackDocLibrarySchema)),
   previewOptions: (
     id: string,
     ref: PackVersionRef,

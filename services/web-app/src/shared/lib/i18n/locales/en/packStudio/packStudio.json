@@ -100,7 +100,8 @@
     "readOnlyReleased": "This version is released: its files are read-only. Edits go into a new template version.",
     "readOnlyRegistry": "The “New version” wizard keeps the release registry: it is not edited by hand.",
     "binaryTitle": "Binary file",
-    "binaryLead": "Images, fonts and office files do not open in the code editor."
+    "binaryLead": "Images, fonts and office files do not open in the code editor.",
+    "formDirty": "Save or revert the source edits first"
   },
   "stale": {
     "title": "The file changed since you opened it.",

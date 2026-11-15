@@ -1,0 +1,6 @@
+{
+  "action": "add_document",
+  "document": "review",
+  "name": { "ru": "Отзыв руководителя", "en": "Supervisor review" },
+  "source": "hse-cs-se/templates/vkr/versions/2026.1.2/files/pdp_review"
+}

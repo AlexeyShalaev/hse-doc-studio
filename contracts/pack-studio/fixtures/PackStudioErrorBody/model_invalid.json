@@ -1,0 +1,5 @@
+{
+  "detail": "Правку формы нельзя записать: пак после неё не прочитается так, как задумано.",
+  "code": "model_invalid",
+  "reason": "/meta_fields/year/type: 'number' is not one of ['string', 'bool', 'person', 'select', 'font']"
+}
