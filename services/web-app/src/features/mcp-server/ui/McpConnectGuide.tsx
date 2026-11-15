@@ -51,7 +51,13 @@ export const McpConnectGuide = ({
             }))}
           />
         </div>
-        <CopyField value={config.text} label={name} multiline wrap="spaces" />
+        <CopyField
+          value={config.text}
+          label={name}
+          multiline
+          wrap="spaces"
+          rows={config.text.split("\n").length}
+        />
         <p
           className="dim"
           style={{ margin: 0, fontSize: "0.75rem" }}

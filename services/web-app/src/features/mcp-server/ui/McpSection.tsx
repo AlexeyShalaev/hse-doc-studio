@@ -63,13 +63,22 @@ export const McpSection = () => {
           title={t("tools.available", { count: data.tools.length })}
           description={t("tools.tokenHint")}
         >
-          <p style={{ margin: 0, lineHeight: 1.8 }}>
+          <ul
+            className="flex flex-wrap"
+            style={{
+              margin: 0,
+              padding: 0,
+              listStyle: "none",
+              gap: "0.375rem 0.5rem",
+            }}
+            data-testid="mcp-tools"
+          >
             {data.tools.map((name) => (
-              <code key={name} style={{ marginRight: "0.5rem" }}>
-                {name}
-              </code>
+              <li key={name} style={{ minWidth: 0, maxWidth: "100%" }}>
+                <code style={{ overflowWrap: "anywhere" }}>{name}</code>
+              </li>
             ))}
-          </p>
+          </ul>
         </Section>
       )}
       {!server && <McpSettingsPanel scope="local" />}
