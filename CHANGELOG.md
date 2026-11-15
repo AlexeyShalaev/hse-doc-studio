@@ -6,21 +6,12 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.32.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.31.0...v0.32.0) (2026-11-15)
+## [0.32.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.31.0...v0.32.0) - 2026-11-15
 
-
-### Features
-
-* **packs:** fast packs CI job and pack ci init for pack repositories ([048c6e7](https://github.com/AlexeyShalaev/hse-doc-studio/commit/048c6e72b8dfaed4b0afc0b7084871567d431970))
-* **packs:** fast packs CI job and pack ci init for pack repositories ([dcfce41](https://github.com/AlexeyShalaev/hse-doc-studio/commit/dcfce41ab2209d5bb788ad21a13a334b87fd858c))
-
-
-### Bug Fixes
-
-* **compile:** build a missing TeX format before latexmk in local mode ([ab36d1c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ab36d1c42fb065eb272b05967f77f3aec8b50652))
-* **compile:** build a missing TeX format before latexmk in local mode ([ff92afd](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ff92afd6846c0ea7ebf454e3397cf1bf81256c62))
-* **pack-studio:** paste a GitHub token right where it is needed ([7ddfe6f](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7ddfe6f46b03782cef7892c66513535348b23370))
-* **pack-studio:** paste a GitHub token right where it is needed ([2cf1422](https://github.com/AlexeyShalaev/hse-doc-studio/commit/2cf142261e8ff62648c177ebdf4e04bd84f34cad))
+- A GitHub token can now be pasted right where it is needed: in the Official packs dialog, in New workspace of the Template Studio and in Git access (the Add token button). The Studio checks the token and selects it right away. The hint for official packs suggests a classic token with the public_repo scope.
+- Packs: a fast packs check in CI and the hse-doc-studio pack ci init command, which adds a ready CI (GitHub Actions or GitLab CI) to your own packs repository.
+- Docs: a new Template Studio section for pack authors and an article on where a pack in the project wizard comes from.
+- Fixed: in local mode with the texlive TL2024-historic image the first xelatex build failed without a format. The missing format is now built automatically and kept in the cache.
 
 ## [0.31.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.30.0...v0.31.0) - 2026-11-15
 
