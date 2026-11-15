@@ -40,7 +40,9 @@ export {
   usePackPreviewLog,
   usePackPreviewOptions,
   usePackServiceAccess,
+  usePackDocLibrary,
   usePackSignatures,
+  usePackVersionModel,
   usePatchPackSignatures,
   useProposePack,
   useRemovePackServiceAccess,
@@ -74,9 +76,14 @@ export {
   languageForPackPath,
   lintTargetOf,
   versionDirOf,
+  packFormKind,
   versionRefOf,
 } from "./lib/packPaths";
-export type { PackTreeNode, VersionLocation } from "./lib/packPaths";
+export type {
+  PackFormKind,
+  PackTreeNode,
+  VersionLocation,
+} from "./lib/packPaths";
 export { packErrorText, workspaceErrorText } from "./lib/errorText";
 export {
   errorNumber,

@@ -17,11 +17,14 @@ import {
   PackCommitRequestSchema,
   PackCommitResponseSchema,
   PackDiffSchema,
+  PackDocLibrarySchema,
   PackEditorHintsSchema,
   PackFileVersionSchema,
   PackGitSchema,
   PackLintRequestSchema,
   PackLintSchema,
+  PackModelActionRequestSchema,
+  PackModelPatchRequestSchema,
   PackMoveEditsRequestSchema,
   PackPreviewBuildSchema,
   PackPreviewOptionsSchema,
@@ -42,6 +45,7 @@ import {
   PackStudioSectionSchema,
   PackTreeSchema,
   PackVersionCreatedSchema,
+  PackVersionModelSchema,
   PackVersionMovedSchema,
   PackVersionNotesRequestSchema,
   PackVersionOptionsSchema,
@@ -123,6 +127,11 @@ const SCHEMAS: Record<string, ZodType> = {
   PackStudioOfficialAdmin: PackStudioOfficialAdminSchema,
   PackSignatures: PackSignaturesSchema,
   PackSignaturesPatchRequest: PackSignaturesPatchRequestSchema,
+  // Срезы T11 и T12: формы версии
+  PackVersionModel: PackVersionModelSchema,
+  PackModelPatchRequest: PackModelPatchRequestSchema,
+  PackModelActionRequest: PackModelActionRequestSchema,
+  PackDocLibrary: PackDocLibrarySchema,
 };
 
 const readJson = (path: string): unknown =>

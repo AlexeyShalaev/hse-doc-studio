@@ -7,7 +7,7 @@ import path from "node:path";
 const ROOT = path.resolve(import.meta.dirname, "..", "src");
 const LOC = path.join(ROOT, "shared/lib/i18n/locales/ru");
 const cache = {};
-const LAZY_PAGE_NAMESPACES = ["landing", "signing", "packStudio"];
+const LAZY_PAGE_NAMESPACES = ["landing", "signing", "packStudio", "packForms"];
 const load = (ns) => {
   if (ns in cache) return cache[ns];
   // Словари админки: admin<Name> живёт в locales/ru/admin/<name>.json.

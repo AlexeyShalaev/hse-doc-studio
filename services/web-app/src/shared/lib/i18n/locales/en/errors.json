@@ -284,6 +284,7 @@
     "license_consent_required": "Before the first proposal, confirm that the contribution is public and goes under the repository license.",
     "paths_outside_packs": "The branch changes files outside the packs folder. Official packs and service access take only packs.",
     "place_invalid": "The signature place cannot be written: the box is off the page or the slot does not apply to the document.",
+    "model_invalid": "The form edit cannot be written: the pack would not read as intended after it.",
     "source_not_found": "Catalog source not found. Reload the page.",
     "source_busy": "This source is already being checked or applied. Wait for it to finish.",
     "source_kind_not_allowed": "This kind of source is not available here: a folder connects only in the local Studio.",

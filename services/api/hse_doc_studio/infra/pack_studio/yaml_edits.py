@@ -11,7 +11,8 @@ r"""Точечные правки YAML пака по позициям узлов
   (и с их выравниванием значений), с `after` сразу за ключом-соседом. Значение, равное текущему, ничего не меняет;
 * `insert_item`: элемент списка по индексу (`len` дописывает в конец);
 * `delete`: ключ словаря или элемент списка вместе с комментарием над ним;
-* `move_item`: элемент списка на новое место, с его комментарием.
+* `move_item`: элемент списка на новое место, с его комментарием;
+* `rename_key`: новое имя ключа словаря на его месте (значение, комментарии и порядок остаются).
 
 Каждая правка проверяет себя: результат разбирается безопасным загрузчиком ровно в ожидаемые данные (та же правка
 над разобранным исходником), иначе `YamlEditError`, а текст остаётся прежним. Якоря и ссылки (`&`, `*`) не
@@ -85,6 +86,33 @@ def move_item(text: str, path: YamlPath, src: int, dst: int) -> str:
     """Элемент списка по пути с места `src` на место `dst` (индекс в итоговом списке)."""
     expected = _expect(text, (*path, src), lambda parent, key: _move_within(parent, key, dst))
     return _checked(_move(text, path, src, dst), expected)
+
+
+def rename_key(text: str, path: YamlPath, new_key: str) -> str:
+    """Ключ словаря по пути получает имя `new_key` на своём месте: значение, комментарии и порядок остаются."""
+    if not path or not isinstance(path[-1], str):
+        raise YamlEditError("rename needs a path ending with a mapping key")
+    old_key = path[-1]
+
+    def change(parent: Any, key: Key) -> None:
+        if not isinstance(parent, dict) or key not in parent:
+            raise YamlEditError(f"path element {key!r} is not in the document")
+        if new_key in parent and new_key != key:
+            raise YamlEditError(f"key {new_key!r} is already in the mapping")
+        items = [(new_key if k == key else k, v) for k, v in parent.items()]
+        parent.clear()
+        parent.update(items)
+
+    expected = _expect(text, path, change)
+    if new_key == old_key:
+        return text
+    doc = _Doc(text)
+    loc = doc.locate(path)
+    if not isinstance(loc.parent, MappingNode):
+        raise YamlEditError("rename needs a mapping key")
+    key_node = loc.parent.value[loc.index][0]
+    written = _scalar_text(new_key, flow=loc.in_flow, as_key=True)
+    return _checked(_splice(text, key_node.start_mark.index, doc.end(key_node), written), expected)
 
 
 # ---------------------------------------------------------------------------
@@ -735,3 +763,6 @@ class PackYamlEditor:
 
     def move_item(self, text: str, path: YamlPath, src: int, dst: int) -> str:
         return move_item(text, path, src, dst)
+
+    def rename_key(self, text: str, path: YamlPath, new_key: str) -> str:
+        return rename_key(text, path, new_key)

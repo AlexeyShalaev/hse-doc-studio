@@ -1,0 +1,53 @@
+{
+  "workspace_id": "5b0c8f7e-2a41-4d6c-9e3b-7f1a2c3d4e5f",
+  "pack": "hse-cs-sse",
+  "template": "coursework",
+  "version": "2026.1.6",
+  "read_only": "version_released",
+  "manifest": {
+    "path": "hse-cs-sse/templates/coursework/versions/2026.1.6/version.yaml",
+    "etag": "\"0f4e1d2c3b4a59687766554433221100\"",
+    "data": {
+      "id": "2026.1.6",
+      "documents": [
+        {
+          "id": "report",
+          "name": {
+            "ru": "Отчёт"
+          }
+        }
+      ]
+    }
+  },
+  "documents": [
+    {
+      "id": "report",
+      "manifest": null,
+      "data": {
+        "id": "report",
+        "name": {
+          "ru": "Отчёт"
+        }
+      },
+      "files": [],
+      "references": []
+    }
+  ],
+  "usage": [
+    {
+      "field": "font_main",
+      "document": "report",
+      "macros": [],
+      "direct": false,
+      "whole": true
+    }
+  ],
+  "checks": [],
+  "problems": [
+    "/meta_fields/year: the loader drops the field: 'number' is not a valid MetaFieldType"
+  ],
+  "changed": [
+    "hse-cs-sse/templates/coursework/versions/2026.1.7/files/report/report.en.tex",
+    "hse-cs-sse/templates/coursework/versions/2026.1.7/version.yaml"
+  ]
+}
