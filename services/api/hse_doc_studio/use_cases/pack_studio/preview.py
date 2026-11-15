@@ -159,10 +159,9 @@ class PackPreviewService:
         self._today = today
         self._lock = asyncio.Lock()
         self._active: dict[UUID, PreviewBuild] = {}
+        self._finishing: set[UUID] = set()
         self._submitted: set[UUID] = set()
         self._stopping: set[UUID] = set()
-        # Сборки, чей итог сейчас записывается: повторный итог (отмена вдогонку) не пишется дважды.
-        self._finishing: set[UUID] = set()
         self._warnings: dict[UUID, tuple[str, ...]] = {}
         # Id инстанса документа сборки: у личного документа команды это `<def>--<slug>`.
         self._doc_ids: dict[UUID, str] = {}
@@ -416,33 +415,32 @@ class PackPreviewService:
         *,
         pages: int | None = None,
     ) -> None:
-        # Сборка остаётся среди идущих, пока её итог не записан: иначе опрос в этот промежуток не нашёл бы её
-        # ни в памяти, ни в хранилище с итогом и прочитал бы как прерванную рестартом (`interrupted`).
+        # Сборка остаётся в `_active`, пока итог не записан на диск: иначе `get()` в этом окне не находит её ни в
+        # памяти, ни завершённой в хранилище и отвечает «прервана».
         build = self._active.get(build_id)
         if build is None or build_id in self._finishing:
             return
         self._finishing.add(build_id)
-        self._submitted.discard(build_id)
-        self._stopping.discard(build_id)
-        doc_id = self._doc_ids.pop(build_id, "")
-        warnings = self._warnings.pop(build_id, ())
         try:
-            await self._record(build, status, error, log, doc_id=doc_id, warnings=warnings, pages=pages)
+            await self._finish_active(build, status, error, log, pages=pages)
         finally:
             self._active.pop(build_id, None)
             self._finishing.discard(build_id)
 
-    async def _record(  # noqa: PLR0913 — итог сборки и что к нему приложить
+    async def _finish_active(
         self,
         build: PreviewBuild,
         status: PreviewStatus,
         error: PreviewError | None,
         log: str,
         *,
-        doc_id: str,
-        warnings: tuple[str, ...],
         pages: int | None,
     ) -> None:
+        build_id = build.id
+        self._submitted.discard(build_id)
+        self._stopping.discard(build_id)
+        doc_id = self._doc_ids.pop(build_id, "")
+        warnings = self._warnings.pop(build_id, ())
         text = "\n".join([*(f"[render] {w}" for w in warnings), log]).strip("\n") + "\n"
         has_anchors = False
         if status is PreviewStatus.succeeded:
