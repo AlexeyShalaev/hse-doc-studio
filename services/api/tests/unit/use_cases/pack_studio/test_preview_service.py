@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import asyncio
+import time
 from dataclasses import dataclass, field
 from datetime import UTC, date, datetime
 from pathlib import Path
@@ -268,6 +269,33 @@ async def test__get__build_of_a_dead_process__interrupted(tmp_path: Path, versio
     assert seen.status is PreviewStatus.failed
     assert seen.error is not None
     assert seen.error.code == "interrupted"
+
+
+async def test__get__while_the_result_is_being_written__still_running_not_interrupted(
+    tmp_path: Path, version: TemplateVersion
+) -> None:
+    # Итог пишется в хранилище в отдельном потоке: опрос в этот промежуток видит идущую сборку, а не прерванную.
+    gate = asyncio.Event()
+    seen: list[PreviewStatus] = []
+
+    class SlowStore(FsPreviewStore):
+        def save(self, build: Any) -> None:
+            if build.status.is_terminal and not gate.is_set():
+                gate.set()
+                time.sleep(0.2)
+            super().save(build)
+
+    rig = _rig(tmp_path, version, store=SlowStore(tmp_path / "previews", max_cache_entries=10, max_age_s=3600))
+    [build] = await rig.start("report")
+
+    async def poll() -> None:
+        await gate.wait()
+        seen.append((await rig.service.get(ACTOR, WS, build.id)).status)
+
+    await asyncio.gather(rig.dispatcher.succeed(build.id), poll())
+
+    assert seen == [PreviewStatus.running]
+    assert (await rig.service.get(ACTOR, WS, build.id)).status is PreviewStatus.succeeded
 
 
 async def test__get__other_workspace_or_owner__not_found(tmp_path: Path, version: TemplateVersion) -> None:

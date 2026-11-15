@@ -152,7 +152,7 @@ async def test__preview__builds_pdf_then_serves_cache(stand: Stand, fake_docker:
     done = await _settled(stand, ws, builds[0]["id"])
 
     assert status == 202
-    assert done["status"] == "succeeded", done
+    assert done["status"] == "succeeded", done["error"]
     assert done["cached"] is False
     assert done["source_file"] == "report/report.tex"
     assert done["combination"]["meta.stage"] == "Второй"
@@ -201,7 +201,7 @@ async def test__preview__team_example_renders_personal_base(stand: Stand, fake_d
     _, builds = await _start(stand, ws, {"documents": ["report"], "example": "team"})
     done = await _settled(stand, ws, builds[0]["id"])
 
-    assert done["status"] == "succeeded", done
+    assert done["status"] == "succeeded", done["error"]
     assert done["combination"]["staffing"] == "team2"
 
 
