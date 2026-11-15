@@ -86,6 +86,8 @@ class PackStudioErrorCode(StrEnum):
     name_required = "name_required"
     template_id_taken = "template_id_taken"
     pack_not_found = "pack_not_found"
+    # Локальная копия репозитория пространства: сбой git без сети
+    workspace_git_failed = "workspace_git_failed"
 
 
 _C = PackStudioErrorCode
@@ -327,6 +329,11 @@ _TABLE: dict[PackStudioErrorCode, tuple[int, str, str]] = {
         "This pack already has a template with this id.",
     ),
     _C.pack_not_found: (404, "Пак не найден в рабочем пространстве.", "Pack not found in the workspace."),
+    _C.workspace_git_failed: (
+        409,
+        "Не удалось прочитать локальную копию репозитория. Если ошибка повторится, создайте пространство заново.",
+        "The local copy of the repository could not be read. If the error repeats, create the workspace again.",
+    ),
 }
 
 

@@ -57,5 +57,6 @@
   "id_invalid",
   "name_required",
   "template_id_taken",
-  "pack_not_found"
+  "pack_not_found",
+  "workspace_git_failed"
 ]
