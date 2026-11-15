@@ -22,6 +22,7 @@ from hse_doc_studio.core.enums import (
     VcsTagKind,
 )
 from hse_doc_studio.core.git_sync.entities import StoreRemoteConfig
+from hse_doc_studio.core.vcs.build_pdf import is_pdf_outside_history
 from hse_doc_studio.core.vcs.constants import VCS_ATTRIBUTES
 from hse_doc_studio.core.vcs.entities import (
     VcsAuthorCount,
@@ -67,10 +68,22 @@ _REC = "\x1e"  # record separator between log entries
 _LOG_FMT = _UNIT.join(["%H", "%h", "%P", "%an", "%ae", "%aI", "%D", "%B"]) + _REC
 _FACETS_FMT = _UNIT.join(["%an", "%ae", "%B"]) + _REC
 
-_PDF_EXCLUDE = ":(exclude)*.pdf"
+_PDF_GLOB = "*.pdf"
 # Коммит сборки: полный или сокращённый хэш SHA-1 или SHA-256, а не произвольная ревизия.
 _COMMIT_ID = re.compile(r"[0-9a-f]{7,64}")
 _MAX_DIFF_FILES = 80
+
+
+def _porcelain_path(line: str) -> str:
+    """Путь из строки `status --porcelain`: после переименования новый, кавычки git сняты."""
+    path = line[3:]
+    if " -> " in path:
+        path = path.split(" -> ", 1)[1]
+    if len(path) >= 2 and path.startswith('"') and path.endswith('"'):  # noqa: PLR2004
+        path = path[1:-1]
+    return path
+
+
 # git's well-known empty-tree object — used to diff a root commit (no parent).
 _EMPTY_TREE = "4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 _DEFAULT_DIFF_MAX_BYTES = 256_000
@@ -359,6 +372,35 @@ class GitVcsService:
             raise VcsCommandError("config", proc.stderr or proc.stdout)
         return proc
 
+    def _paths_changed_since(self, project: Project, since: str, *, track_pdf: bool) -> set[str]:
+        """Изменённые и удалённые относительно `since` и новые неотслеживаемые; PDF сборки без `track_pdf` нет."""
+        scope = ["--", "."]
+        tracked = self._run(project, ["diff", "--no-ext-diff", "--name-only", "--no-renames", "-z", since, *scope])
+        if tracked.returncode != 0:
+            raise VcsCommandError("diff", tracked.stderr or tracked.stdout)
+        untracked = self._run(project, ["ls-files", "--others", "--exclude-standard", "-z", *scope], check=True)
+        paths = {p for p in (tracked.stdout + untracked.stdout).split("\0") if p}
+        if track_pdf:
+            return paths
+        return {p for p in paths if not self._is_build_pdf(project.folder, p)}
+
+    # ── собранные PDF ────────────────────────────────────────────────────────
+    @staticmethod
+    def _is_build_pdf(folder: Path, path: str) -> bool:
+        return is_pdf_outside_history(path, lambda candidate: (folder / candidate).is_file())
+
+    def _build_pdf_excludes(self, project: Project) -> list[str]:
+        """Пути исключения для `add`: PDF сборки и служебные (core.vcs.build_pdf), а не все PDF проекта.
+
+        Раньше исключались все `*.pdf`, и рисунок или скан в PDF, загруженный пользователем, не попадал
+        ни в снимки, ни в синхронизацию. Список строится из отслеживаемых и новых PDF рабочей папки.
+        """
+        listed = self._run(
+            project, ["ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", _PDF_GLOB], check=True
+        ).stdout
+        outputs = sorted({p for p in listed.split("\0") if p and self._is_build_pdf(project.folder, p)})
+        return [f":(exclude,literal){p}" for p in outputs]
+
     # ── commits ──────────────────────────────────────────────────────────────
     def commit(
         self,
@@ -379,7 +421,7 @@ class GitVcsService:
         add_args = ["add", "-A", "--"]
         add_args += list(paths) if paths else ["."]
         if not include_pdf:
-            add_args.append(_PDF_EXCLUDE)
+            add_args += self._build_pdf_excludes(project)
         self._run(project, add_args, check=True)
         forced = [p for p in (force_paths or ()) if (project.folder / p).exists()]
         if forced:
@@ -557,12 +599,15 @@ class GitVcsService:
         if not self.is_initialized(project):
             return _empty_status(available=True, store_path=str(git_dir), settings=settings)
 
-        status_args = ["status", "--porcelain"]
-        if not settings.track_pdf:
-            status_args += ["--", ".", _PDF_EXCLUDE]
-        porcelain = self._run(project, status_args).stdout
+        porcelain = self._run(project, ["status", "--porcelain"]).stdout
+        # PDF сборки без `track_pdf` в историю не идут и изменением не считаются (core.vcs.build_pdf).
+        lines = [
+            line
+            for line in porcelain.splitlines()
+            if settings.track_pdf or not self._is_build_pdf(project.folder, _porcelain_path(line))
+        ]
         modified = untracked = staged = 0
-        for line in porcelain.splitlines():
+        for line in lines:
             if len(line) < 2:  # noqa: PLR2004
                 continue
             index_status, worktree_status = line[0], line[1]
@@ -583,7 +628,7 @@ class GitVcsService:
             initialized=True,
             current_branch=branch,
             head=head,
-            dirty=bool(porcelain.strip()),
+            dirty=any(line.strip() for line in lines),
             modified=modified,
             untracked=untracked,
             staged=staged,
@@ -606,13 +651,7 @@ class GitVcsService:
         known = self._run(project, ["rev-parse", "--verify", "--quiet", f"{since}^{{commit}}"])
         if known.returncode != 0:
             return True
-        scope = ["--", "."] if settings.track_pdf else ["--", ".", _PDF_EXCLUDE]
-        tracked = self._run(project, ["diff", "--no-ext-diff", "--name-only", "--no-renames", "-z", since, *scope])
-        if tracked.returncode != 0:
-            raise VcsCommandError("diff", tracked.stderr or tracked.stdout)
-        untracked = self._run(project, ["ls-files", "--others", "--exclude-standard", "-z", *scope], check=True)
-        paths = {p for p in (tracked.stdout + untracked.stdout).split("\0") if p}
-        changed = changed_build_inputs(paths)
+        changed = changed_build_inputs(self._paths_changed_since(project, since, track_pdf=settings.track_pdf))
         if any(path != PROJECT_FILE for path in changed):
             return True
         if not changed:

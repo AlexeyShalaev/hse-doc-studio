@@ -386,6 +386,7 @@ async def get_project(
         required_studio=access.required_studio,
         stale_packs=None if stale is None else StalePacksResponse(path=stale.path, studio_version=stale.studio_version),
     )
+    response.file_max_bytes = settings.server.project_file_max_bytes
     storage = await quota.status(project_id)
     if storage is not None:
         response.storage = ProjectStorageResponse(

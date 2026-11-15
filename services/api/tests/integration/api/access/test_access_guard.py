@@ -145,6 +145,22 @@ async def test__guard__stub_non_local_reader__member_with_too_little_role_gets_4
     assert (await guarded_app.get(f"{base}/files", params={"path": "."})).status_code == 403
 
 
+async def test__guard__upload_of_a_binary_file_follows_the_write_right(
+    guarded_app: AsyncClient, project: dict[str, Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # Загрузка с компьютера идёт тем же PUT /files, что и сохранение: право записи проверяет гард, до чтения тела.
+    base = _base(project)
+    png = b"\x89PNG\r\n\x1a\n\xff\x00"
+
+    _stub_server(monkeypatch, Actor.user("reader"), {"reader": Grant(role=Role.reader, show_sources=True)})
+    assert (await guarded_app.put(f"{base}/files/images/a.png", content=png)).status_code == 403
+    assert not (Path(project["folder"]) / "images" / "a.png").exists()
+
+    _stub_server(monkeypatch, Actor.user("editor"), {"editor": Grant(role=Role.editor)})
+    assert (await guarded_app.put(f"{base}/files/images/a.png", content=png)).status_code == 204
+    assert (Path(project["folder"]) / "images" / "a.png").read_bytes() == png
+
+
 async def test__guard__non_local_project_route_without_rule__denied(monkeypatch: pytest.MonkeyPatch) -> None:
     router = APIRouter(prefix="/api/v1", dependencies=[Depends(project_access_guard)])
 

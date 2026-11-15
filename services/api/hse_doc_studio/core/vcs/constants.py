@@ -10,8 +10,9 @@ if TYPE_CHECKING:
 # project settings, signatures and forms — and nothing else. Everything that is
 # derived, generated, transient, or belongs to a different feature is excluded so
 # that "compiled but didn't edit anything" never registers as a change (no
-# million-entry history). PDFs are excluded per-commit via an :(exclude)*.pdf
-# pathspec so the track_pdf toggle never has to rewrite this file.
+# million-entry history). Compiled PDFs are excluded per-commit by explicit
+# pathspecs (core.vcs.build_pdf) so the track_pdf toggle never has to rewrite this
+# file, and a PDF the user put in the project (a figure, a scan) is still tracked.
 DEFAULT_VCS_EXCLUDE: tuple[str, ...] = (
     "# LaTeX intermediates",
     "*.aux",

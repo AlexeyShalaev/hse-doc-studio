@@ -99,6 +99,8 @@ class ProjectDetailResponse(BaseModel):
     access: ProjectAccessResponse = ProjectAccessResponse()
     # Заполняется в GET /projects/{id} на сервере; в локальном режиме None.
     storage: ProjectStorageResponse | None = None
+    # Предел одного файла при записи через файловый API (GET /projects/{id}): интерфейс отказывает заранее.
+    file_max_bytes: int | None = None
     # Только на сервере (GET /projects/{id}): чей проект и роль смотрящего, как в списке проектов.
     owner: ProjectOwner | None = None
     my_role: ProjectRoleName | None = None

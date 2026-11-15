@@ -6,6 +6,7 @@ from uuid import UUID
 
 import structlog
 
+from hse_doc_studio.core.file_paths import writable_file_path
 from hse_doc_studio.core.file_version import etag_matches, file_etag
 from hse_doc_studio.core.projects.usage import IProjectQuota, NoopProjectQuota
 from hse_doc_studio.core.repositories import (
@@ -72,6 +73,8 @@ class PutFileUC:
         self._get_uc = GetProjectUC(project_repo, project_index_repo)
 
     async def execute(self, inp: PutFileInput) -> PutFileOutput:
+        # Служебные папки и пути наружу отклоняются до чтения проекта (core.file_paths).
+        path = writable_file_path(inp.path)
         result = await self._get_uc.execute(GetProjectInput(project_id=inp.project_id))
         project = result.project
 
@@ -79,17 +82,17 @@ class PutFileUC:
         # пришедшее между снимком и записью слияния, затиралось бы слиянием и нигде не оставалось.
         async with self._vcs_locks.for_folder(project.folder):
             if inp.if_match is not None:
-                self._ensure_not_stale(project.folder, inp.path, inp.if_match)
-            delta = await reserve_write(self._quota, self._file_repo, project.id, project.folder, inp.path, inp.content)
-            self._file_repo.write(project.folder, inp.path, inp.content)
+                self._ensure_not_stale(project.folder, path, inp.if_match)
+            delta = await reserve_write(self._quota, self._file_repo, project.id, project.folder, path, inp.content)
+            self._file_repo.write(project.folder, path, inp.content)
             await self._quota.record_change(project.id, delta)
 
         logger.debug(
             "file written via use case",
             project_id=str(inp.project_id),
-            path=inp.path,
+            path=path,
         )
-        await maybe_edit_commit(self._vcs, self._vcs_locks, self._vcs_throttle, project, f"Правка: {inp.path}")
+        await maybe_edit_commit(self._vcs, self._vcs_locks, self._vcs_throttle, project, f"Правка: {path}")
         return PutFileOutput(etag=file_etag(inp.content))
 
     def _ensure_not_stale(self, folder: Path, path: str, if_match: str) -> None:
