@@ -4,6 +4,7 @@ import {
   ChevronRight,
   FileCode2,
   FileText,
+  FilePlus2,
   Folder,
   Lock,
   Package,
@@ -31,17 +32,23 @@ export type PackTreePanelProps = {
   workspaceId: string;
   selectedPath: string | null;
   onSelect: (path: string) => void;
+  /** «Новая версия» на шаблоне (мастер, срез T10): имена папок пака и шаблона. */
+  onNewVersion?: ((pack: string, template: string) => void) | undefined;
 };
+
+type TemplateDir = { pack: string; template: string };
 
 type Annotations = {
   versions: Map<string, PackTreeVersion>;
   names: Map<string, string>;
+  templates: Map<string, TemplateDir>;
 };
 
 /** Версии и подписи паков и шаблонов по пути каталога (в нижнем регистре). */
 const annotate = (tree: PackTree, lang: string): Annotations => {
   const versions = new Map<string, PackTreeVersion>();
   const names = new Map<string, string>();
+  const templates = new Map<string, TemplateDir>();
   for (const pack of tree.packs) {
     if (pack.name) {
       names.set(
@@ -50,6 +57,11 @@ const annotate = (tree: PackTree, lang: string): Annotations => {
       );
     }
     for (const template of pack.templates) {
+      const [packDir = "", , templateDir = ""] = template.path.split("/");
+      templates.set(template.path.toLowerCase(), {
+        pack: packDir,
+        template: templateDir,
+      });
       if (template.name) {
         names.set(
           template.path.toLowerCase(),
@@ -61,7 +73,7 @@ const annotate = (tree: PackTree, lang: string): Annotations => {
       }
     }
   }
-  return { versions, names };
+  return { versions, names, templates };
 };
 
 const withItem = (
@@ -126,6 +138,7 @@ type NodeProps = {
   selectedPath: string | null;
   onSelect: (path: string) => void;
   notes: Annotations;
+  onNewVersion: ((pack: string, template: string) => void) | undefined;
 };
 
 const TreeNode = ({
@@ -136,6 +149,7 @@ const TreeNode = ({
   selectedPath,
   onSelect,
   notes,
+  onNewVersion,
 }: NodeProps) => {
   const { t } = useTranslation("packStudio");
   const key = node.path.toLowerCase();
@@ -144,14 +158,20 @@ const TreeNode = ({
     const expanded = open.has(node.path);
     const version = notes.versions.get(key);
     const name = notes.names.get(key);
+    const template = onNewVersion ? notes.templates.get(key) : undefined;
     const Chevron = expanded ? ChevronDown : ChevronRight;
     const Icon = depth === 0 ? Package : Folder;
     return (
-      <li role="treeitem" aria-expanded={expanded} aria-selected={false}>
+      <li
+        role="treeitem"
+        aria-expanded={expanded}
+        aria-selected={false}
+        className="ps-tree-item"
+      >
         <button
           type="button"
           className="ps-tree-row"
-          style={indent}
+          style={template ? { ...indent, paddingRight: "2rem" } : indent}
           onClick={() => {
             toggle(node.path);
           }}
@@ -167,6 +187,20 @@ const TreeNode = ({
           {name && <span className="ps-tree-hint truncate">{name}</span>}
           {version && <VersionMarks version={version} />}
         </button>
+        {template && onNewVersion && (
+          <button
+            type="button"
+            className="icon-btn ps-tree-action"
+            aria-label={t("tree.newVersion", { template: template.template })}
+            title={t("tree.newVersion", { template: template.template })}
+            onClick={() => {
+              onNewVersion(template.pack, template.template);
+            }}
+            data-testid={`tree-new-version-${node.path}`}
+          >
+            <FilePlus2 size="0.75rem" />
+          </button>
+        )}
         {expanded && node.children.length > 0 && (
           <ul role="group" className="ps-tree-group">
             {node.children.map((child) => (
@@ -179,6 +213,7 @@ const TreeNode = ({
                 selectedPath={selectedPath}
                 onSelect={onSelect}
                 notes={notes}
+                onNewVersion={onNewVersion}
               />
             ))}
           </ul>
@@ -225,6 +260,7 @@ export const PackTreePanel = ({
   workspaceId,
   selectedPath,
   onSelect,
+  onNewVersion,
 }: PackTreePanelProps) => {
   const { t, i18n } = useTranslation("packStudio");
   const tree = usePackTree(workspaceId);
@@ -236,7 +272,7 @@ export const PackTreePanel = ({
     (): Annotations =>
       tree.data
         ? annotate(tree.data, i18n.language)
-        : { versions: new Map(), names: new Map() },
+        : { versions: new Map(), names: new Map(), templates: new Map() },
     [tree.data, i18n.language],
   );
   // Раскрытые папки: по умолчанию паки и путь к открытому файлу, поверх них
@@ -309,6 +345,7 @@ export const PackTreePanel = ({
                   selectedPath={selectedPath}
                   onSelect={onSelect}
                   notes={notes}
+                  onNewVersion={onNewVersion}
                 />
               ))}
             </ul>
