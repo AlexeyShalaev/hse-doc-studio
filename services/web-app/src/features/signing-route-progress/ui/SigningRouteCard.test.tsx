@@ -762,11 +762,7 @@ describe("Подписание: эталонные состояния", () => {
 
   it("без необязательных слотов хвоста нет; по-английски", async () => {
     await i18n.changeLanguage("en");
-    // Срок в будущем при любой дате прогона: у общего образца он уже прошёл (15.11.2026).
-    serve({
-      ...approvedAuthorRoute({ optional: false }),
-      deadline: "2099-11-15T20:59:00Z",
-    });
+    serve(approvedAuthorRoute({ optional: false }));
     mount({ projectId: SR_PROJECT_ID });
     expect(await status()).toHaveTextContent(
       /consultant1 of 3 approved · 0 of 3 signed · Due/,
