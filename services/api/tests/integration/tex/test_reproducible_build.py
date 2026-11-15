@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import subprocess
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -123,15 +124,26 @@ async def test__build__other_workspace__same_sha256(first: _Built, tmp_path: Pat
 
 
 async def test__build__embedded_root_profile__same_sha256_as_runner(first: _Built, tmp_path: Path) -> None:
-    # Встроенный раннер локальной Студии: root, без изоляции, готовый формат образа.
-    project = _project(tmp_path / "embedded")
-    log = await _run(_executor(None), project)
-    if log[-1] != SENTINEL_DONE and any("I can't find the format file" in line for line in log):
-        # Так у образов без готового формата xelatex (TL2024-historic): root собирает формат при сборке и падает.
-        pytest.skip("в образе нет готового формата xelatex, профиль root на нём не собирает")
-    assert log[-1] == SENTINEL_DONE, "\n".join(log[-60:])
+    # Встроенный раннер локальной Студии: root, без изоляции. Свежий том кэша: у TL2024-historic нет готового
+    # xelatex.fmt, и первая сборка сама строит формат в томе (раньше падала с «I can't find the format file»).
+    volume = f"hds-test-tex-root-{uuid.uuid4().hex[:12]}"
+    executor = DockerCompileExecutor(
+        HostPathResolver(), image=os.environ["HSE_TEST_TEX_IMAGE"], cache_volume_name=volume, limits=None
+    )
+    try:
+        project = _project(tmp_path / "embedded")
+        log = await _run(executor, project)
+        assert log[-1] == SENTINEL_DONE, "\n".join(log[-60:])
+        assert _sha((project / "tz" / "main.pdf").read_bytes()) == _sha(first.pdf)
 
-    assert _sha((project / "tz" / "main.pdf").read_bytes()) == _sha(first.pdf)
+        # Вторая сборка берёт формат из тома и не строит его заново.
+        again = _project(tmp_path / "embedded-again")
+        log = await _run(executor, again)
+        assert log[-1] == SENTINEL_DONE, "\n".join(log[-60:])
+        assert not any("fmtutil" in line for line in log), "\n".join(log[-60:])
+        assert _sha((again / "tz" / "main.pdf").read_bytes()) == _sha(first.pdf)
+    finally:
+        subprocess.run(["docker", "volume", "rm", "-f", volume], capture_output=True, check=False)  # noqa: S607
 
 
 def test__build__fixed_pdf_date_and_real_year_in_text(first: _Built, tmp_path: Path) -> None:

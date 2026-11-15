@@ -1390,7 +1390,7 @@ describe("ConnectRemoteDialog: токен проверяется сразу по
     await user.click(screen.getByLabelText("Токен"));
     await user.paste(TOKEN);
     const card = await screen.findByTestId("token-check-too_narrow");
-    expect(card).toHaveTextContent("Добавь права: write_repository");
+    expect(card).toHaveTextContent("Добавьте права: write_repository");
     expect(
       within(card).getByRole("link", { name: /Создать новый токен/ }),
     ).toHaveAttribute(

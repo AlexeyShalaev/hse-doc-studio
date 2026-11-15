@@ -8,7 +8,7 @@ import {
   type CreatePackWorkspaceRequest,
   type PackWorkspace,
 } from "@entities/pack-studio";
-import { RepoTokenHelp } from "@features/git-remote";
+import { AddTokenForm, RepoTokenHelp } from "@features/git-remote";
 import { Button, Input, Modal, Select, ViewTabs } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import { hostOfUrl } from "../lib/hostOfUrl";
@@ -34,6 +34,8 @@ export type CreateWorkspaceDialogProps = {
 };
 
 const NO_CREDENTIAL = "none";
+/** Пункт «Новый токен»: поле токена прямо в окне. */
+const NEW_TOKEN = "new";
 const DEFAULT_PACKS_PATH = "packs";
 
 const trimmed = (value: string): string | null => {
@@ -70,23 +72,45 @@ export const CreateWorkspaceDialog = ({
   const credentialFieldId = useId();
 
   const host = hostOfUrl(url);
-  const credentialOptions = useMemo(() => {
-    const list = (credentials.data ?? []).filter(
-      (c) => host === null || c.host.toLowerCase() === host,
-    );
-    return [
+  const hostCredentials = useMemo(
+    () =>
+      (credentials.data ?? []).filter(
+        (c) => host === null || c.host.toLowerCase() === host,
+      ),
+    [credentials.data, host],
+  );
+  const credentialOptions = useMemo(
+    () => [
       { value: NO_CREDENTIAL, label: t("create.noCredential") },
-      ...list.map((c) => ({ value: c.id, label: `${c.label} · ${c.host}` })),
-    ];
-  }, [credentials.data, host, t]);
+      ...hostCredentials.map((c) => ({
+        value: c.id,
+        label: `${c.label} · ${c.host}`,
+      })),
+      ...(host !== null
+        ? [{ value: NEW_TOKEN, label: t("create.newToken") }]
+        : []),
+    ],
+    [hostCredentials, host, t],
+  );
+  // Выбранный доступ другого хоста (адрес поменяли) больше не подходит.
+  const chosen = credentialOptions.some((o) => o.value === credentialId)
+    ? credentialId
+    : NO_CREDENTIAL;
   const plainHttp = url.trim().toLowerCase().startsWith("http://");
   // Служебный доступ задаёт админ сервера: в локальной Студии (есть папки) его нет.
   const serviceAllowed = !allowFolder;
   const service = serviceAllowed && access === "service";
+  // Подходящего токена нет или человек выбрал «Новый токен»: поле токена здесь же.
+  const tokenForm =
+    host !== null &&
+    (chosen === NEW_TOKEN ||
+      (chosen === NO_CREDENTIAL && hostCredentials.length === 0));
 
   const canSubmit =
     !create.isPending &&
-    (kind === "git" ? trimmed(url) !== null : trimmed(folder) !== null);
+    (kind === "git"
+      ? trimmed(url) !== null && (service || chosen !== NEW_TOKEN)
+      : trimmed(folder) !== null);
 
   const submit = () => {
     const body: CreatePackWorkspaceRequest =
@@ -95,7 +119,9 @@ export const CreateWorkspaceDialog = ({
             kind,
             url: url.trim(),
             credential_id:
-              service || credentialId === NO_CREDENTIAL ? null : credentialId,
+              service || chosen === NO_CREDENTIAL || chosen === NEW_TOKEN
+                ? null
+                : chosen,
             ...(service ? { service_access: true } : {}),
             base_branch: trimmed(branch),
             packs_path: trimmed(packsPath),
@@ -184,19 +210,45 @@ export const CreateWorkspaceDialog = ({
                 </label>
                 <Select
                   id={credentialFieldId}
-                  value={credentialId}
+                  value={chosen}
                   onValueChange={setCredentialId}
                   options={credentialOptions}
                   ariaLabel={t("create.credential")}
                 />
-                <p className="hint">{t("create.credentialHint")}</p>
-                {host !== null && (
-                  <details className="sync-details">
-                    <summary>{t("create.tokenHelp")}</summary>
-                    <div style={{ marginTop: "0.5rem" }}>
-                      <RepoTokenHelp url={url} profile="packs" />
-                    </div>
-                  </details>
+                <p className="hint">
+                  {tokenForm
+                    ? t("create.newTokenHint")
+                    : t("create.credentialHint")}
+                </p>
+                {tokenForm ? (
+                  <div
+                    className="flex flex-col"
+                    style={{ marginTop: "0.25rem" }}
+                    data-testid="ws-create-token"
+                  >
+                    <AddTokenForm
+                      url={url}
+                      profile="packs"
+                      helpOpen={false}
+                      autoFocus={false}
+                      onSaved={(credential) => {
+                        setCredentialId(credential.id);
+                      }}
+                    />
+                  </div>
+                ) : (
+                  host !== null && (
+                    <details className="sync-details">
+                      <summary>{t("create.tokenHelp")}</summary>
+                      <div style={{ marginTop: "0.5rem" }}>
+                        <RepoTokenHelp
+                          url={url}
+                          profile="packs"
+                          pasteHint={t("create.pasteHint")}
+                        />
+                      </div>
+                    </details>
+                  )
                 )}
               </div>
             )}

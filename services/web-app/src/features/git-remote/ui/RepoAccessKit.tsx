@@ -29,6 +29,8 @@ export type RepoTokenHelpProps = {
   url: string;
   profile?: PermissionProfile | null;
   defaultOpen?: boolean;
+  /** Куда вставить токен, если поля токена рядом нет (см. TokenLinkCard). */
+  pasteHint?: string | null;
 };
 
 /** Памятка «как получить токен» для адреса репозитория; адрес без сайта: ничего. */
@@ -36,6 +38,7 @@ export const RepoTokenHelp = ({
   url,
   profile = null,
   defaultOpen = false,
+  pasteHint = null,
 }: RepoTokenHelpProps) => {
   const parsed = useMemo(() => {
     const result = parseRemoteUrl(url, { allow_http: true });
@@ -44,7 +47,12 @@ export const RepoTokenHelp = ({
   const host = useHostProvider(parsed);
   if (!host.url) return null;
   return (
-    <TokenLinkCard url={host.url} profile={profile} defaultOpen={defaultOpen} />
+    <TokenLinkCard
+      url={host.url}
+      profile={profile}
+      defaultOpen={defaultOpen}
+      pasteHint={pasteHint}
+    />
   );
 };
 

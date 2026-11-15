@@ -7,6 +7,8 @@
                                                  копия версии в новый номер, status: beta
     pack freeze <шаблон> <версия> [--release] [--default] [--kind C] [--replace] [--base REF]
                                                  выпуск: запись в releases.yaml
+    pack ci init [<репозиторий>] [--provider github|gitlab] [--packs-path P] [--image I] [--branch B]
+                                                 файл CI репозитория паков: `pack check` в образе Студии
 
 Каталог это версия, шаблон, пак или папка с паками. `--json` печатает в stdout один объект JSON (для CI и агентов),
 текст для человека иначе. Коды выхода: 0 всё в порядке; 1 найдены ошибки (с `--strict` и предупреждения), номер
@@ -27,6 +29,14 @@ from hse_doc_studio.core.template_diff import classify_change
 from hse_doc_studio.core.template_versions import is_softer
 from hse_doc_studio.infra.pack_studio.base_ref import BaseRefError, BaseReleases
 from hse_doc_studio.infra.pack_studio.check import CheckResult, check_tree, lint_tree
+from hse_doc_studio.infra.pack_studio.ci_init import (
+    PackCiError,
+    PackCiProvider,
+    default_image,
+    detect_branch,
+    render_pack_ci,
+    write_pack_ci,
+)
 from hse_doc_studio.infra.pack_studio.layout import PackPathError, discover, require_template, resolve_version
 from hse_doc_studio.infra.pack_studio.versions import (
     LintFailedError,
@@ -114,6 +124,25 @@ def configure_parser(pack: argparse.ArgumentParser) -> None:
     freeze.add_argument("--base", metavar="REF", help="базовая ветка git: с --replace запрет на выпущенные в ней")
     common(freeze)
 
+    ci = sub.add_parser("ci", help="CI репозитория паков (GitHub Actions, GitLab CI)")
+    ci_sub = ci.add_subparsers(dest="ci_command", required=True)
+    init = ci_sub.add_parser("init", help="положить файл CI: `pack check` в опубликованном образе Студии")
+    init.add_argument(
+        "root", nargs="?", type=Path, default=Path(), metavar="репозиторий", help="корень репозитория (по умолчанию .)"
+    )
+    init.add_argument(
+        "--provider",
+        choices=[p.value for p in PackCiProvider],
+        default=PackCiProvider.github.value,
+        help="github: .github/workflows/hse-packs.yml; gitlab: .gitlab-ci.yml",
+    )
+    init.add_argument("--packs-path", default="packs", metavar="P", help="папка паков от корня (по умолчанию packs)")
+    init.add_argument("--image", metavar="I", help="образ Студии (по умолчанию этой версии)")
+    init.add_argument("--branch", metavar="B", help="основная ветка для push (GitHub; по умолчанию из origin/HEAD)")
+    init.add_argument("--force", action="store_true", help="заменить существующий файл")
+    init.add_argument("--stdout", action="store_true", help="напечатать файл, ничего не записывая")
+    common(init)
+
 
 # ── lint и check ──
 
@@ -153,7 +182,7 @@ def _lint(args: argparse.Namespace) -> int:
 
 def _check(args: argparse.Namespace) -> int:
     tree = discover(args.paths)
-    result = check_tree(tree, BaseReleases(args.base) if args.base else None)
+    result = check_tree(tree, BaseReleases(args.base) if args.base else None, load=True)
     if args.json:
         _json({"command": "check", "base": args.base, **result.to_dict(strict=args.strict)})
     else:
@@ -252,12 +281,45 @@ def _freeze(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+# ── ci init ──
+
+
+def _ci(args: argparse.Namespace) -> int:
+    root: Path = args.root
+    if not root.is_dir():
+        raise PackPathError(f"{root}: каталог не найден")
+    ci_file = render_pack_ci(
+        PackCiProvider(args.provider),
+        image=args.image or default_image(),
+        packs_path=args.packs_path,
+        branch=args.branch or detect_branch(root),
+    )
+    warnings = [] if (root / ci_file.packs_path).is_dir() else [f"папки паков {ci_file.packs_path} нет в {root}"]
+    if args.stdout:
+        if args.json:
+            _json({"command": "ci init", "ok": True, "path": ci_file.path, "content": ci_file.content})
+        else:
+            sys.stdout.write(ci_file.content)
+        return EXIT_OK
+    target = write_pack_ci(root, ci_file, force=args.force)
+    if args.json:
+        payload = {"path": str(target), "image": ci_file.image, "packs_path": ci_file.packs_path, "warnings": warnings}
+        _json({"command": "ci init", "ok": True, "provider": ci_file.provider.value, **payload})
+        return EXIT_OK
+    _out(f"{target}: {ci_file.provider.value}, образ {ci_file.image}, паки {ci_file.packs_path}")
+    for warning in warnings:
+        _out(f"  warning {warning}")
+    _out("Дальше: закоммитьте файл; новая Студия, новый тег образа: запустите команду снова с --force.")
+    return EXIT_OK
+
+
 _COMMANDS: dict[str, Callable[[argparse.Namespace], int]] = {
     "lint": _lint,
     "check": _check,
     "classify": _classify,
     "new-version": _new_version,
     "freeze": _freeze,
+    "ci": _ci,
 }
 
 
@@ -282,6 +344,8 @@ def run_parsed(args: argparse.Namespace) -> int:
         return _fail(args, EXIT_FAILED, "lint_failed", str(exc), exc.errors)
     except PackVersionError as exc:
         return _fail(args, EXIT_FAILED, "refused", str(exc))
+    except PackCiError as exc:
+        return _fail(args, EXIT_FAILED if exc.code == "exists" else EXIT_USAGE, exc.code, str(exc))
     except (PackPathError, BaseRefError) as exc:
         return _fail(args, EXIT_USAGE, "usage", str(exc))
 

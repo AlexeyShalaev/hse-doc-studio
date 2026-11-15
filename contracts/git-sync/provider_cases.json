@@ -770,6 +770,29 @@
       }
     },
     {
+      "name": "github.com, профиль packs_fork: классический public_repo, точный для владельца запасным",
+      "provider": "github",
+      "web_base": "https://github.com",
+      "token_name": "HSE Studio",
+      "description": "Доступ для HSE Doc Studio, 2026-11-15",
+      "owner": "AlexeyShalaev",
+      "repo": "hse-doc-studio",
+      "expires_in_days": 90,
+      "profile": "packs_fork",
+      "expect": {
+        "primary": {
+          "kind": "prefilled",
+          "url": "https://github.com/settings/tokens/new?scopes=public_repo&description=%D0%94%D0%BE%D1%81%D1%82%D1%83%D0%BF%20%D0%B4%D0%BB%D1%8F%20HSE%20Doc%20Studio%2C%202026-11-15",
+          "broad": false
+        },
+        "fallback": {
+          "kind": "prefilled",
+          "url": "https://github.com/settings/personal-access-tokens/new?name=HSE%20Studio&description=%D0%94%D0%BE%D1%81%D1%82%D1%83%D0%BF%20%D0%B4%D0%BB%D1%8F%20HSE%20Doc%20Studio%2C%202026-11-15&target_name=AlexeyShalaev&expires_in=90&contents=write&pull_requests=write&statuses=read&metadata=read",
+          "broad": false
+        }
+      }
+    },
+    {
       "name": "gitlab.com, профиль packs: read_api для статуса конвейера",
       "provider": "gitlab",
       "web_base": "https://gitlab.com",
@@ -1213,6 +1236,65 @@
       "scopes": null,
       "expect": {
         "sufficiency": "unknown",
+        "missing": []
+      }
+    },
+    {
+      "provider": "github",
+      "profile": "packs_fork",
+      "scopes": [
+        "public_repo"
+      ],
+      "expect": {
+        "sufficiency": "sufficient",
+        "missing": []
+      }
+    },
+    {
+      "provider": "github",
+      "profile": "packs_fork",
+      "scopes": [
+        "repo"
+      ],
+      "expect": {
+        "sufficiency": "sufficient",
+        "missing": []
+      }
+    },
+    {
+      "provider": "github",
+      "profile": "packs_fork",
+      "scopes": [
+        "read:user"
+      ],
+      "expect": {
+        "sufficiency": "too_narrow",
+        "missing": [
+          "public_repo"
+        ]
+      }
+    },
+    {
+      "provider": "github",
+      "profile": "packs_fork",
+      "scopes": [
+        "public_repo",
+        "delete_repo"
+      ],
+      "expect": {
+        "sufficiency": "too_broad",
+        "missing": []
+      }
+    },
+    {
+      "provider": "gitlab",
+      "profile": "packs_fork",
+      "scopes": [
+        "read_repository",
+        "write_repository"
+      ],
+      "expect": {
+        "sufficiency": "sufficient",
         "missing": []
       }
     },
