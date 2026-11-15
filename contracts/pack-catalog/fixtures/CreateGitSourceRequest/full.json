@@ -1,0 +1,9 @@
+{
+  "url": "https://git.example.org/acme/packs.git",
+  "label": "acme-packs",
+  "packs_path": "packs",
+  "ref": "v2026.1.1",
+  "service_access_id": "9d8c7b6a-5f4e-4d3c-8b2a-190807060504",
+  "replace_builtin": false,
+  "track": true
+}
