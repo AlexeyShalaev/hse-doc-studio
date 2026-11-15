@@ -403,6 +403,13 @@ class PackWorkspaceGit:
         truncated = len(raw) > max_bytes
         return raw[:max_bytes].decode("utf-8", errors="replace"), truncated
 
+    async def branch_paths(self, dirs: WorkspaceDirs, *, base_branch: str) -> tuple[str, ...]:
+        base = remote_ref(_branch(base_branch))
+        # Три точки: от точки расхождения с базой, поэтому слитая в ветку база (merge-base) сюда не попадает.
+        # Нужны только деревья, блобы частичного клона не подгружаются.
+        raw = await self._local(dirs, ["diff", "--name-only", "-z", "--no-renames", f"{base}...HEAD"])
+        return tuple(name for name in raw.decode("utf-8", errors="replace").split("\0") if name)
+
     @staticmethod
     def _tree(dirs: WorkspaceDirs) -> list[str]:
         return ["--work-tree", str(dirs.tree)]

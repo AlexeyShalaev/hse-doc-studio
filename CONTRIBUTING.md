@@ -117,6 +117,23 @@ silently changes every project created on it. Released versions are listed in
 - Before releasing, preview the update on real projects (nothing is written):
   `uv run python -m hse_doc_studio.infra.template_update.cli plan <project dir>… --to <version>`.
 
+## Contributing to the official packs
+
+The packs in `packs/` are the official packs: they ship inside the Studio image and reach
+users with the next Studio release. Anyone can propose a change, also without a clone of
+this repository: open **Pack Studio, Official packs** in a Studio instance (your own GitHub
+token, or the instance service account if its administrator set one up).
+
+- Contributions are public and are made under the repository license (Apache-2.0, see
+  `LICENSE`); the Pack Studio asks for this consent before the first proposal.
+- Change only `packs/**`. A PR sent through an instance service account may not touch
+  anything else, and its commits carry the author's name with a Studio noreply address.
+- Never edit a released version (see above): copy it to the next version, fill `changes:`
+  in ru and en, and keep the class no softer than the changes require.
+- PRs from forks of first-time contributors wait for a maintainer to approve the CI run;
+  this is GitHub's rule, not an error.
+- After the merge, the new version appears for users with the next Studio release.
+
 ## Releasing (maintainers only)
 
 Versioning and tagging are automated via

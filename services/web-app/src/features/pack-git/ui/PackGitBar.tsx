@@ -334,6 +334,34 @@ export const PackGitBar = ({
           />
         </div>
       )}
+      {checks.data?.pr_state === "merged" && (
+        <div className="ps-git-notice" data-testid="git-pr-merged">
+          <Notice
+            tone="info"
+            role="status"
+            text={
+              ws.official ? t("git.merged.official") : t("git.merged.other")
+            }
+            action={
+              <Button
+                size="xs"
+                variant="secondary"
+                disabled={busy}
+                onClick={() => {
+                  setDialog("startOver");
+                }}
+              >
+                {t("git.startOver.title")}
+              </Button>
+            }
+          />
+        </div>
+      )}
+      {checks.data?.pr_state === "closed" && (
+        <div className="ps-git-notice" data-testid="git-pr-closed">
+          <Notice tone="warn" role="status" text={t("git.merged.closed")} />
+        </div>
+      )}
       <CommitDialog
         git={g}
         isOpen={dialog === "commit"}

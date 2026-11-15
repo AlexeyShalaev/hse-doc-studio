@@ -436,6 +436,11 @@ tags:
 | `HSE_STUDIO__PACK_STUDIO__PREVIEW_KEEP_HOURS` | float | `24.0` | оба | How long preview build records, logs and leftover folders are kept. |
 | `HSE_STUDIO__PACK_STUDIO__HOSTING_TIMEOUT_S` | float | `20.0` | оба | Timeout for one request to the git hosting API (pull request, CI status). |
 | `HSE_STUDIO__PACK_STUDIO__MAX_DIFF_BYTES` | int | `1048576` | оба | Largest diff of a workspace against its base branch shown at once. |
+| `HSE_STUDIO__PACK_STUDIO__OFFICIAL_REPO_URL` | str | `https://github.com/AlexeyShalaev/hse-doc-studio` | оба | Official packs repository (https). Empty hides the Official packs button. |
+| `HSE_STUDIO__PACK_STUDIO__OFFICIAL_PACKS_PATH` | str | `packs` | оба | Packs folder inside the official repository. |
+| `HSE_STUDIO__PACK_STUDIO__OFFICIAL_BASE_BRANCH` | str | `master` | оба | Base branch of the official repository. |
+| `HSE_STUDIO__PACK_STUDIO__OFFICIAL_LICENSE` | str | `Apache-2.0` | оба | License a contribution to the official packs goes under (its LICENSE). |
+| `HSE_STUDIO__PACK_STUDIO__OFFICIAL_BOT_DAILY_LIMIT` | int | `5` | оба | Proposals one person may send through the bot access per 24 hours (the admin may change it). |
 | `HSE_STUDIO__MODE` | local / server | `local` | оба | Instance mode: 'local' (single-user install) or 'server' (shared; not supported yet). |
 | `HSE_STUDIO__DATA_DIR` | Path | `~/.config/hse-studio` | оба | Local data storage directory |
 | `HSE_STUDIO__HOST_DATA_DIR` | str | не задано | оба | Host path of data_dir for sibling-container mounts; None when backend runs natively. |

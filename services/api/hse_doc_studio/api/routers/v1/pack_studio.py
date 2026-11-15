@@ -21,10 +21,12 @@ from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, Depends, Header, Request, Response
 from fastapi.responses import FileResponse, PlainTextResponse
 
+from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.routers.v1.files import _content_type_for
 from hse_doc_studio.api.schemas.pack_studio import (
     CreatePackWorkspaceRequest,
+    OpenPackOfficialRequest,
     PackBranchRequest,
     PackCheckFinding,
     PackCheckSummary,
@@ -42,6 +44,9 @@ from hse_doc_studio.api.schemas.pack_studio import (
     PackLintResponse,
     PackMacroHintResponse,
     PackMetaFieldHintResponse,
+    PackOfficialBot,
+    PackOfficialRepo,
+    PackOfficialResponse,
     PackPreviewBuildResponse,
     PackPreviewDocument,
     PackPreviewErrorBody,
@@ -77,11 +82,13 @@ from hse_doc_studio.core.pack_studio.entities import (
     WorkspaceKind,
 )
 from hse_doc_studio.core.pack_studio.errors import PackStudioError, PackStudioErrorCode
+from hse_doc_studio.core.pack_studio.official import OfficialRepo, official_repo
 from hse_doc_studio.core.pack_studio.preview import PreviewBuild
 from hse_doc_studio.use_cases.pack_studio.access import PackStudioAccess, SectionView
 from hse_doc_studio.use_cases.pack_studio.files import PackFilesService, YamlOp
 from hse_doc_studio.use_cases.pack_studio.git import ForkChoice, GitView, PackGitService, ProposeInput
 from hse_doc_studio.use_cases.pack_studio.insight import PackInsightService
+from hse_doc_studio.use_cases.pack_studio.official import OfficialAccess, OfficialInfo, OfficialPacks
 from hse_doc_studio.use_cases.pack_studio.preview import PackPreviewService, PreviewOptions, StartPreviewInput
 from hse_doc_studio.use_cases.pack_studio.workspaces import (
     CreateWorkspaceInput,
@@ -115,8 +122,47 @@ def section_response(view: SectionView) -> PackStudioSectionResponse:
     )
 
 
+def _official() -> OfficialRepo | None:
+    cfg = settings.pack_studio
+    return official_repo(
+        cfg.official_repo_url,
+        packs_path=cfg.official_packs_path,
+        base_branch=cfg.official_base_branch,
+        license=cfg.official_license,
+    )
+
+
+def official_repo_response(repo: OfficialRepo | None) -> PackOfficialRepo | None:
+    if repo is None:
+        return None
+    return PackOfficialRepo(
+        url=repo.url,
+        web_url=repo.web_url,
+        packs_path=repo.packs_path,
+        base_branch=repo.base_branch,
+        license=repo.license,
+        license_url=repo.license_url,
+        contributing_url=repo.contributing_url,
+    )
+
+
+def official_response(info: OfficialInfo) -> PackOfficialResponse:
+    quota = info.bot.quota
+    return PackOfficialResponse(
+        repo=official_repo_response(info.repo),
+        bot=PackOfficialBot(
+            available=info.bot.available,
+            reason=info.bot.reason.value if info.bot.reason else None,
+            daily_limit=quota.limit if quota else None,
+            used=quota.used if quota else None,
+        ),
+        workspace_id=None if info.workspace_id is None else str(info.workspace_id),
+    )
+
+
 def workspace_response(view: WorkspaceView) -> PackWorkspaceResponse:
     ws = view.workspace
+    official = _official()
     return PackWorkspaceResponse(
         id=str(ws.id),
         kind=ws.kind.value,
@@ -141,6 +187,8 @@ def workspace_response(view: WorkspaceView) -> PackWorkspaceResponse:
         error=None if ws.error is None else PackWorkspaceErrorBody(code=ws.error.code, detail=ws.error.detail),
         created_at=ws.created_at,
         updated_at=ws.updated_at,
+        official=official is not None and official.matches(ws.remote_url),
+        license_accepted_at=ws.license_accepted_at,
     )
 
 
@@ -269,6 +317,23 @@ async def create_workspace(
     )
     if view.workspace.kind is WorkspaceKind.git:
         response.status_code = 202
+    return workspace_response(view)
+
+
+@router.get("/pack-studio/official", response_model=PackOfficialResponse)
+async def get_official(official: FromDishka[OfficialPacks], response: Response) -> PackOfficialResponse:
+    """Официальные паки (срез T22): репозиторий установки (null: кнопки нет), доступ бота, своё пространство."""
+    response.headers.update(_NO_STORE)
+    return official_response(await official.info(require_actor()))
+
+
+@router.post("/pack-studio/official/workspace", response_model=PackWorkspaceResponse)
+async def open_official(
+    body: OpenPackOfficialRequest, official: FromDishka[OfficialPacks], response: Response
+) -> PackWorkspaceResponse:
+    """Пространство над официальным репозиторием: уже созданное (200) или новое (202, клон в фоне)."""
+    view, created = await official.open(require_actor(), OfficialAccess(body.access), body.credential_id)
+    response.status_code = 202 if created else 200
     return workspace_response(view)
 
 
@@ -446,7 +511,13 @@ async def propose(workspace_id: UUID, body: PackProposeRequest, git: FromDishka[
     view = await git.propose(
         require_actor(),
         workspace_id,
-        ProposeInput(title=body.title, description=body.description, message=body.message, fork=fork),
+        ProposeInput(
+            title=body.title,
+            description=body.description,
+            message=body.message,
+            fork=fork,
+            accept_license=body.accept_license,
+        ),
     )
     pull = view.pull_request
     return PackProposeResponse(
@@ -499,6 +570,7 @@ async def get_checks(workspace_id: UUID, git: FromDishka[PackGitService], respon
         available=report.available,
         reason=report.reason,
         web_url=report.web_url,
+        pr_state=report.pr_state.value if report.pr_state else None,
     )
 
 

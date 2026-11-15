@@ -1,12 +1,22 @@
-import { useState } from "react";
-import { KeyRound, Plus, ShieldCheck, Trash2 } from "lucide-react";
+import { useId, useState } from "react";
+import {
+  GitFork,
+  KeyRound,
+  Plus,
+  ShieldCheck,
+  Stethoscope,
+  Trash2,
+  TriangleAlert,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   packErrorText,
   useAddPackServiceAccess,
+  useCheckPackServiceAccess,
   usePackServiceAccess,
   useRemovePackServiceAccess,
   type PackServiceAccess,
+  type PackServiceAccessCheck,
 } from "@entities/pack-studio";
 import { ApiError } from "@shared/api";
 import { formatPastTime } from "@shared/lib";
@@ -23,34 +33,45 @@ import {
 } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 
+/** Что открыть в окне добавления: из раздела «Официальные паки» это доступ бота. */
+export type ServiceAccessPreset = { url: string; forkMode: boolean };
+
 /** Окно «Добавить служебный доступ»: адрес репозитория паков, метка и токен. */
-const AddDialog = ({
+export const AddServiceAccessDialog = ({
   isOpen,
   onClose,
+  preset = null,
 }: {
   isOpen: boolean;
   onClose: () => void;
+  preset?: ServiceAccessPreset | null;
 }) => {
   const { t } = useTranslation("adminPackStudio");
   const add = useAddPackServiceAccess();
-  const [url, setUrl] = useState("");
+  const [url, setUrl] = useState<string | null>(null);
   const [label, setLabel] = useState("");
   const [token, setToken] = useState("");
+  const [forkMode, setForkMode] = useState<boolean | null>(null);
+  const forkId = useId();
+  const urlValue = url ?? preset?.url ?? "";
+  const fork = forkMode ?? preset?.forkMode ?? false;
 
   const close = () => {
     if (add.isPending) return;
     add.reset();
-    setUrl("");
+    setUrl(null);
     setLabel("");
     setToken("");
+    setForkMode(null);
     onClose();
   };
 
   const submit = () => {
     const body = {
-      url: url.trim(),
+      url: urlValue.trim(),
       token: token.trim(),
       label: label.trim() === "" ? null : label.trim(),
+      ...(fork ? { fork_mode: true } : {}),
     };
     add.mutate(body, {
       onSuccess: close,
@@ -74,7 +95,9 @@ const AddDialog = ({
             {t("grant.cancel")}
           </Button>
           <Button
-            disabled={add.isPending || url.trim() === "" || token.trim() === ""}
+            disabled={
+              add.isPending || urlValue.trim() === "" || token.trim() === ""
+            }
             onClick={submit}
             data-testid="ps-service-submit"
           >
@@ -87,7 +110,7 @@ const AddDialog = ({
         <Input
           label={t("service.url")}
           placeholder="https://gitlab.example.org/fcs/packs.git"
-          value={url}
+          value={urlValue}
           maxLength={2048}
           onChange={(e) => {
             setUrl(e.target.value);
@@ -119,11 +142,77 @@ const AddDialog = ({
           isMono
           data-testid="ps-service-token"
         />
+        <label className="ps-choice" htmlFor={forkId}>
+          <input
+            id={forkId}
+            type="checkbox"
+            checked={fork}
+            onChange={(e) => {
+              setForkMode(e.target.checked);
+            }}
+            style={{ accentColor: "var(--accent)" }}
+            data-testid="ps-service-fork"
+          />
+          <span className="ps-choice-text">
+            <span>{t("service.forkMode")}</span>
+            <span className="ps-choice-hint">{t("service.forkModeHint")}</span>
+          </span>
+        </label>
         {add.isError && (
           <Notice tone="err" role="alert" text={packErrorText(add.error)} />
         )}
       </div>
     </Modal>
+  );
+};
+
+/** Итог «Проверить»: чей токен, его области, право push, форк бота и что не так. */
+const CheckResult = ({ check }: { check: PackServiceAccessCheck }) => {
+  const { t } = useTranslation("adminPackStudio");
+  return (
+    <div
+      className="flex flex-col"
+      style={{ gap: "0.5rem" }}
+      data-testid="ps-service-check-result"
+    >
+      <Notice
+        tone={check.ok ? "info" : "err"}
+        role={check.ok ? "status" : "alert"}
+        text={check.ok ? t("service.check.ok") : t("service.check.failed")}
+      />
+      <ul
+        className="flex flex-col"
+        style={{ gap: "0.25rem", margin: 0, paddingLeft: "1rem" }}
+      >
+        {check.login && (
+          <li>{t("service.check.login", { login: check.login })}</li>
+        )}
+        {check.scopes !== null && (
+          <li>
+            {t("service.check.scopes", {
+              scopes: check.scopes.length > 0 ? check.scopes.join(", ") : "-",
+            })}
+          </li>
+        )}
+        {check.access.fork_url && (
+          <li className="mono">
+            {t("service.check.fork", { url: check.access.fork_url })}
+          </li>
+        )}
+      </ul>
+      {check.problems.map((problem) => (
+        <div
+          key={problem}
+          className="flex items-start"
+          style={{ gap: "0.375rem" }}
+        >
+          <TriangleAlert size="0.875rem" aria-hidden="true" />
+          <span data-testid={`ps-service-problem-${problem}`}>
+            {t(`service.problem.${problem}`)}
+          </span>
+        </div>
+      ))}
+    </div>
   );
 };
 
@@ -136,6 +225,8 @@ export const ServiceAccessSection = () => {
   const { t } = useTranslation("adminPackStudio");
   const list = usePackServiceAccess();
   const remove = useRemovePackServiceAccess();
+  const check = useCheckPackServiceAccess();
+  const [checked, setChecked] = useState<PackServiceAccessCheck | null>(null);
   const [adding, setAdding] = useState(false);
   const [removing, setRemoving] = useState<PackServiceAccess | null>(null);
 
@@ -175,10 +266,21 @@ export const ServiceAccessSection = () => {
           <ListRow
             key={item.id}
             testId={`ps-service-${item.id}`}
-            icon={<KeyRound size="0.875rem" />}
+            icon={
+              item.fork_mode ? (
+                <GitFork size="0.875rem" />
+              ) : (
+                <KeyRound size="0.875rem" />
+              )
+            }
             title={item.label}
             description={[
               item.url,
+              item.fork_mode
+                ? item.fork_url
+                  ? t("service.forkAt", { url: item.fork_url })
+                  : t("service.forkPending")
+                : null,
               item.token_family ? `${item.token_family}…` : null,
               t("service.since", {
                 when: formatPastTime(item.created_at),
@@ -188,18 +290,42 @@ export const ServiceAccessSection = () => {
               .filter(Boolean)
               .join(" · ")}
             meta={
-              <Button
-                size="xs"
-                variant="ghost"
-                aria-label={t("service.remove", { name: item.label })}
-                title={t("service.remove", { name: item.label })}
-                onClick={() => {
-                  setRemoving(item);
-                }}
-                data-testid="ps-service-remove"
-              >
-                <Trash2 size="0.75rem" />
-              </Button>
+              <>
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  aria-label={t("service.check.button", { name: item.label })}
+                  title={t("service.check.button", { name: item.label })}
+                  disabled={check.isPending}
+                  onClick={() => {
+                    setChecked(null);
+                    check.mutate(item.id, {
+                      onSuccess: (result) => {
+                        setChecked(result);
+                      },
+                    });
+                  }}
+                  data-testid="ps-service-check"
+                >
+                  {check.isPending && check.variables === item.id ? (
+                    <Spinner size="sm" />
+                  ) : (
+                    <Stethoscope size="0.75rem" />
+                  )}
+                </Button>
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  aria-label={t("service.remove", { name: item.label })}
+                  title={t("service.remove", { name: item.label })}
+                  onClick={() => {
+                    setRemoving(item);
+                  }}
+                  data-testid="ps-service-remove"
+                >
+                  <Trash2 size="0.75rem" />
+                </Button>
+              </>
             }
           />
         ))}
@@ -226,7 +352,28 @@ export const ServiceAccessSection = () => {
       flush={(list.data?.length ?? 0) > 0}
     >
       {body}
-      <AddDialog
+      {check.isError && (
+        <Notice tone="err" role="alert" text={packErrorText(check.error)} />
+      )}
+      <Modal
+        isOpen={checked !== null}
+        onClose={() => {
+          setChecked(null);
+        }}
+        title={t("service.check.title", { name: checked?.access.label ?? "" })}
+        footer={
+          <Button
+            onClick={() => {
+              setChecked(null);
+            }}
+          >
+            {t("service.check.close")}
+          </Button>
+        }
+      >
+        {checked && <CheckResult check={checked} />}
+      </Modal>
+      <AddServiceAccessDialog
         isOpen={adding}
         onClose={() => {
           setAdding(false);

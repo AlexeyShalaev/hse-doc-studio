@@ -51,6 +51,10 @@ export const PackWorkspaceSchema = z.strictObject({
   error: PackWorkspaceErrorSchema.nullable(),
   created_at: z.string(),
   updated_at: z.string(),
+  // Срез T22: пространство над официальным репозиторием паков и когда
+  // человек принял его лицензию (до первой отправки null).
+  official: z.boolean().optional(),
+  license_accepted_at: z.string().nullish(),
 });
 
 export const PackWorkspaceListSchema = z.array(PackWorkspaceSchema);
@@ -273,6 +277,8 @@ export const PackProposeRequestSchema = z.strictObject({
   description: z.string().max(20000).nullish(),
   message: z.string().max(2000).nullish(),
   fork: PackForkChoiceSchema.nullish(),
+  // Официальные паки: согласие, что вклад публичен и идёт под лицензией.
+  accept_license: z.boolean().optional(),
 });
 
 export const PackPullRequestSchema = z.strictObject({
@@ -328,19 +334,30 @@ export const PackCiCheckSchema = z.strictObject({
     "neutral",
     "skipped",
     "cancelled",
+    // Запуск ждёт одобрения сопровождающего (PR из форка нового участника).
+    "awaiting_approval",
   ]),
   url: z.string().nullable(),
   summary: z.string().nullable(),
 });
 
 export const PackCiStatusSchema = z.strictObject({
-  state: z.enum(["none", "pending", "success", "failure", "unknown"]),
+  state: z.enum([
+    "none",
+    "pending",
+    "awaiting_approval",
+    "success",
+    "failure",
+    "unknown",
+  ]),
   sha: z.string().nullable(),
   checks: z.array(PackCiCheckSchema),
   // false: хостинг не отдаёт статус этому токену (reason ci_status_unavailable).
   available: z.boolean(),
   reason: z.string().nullable(),
   web_url: z.string().nullable(),
+  // Срез T22: открыт, слит или закрыт PR (null: PR нет или хостинг молчит).
+  pr_state: z.enum(["open", "merged", "closed"]).nullish(),
 });
 
 export const PackStartOverRequestSchema = z.strictObject({
@@ -360,6 +377,9 @@ export const PackServiceAccessSchema = z.strictObject({
   created_by: z.string().nullable(),
   created_by_name: z.string().nullable(),
   created_at: z.string(),
+  // Срез T22: доступ бота, ветка уходит только в его форк.
+  fork_mode: z.boolean().optional(),
+  fork_url: z.string().nullish(),
 });
 
 export const PackServiceAccessListSchema = z.array(PackServiceAccessSchema);
@@ -368,6 +388,75 @@ export const CreatePackServiceAccessRequestSchema = z.strictObject({
   url: z.string().min(1).max(2048),
   token: z.string().min(1).max(4096),
   label: z.string().max(120).nullish(),
+  fork_mode: z.boolean().optional(),
+});
+
+export const PackServiceAccessProblemSchema = z.enum([
+  "token_rejected",
+  "fine_grained_token",
+  "scope_missing",
+  "fork_unavailable",
+  "bot_can_push",
+  "provider_unsupported",
+]);
+
+export const PackServiceAccessCheckSchema = z.strictObject({
+  access: PackServiceAccessSchema,
+  ok: z.boolean(),
+  login: z.string().nullable(),
+  // Области классического токена GitHub; null: хостинг их не назвал.
+  scopes: z.array(z.string()).nullable(),
+  can_push: z.boolean().nullable(),
+  problems: z.array(PackServiceAccessProblemSchema),
+});
+
+// ── Срез T22: официальные паки ─────────────────────────────────────────────
+
+export const PackOfficialRepoSchema = z.strictObject({
+  url: z.string(),
+  web_url: z.string(),
+  packs_path: z.string(),
+  base_branch: z.string(),
+  license: z.string(),
+  license_url: z.string(),
+  contributing_url: z.string(),
+});
+
+export const PackOfficialBotUnavailableSchema = z.enum([
+  "local",
+  "not_configured",
+  "disabled",
+  "no_right",
+]);
+
+export const PackOfficialSchema = z.strictObject({
+  // null: установка не задала официальный репозиторий, кнопки нет.
+  repo: PackOfficialRepoSchema.nullable(),
+  bot: z.strictObject({
+    available: z.boolean(),
+    reason: PackOfficialBotUnavailableSchema.nullable(),
+    daily_limit: z.number().int().nullable(),
+    used: z.number().int().nullable(),
+  }),
+  workspace_id: z.string().nullable(),
+});
+
+export const OpenPackOfficialRequestSchema = z.union([
+  z.strictObject({ access: z.literal("bot") }),
+  z.strictObject({ access: z.literal("token"), credential_id: z.string() }),
+]);
+
+export const PackStudioOfficialAdminSchema = z.strictObject({
+  repo: PackOfficialRepoSchema.nullable(),
+  bot_enabled: z.boolean(),
+  daily_limit: z.number().int(),
+  default_daily_limit: z.number().int(),
+  service_access: PackServiceAccessSchema.nullable(),
+});
+
+export const UpdatePackStudioOfficialRequestSchema = z.strictObject({
+  bot_enabled: z.boolean(),
+  daily_limit: z.number().int().min(1).max(1000),
 });
 
 // Предпросмотр (срез T7): документы версии, переключатели, наборы данных и сборки.
@@ -487,4 +576,21 @@ export type PackDiff = z.infer<typeof PackDiffSchema>;
 export type PackServiceAccess = z.infer<typeof PackServiceAccessSchema>;
 export type CreatePackServiceAccessRequest = z.infer<
   typeof CreatePackServiceAccessRequestSchema
+>;
+export type PackServiceAccessCheck = z.infer<
+  typeof PackServiceAccessCheckSchema
+>;
+export type PackServiceAccessProblem = z.infer<
+  typeof PackServiceAccessProblemSchema
+>;
+export type PackOfficial = z.infer<typeof PackOfficialSchema>;
+export type PackOfficialRepo = z.infer<typeof PackOfficialRepoSchema>;
+export type OpenPackOfficialRequest = z.infer<
+  typeof OpenPackOfficialRequestSchema
+>;
+export type PackStudioOfficialAdmin = z.infer<
+  typeof PackStudioOfficialAdminSchema
+>;
+export type UpdatePackStudioOfficialRequest = z.infer<
+  typeof UpdatePackStudioOfficialRequestSchema
 >;

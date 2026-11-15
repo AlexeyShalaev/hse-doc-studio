@@ -50,6 +50,12 @@ _SCHEMAS: dict[str, Any] = {
     "StartPackPreviewRequest": s.StartPackPreviewRequest,
     "PackPreviewBuild": s.PackPreviewBuildResponse,
     "PackPreviewStart": s.PackPreviewStartResponse,
+    # Срез T22: официальные паки и доступ бота
+    "PackOfficial": s.PackOfficialResponse,
+    "OpenPackOfficialRequest": s.OpenPackOfficialRequest,
+    "PackServiceAccessCheck": s.PackServiceAccessCheckResponse,
+    "PackStudioOfficialAdmin": s.PackStudioOfficialAdminResponse,
+    "UpdatePackStudioOfficialRequest": s.UpdatePackStudioOfficialRequest,
 }
 
 

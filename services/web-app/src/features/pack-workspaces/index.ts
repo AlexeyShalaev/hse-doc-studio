@@ -8,3 +8,8 @@ export type {
   FolderPickerRender,
 } from "./ui/CreateWorkspaceDialog";
 export { hostOfUrl } from "./lib/hostOfUrl";
+export { OfficialPacksCard, OfficialPacksDialog } from "./ui/OfficialPacks";
+export type {
+  OfficialPacksCardProps,
+  OfficialPacksDialogProps,
+} from "./ui/OfficialPacks";

@@ -42,5 +42,10 @@
   "nothing_to_propose",
   "service_access_missing",
   "service_access_exists",
-  "service_access_not_found"
+  "service_access_not_found",
+  "official_unavailable",
+  "official_bot_unavailable",
+  "license_consent_required",
+  "proposal_limit",
+  "paths_outside_packs"
 ]

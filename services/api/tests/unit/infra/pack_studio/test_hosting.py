@@ -275,3 +275,125 @@ async def test__timeout__is_a_git_timeout() -> None:
         await _hosting(handler).permissions(GH, _target())
 
     assert caught.value.code is GitErrorCode.timeout
+
+
+# ── срез T22: одобрение запуска, состояние PR, чей токен, синхронизация форка ──
+
+
+async def test__ci_status__fork_run_awaiting_approval__reported_in_words_not_as_none() -> None:
+    sha = "a" * 40
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if path.endswith("/check-runs"):
+            return httpx.Response(200, json={"check_runs": []})
+        if path.endswith("/status"):
+            return httpx.Response(200, json={"statuses": []})
+        if path == "/repos/acme/packs/actions/runs":
+            assert request.url.params["head_sha"] == sha
+            return httpx.Response(
+                200,
+                json={
+                    "workflow_runs": [
+                        {
+                            "name": "CI",
+                            "status": "completed",
+                            "conclusion": "action_required",
+                            "html_url": "https://r/1",
+                        },
+                        {"name": "Docs", "status": "completed", "conclusion": "success", "html_url": None},
+                    ]
+                },
+            )
+        return httpx.Response(404, json={})
+
+    report = await _hosting(handler).ci_status(GH, _target(), sha=sha, branch="b")
+
+    assert report.state is CiState.awaiting_approval
+    assert [(c.name, c.state, c.url) for c in report.checks] == [("CI", CheckState.awaiting_approval, "https://r/1")]
+
+
+async def test__ci_status__runs_api_unavailable__checks_still_reported() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/status"):
+            return httpx.Response(200, json={"statuses": [{"context": "ci", "state": "success"}]})
+        return httpx.Response(403, json={})
+
+    report = await _hosting(handler).ci_status(GH, _target(), sha="b" * 40, branch=None)
+
+    assert report.state is CiState.success
+
+
+@pytest.mark.parametrize(
+    ("body", "expected"),
+    [
+        ({"state": "closed", "merged": True}, "merged"),
+        ({"state": "closed", "merged": False, "merged_at": None}, "closed"),
+        ({"state": "open", "merged": False}, "open"),
+    ],
+)
+async def test__pull_request_state__open_merged_closed(body: dict[str, object], expected: str) -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/repos/acme/packs/pulls/7"
+        return httpx.Response(200, json=body)
+
+    state = await _hosting(handler).pull_request_state(GH, _target(), 7)
+
+    assert state is not None
+    assert state.value == expected
+
+
+async def test__pull_request_state__not_github_or_denied__none() -> None:
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(404, json={})
+
+    assert await _hosting(handler).pull_request_state(GH, _target(), 7) is None
+    assert await _hosting(handler).pull_request_state(GL, _target(), 7) is None
+
+
+async def test__account__classic_token__login_and_scopes_from_header() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/user"
+        return httpx.Response(200, json={"login": "studio-bot"}, headers={"X-OAuth-Scopes": "public_repo, read:org"})
+
+    account = await _hosting(handler).account(GH, _target())
+
+    assert account is not None
+    assert (account.login, account.scopes) == ("studio-bot", ("public_repo", "read:org"))
+
+
+async def test__account__fine_grained_token__no_scopes_header() -> None:
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"login": "studio-bot"})
+
+    account = await _hosting(handler).account(GH, _target())
+
+    assert account is not None
+    assert account.scopes is None
+
+
+async def test__account__rejected_token__none() -> None:
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(401, json={"message": "Bad credentials"})
+
+    assert await _hosting(handler).account(GH, _target()) is None
+
+
+async def test__sync_fork__posts_merge_upstream_and_never_raises() -> None:
+    seen: list[httpx.Request] = []
+    fork = HostingRepo(GitProvider.github, "bot/packs", "https://github.com", "https://api.github.com")
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        return httpx.Response(200, json={"merge_type": "fast-forward"})
+
+    def broken(_request: httpx.Request) -> httpx.Response:
+        raise httpx.ConnectError("down")
+
+    synced = await _hosting(handler).sync_fork(fork, _target("https://github.com/bot/packs.git"), branch="master")
+
+    assert synced is True
+    (request,) = seen
+    assert (request.method, request.url.path) == ("POST", "/repos/bot/packs/merge-upstream")
+    assert json.loads(request.content) == {"branch": "master"}
+    assert await _hosting(broken).sync_fork(fork, _target("https://github.com/bot/packs.git"), branch="master") is False

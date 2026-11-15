@@ -4,6 +4,11 @@ import { describe, expect, it } from "vitest";
 import type { ZodType } from "zod";
 import { PACK_STUDIO_ERROR_CODES, isPackStudioErrorCode } from "./errorCodes";
 import {
+  OpenPackOfficialRequestSchema,
+  PackOfficialSchema,
+  PackServiceAccessCheckSchema,
+  PackStudioOfficialAdminSchema,
+  UpdatePackStudioOfficialRequestSchema,
   CreatePackServiceAccessRequestSchema,
   CreatePackStudioGrantRequestSchema,
   CreatePackWorkspaceRequestSchema,
@@ -90,6 +95,12 @@ const SCHEMAS: Record<string, ZodType> = {
   PackServiceAccess: PackServiceAccessSchema,
   PackServiceAccessList: PackServiceAccessListSchema,
   CreatePackServiceAccessRequest: CreatePackServiceAccessRequestSchema,
+  // Срез T22: официальные паки и доступ бота
+  PackOfficial: PackOfficialSchema,
+  OpenPackOfficialRequest: OpenPackOfficialRequestSchema,
+  PackServiceAccessCheck: PackServiceAccessCheckSchema,
+  PackStudioOfficialAdmin: PackStudioOfficialAdminSchema,
+  UpdatePackStudioOfficialRequest: UpdatePackStudioOfficialRequestSchema,
 };
 
 const readJson = (path: string): unknown =>

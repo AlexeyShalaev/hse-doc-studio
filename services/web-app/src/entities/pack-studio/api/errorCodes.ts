@@ -47,6 +47,11 @@ export const PACK_STUDIO_ERROR_CODES = [
   "service_access_missing",
   "service_access_exists",
   "service_access_not_found",
+  "official_unavailable",
+  "official_bot_unavailable",
+  "license_consent_required",
+  "proposal_limit",
+  "paths_outside_packs",
 ] as const;
 
 export type PackStudioErrorCode = (typeof PACK_STUDIO_ERROR_CODES)[number];
