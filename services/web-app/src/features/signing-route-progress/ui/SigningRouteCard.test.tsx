@@ -133,6 +133,8 @@ const startRoute = async (): Promise<string> => {
  * Маршрут с прода: три обязательных слота ЭП и необязательный «Академический руководитель». Автор
  * согласовал отправкой и ждёт фиксации PDF, научрук и консультант согласуют параллельно.
  */
+const DAY_MS = 86_400_000;
+
 const approvedAuthorRoute = ({ optional = true } = {}): SigningRoute => {
   const slot = (id: string, participant: string | null, opt = false) => ({
     slot_id: id,
@@ -159,6 +161,8 @@ const approvedAuthorRoute = ({ optional = true } = {}): SigningRoute => {
     });
   return makeSigningRoute({
     phase: "approval",
+    // Срок от сегодняшнего дня: постоянная дата эталона прошла, и «Срок» сменился на «Просрочено».
+    deadline: new Date(Date.now() + 30 * DAY_MS).toISOString(),
     docs: [
       {
         doc_id: DOC,
