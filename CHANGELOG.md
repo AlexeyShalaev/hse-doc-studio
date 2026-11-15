@@ -6,25 +6,13 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.30.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.29.0...v0.30.0) (2026-11-15)
+## [0.30.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.29.0...v0.30.0) - 2026-11-15
 
-
-### Features
-
-* **pack-studio:** official packs with bot contribution (T22) ([42ac234](https://github.com/AlexeyShalaev/hse-doc-studio/commit/42ac234ba51631543a87090a190af503ed12b66a))
-* **pack-studio:** official packs with bot contribution (T22) ([d6a4182](https://github.com/AlexeyShalaev/hse-doc-studio/commit/d6a4182fd4e5e602d31c5f5678fe4b75088f94c9))
-* **pack-studio:** мастер «Новая версия» (T10) ([dfb805a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/dfb805ad0b30822380f51b22901ff29871429d47))
-* **pack-studio:** мастер «Новая версия» в интерфейсе: кнопка у шаблона, полоса версии, заметки и выпуск (T10) ([1ee2e0f](https://github.com/AlexeyShalaev/hse-doc-studio/commit/1ee2e0f3b8e157b22a9d6bfc835f28ddf8e4ab35))
-* **pack-studio:** мастер «Новая версия» на сервере: копия, живой класс, номер, заметки, перенос правок, выпуск (T10) ([3306d89](https://github.com/AlexeyShalaev/hse-doc-studio/commit/3306d89eb862dfb4122527fe56196c0daed1004a))
-
-
-### Bug Fixes
-
-* **mail:** send notification mail after commit, outside the event session ([c56afb3](https://github.com/AlexeyShalaev/hse-doc-studio/commit/c56afb38ae3297cf9617f302ffbf8026867da9b7))
-* **mail:** send notification mail after commit, outside the event session ([979e83e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/979e83eee4393fccafd23d1488433d268a63960c))
-* **pack-studio:** preview build stays active until its result is saved ([2c24226](https://github.com/AlexeyShalaev/hse-doc-studio/commit/2c24226a40660caf4b4a0444d795aa783a584842))
-* **pack-studio:** preview build stays active until its result is saved ([63cc94a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/63cc94a0f83f0f58f85d159ce1a59a4744421a13))
-* **pack-studio:** маршруты мастера «Новая версия» в таблице областей ([05bb18e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/05bb18e51d3ebcea37af429c47777ece680c6693))
+- Fixed: notification emails (signature requests, "Everyone has signed" and others) were not sent and showed up in the mail log with an InterfaceError. Now an email is sent after the action is saved, and not at all if the action was rolled back.
+- Template Studio: Official packs. A separate button opens the packs of the main HSE Doc Studio repository, and changes go out as a PR. Use your own GitHub token or no account at all: the installation's bot sends changes from its own fork. The bot path is limited to the packs folder, a daily proposal limit, license consent and audit records. Bot setup is described in the docs.
+- Template Studio: New version wizard. A copy of a released version, the version class (patch, minor, major) with reasons on every edit, a number based on the class, version notes with a draft, and release into releases.yaml.
+- Template Studio: PR CI status now shows when checks are waiting for a maintainer's approval, and after merge says when the version reaches users.
+- Fixed: template preview occasionally showed "build interrupted" for a build that had actually finished.
 
 ## [0.29.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.28.0...v0.29.0) - 2026-11-15
 
