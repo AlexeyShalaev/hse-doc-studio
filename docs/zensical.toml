@@ -72,6 +72,7 @@ nav = [
         { "Обновление и потеря ключа" = "deploy/operations.md" },
         { "Официальные паки без аккаунта GitHub" = "deploy/pack-studio-bot.md" },
         { "Каталоги паков" = "deploy/pack-catalogs.md" },
+        { "Студия шаблонов у себя" = "deploy/pack-studio-local.md" },
         { "Автономная работа и хранение данных" = "deploy/autonomy.md" },
     ] },
     { "Справочник" = [

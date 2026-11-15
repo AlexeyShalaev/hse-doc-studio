@@ -59,6 +59,7 @@ from hse_doc_studio.api.security_install import install_server_security
 from hse_doc_studio.api.server_setup import prepare_server_setup
 from hse_doc_studio.api.spa_static import install_spa_fallback, mount_assets
 from hse_doc_studio.core.access.context import ActorRequired
+from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.ai_runtime import IOllamaRuntime
 from hse_doc_studio.core.git_sync.protocols import IGitRemoteRegistry
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
@@ -89,6 +90,7 @@ from hse_doc_studio.use_cases.compile.recover_stale_compiles import RecoverStale
 from hse_doc_studio.use_cases.devices.local_presence import LocalPresenceService, PresenceTick
 from hse_doc_studio.use_cases.fonts.adopt_host_fonts import AdoptHostFontsUC
 from hse_doc_studio.use_cases.git_sync.fetch_all_remotes import FetchAllGitRemotesUC, FetchTickResult
+from hse_doc_studio.use_cases.pack_studio.workspaces import PackWorkspaceService
 from hse_doc_studio.use_cases.setup.inspect_setup import InspectSetupUC
 from hse_doc_studio.use_cases.system.auto_update import AutoUpdateResult, AutoUpdateUC
 from hse_doc_studio.use_cases.template_update.recover_template_updates import RecoverTemplateUpdatesUC
@@ -703,6 +705,22 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915 — app-wiring factory: rout
                 await (await container.get(IRemoteRunnerSupervisor)).stop()
             except Exception:
                 logger.exception("remote runner shutdown failed")
+
+        if settings.pack_studio.standalone and settings.pack_studio.standalone_folder:
+            standalone_folder = settings.pack_studio.standalone_folder
+
+            @app.on_event("startup")
+            async def _pack_studio_standalone_folder() -> None:
+                # Профиль deploy/pack-studio (template-studio.md, T19): папка паков сразу открыта пространством.
+                try:
+                    async with container() as request_container:
+                        service = await request_container.get(PackWorkspaceService)
+                        created = await service.ensure_folder(Actor.local(), standalone_folder)
+                except Exception as exc:
+                    logger.warning("pack studio folder not opened", folder=standalone_folder, error=str(exc))
+                    return
+                if created is not None:
+                    logger.info("pack studio folder opened", folder=standalone_folder)
 
     # MCP-сервер (docs/design/mcp.md): до SPA-фолбэка, иначе `/mcp` отдал бы index.html.
     install_mcp(app)

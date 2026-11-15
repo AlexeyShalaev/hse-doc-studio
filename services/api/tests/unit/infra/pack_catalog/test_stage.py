@@ -28,7 +28,7 @@ def _zip(path: Path, entries: dict[str, bytes], *, symlink: str | None = None) -
             zf.writestr(name, data)
         if symlink:
             info = zipfile.ZipInfo(symlink)
-            info.external_attr = (0o120777 << 16)
+            info.external_attr = 0o120777 << 16
             zf.writestr(info, "/etc/passwd")
     return path
 

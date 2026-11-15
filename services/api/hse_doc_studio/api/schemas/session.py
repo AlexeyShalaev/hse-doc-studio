@@ -53,6 +53,8 @@ class Capabilities(StrictModel):
     git_server_login: bool = False
     # Студия шаблонов (`/pack-studio`): раздел включён и у человека есть право «Автор шаблонов» (локально: включён).
     pack_studio: bool = False
+    # Локально, профиль deploy/pack-studio (template-studio.md, D2): стартовая страница `/pack-studio`, проекты скрыты.
+    pack_studio_standalone: bool = False
 
 
 class OidcProviderOption(StrictModel):
