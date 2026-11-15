@@ -241,7 +241,7 @@ export const ReviewPanel = ({
         isDocBuilding(doc.id) || doc.status === "building"
           ? "building"
           : doc.status;
-      const statusMeta = getStatusMeta(status);
+      const statusMeta = getStatusMeta(status, doc.last_compile_status);
       const errors = doc.errors ?? 0;
       const warnings = doc.warnings ?? 0;
       const countsTitle = [

@@ -40,8 +40,14 @@ export {
   usePutFile,
   useUploadFile,
 } from "./api/fileQueries";
-export { getDocMeta, getStatusMeta } from "./lib/docMeta";
-export type { DocDefLike, DocMeta, DocStatus, StatusMeta } from "./lib/docMeta";
+export { getDocMeta, getStatusMeta, hasCheckErrorsOnly } from "./lib/docMeta";
+export type {
+  DocBuildLike,
+  DocDefLike,
+  DocMeta,
+  DocStatus,
+  StatusMeta,
+} from "./lib/docMeta";
 export { useDocChecksActions } from "./lib/useDocChecksActions";
 export type { DocChecksActions } from "./lib/useDocChecksActions";
 export {

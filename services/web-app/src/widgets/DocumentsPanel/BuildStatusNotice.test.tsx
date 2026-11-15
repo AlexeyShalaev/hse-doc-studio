@@ -166,4 +166,28 @@ describe("build status notice and per-document state", () => {
     expect(screen.getByTestId("doc-state-z").textContent).toBe("ошибка");
     expect(screen.getByTestId("doc-state-y").textContent).toBe("собран");
   });
+
+  it("tells check errors after a successful build apart from a failed build", () => {
+    cleanup();
+    render(
+      <I18nextProvider i18n={i18n}>
+        <DocStateLine
+          projectId="p"
+          docId="x"
+          status="err"
+          lastCompileStatus="success"
+        />
+        <DocStateLine
+          projectId="p"
+          docId="w"
+          status="err"
+          lastCompileStatus="failure"
+        />
+      </I18nextProvider>,
+    );
+    expect(screen.getByTestId("doc-state-x").textContent).toBe(
+      "ошибки проверок",
+    );
+    expect(screen.getByTestId("doc-state-w").textContent).toBe("ошибка");
+  });
 });

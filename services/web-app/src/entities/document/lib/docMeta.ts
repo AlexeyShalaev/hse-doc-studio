@@ -152,14 +152,36 @@ export type StatusMeta = {
   label: string;
 };
 
-export const getStatusMeta = (status: DocStatus): StatusMeta => {
+/** Что сервер знает о последней сборке документа (поля списка и карточки). */
+export type DocBuildLike = {
+  status: DocStatus;
+  last_compile_status?: string | null | undefined;
+};
+
+/**
+ * Статус `err` при удачной последней сборке: PDF собран, а ошибки нашли
+ * проверки. Это не «ошибка сборки»: превью показывает PDF, подписи другие.
+ */
+export const hasCheckErrorsOnly = (doc: DocBuildLike): boolean =>
+  doc.status === "err" && doc.last_compile_status === "success";
+
+export const getStatusMeta = (
+  status: DocStatus,
+  lastCompileStatus?: string | null,
+): StatusMeta => {
   switch (status) {
     case "ok":
       return { sev: "ok", label: i18n.t("documents:status.ok") };
     case "warn":
       return { sev: "warn", label: i18n.t("documents:status.warn") };
     case "err":
-      return { sev: "err", label: i18n.t("documents:status.err") };
+      return {
+        sev: "err",
+        label:
+          lastCompileStatus === "success"
+            ? i18n.t("documents:status.errChecks")
+            : i18n.t("documents:status.err"),
+      };
     case "building":
       return { sev: "info", label: i18n.t("documents:status.building") };
     case "locked":

@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { AlertTriangle, ChevronRight } from "lucide-react";
 import { shortReason } from "@entities/compile";
-import { getDocMeta } from "@entities/document";
+import { getDocMeta, hasCheckErrorsOnly } from "@entities/document";
 import type { DocumentItem } from "./lib/buildDocSections";
 
 /** Форма анкеты в объёме, нужном блоку «Сейчас». */
@@ -59,7 +59,10 @@ export const NowBlock = ({
     const failure = doc.last_compile_error ?? null;
     items.push({
       key: `doc:${doc.id}`,
-      label: t("now.buildError", { doc: meta.code }),
+      // PDF собран, ошибки нашли проверки: это не «ошибка сборки».
+      label: hasCheckErrorsOnly(doc)
+        ? t("now.checkErrors", { doc: meta.code })
+        : t("now.buildError", { doc: meta.code }),
       ...(failure
         ? { reason: shortReason(failure.message), full: failure.message }
         : {}),

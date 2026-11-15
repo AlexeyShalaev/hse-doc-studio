@@ -12,9 +12,11 @@ import {
 } from "./compileStreamStore";
 import { useResumeProjectStreams } from "./useResumeProjectStreams";
 
+const docs = vi.hoisted(() => ({ list: [] as object[] }));
+
 vi.mock("@entities/document", async (importOriginal) => ({
   ...(await importOriginal<typeof DocumentModule>()),
-  useDocuments: () => ({ data: [] }),
+  useDocuments: () => ({ data: docs.list }),
 }));
 
 const PROJECT = "p_demo";
@@ -35,10 +37,11 @@ const slot = (status: CompileStreamSlot["status"]): CompileStreamSlot => ({
 
 afterEach(() => {
   useCompileStreamStore.setState({ streams: {}, pending: {}, _closers: {} });
+  docs.list = [];
 });
 
 describe("сборка закончилась", () => {
-  it("перечитывает документы, план подписей и маршруты подписания проекта", () => {
+  it("перечитывает документы, их карточки, план подписей и маршруты подписания проекта", () => {
     const client = new QueryClient();
     const invalidate = vi.spyOn(client, "invalidateQueries");
     renderHook(
@@ -65,6 +68,7 @@ describe("сборка закончилась", () => {
     expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual(
       [
         documentKeys.lists(PROJECT),
+        [...documentKeys.all, "detail", PROJECT],
         signatureKeys.state(PROJECT),
         signingRouteKeys.project(PROJECT),
       ],
@@ -136,5 +140,41 @@ describe("сборка закончилась", () => {
     });
     expect(info).not.toHaveBeenCalled();
     info.mockRestore();
+  });
+});
+
+describe("поток оборвался без done", () => {
+  const settle = (lastCompileStatus: string) => {
+    docs.list = [
+      {
+        id: "doc",
+        status: "err",
+        last_compile_id: "c_1",
+        last_compile_status: lastCompileStatus,
+      },
+    ];
+    useCompileStreamStore.setState({
+      streams: { [`${PROJECT}::doc`]: slot("running") },
+    });
+    const client = new QueryClient();
+    renderHook(
+      () => {
+        useResumeProjectStreams(PROJECT);
+      },
+      {
+        wrapper: ({ children }) => (
+          <QueryClientProvider client={client}>{children}</QueryClientProvider>
+        ),
+      },
+    );
+    return useCompileStreamStore.getState().streams[`${PROJECT}::doc`]?.status;
+  };
+
+  it("ошибки проверок при удачной сборке закрывают слот успехом", () => {
+    expect(settle("success")).toBe("success");
+  });
+
+  it("упавшая сборка закрывает слот ошибкой", () => {
+    expect(settle("failure")).toBe("failure");
   });
 });

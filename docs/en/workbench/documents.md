@@ -23,7 +23,7 @@ tags:
 ## What it does
 
 - **“Now”** — the top blockers (“build error”, “form not filled in”, “signature missing”); a click takes you straight to the problem.
-- **Statuses** — “Not built”, “Ready”, “With findings”, “Build error”; a filter and counter chips, plus author chips in team projects.
+- **Statuses** — “Not built”, “Ready”, “With findings”, “Check errors” (the PDF is built), “Build error”; a filter and counter chips, plus author chips in team projects.
 - **“Build all”** — the whole set with one button; “Stop” while a build is running.
 - **The document screen** — a “Build” button, the Preview / Editor / Side-by-side views and the Findings · Build · Log · Signatures pages.
 - **“Replace with my own file…”** — your own PDF/DOCX instead of the generated one (e.g. a scan of a signed assignment); “Revert to template” brings it back.

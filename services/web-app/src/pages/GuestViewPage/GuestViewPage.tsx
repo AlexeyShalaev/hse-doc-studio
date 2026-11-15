@@ -22,7 +22,10 @@ export const GuestViewPage = () => {
       doc.def_id ?? doc.id,
     ),
     pdfUrl:
-      doc.last_compile_id && (doc.status === "ok" || doc.status === "warn")
+      doc.last_compile_id &&
+      (doc.status === "ok" ||
+        doc.status === "warn" ||
+        doc.last_compile_status === "success")
         ? pdfUrl(projectId, doc.id, doc.last_compile_id)
         : null,
     pages: doc.pages ?? null,

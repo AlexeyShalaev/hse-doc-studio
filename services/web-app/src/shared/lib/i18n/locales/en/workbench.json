@@ -87,6 +87,7 @@
       "running": "building {{time}}",
       "silent": "not responding for {{count}} min",
       "failed": "error",
+      "checksFailed": "check errors",
       "built": "built"
     }
   },
@@ -155,6 +156,7 @@
   "now": {
     "title": "Now",
     "buildError": "{{doc}} — build failed",
+    "checkErrors": "{{doc}}: check errors",
     "notBuilt": "{{doc}} — not built",
     "formIncomplete": "{{form}} — not filled in",
     "missingSignature": "{{doc}} — signature missing",
