@@ -9,7 +9,7 @@ import {
   type PackOfficial,
   type PackWorkspace,
 } from "@entities/pack-studio";
-import { RepoTokenHelp } from "@features/git-remote";
+import { AddTokenForm } from "@features/git-remote";
 import { Button, Modal, Select } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import { hostOfUrl } from "../lib/hostOfUrl";
@@ -26,8 +26,9 @@ export type OfficialPacksDialogProps = {
 
 /**
  * Доступ к официальным пакам (template-studio.md, 4.7): только свой токен
- * GitHub (PR создают люди своим аккаунтом); без токена окно объясняет, какой
- * выпустить.
+ * GitHub (PR создают люди своим аккаунтом). Без токена окно объясняет, какой
+ * выпустить (классический с public_repo: вклад идёт через форк), и принимает
+ * его прямо здесь: проверка, сохранение в «Доступы git» и выбор.
  */
 export const OfficialPacksDialog = ({
   official,
@@ -49,13 +50,20 @@ export const OfficialPacksDialog = ({
     [credentials.data, host],
   );
   const [credentialId, setCredentialId] = useState<string | null>(null);
-  const tokenId = credentialId ?? tokens[0]?.id ?? null;
+  const [added, setAdded] = useState(false);
+  const tokenId =
+    (credentialId !== null && tokens.some((c) => c.id === credentialId)
+      ? credentialId
+      : null) ??
+    tokens[0]?.id ??
+    null;
   const nothing = tokens.length === 0;
 
   const close = () => {
     if (open.isPending) return;
     open.reset();
     setCredentialId(null);
+    setAdded(false);
     onClose();
   };
   const submit = () => {
@@ -65,6 +73,7 @@ export const OfficialPacksDialog = ({
       {
         onSuccess: (workspace) => {
           setCredentialId(null);
+          setAdded(false);
           onOpened(workspace);
         },
       },
@@ -72,6 +81,20 @@ export const OfficialPacksDialog = ({
   };
 
   if (!repo) return null;
+
+  const tokenForm = (
+    <AddTokenForm
+      url={repo.url}
+      profile="packs_fork"
+      helpOpen={nothing}
+      autoFocus={nothing}
+      onSaved={(credential) => {
+        setCredentialId(credential.id);
+        setAdded(true);
+        open.reset();
+      }}
+    />
+  );
 
   return (
     <Modal
@@ -100,6 +123,15 @@ export const OfficialPacksDialog = ({
         style={{ gap: "0.75rem" }}
         data-testid="official-dialog"
       >
+        {added && (
+          <div data-testid="official-token-added">
+            <Notice
+              tone="info"
+              role="status"
+              text={t("official.token.added")}
+            />
+          </div>
+        )}
         {tokens.length > 0 && (
           <p className="ps-dialog-text" data-testid="official-access-token">
             {t("official.token.hint")}
@@ -122,24 +154,27 @@ export const OfficialPacksDialog = ({
             />
           </div>
         )}
-        {nothing && (
-          <div data-testid="official-nothing">
-            <Notice tone="info" role="status" text={t("official.none.lead")} />
-          </div>
+        {nothing ? (
+          <>
+            <div data-testid="official-nothing">
+              <Notice
+                tone="info"
+                role="status"
+                text={t("official.none.lead")}
+              />
+            </div>
+            {tokenForm}
+          </>
+        ) : (
+          <details className="sync-details">
+            <summary>{t("official.token.another")}</summary>
+            <div style={{ marginTop: "0.5rem" }}>{tokenForm}</div>
+          </details>
         )}
-        <details className="sync-details" open={nothing}>
-          <summary>{t("official.none.token")}</summary>
-          <div
-            className="flex flex-col"
-            style={{ gap: "0.5rem", marginTop: "0.5rem" }}
-          >
-            <p className="ps-dialog-text">{t("official.none.steps")}</p>
-            <RepoTokenHelp url={repo.url} profile="packs" defaultOpen />
-            <a href={GIT_ACCESS_SETTINGS} className="ps-dialog-text">
-              {t("official.none.settings")}
-            </a>
-          </div>
-        </details>
+        <p className="ps-dialog-text dim">
+          {t("official.none.settingsLead")}{" "}
+          <a href={GIT_ACCESS_SETTINGS}>{t("official.none.settings")}</a>
+        </p>
         {open.isError && (
           <Notice tone="err" role="alert" text={packErrorText(open.error)} />
         )}

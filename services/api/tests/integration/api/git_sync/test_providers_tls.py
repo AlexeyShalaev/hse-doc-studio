@@ -517,6 +517,31 @@ async def test__check_credential__after_detection__returns_provider_and_token_in
     assert _TOKEN not in resp.text
 
 
+@pytest.mark.parametrize("profile", ["packs", "packs_fork"])
+async def test__check_credential__packs_profiles__are_accepted(
+    test_app: AsyncClient, gitlab_server: GitHttpServer, profile: str
+) -> None:
+    await _trusted(test_app, gitlab_server)
+    credential = await _credential(test_app)
+    await _probe(test_app, _url(gitlab_server), str(credential.id))
+
+    resp = await test_app.post(f"/api/v1/git/credentials/{credential.id}/check", params={"profile": profile})
+
+    assert resp.status_code == 200, resp.text
+    body = GitCredentialCheckResponse.model_validate(resp.json())
+    assert body.token_info is not None
+    assert body.token_info.sufficiency == "sufficient"
+
+
+async def test__check_credential__unknown_profile__is_422(test_app: AsyncClient, gitlab_server: GitHttpServer) -> None:
+    await _trusted(test_app, gitlab_server)
+    credential = await _credential(test_app)
+
+    resp = await test_app.post(f"/api/v1/git/credentials/{credential.id}/check", params={"profile": "admin"})
+
+    assert resp.status_code == 422
+
+
 async def test__check_credential__expired_token__is_token_expired(
     test_app: AsyncClient, gitlab_server: GitHttpServer, gitlab: Gitlab
 ) -> None:

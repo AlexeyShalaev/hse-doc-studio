@@ -99,6 +99,36 @@ describe("доступ пространства к репозиторию", () =
     ).toHaveTextContent("pull_requests:write");
   });
 
+  it("официальные паки: проверка и памятка под packs_fork (классический public_repo)", async () => {
+    vi.spyOn(gitRemoteApi, "listCredentials").mockResolvedValue([CREDENTIAL]);
+    vi.spyOn(gitRemoteApi, "listHostSettings").mockResolvedValue([]);
+    const check = vi.spyOn(gitRemoteApi, "checkCredential").mockResolvedValue({
+      credential: CREDENTIAL,
+      provider_info: { id: "github", detected_by: "host", version: null },
+      token_info: {
+        login: "ivanov",
+        scopes: ["public_repo"],
+        expires_at: null,
+        sufficiency: "sufficient",
+        missing: [],
+      },
+    });
+    mount({ ...WORKSPACE, official: true });
+    await userEvent.click(await screen.findByTestId("credential-check"));
+    await waitFor(() => {
+      expect(check).toHaveBeenCalledWith(CREDENTIAL.id, "packs_fork");
+    });
+    expect(
+      await screen.findByTestId("token-check-sufficient"),
+    ).toBeInTheDocument();
+    const link = screen.getByTestId("token-create-link");
+    expect(link.getAttribute("href")).toContain("scopes=public_repo");
+    // Поля токена тут нет: шаг «Вставьте» ведёт к кнопке замены.
+    expect(screen.getByTestId("token-helper-steps")).toHaveTextContent(
+      "Заменить токен",
+    );
+  });
+
   it("без токена: пояснение и памятка о токене с правами packs", async () => {
     vi.spyOn(gitRemoteApi, "listHostSettings").mockResolvedValue([]);
     mount({ ...WORKSPACE, credential_id: null });
@@ -106,5 +136,8 @@ describe("доступ пространства к репозиторию", () =
       "У пространства нет токена",
     );
     expect(screen.getByTestId("token-link-card")).toBeInTheDocument();
+    expect(screen.getByTestId("token-helper-steps")).not.toHaveTextContent(
+      "поле ниже",
+    );
   });
 });

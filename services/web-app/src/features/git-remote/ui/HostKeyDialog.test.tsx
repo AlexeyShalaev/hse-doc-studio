@@ -192,9 +192,9 @@ describe("HostKeyDialog: ключ сервера изменился", () => {
     });
     const replace = screen.getByRole("button", { name: "Заменить ключ" });
     expect(replace).toBeDisabled();
-    await user.type(screen.getByLabelText(/введи имя сервера/), "git.hse");
+    await user.type(screen.getByLabelText(/введите имя сервера/), "git.hse");
     expect(replace).toBeDisabled();
-    await user.type(screen.getByLabelText(/введи имя сервера/), ".ru");
+    await user.type(screen.getByLabelText(/введите имя сервера/), ".ru");
     expect(replace).toBeEnabled();
     await user.click(replace);
     await waitFor(() => {
@@ -238,7 +238,10 @@ describe("HostKeyDialog: ключ сервера изменился", () => {
       });
       expect(await screen.findByDisplayValue("SHA256:NEW")).toBeInTheDocument();
       expect(screen.getByDisplayValue("SHA256:OLD")).toBeInTheDocument();
-      await user.type(screen.getByLabelText(/введи имя сервера/), "git.hse.ru");
+      await user.type(
+        screen.getByLabelText(/введите имя сервера/),
+        "git.hse.ru",
+      );
       await user.click(screen.getByRole("button", { name: "Заменить ключ" }));
       await waitFor(() => {
         expect(trust).toHaveBeenLastCalledWith({
@@ -267,7 +270,10 @@ describe("HostKeyDialog: ключ сервера изменился", () => {
       const user = userEvent.setup();
       mount({ mode: "changed", keys: [] });
       const retry = await screen.findByRole("button", { name: "Повторить" });
-      await user.type(screen.getByLabelText(/введи имя сервера/), "git.hse.ru");
+      await user.type(
+        screen.getByLabelText(/введите имя сервера/),
+        "git.hse.ru",
+      );
       expect(
         screen.getByRole("button", { name: "Заменить ключ" }),
       ).toBeDisabled();
