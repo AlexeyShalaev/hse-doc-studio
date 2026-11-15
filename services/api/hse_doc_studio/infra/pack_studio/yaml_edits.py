@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import bisect
 import copy
+from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import Any
 
@@ -38,6 +39,8 @@ _LOADER: Any = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
 _NO_WRAP = 2**31 - 1
 # Новое значение-словарь или список пишется в одну строку (`{ page: 1, x_mm: 80 }`), если оно не длиннее этого.
 _INLINE_MAX = 100
+# `set_value(..., block=True)`: новые непустые словари и списки пишутся блоком строк, а не в одну строку.
+_BLOCK: ContextVar[bool] = ContextVar("pack_yaml_block", default=False)
 
 
 class YamlEditError(ValueError):
@@ -49,14 +52,19 @@ class YamlEditError(ValueError):
 # ---------------------------------------------------------------------------
 
 
-def set_value(text: str, path: YamlPath, value: Any, *, after: str | None = None) -> str:
+def set_value(text: str, path: YamlPath, value: Any, *, after: str | None = None, block: bool = False) -> str:
     """Значение по пути; последний ключ словаря может отсутствовать, тогда он дописывается в конец блока.
 
     `after` ставит новый ключ сразу за этим ключом того же словаря (если он там есть), а не в конец блока:
-    `release` за `status` в `version.yaml`. Для существующего ключа `after` ничего не меняет.
+    `release` за `status` в `version.yaml`. Для существующего ключа `after` ничего не меняет. `block`: новые
+    непустые словари и списки блоком строк (заметки `changes` пунктами, как в паках), а не `[...]` в строку.
     """
     expected = _expect(text, path, lambda parent, key: _assign(parent, key, value), root=value)
-    return _checked(_set(text, path, value, after=after), expected)
+    token = _BLOCK.set(block)
+    try:
+        return _checked(_set(text, path, value, after=after), expected)
+    finally:
+        _BLOCK.reset(token)
 
 
 def insert_item(text: str, path: YamlPath, index: int, value: Any) -> str:
@@ -378,12 +386,7 @@ def _inline(
 ) -> str | None:
     """Значение одной строкой (скаляр или `{...}`, `[...]`) или блочный скаляр; None, если нужен блок строк."""
     if isinstance(value, dict | list):
-        if flow:
-            return _flow_text(value)
-        if not value:
-            return "{}" if isinstance(value, dict) else "[]"
-        text = _flow_text(value) if _fits_inline(value) else None
-        return text if text is not None and len(text) <= _INLINE_MAX else None
+        return _flow_text(value) if flow else _collection_inline(value)
     if flow:
         return _scalar_text(value, None if style in ("|", ">") else style, flow=True, plain_first=plain_first)
     if style in ("|", ">") and isinstance(value, str) and literal_indent is not None:
@@ -392,6 +395,16 @@ def _inline(
             return literal
         style = '"'
     return _scalar_text(value, style, plain_first=plain_first)
+
+
+def _collection_inline(value: dict[Any, Any] | list[Any]) -> str | None:
+    """Словарь или список в блочном контексте: одной строкой, если короткий и плоский (и не просили блок)."""
+    if not value:
+        return "{}" if isinstance(value, dict) else "[]"
+    if _BLOCK.get():
+        return None
+    text = _flow_text(value) if _fits_inline(value) else None
+    return text if text is not None and len(text) <= _INLINE_MAX else None
 
 
 def _entry_lines(key: Any, value: Any, indent: int, align: int | None = None) -> list[str]:

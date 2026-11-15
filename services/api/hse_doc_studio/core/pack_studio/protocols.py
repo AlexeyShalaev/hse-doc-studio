@@ -4,11 +4,12 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Protocol
 from uuid import UUID
 
+from hse_doc_studio.core.enums import TemplateUpdateClass
 from hse_doc_studio.core.git_sync.entities import RemoteTarget
 from hse_doc_studio.core.git_sync.secret import Secret
 from hse_doc_studio.core.jobs.entities import JobSpec
@@ -43,6 +44,16 @@ from hse_doc_studio.core.pack_studio.preview import (
     VersionDescription,
 )
 from hse_doc_studio.core.pack_studio.protection import Protection
+from hse_doc_studio.core.pack_studio.versions import (
+    BaseRegistry,
+    CreatedVersion,
+    MovedVersion,
+    NewVersionOptions,
+    ReleasedVersionView,
+    TemplateRef,
+    VersionNotesInput,
+    VersionState,
+)
 from hse_doc_studio.core.vcs.entities import VcsAuthor
 
 
@@ -198,6 +209,15 @@ class IPackWorkspaceGit(Protocol):
         self, dirs: WorkspaceDirs, target: RemoteTarget, *, base_branch: str, packs_path: str, max_bytes: int
     ) -> tuple[str, bool]:
         """Единый diff пространства от базы (коммиты и правки на диске) и признак, что он обрезан."""
+        ...
+
+    # ── срез T10: мастер «Новая версия» ──
+
+    async def restore_from_base(
+        self, dirs: WorkspaceDirs, target: RemoteTarget, *, base_branch: str, paths: Sequence[str]
+    ) -> None:
+        """Каталоги рабочего дерева (пути от корня репозитория) ровно как в базовой ветке: лишние файлы уходят,
+        содержимое берётся из базы (блобы частичного клона подгружаются по сети). Коммит не делается."""
         ...
 
     async def branch_paths(self, dirs: WorkspaceDirs, *, base_branch: str) -> tuple[str, ...]:
@@ -438,6 +458,56 @@ class IPreviewDispatcher(Protocol):
     def submit(self, spec: JobSpec, hooks: IJobHooks) -> None: ...
     async def cancel(self, job_id: UUID) -> bool: ...
     def is_active(self, job_id: UUID) -> bool: ...
+
+
+# ── Мастер «Новая версия» (раздел 7, срез T10) ───────────────────────────────
+
+
+class IPackVersions(Protocol):
+    """Копия, номер, класс, заметки и выпуск версии шаблона над папкой паков `root` (в процессе, без TeX).
+
+    `registry` выпущенные в базовой ветке версии шаблона (D10). Отказы это `PackStudioError`: `version_not_found`,
+    `version_taken` (с `suggested`), `version_number_invalid`, `class_softer_than_changes`, `lint_failed`.
+    """
+
+    def options(self, root: Path, template: TemplateRef, registry: BaseRegistry) -> NewVersionOptions: ...
+
+    def state(self, root: Path, ref: VersionRef, registry: BaseRegistry) -> VersionState: ...
+
+    def create(  # noqa: PLR0913 — шаг 1 мастера
+        self,
+        root: Path,
+        template: TemplateRef,
+        *,
+        base: str | None,
+        to: str | None,
+        update_class: TemplateUpdateClass | None,
+        registry: BaseRegistry,
+        today: date,
+    ) -> CreatedVersion: ...
+
+    def save_notes(self, root: Path, ref: VersionRef, notes: VersionNotesInput) -> None: ...
+
+    def renumber(self, root: Path, ref: VersionRef, to: str, registry: BaseRegistry, today: date) -> MovedVersion:
+        """Черновик на другой номер; запись выпуска в ветке снимается."""
+        ...
+
+    def move_edits(
+        self, root: Path, ref: VersionRef, to: str | None, registry: BaseRegistry, today: date
+    ) -> MovedVersion:
+        """Изменённый выпущенный каталог копируется в новый черновик, реестр рабочего дерева берёт записи базы."""
+        ...
+
+    def release(  # noqa: PLR0913 — шаг «Выпустить»
+        self,
+        root: Path,
+        ref: VersionRef,
+        *,
+        kind: TemplateUpdateClass | None,
+        set_default: bool,
+        registry: BaseRegistry,
+        today: date,
+    ) -> ReleasedVersionView: ...
 
 
 class IOfficialSettingsStore(Protocol):

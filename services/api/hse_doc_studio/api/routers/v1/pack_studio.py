@@ -8,12 +8,17 @@
 Файлы адресуются путём от папки паков пространства:
 `files/hse-cs-sse/templates/coursework/versions/2026.1.5/version.yaml`.
 
+Мастер «Новая версия» (срез T10): `templates/{pack}/{template}/versions` даёт базы и номера (GET) и создаёт черновик
+(POST); `versions/{pack}/{template}/{version}/state` живой класс, номера и заметки, дальше `notes`, `renumber`,
+`move-edits` (7.3) и `release`.
+
 Предпросмотр (срез T7): `versions/{pack}/{template}/{version}/preview` отдаёт документы, переключатели и наборы данных
 (GET) и запускает сборку (POST); ход сборки, PDF, журнал и якоря мест подписей по `previews/{build_id}`.
 """
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Annotated
 from uuid import UUID
 
@@ -25,6 +30,7 @@ from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.routers.v1.files import _content_type_for
 from hse_doc_studio.api.schemas.pack_studio import (
+    CreatePackVersionRequest,
     CreatePackWorkspaceRequest,
     OpenPackOfficialRequest,
     PackBranchRequest,
@@ -42,8 +48,10 @@ from hse_doc_studio.api.schemas.pack_studio import (
     PackGitResponse,
     PackLintRequest,
     PackLintResponse,
+    PackLocalizedList,
     PackMacroHintResponse,
     PackMetaFieldHintResponse,
+    PackMoveEditsRequest,
     PackOfficialBot,
     PackOfficialRepo,
     PackOfficialResponse,
@@ -57,6 +65,9 @@ from hse_doc_studio.api.schemas.pack_studio import (
     PackProposeRequest,
     PackProposeResponse,
     PackPullRequest,
+    PackReleaseRequest,
+    PackReleaseResponse,
+    PackRenumberRequest,
     PackStartOverRequest,
     PackStudioSectionResponse,
     PackTreeFile,
@@ -64,16 +75,27 @@ from hse_doc_studio.api.schemas.pack_studio import (
     PackTreeResponse,
     PackTreeTemplate,
     PackTreeVersion,
+    PackVersionChoice,
     PackVersionClass,
+    PackVersionCreatedResponse,
+    PackVersionMovedResponse,
+    PackVersionNotesRequest,
+    PackVersionNumbers,
+    PackVersionOptionsResponse,
+    PackVersionReason,
+    PackVersionRef,
+    PackVersionStateResponse,
     PackWorkspaceErrorBody,
     PackWorkspaceResponse,
     PackYamlPatchRequest,
     PackYamlPatchResponse,
     ReadOnlyReason,
     StartPackPreviewRequest,
+    UpdateClassName,
     UpdatePackStudioSectionRequest,
 )
 from hse_doc_studio.core.access.context import require_actor
+from hse_doc_studio.core.enums import TemplateUpdateClass
 from hse_doc_studio.core.pack_studio.entities import (
     DiagnosticSeverity,
     PackEditorHints,
@@ -83,13 +105,22 @@ from hse_doc_studio.core.pack_studio.entities import (
 )
 from hse_doc_studio.core.pack_studio.errors import PackStudioError, PackStudioErrorCode
 from hse_doc_studio.core.pack_studio.official import OfficialRepo, official_repo
+from hse_doc_studio.core.pack_studio.paths import VersionRef
 from hse_doc_studio.core.pack_studio.preview import PreviewBuild
+from hse_doc_studio.core.pack_studio.versions import (
+    LANGS,
+    LocalizedList,
+    NewVersionOptions,
+    VersionNotesInput,
+    VersionState,
+)
 from hse_doc_studio.use_cases.pack_studio.access import PackStudioAccess, SectionView
 from hse_doc_studio.use_cases.pack_studio.files import PackFilesService, YamlOp
 from hse_doc_studio.use_cases.pack_studio.git import ForkChoice, GitView, PackGitService, ProposeInput
 from hse_doc_studio.use_cases.pack_studio.insight import PackInsightService
 from hse_doc_studio.use_cases.pack_studio.official import OfficialAccess, OfficialInfo, OfficialPacks
 from hse_doc_studio.use_cases.pack_studio.preview import PackPreviewService, PreviewOptions, StartPreviewInput
+from hse_doc_studio.use_cases.pack_studio.versions import CreateVersionInput, PackVersionService, ReleaseInput
 from hse_doc_studio.use_cases.pack_studio.workspaces import (
     CreateWorkspaceInput,
     PackWorkspaceService,
@@ -731,3 +762,222 @@ async def get_preview_anchors(workspace_id: UUID, build_id: UUID, previews: From
     """Якоря мест подписей и меток даты собранного PDF (тот же `anchors.json`, что у сборки проекта)."""
     data = await previews.anchors(require_actor(), workspace_id, build_id)
     return Response(content=data, media_type="application/json", headers=_NO_STORE)
+
+
+# ── мастер «Новая версия» ───────────────────────────────────────────────────
+
+_TEMPLATE_VERSIONS = "/pack-studio/workspaces/{workspace_id}/templates/{pack}/{template}/versions"
+_VERSION = "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}"
+
+
+def _version_ref(ref: VersionRef) -> PackVersionRef:
+    return PackVersionRef(pack=ref.pack, template=ref.template, version=ref.version, path=ref.dir)
+
+
+def _numbers(numbers: Mapping[TemplateUpdateClass, str]) -> PackVersionNumbers:
+    return PackVersionNumbers(
+        patch=numbers.get(TemplateUpdateClass.patch),
+        minor=numbers.get(TemplateUpdateClass.minor),
+        major=numbers.get(TemplateUpdateClass.major),
+    )
+
+
+def _localized(value: LocalizedList) -> PackLocalizedList:
+    return PackLocalizedList(ru=list(value.get("ru", ())), en=list(value.get("en", ())))
+
+
+def _class_name(value: TemplateUpdateClass | None) -> UpdateClassName | None:
+    return value.value if value is not None else None
+
+
+def version_options_response(options: NewVersionOptions) -> PackVersionOptionsResponse:
+    return PackVersionOptionsResponse(
+        pack=options.template.pack,
+        template=options.template.template,
+        versions=[
+            PackVersionChoice(
+                version=c.version, status=c.status, released=c.released, registered=c.registered, modified=c.modified
+            )
+            for c in options.versions
+        ],
+        default_base=options.default_base,
+        default_version=options.default_version,
+        numbers=_numbers(options.numbers),
+    )
+
+
+def version_state_response(state: VersionState) -> PackVersionStateResponse:
+    return PackVersionStateResponse(
+        version=_version_ref(state.ref),
+        status=state.status,
+        released=state.released,
+        modified=state.modified,
+        registered=state.registered,
+        release_outdated=state.release_outdated,
+        is_default=state.is_default,
+        base=state.base,
+        minimum=_class_name(state.minimum),
+        suggested=_class_name(state.suggested),
+        by_number=_class_name(state.by_number),
+        declared=_class_name(state.declared),
+        note=state.note,
+        number_ok=state.number_ok,
+        headline=dict(state.headline),
+        reasons=[
+            PackVersionReason(
+                code=r.code,
+                path=r.path,
+                change=r.change,
+                minimum=r.minimum.value,
+                suggested=r.suggested.value,
+                hard=r.hard,
+                exception=r.exception,
+                message=dict(r.message),
+            )
+            for r in state.reasons
+        ],
+        numbers=_numbers(state.numbers),
+        changes=_localized(state.changes),
+        breaking_changes=_localized(state.breaking_changes),
+        draft_changes=_localized(state.draft_changes),
+        draft_breaking=_localized(state.draft_breaking),
+        move_to=state.move_to,
+        error=state.error,
+    )
+
+
+def _notes_input(body: PackVersionNotesRequest) -> VersionNotesInput:
+    def pairs(value: PackLocalizedList | None) -> LocalizedList | None:
+        if value is None:
+            return None
+        return {lang: tuple(getattr(value, lang)) for lang in LANGS}
+
+    return VersionNotesInput(changes=pairs(body.changes), breaking_changes=pairs(body.breaking_changes), note=body.note)
+
+
+def _update_class(raw: str | None) -> TemplateUpdateClass | None:
+    return TemplateUpdateClass(raw) if raw else None
+
+
+@router.get(_TEMPLATE_VERSIONS, response_model=PackVersionOptionsResponse)
+async def get_version_options(
+    workspace_id: UUID, pack: str, template: str, versions: FromDishka[PackVersionService], response: Response
+) -> PackVersionOptionsResponse:
+    """Базы для «Новой версии» (по умолчанию последняя выпущенная) и номера по классам (7.1)."""
+    response.headers.update(_NO_STORE)
+    return version_options_response(await versions.options(require_actor(), workspace_id, pack, template))
+
+
+@router.post(_TEMPLATE_VERSIONS, status_code=201, response_model=PackVersionCreatedResponse)
+async def create_version(  # noqa: PLR0913 — путь шаблона и тело
+    workspace_id: UUID,
+    pack: str,
+    template: str,
+    body: CreatePackVersionRequest,
+    versions: FromDishka[PackVersionService],
+) -> PackVersionCreatedResponse:
+    """Шаг 1 мастера: каталог базы копируется в черновик `beta`, заметки пусты."""
+    created = await versions.create(
+        require_actor(),
+        workspace_id,
+        pack,
+        template,
+        CreateVersionInput(base=body.base, version=body.version, update_class=_update_class(body.update_class)),
+    )
+    return PackVersionCreatedResponse(
+        version=_version_ref(created.ref),
+        base=created.base,
+        update_class=_class_name(created.update_class),
+        warnings=list(created.warnings),
+    )
+
+
+@router.get(_VERSION + "/state", response_model=PackVersionStateResponse)
+async def get_version_state(  # noqa: PLR0913 — путь версии
+    workspace_id: UUID,
+    pack: str,
+    template: str,
+    version: str,
+    versions: FromDishka[PackVersionService],
+    response: Response,
+) -> PackVersionStateResponse:
+    """Живой класс черновика по классификатору (7.2), номера по классам, заметки и их черновик из отчёта (7.4)."""
+    response.headers.update(_NO_STORE)
+    state = await versions.state(require_actor(), workspace_id, pack, template, version)
+    return version_state_response(state)
+
+
+@router.put(_VERSION + "/notes", response_model=PackVersionStateResponse)
+async def put_version_notes(  # noqa: PLR0913 — путь версии и тело
+    workspace_id: UUID,
+    pack: str,
+    template: str,
+    version: str,
+    body: PackVersionNotesRequest,
+    versions: FromDishka[PackVersionService],
+) -> PackVersionStateResponse:
+    """Заметки `changes` и `breaking_changes` ru и en, объяснение класса `release.note`: точечные правки YAML."""
+    state = await versions.save_notes(require_actor(), workspace_id, pack, template, version, _notes_input(body))
+    return version_state_response(state)
+
+
+@router.post(_VERSION + "/renumber", response_model=PackVersionMovedResponse)
+async def renumber_version(  # noqa: PLR0913 — путь версии и тело
+    workspace_id: UUID,
+    pack: str,
+    template: str,
+    version: str,
+    body: PackRenumberRequest,
+    versions: FromDishka[PackVersionService],
+) -> PackVersionMovedResponse:
+    """Черновик на другой номер: класс поднят или номер уже выпущен в базе (4.3). Мягче минимума нельзя."""
+    moved = await versions.renumber(require_actor(), workspace_id, pack, template, version, body.version)
+    return PackVersionMovedResponse(
+        version=_version_ref(moved.ref), previous=moved.previous, unreleased=moved.unreleased, restored=moved.restored
+    )
+
+
+@router.post(_VERSION + "/move-edits", response_model=PackVersionMovedResponse)
+async def move_version_edits(  # noqa: PLR0913 — путь версии и тело
+    workspace_id: UUID,
+    pack: str,
+    template: str,
+    version: str,
+    body: PackMoveEditsRequest,
+    versions: FromDishka[PackVersionService],
+) -> PackVersionMovedResponse:
+    """«Перенести правки в новую версию» (7.3): правки выпущенного каталога уходят в черновик, каталог к выпуску."""
+    moved = await versions.move_edits(require_actor(), workspace_id, pack, template, version, body.version)
+    return PackVersionMovedResponse(
+        version=_version_ref(moved.ref), previous=moved.previous, unreleased=moved.unreleased, restored=moved.restored
+    )
+
+
+@router.post(_VERSION + "/release", response_model=PackReleaseResponse)
+async def release_pack_version(  # noqa: PLR0913 — путь версии и тело
+    workspace_id: UUID,
+    pack: str,
+    template: str,
+    version: str,
+    body: PackReleaseRequest,
+    versions: FromDishka[PackVersionService],
+) -> PackReleaseResponse:
+    """«Выпустить»: `status: stable`, `released_at`, `release.kind`, по желанию `default_version`, запись в реестр."""
+    released = await versions.release(
+        require_actor(),
+        workspace_id,
+        pack,
+        template,
+        version,
+        ReleaseInput(kind=_update_class(body.kind), set_default=body.set_default),
+    )
+    return PackReleaseResponse(
+        version=_version_ref(released.ref),
+        digest=released.digest,
+        kind=_class_name(released.kind),
+        previous=released.previous,
+        replaced=released.replaced,
+        default_set=released.default_set,
+        edited=list(released.edited),
+        warnings=list(released.warnings),
+    )

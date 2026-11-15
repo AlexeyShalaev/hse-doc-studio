@@ -78,7 +78,8 @@
     "readOnly": {
       "versionReleased": "File of a released version: read-only",
       "releasesRegistry": "Release registry: changed by the “New version” wizard"
-    }
+    },
+    "newVersion": "New version of template {{template}}"
   },
   "crumbs": {
     "label": "File location"
@@ -429,6 +430,108 @@
       "token": "How to create a token",
       "steps": "The token needs the packs permission profile: branch, PR and checks status. For a PR from a fork into someone else's public repository a classic token with the public_repo scope works.",
       "settings": "Open Git access"
+    }
+  },
+  "version": {
+    "class": {
+      "patch": "patch",
+      "minor": "minor",
+      "major": "major"
+    },
+    "classHint": {
+      "patch": "Fixes: texts, files, signature places. Projects get the update as a card.",
+      "minor": "New things without breaking: fields, documents, checkpoints.",
+      "major": "A new edition of the rules: another intake year."
+    },
+    "base": {
+      "released": "released",
+      "registered": "released in branch",
+      "draft": "draft"
+    },
+    "create": {
+      "title": "New version",
+      "lead": "Template {{pack}} / {{template}}: the base folder is copied into a beta draft.",
+      "base": "Base",
+      "baseHint": "The last released version by default.",
+      "class": "Class of the new version",
+      "majorNumber": "Major version number",
+      "majorHint": "YEAR.1 by the intake year, for example 2027.1.",
+      "copyHint": "Version notes in the copy are empty, the release block is removed. The class is recalculated as you edit.",
+      "submit": "Create {{version}}",
+      "done": "Version {{version}} created",
+      "takeSuggested": "Use {{version}}"
+    },
+    "bar": {
+      "reasons": "Class reasons",
+      "first": "First version of the template: nothing to compare with",
+      "noChanges": "No changes",
+      "soft": "soft: {{cls}}",
+      "registered": "released in branch",
+      "registeredHint": "The version is in the release registry of the work branch. It becomes released after the PR is merged.",
+      "numberSofter": "The number is softer than the changes require: choose a number not below the minimum class.",
+      "numberFix": "Number {{version}}",
+      "outdated": "Version files changed after the release: release it again to recalculate the registry entry.",
+      "released": "Version {{version}} is released: its folder is only a base for a copy.",
+      "newFrom": "New version from this one",
+      "modified": "The released version folder differs from the release: it was edited outside the Studio or this number was already released in the main branch.",
+      "saveFirst": "Save the file in the editor first: the wizard step rereads the version files."
+    },
+    "renumber": {
+      "button": "Number",
+      "title": "Version number",
+      "lead": "Now {{version}}. The number follows the class of changes.",
+      "minimum": "The changes require at least {{minimum}}: softer is not allowed, stricter is.",
+      "blocked": "Softer than the changes require",
+      "unrelease": "The version is already in the branch release registry: the entry is removed, release it again under the new number.",
+      "submit": "Move to {{version}}",
+      "done": "The version is now {{version}}"
+    },
+    "notes": {
+      "button": "Notes",
+      "title": "Notes for version {{version}}",
+      "lead": "What changed for students and supervisors. One item per line, ru and en in pairs.",
+      "draftLead": "A draft from the classifier report: edit the items as needed.",
+      "fill": "Use the report",
+      "changesRu": "Changes (ru)",
+      "changesEn": "Changes (en)",
+      "breakingRu": "What breaks (ru)",
+      "breakingEn": "What breaks (en)",
+      "parallel": "ru and en need the same number of items: they go in pairs.",
+      "note": "Class explanation",
+      "noteHint": "The number is softer than the soft rules suggest. Explain the choice: the text goes into release.note and the PR description.",
+      "aiHint": "The English translation is written by hand for now.",
+      "save": "Save notes",
+      "done": "Notes saved"
+    },
+    "release": {
+      "button": "Release",
+      "again": "Release again",
+      "title": "Release {{version}}",
+      "lead": "The version becomes stable, goes into the release registry with the folder digest, and its files are closed for editing.",
+      "leadGit": "The version becomes stable and goes into the release registry of the work branch. It becomes released after the PR is merged; until then the release can be repeated.",
+      "class": "Class",
+      "base": "Compared with",
+      "notes": "Notes",
+      "notesCount_one": "{{count}} item",
+      "notesCount_other": "{{count}} items",
+      "noNotes": "The version has no notes: the linter will not release it without ru and en items.",
+      "noteMissing": "The number is softer than suggested and there is no class explanation: add it in the notes.",
+      "setDefault": "Make it the default version for new projects",
+      "submit": "Release",
+      "done": "Version {{version}} released",
+      "doneGit": "Version {{version}} released in the work branch. Open a PR with Propose changes.",
+      "taken": "Number {{version}} is already released in the main branch. The edits can move to {{suggested}}.",
+      "moveTo": "Move to {{version}}",
+      "lint": "The version did not pass the checks: files are unchanged."
+    },
+    "move": {
+      "button": "Move edits to a new version",
+      "title": "Move edits of {{version}}",
+      "lead": "The edits are copied into draft {{version}}. Return the released version folder to the release yourself (for example, git checkout).",
+      "leadGit": "The edits are copied into draft {{version}}, the released version folder returns to the main branch, the release registry takes its entries.",
+      "submit": "Move to {{version}}",
+      "done": "Edits moved to {{version}}",
+      "notRestored": "The released version folder still has the edits: return it to the release by hand."
     }
   }
 }

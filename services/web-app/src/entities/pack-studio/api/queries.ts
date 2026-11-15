@@ -9,12 +9,15 @@ import { packStudioApi, type PackVersionRef } from "./packStudioApi";
 import type {
   CreatePackServiceAccessRequest,
   CreatePackStudioGrantRequest,
+  CreatePackVersionRequest,
   CreatePackWorkspaceRequest,
   OpenPackOfficialRequest,
   PackCiStatus,
   PackGit,
   PackPreviewBuild,
   PackProposeRequest,
+  PackReleaseRequest,
+  PackVersionNotesRequest,
   PackWorkspace,
   StartPackPreviewRequest,
   UpdatePackStudioOfficialRequest,
@@ -46,6 +49,18 @@ export const packStudioKeys = {
       ref.pack,
       ref.template,
       ref.version,
+    ] as const,
+  versionOptions: (id: string, pack: string, template: string) =>
+    [...packStudioKeys.workspace(id), "versions", pack, template] as const,
+  // Состояние версии зависит от файлов: `revision` меняется с каждой сохранённой правкой.
+  versionState: (id: string, ref: PackVersionRef, revision: string) =>
+    [
+      ...packStudioKeys.workspace(id),
+      "version-state",
+      ref.pack,
+      ref.template,
+      ref.version,
+      revision,
     ] as const,
   previewBuild: (id: string, buildId: string) =>
     [...packStudioKeys.workspace(id), "build", buildId] as const,
@@ -327,6 +342,122 @@ export const useStartPackOver = (id: string) => {
     onSuccess: (git) => {
       rememberGit(client, git);
       forgetFiles(client, id);
+    },
+  });
+};
+
+// ── мастер «Новая версия» (срез T10) ───────────────────────────────────────
+
+export const usePackVersionOptions = (
+  id: string,
+  pack: string,
+  template: string,
+  enabled = true,
+) =>
+  useQuery({
+    queryKey: packStudioKeys.versionOptions(id, pack, template),
+    queryFn: () => packStudioApi.versionOptions(id, pack, template),
+    enabled,
+    staleTime: 0,
+  });
+
+/** Живой класс версии: перечитывается с каждой сохранённой правкой (`revision`). */
+export const usePackVersionState = (
+  id: string,
+  ref: PackVersionRef | null,
+  revision: string,
+) =>
+  useQuery({
+    queryKey: packStudioKeys.versionState(
+      id,
+      ref ?? { pack: "", template: "", version: "" },
+      revision,
+    ),
+    queryFn: () =>
+      packStudioApi.versionState(
+        id,
+        ref ?? { pack: "", template: "", version: "" },
+      ),
+    enabled: ref !== null,
+    placeholderData: (previous) => previous,
+    staleTime: Infinity,
+  });
+
+/** Шаг мастера поменял файлы: дерево, состояние версий, git и проверки читаются заново. */
+const forgetVersionFiles = (client: QueryClient, id: string) => {
+  void client.invalidateQueries({ queryKey: packStudioKeys.tree(id) });
+  void client.invalidateQueries({ queryKey: packStudioKeys.git(id) });
+  void client.invalidateQueries({
+    queryKey: [...packStudioKeys.workspace(id), "version-state"],
+  });
+  void client.invalidateQueries({
+    queryKey: [...packStudioKeys.workspace(id), "versions"],
+  });
+  client.removeQueries({ queryKey: [...packStudioKeys.workspace(id), "file"] });
+  client.removeQueries({ queryKey: [...packStudioKeys.workspace(id), "lint"] });
+};
+
+export const useCreatePackVersion = (id: string) => {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (args: {
+      pack: string;
+      template: string;
+      body: CreatePackVersionRequest;
+    }) => packStudioApi.createVersion(id, args.pack, args.template, args.body),
+    onSuccess: () => {
+      forgetVersionFiles(client, id);
+    },
+  });
+};
+
+export const useSavePackVersionNotes = (id: string) => {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (args: {
+      ref: PackVersionRef;
+      body: PackVersionNotesRequest;
+    }) => packStudioApi.saveVersionNotes(id, args.ref, args.body),
+    onSuccess: () => {
+      forgetVersionFiles(client, id);
+    },
+  });
+};
+
+export const useRenumberPackVersion = (id: string) => {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { ref: PackVersionRef; version: string }) =>
+      packStudioApi.renumberVersion(id, args.ref, args.version),
+    onSuccess: () => {
+      forgetVersionFiles(client, id);
+    },
+  });
+};
+
+export const useMovePackVersionEdits = (id: string) => {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { ref: PackVersionRef; version: string | null }) =>
+      packStudioApi.moveVersionEdits(id, args.ref, args.version),
+    onSuccess: () => {
+      forgetVersionFiles(client, id);
+    },
+  });
+};
+
+export const useReleasePackVersion = (id: string) => {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (args: { ref: PackVersionRef; body: PackReleaseRequest }) =>
+      packStudioApi.releaseVersion(id, args.ref, args.body),
+    onSuccess: () => {
+      forgetVersionFiles(client, id);
+      // Выпуск у git делает выборку базы: карточка пространства тоже свежая.
+      void client.invalidateQueries({ queryKey: packStudioKeys.workspace(id) });
+    },
+    onError: () => {
+      void client.invalidateQueries({ queryKey: packStudioKeys.tree(id) });
     },
   });
 };
