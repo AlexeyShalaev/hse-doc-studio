@@ -65,4 +65,8 @@ Place edits go into `version.yaml` as targeted edits: the rest of the text and t
 
 Hints about places (off the sheet, a `per_author` place on a shared document, a place narrower than the detached signature plate) come to the **Problems** panel.
 
-<!-- T13 (route forms): describe "Route in this combination" and pale slots outside the checkpoint route here, after "Signature places". -->
+## Route in this combination { #route }
+
+On the checkpoints form (`version.yaml`, the **Form** tab) each checkpoint shows the signing route a project with the people from the switches gets: who signs at each step, which signatures the template added on a condition (`signing_slots` with `when`) and which do not appear in this combination, which signatures are optional, what the project author may add and which items are not submitted in this combination. The same code as the project route calculates it. The switches are shared with the preview: switch the supervisor to "From a company" in one place, and the route and the build see it at once.
+
+<!-- T13: pale slots outside the checkpoint route on the PDF are not done yet; describe them here when they come. -->

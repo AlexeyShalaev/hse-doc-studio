@@ -10,6 +10,32 @@ export {
   PackStaleFileError,
 } from "./api/packStudioApi";
 export type { PackFile, PackVersionRef } from "./api/packStudioApi";
+// Срез T13: профили сдачи, пункты и порядок маршрута формой.
+export {
+  PackSubmissionPatchRequestSchema,
+  PackSubmissionRoutesRequestSchema,
+  PackSubmissionRoutesSchema,
+  PackSubmissionSchema,
+  packSubmissionApi,
+  packSubmissionKeys,
+  usePackSubmission,
+  usePackSubmissionRoutes,
+  usePatchPackSubmission,
+} from "./api/submission";
+export type {
+  PackProfileHead,
+  PackProfileRoute,
+  PackSubmission,
+  PackSubmissionExtra,
+  PackSubmissionItem,
+  PackSubmissionOp,
+  PackSubmissionPatchRequest,
+  PackSubmissionProfile,
+  PackSubmissionRoutes,
+  PackSubmissionRoutesRequest,
+  PackSubmissionSlot,
+  PackSubmissionWhen,
+} from "./api/submission";
 export {
   CI_APPROVAL_POLL_MS,
   CI_POLL_MS,

@@ -1,0 +1,204 @@
+{
+  "workspace_id": "6f1c1c8e-1b7a-4d51-9a43-0a5b2f3c4d10",
+  "pack": "hse-cs-sse",
+  "template": "coursework",
+  "version": "2026.1.7",
+  "path": "hse-cs-sse/templates/coursework/versions/2026.1.7/version.yaml",
+  "etag": "\"sha256-3f2a\"",
+  "read_only": null,
+  "documents": [
+    "project_proposal",
+    "topic_application",
+    "report"
+  ],
+  "supported_kinds": [
+    "project",
+    "research"
+  ],
+  "has_nda": false,
+  "slots": [
+    {
+      "id": "author",
+      "label": {
+        "ru": "Автор работы",
+        "en": "Author"
+      },
+      "applies_to": [
+        "topic_application",
+        "report"
+      ],
+      "required": false,
+      "per_author": false
+    },
+    {
+      "id": "supervisor",
+      "label": {
+        "ru": "Научный руководитель",
+        "en": "Supervisor"
+      },
+      "applies_to": [
+        "project_proposal",
+        "topic_application",
+        "report"
+      ],
+      "required": false,
+      "per_author": false
+    },
+    {
+      "id": "academic_supervisor",
+      "label": {
+        "ru": "Академический руководитель ОП",
+        "en": "Academic programme supervisor"
+      },
+      "applies_to": [
+        "topic_application"
+      ],
+      "required": false,
+      "per_author": false
+    }
+  ],
+  "forms": [
+    {
+      "id": "code_link",
+      "title": {
+        "ru": "Ссылка на репозиторий",
+        "en": "Repository link"
+      },
+      "source": ".hse-studio/forms/code_link.json",
+      "output_name": "Ссылка на репозиторий.txt",
+      "format": "markdown",
+      "required_for_pack": true
+    }
+  ],
+  "route": null,
+  "builtin_route": [
+    [
+      "author"
+    ],
+    [
+      "supervisor",
+      "co_supervisor"
+    ],
+    [
+      "academic_supervisor"
+    ]
+  ],
+  "profiles": [
+    {
+      "index": 0,
+      "id": "topic-approval",
+      "name": {
+        "ru": "Заявка на тему КП",
+        "en": "Topic application"
+      },
+      "description": {
+        "ru": "Два PDF с подписями.",
+        "en": "Two signed PDFs."
+      },
+      "deadline_hint": {
+        "ru": "Обычно в середине ноября",
+        "en": "Usually mid-November"
+      },
+      "items": [
+        {
+          "index": 0,
+          "entry": {
+            "doc_id": "topic_application",
+            "signatures": [
+              "author",
+              "supervisor"
+            ],
+            "methods": {
+              "author": [
+                "image",
+                "detached"
+              ],
+              "supervisor": [
+                "image",
+                "detached"
+              ]
+            },
+            "skip_if_nda": false,
+            "supported_kinds": []
+          },
+          "error": null
+        }
+      ],
+      "extra_items": [],
+      "signing_route": [
+        [
+          "author"
+        ],
+        [
+          "supervisor"
+        ],
+        [
+          "academic_supervisor"
+        ]
+      ],
+      "signing_slots": [
+        {
+          "index": 0,
+          "entry": {
+            "doc_id": "topic_application",
+            "slot_id": "academic_supervisor",
+            "when": {
+              "person": "supervisor",
+              "role": "company"
+            },
+            "optional": false
+          },
+          "error": null
+        },
+        {
+          "index": 1,
+          "entry": null,
+          "error": "signing_slots[1]: doc_id and slot_id must be non-empty strings"
+        }
+      ],
+      "error": "signing_slots[1]: doc_id and slot_id must be non-empty strings"
+    },
+    {
+      "index": 1,
+      "id": "final",
+      "name": {
+        "ru": "Защита КП",
+        "en": "Course project defence"
+      },
+      "description": {},
+      "deadline_hint": null,
+      "items": [
+        {
+          "index": 0,
+          "entry": {
+            "doc_id": "report",
+            "signatures": [
+              "author"
+            ],
+            "methods": {},
+            "skip_if_nda": true,
+            "supported_kinds": [
+              "research"
+            ]
+          },
+          "error": null
+        }
+      ],
+      "extra_items": [
+        {
+          "index": 0,
+          "entry": {
+            "source": ".hse-studio/forms/code_link.json",
+            "output_name": "Ссылка на репозиторий.txt",
+            "format": "markdown",
+            "supported_kinds": []
+          },
+          "error": null
+        }
+      ],
+      "signing_route": null,
+      "signing_slots": [],
+      "error": null
+    }
+  ]
+}

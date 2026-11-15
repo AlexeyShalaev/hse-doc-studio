@@ -8,6 +8,7 @@ from typing import Any
 
 import pytest
 from hse_doc_studio.api.schemas import pack_studio as s
+from hse_doc_studio.api.schemas import pack_studio_submission as sub
 from hse_doc_studio.core.pack_studio.errors import PackStudioErrorCode, status_of
 from pydantic import TypeAdapter
 
@@ -74,6 +75,11 @@ _SCHEMAS: dict[str, Any] = {
     "PackModelPatchRequest": s.PackModelPatchRequest,
     "PackModelActionRequest": s.PackModelActionRequest,
     "PackDocLibrary": s.PackDocLibraryResponse,
+    # Срез T13: профили сдачи, пункты и порядок маршрута формой
+    "PackSubmission": sub.PackSubmissionResponse,
+    "PackSubmissionPatchRequest": sub.PackSubmissionPatchRequest,
+    "PackSubmissionRoutesRequest": sub.PackSubmissionRoutesRequest,
+    "PackSubmissionRoutes": sub.PackSubmissionRoutesResponse,
 }
 
 

@@ -599,5 +599,158 @@
     "disconnectLead": "The folder packs disappear from the project wizard. Versions stay: existing projects keep working on them.",
     "close": "Close",
     "done": "Done"
+  },
+  "submission": {
+    "lead": "Checkpoints and signing order of this version. Every change is written to version.yaml right away as a targeted edit: comments and key order stay, checks and the version class are recalculated as after an edit in Source.",
+    "missingTranslation": "Translation missing",
+    "stale": "The file changed outside the form. The form shows the fresh version; repeat the change.",
+    "profiles": "Checkpoints",
+    "noProfiles": "No checkpoints yet.",
+    "unnamed": "Untitled",
+    "problems_one": "{{count}} problem",
+    "problems_other": "{{count}} problems",
+    "up": "Up: {{what}}",
+    "down": "Down: {{what}}",
+    "remove": "Remove: {{what}}",
+    "brokenEntry": "The template does not read this entry: {{error}}. Fix it in Source.",
+    "route": {
+      "step": "Step {{n}}",
+      "parallel": "in parallel",
+      "stepUp": "Step up",
+      "stepDown": "Step down",
+      "joinPrevious": "Signs together with the previous step",
+      "joinPreviousShort": "With previous",
+      "separate": "A separate step right after this one",
+      "separateShort": "Separate",
+      "removeSlot": "Remove from the order: {{slot}}",
+      "addPlaceholder": "A signature not in the order",
+      "addStep": "As a separate step",
+      "dropHere": "Drop a signature here to make it a separate last step",
+      "own": "Set an own order",
+      "inherit": "Drop the own order ({{what}})",
+      "inherited": "In effect: {{what}}: {{steps}}.",
+      "missing": "Not in the order, they go as the last steps: {{slots}}.",
+      "unknown": "The order names slots outside the catalog; the route skips them: {{slots}}.",
+      "profileTitle": "Checkpoint signing order",
+      "profileHint": "Who signs first. Within a step people sign in parallel. Without an own order the version order applies.",
+      "versionTitle": "Version signing order",
+      "versionHint": "The common order for every checkpoint without its own. Without it the built-in Studio order applies.",
+      "builtinName": "the built-in order",
+      "versionName": "the version order"
+    },
+    "preview": {
+      "title": "Route in this combination",
+      "unreadable": "The template does not read this checkpoint, it has no route.",
+      "none": "The route is not calculated yet.",
+      "noSignatures": "This checkpoint needs no signatures: there is no route.",
+      "pair": "{{slot}} on “{{doc}}”",
+      "added": "Added by the template: {{pair}} ({{when}}).",
+      "optional": "Optional: {{pair}}.",
+      "skipped": "Not in this combination: {{pair}} ({{when}}).",
+      "mayAdd": "The project author may add: {{pairs}}.",
+      "itemsOff": "Not submitted in this combination: {{docs}}.",
+      "order": {
+        "profile": "Order: the checkpoint's own order.",
+        "version": "Order: the version order.",
+        "builtin": "Order: the built-in Studio order."
+      },
+      "failed": "The route was not calculated: {{reason}}"
+    },
+    "when": {
+      "always": "always",
+      "any": "if the {{person}} is set",
+      "university": "if the {{person}} is set and from HSE",
+      "company": "if the {{person}} is set and from a company"
+    },
+    "person": {
+      "supervisor": "supervisor",
+      "co_supervisor": "consultant",
+      "academic_supervisor": "academic supervisor"
+    },
+    "role": {
+      "author": "Author",
+      "supervisor": "Supervisor",
+      "co_supervisor": "Consultant",
+      "academic_supervisor": "Academic supervisor"
+    },
+    "kinds": {
+      "label": "Kind of work",
+      "both": "Both kinds",
+      "research": "Research only",
+      "project": "Project only"
+    },
+    "items": {
+      "title": "Items",
+      "hint": "The checkpoint's documents and their signatures. No signing method ticked means any method.",
+      "document": "Item document",
+      "noSlots": "No signature slot applies to this document.",
+      "unknownSlots": "Signatures outside the catalog or not for this document: {{slots}}.",
+      "skipIfNda": "Not submitted under NDA",
+      "addPlaceholder": "Document of the new item",
+      "add": "Add item"
+    },
+    "method": {
+      "image": "image",
+      "detached": "detached e-signature",
+      "pades": "PAdES",
+      "any": "any method"
+    },
+    "extras": {
+      "title": "Files besides documents",
+      "hint": "Form answers and other files that go into the checkpoint package.",
+      "form": "Form “{{title}}”",
+      "source": "File in the project",
+      "outputName": "Name in the package",
+      "format": "Format",
+      "notRequired": "Form {{form}} goes into the package but is not marked as needed for it (required_for_pack): the Studio will not warn that it is empty.",
+      "addPlaceholder": "What to add",
+      "other": "Another project file",
+      "add": "Add file"
+    },
+    "preset": {
+      "title": "Extra and optional signatures",
+      "hint": "The route preset: which signatures the template adds by itself and on what condition, which signatures are optional.",
+      "document": "Document",
+      "slot": "Signature",
+      "when": "Condition",
+      "optional": "Optional",
+      "requiredSlot": "The slot is required in the catalog (required): it cannot be optional",
+      "ofPoint": "A checkpoint item requires this signature: no condition, it can only be marked optional.",
+      "extra": "A signature beyond the checkpoint: the template adds it {{when}}.",
+      "noItems": "Add items first: the preset refers to their documents.",
+      "add": "Add entry"
+    },
+    "head": {
+      "id": "Identifier",
+      "idHint": "Latin letters, digits and single hyphens. Projects keep deadlines and routes by it: renaming is a change of the version.",
+      "name": "Name",
+      "description": "Description",
+      "hint": "Deadline hint",
+      "hintHint": "No concrete dates: deadlines change every year and a released version cannot be fixed. For example, “Usually mid-November; the date is announced in the LMS”.",
+      "reset": "Cancel",
+      "save": "Save"
+    },
+    "hintIssue": {
+      "missing": "Both languages are needed",
+      "long": "Longer than 200 characters",
+      "date": "Looks like a concrete date"
+    },
+    "profile": {
+      "up": "Up",
+      "down": "Down",
+      "remove": "Delete checkpoint",
+      "removeConfirm": "Delete the checkpoint from the version?",
+      "removeYes": "Delete",
+      "removeNo": "Keep",
+      "error": "The template does not fully understand the checkpoint: {{error}}",
+      "add": "New checkpoint",
+      "idTaken": "This checkpoint already exists",
+      "cancel": "Cancel",
+      "create": "Create checkpoint"
+    },
+    "combo": {
+      "title": "Combination for the route",
+      "hint": "The same switches as in the preview: the route below is calculated for these project people."
+    }
   }
 }

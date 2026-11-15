@@ -68,10 +68,18 @@ def set_value(text: str, path: YamlPath, value: Any, *, after: str | None = None
         _BLOCK.reset(token)
 
 
-def insert_item(text: str, path: YamlPath, index: int, value: Any) -> str:
-    """Новый элемент списка по пути на место `index` (от 0 до длины списка)."""
+def insert_item(text: str, path: YamlPath, index: int, value: Any, *, block: bool = False) -> str:
+    """Новый элемент списка по пути на место `index` (от 0 до длины списка).
+
+    `block`: словарь или список пишется блоком строк, а не `{...}` в строку (рядом с записями одной строкой
+    элемент всё равно встаёт одной строкой, как соседи).
+    """
     expected = _expect(text, (*path, index), lambda parent, key: _insert_into(parent, key, value))
-    return _checked(_insert(text, path, index, value), expected)
+    token = _BLOCK.set(block)
+    try:
+        return _checked(_insert(text, path, index, value), expected)
+    finally:
+        _BLOCK.reset(token)
 
 
 def delete(text: str, path: YamlPath) -> str:

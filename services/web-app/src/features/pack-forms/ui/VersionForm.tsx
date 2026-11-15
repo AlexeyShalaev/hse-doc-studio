@@ -5,6 +5,7 @@ import { DocumentsSection } from "./documents/DocumentsSection";
 import { LanguagesSection } from "./documents/LanguagesSection";
 import { FieldsSection } from "./fields/FieldsSection";
 import { FormsSection } from "./forms/FormsSection";
+import { SubmissionSection } from "./submission/SubmissionSection";
 
 /** Что раздел формы версии получает от вкладки «Форма» (модель и правки берёт из useModelEditor). */
 export type VersionSectionProps = {
@@ -27,6 +28,7 @@ export const VERSION_SECTIONS: {
   { id: "forms", Component: FormsSection },
   { id: "documents", Component: DocumentsSection },
   { id: "languages", Component: LanguagesSection },
+  { id: "submission", Component: SubmissionSection },
 ];
 
 export const VersionForm = (props: VersionSectionProps) => {

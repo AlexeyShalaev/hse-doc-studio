@@ -1,0 +1,48 @@
+{
+  "example": "auto:normal",
+  "combination": {
+    "lang": "ru",
+    "kind": "project",
+    "staffing": "solo",
+    "supervisor": "company",
+    "co_supervisor": "no",
+    "academic_supervisor": "yes"
+  },
+  "profiles": [
+    {
+      "id": "topic-approval",
+      "steps": [
+        [{ "persona": "author", "role": "author", "name": "Иванов Иван Иванович" }],
+        [{ "persona": "supervisor", "role": "supervisor", "name": "Петров Пётр Петрович" }],
+        [{ "persona": "academic_supervisor", "role": "academic_supervisor", "name": "Сидорова Анна Сергеевна" }]
+      ],
+      "pairs": [
+        { "doc_id": "topic_application", "slot_id": "author", "persona": "author", "source": "point", "optional": false, "when": null },
+        { "doc_id": "topic_application", "slot_id": "supervisor", "persona": "supervisor", "source": "point", "optional": false, "when": null },
+        {
+          "doc_id": "topic_application",
+          "slot_id": "academic_supervisor",
+          "persona": "academic_supervisor",
+          "source": "preset",
+          "optional": false,
+          "when": { "person": "supervisor", "role": "company" }
+        }
+      ],
+      "skipped": [{ "doc_id": "topic_application", "slot_id": "co_supervisor", "when": { "person": "co_supervisor", "role": null } }],
+      "may_add": [],
+      "items_off": [],
+      "order_source": "profile",
+      "preset": true
+    },
+    {
+      "id": "final",
+      "steps": [],
+      "pairs": [],
+      "skipped": [],
+      "may_add": [{ "doc_id": "report", "slot_id": "supervisor" }],
+      "items_off": ["report"],
+      "order_source": "builtin",
+      "preset": false
+    }
+  ]
+}

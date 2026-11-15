@@ -60,6 +60,7 @@ from hse_doc_studio.infra.pack_studio.preview_dispatch import PreviewJobDispatch
 from hse_doc_studio.infra.pack_studio.preview_renderer import PackPreviewRenderer, PreviewRenderLimits
 from hse_doc_studio.infra.pack_studio.preview_store import FsPreviewStore
 from hse_doc_studio.infra.pack_studio.preview_worker import StageLimits
+from hse_doc_studio.infra.pack_studio.submission import PackSubmissionEditor
 from hse_doc_studio.infra.pack_studio.version_model import PackVersionModel
 from hse_doc_studio.infra.pack_studio.version_wizard import PackVersionWizard
 from hse_doc_studio.infra.pack_studio.workspace_check import WorkspacePackChecker
@@ -77,6 +78,7 @@ from hse_doc_studio.use_cases.pack_studio.model import PackModelService
 from hse_doc_studio.use_cases.pack_studio.official import OfficialPacks
 from hse_doc_studio.use_cases.pack_studio.places import PackPlacesService
 from hse_doc_studio.use_cases.pack_studio.preview import PackPreviewService, PreviewLimits
+from hse_doc_studio.use_cases.pack_studio.submission import PackSubmissionService
 from hse_doc_studio.use_cases.pack_studio.versions import PackVersionService
 from hse_doc_studio.use_cases.pack_studio.workspaces import PackWorkspaceService, WorkspaceTasks
 
@@ -291,6 +293,10 @@ class PackStudioProvider(Provider):
     @provide
     def get_model_service(self, workspaces: PackWorkspaceService, files: PackFilesService) -> PackModelService:
         return PackModelService(workspaces, files, PackVersionModel(), PackYamlEditor())
+
+    @provide
+    def get_submission_service(self, files: PackFilesService, previews: PackPreviewService) -> PackSubmissionService:
+        return PackSubmissionService(files, previews, PackSubmissionEditor())
 
     @provide
     def get_catalog_service(

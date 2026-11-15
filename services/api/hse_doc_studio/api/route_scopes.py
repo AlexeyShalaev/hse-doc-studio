@@ -300,6 +300,10 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("PATCH", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/model"): _A,
     ("POST", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/model/actions"): _A,
     ("GET", "/pack-studio/workspaces/{workspace_id}/doc-library"): _A,
+    # Срез T13: профили сдачи, пункты и порядок маршрута формой, «Маршрут в этой комбинации»
+    ("GET", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/submission"): _A,
+    ("PATCH", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/submission"): _A,
+    ("POST", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/submission/routes"): _A,
     ("GET", "/pack-studio/workspaces/{workspace_id}/previews/{build_id}"): _A,
     ("DELETE", "/pack-studio/workspaces/{workspace_id}/previews/{build_id}"): _A,
     ("GET", "/pack-studio/workspaces/{workspace_id}/previews/{build_id}/pdf"): _A,
