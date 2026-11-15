@@ -457,6 +457,9 @@ export const WorkspaceScreen = () => {
                           workspaceId={ws.id}
                           path={file}
                           onSaved={onFormSaved}
+                          onOpenFile={(target) => {
+                            open(target);
+                          }}
                         />
                       </Suspense>
                     ) : undefined

@@ -398,6 +398,55 @@
   gap: 0.625rem;
 }
 
+/* документы и языки (T12) */
+.pf-divided {
+  margin-top: 0.5rem;
+}
+.pf-row-end {
+  justify-content: flex-end;
+}
+.pf-refs {
+  margin: 0.25rem 0 0;
+  padding-left: 1rem;
+  font-size: 0.6875rem;
+}
+.pf-langs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  overflow-x: auto;
+}
+.pf-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.71875rem;
+}
+.pf-table th,
+.pf-table td {
+  padding: 0.25rem 0.375rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+}
+.pf-table th {
+  font-weight: 500;
+  color: var(--fg-2);
+}
+.pf-file {
+  overflow-wrap: anywhere;
+}
+.pf-file .pf-warn {
+  display: inline-flex;
+  margin-left: 0.25rem;
+}
+.pf-shared {
+  color: var(--fg-2);
+}
+.pf-missing-lang {
+  color: var(--c-warn);
+}
+
 @media (max-width: 767.98px) {
   .pf-card {
     grid-template-columns: minmax(0, 1fr);
