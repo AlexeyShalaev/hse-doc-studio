@@ -201,6 +201,7 @@ export const GROUP_ORDER: readonly McpToolGroup[] = [
   "review",
   "history",
   "submission",
+  "packs",
   "admin",
 ];
 

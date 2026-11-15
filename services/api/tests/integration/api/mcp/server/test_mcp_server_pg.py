@@ -367,3 +367,30 @@ async def test__call_tool__set_document_variant__without_write_right__forbidden(
     assert json.loads(_variant(stand, owner_headers, project_id)["content"][0]["text"])["variant"] == before
     events = stand.admin().get("/api/admin/audit", params={"action": "document.variant_update"}).json()["items"]
     assert not [e for e in events if e["target"] == project_id]
+
+
+async def test__pack_tools__need_the_packs_scope_and_the_pack_author_right(stand: Stand) -> None:
+    """Студия шаблонов (template-studio.md, 11): область `packs` у токена и право «Автор шаблонов» у человека."""
+    _enable(stand)
+    resp = stand.admin().put("/api/admin/pack-studio", json={"enabled": True})
+    assert resp.status_code == 200, resp.text
+    person = await stand.person("vera")
+    admin_mcp = _token(stand, "stand-admin@example.org", ["mcp"])
+    admin_packs = _token(stand, "stand-admin@example.org", ["mcp", "packs"])
+    person_packs = _token(stand, person.email, ["mcp", "packs"])
+
+    def names(headers: dict[str, str]) -> set[str]:
+        return {t["name"] for t in _rpc(stand, headers, "tools/list").json()["result"]["tools"]}
+
+    no_scope = _call(stand, admin_mcp, "pack_list_workspaces", {})
+    listed = _call(stand, admin_packs, "pack_list_workspaces", {})
+    no_right = _call(stand, person_packs, "pack_list_workspaces", {})
+
+    assert not [n for n in names(admin_mcp) if n.startswith("pack_")]
+    assert "pack_list_workspaces" in names(admin_packs)
+    assert not [n for n in names(person_packs) if n.startswith("pack_")]
+    assert no_scope["_meta"]["code"] == "forbidden"
+    assert listed["isError"] is False, listed
+    assert json.loads(listed["content"][0]["text"]) == {"workspaces": []}
+    assert no_right["isError"] is True
+    assert json.loads(no_right["content"][0]["text"])["code"] == "pack_studio_forbidden"

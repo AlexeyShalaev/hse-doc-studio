@@ -3,7 +3,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Protocol, TypeVar
 
-from hse_doc_studio.core.mcp.entities import McpCallQuery, McpCallRecord, McpSettings
+from hse_doc_studio.core.access.entities import Actor
+from hse_doc_studio.core.mcp.entities import McpCallQuery, McpCallRecord, McpSettings, McpToolMeta
 
 T = TypeVar("T")
 
@@ -39,3 +40,11 @@ class IMcpChangeAudit(Protocol):
     """
 
     async def record(self, action: str, *, target: str | None, details: Mapping[str, object]) -> None: ...
+
+
+class IMcpToolGate(Protocol):
+    """Право на группу тулов сверх настроек MCP: тулы Студии шаблонов видит только тот, кому открыт её раздел
+    (включён и есть право «Автор шаблонов»). Скрытый тул не попадает в `tools/list`; вызов по имени упрётся в тот же
+    отказ, что у маршрутов раздела."""
+
+    async def allows(self, actor: Actor, meta: McpToolMeta) -> bool: ...

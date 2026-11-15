@@ -36,6 +36,7 @@ from hse_doc_studio.core.pack_studio.protocols import (
     IPackWorkspaceFiles,
     IPackWorkspaceGit,
     IPackWorkspaceRepository,
+    IPdfTextReader,
     IPreviewDispatcher,
     IPreviewStore,
     IServiceAccessRepository,
@@ -64,6 +65,7 @@ from hse_doc_studio.infra.pack_studio.workspace_check import WorkspacePackChecke
 from hse_doc_studio.infra.pack_studio.workspace_files import LocalPackWorkspaceFiles
 from hse_doc_studio.infra.pack_studio.workspace_git import PackWorkspaceGit, workspace_dirs
 from hse_doc_studio.infra.pack_studio.yaml_edits import PackYamlEditor
+from hse_doc_studio.infra.pdf.extract import PypdfTextReader
 from hse_doc_studio.use_cases.git_sync.provider_resolver import ProviderResolver
 from hse_doc_studio.use_cases.pack_catalog.service import PackCatalogService
 from hse_doc_studio.use_cases.pack_studio.access import PackStudioAccess
@@ -244,6 +246,10 @@ class PackStudioProvider(Provider):
         self, workspaces: PackWorkspaceService, versions: IPackVersions, git: IPackWorkspaceGit
     ) -> PackVersionService:
         return PackVersionService(workspaces, versions, git)
+
+    @provide
+    def get_pdf_text_reader(self) -> IPdfTextReader:
+        return PypdfTextReader()
 
     @provide
     def get_preview_store(self) -> IPreviewStore:

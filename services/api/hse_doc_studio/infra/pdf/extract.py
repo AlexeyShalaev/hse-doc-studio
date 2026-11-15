@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from io import BytesIO
 
 from pypdf import PdfReader
@@ -43,3 +44,10 @@ def extract_pdf_text(data: bytes, *, pages: list[int] | None = None, max_chars: 
     if len(joined) > max_chars:
         joined = f"{joined[:max_chars]}\n{_TRUNCATED[Lang.en] if en else _TRUNCATED[Lang.ru]}"
     return joined, total
+
+
+class PypdfTextReader:
+    """Реализация `IPdfTextReader` (core/pack_studio/protocols.py) той же выборкой, что у тула `read_pdf`."""
+
+    def read(self, data: bytes, *, pages: Sequence[int] | None, max_chars: int) -> tuple[str, int]:
+        return extract_pdf_text(data, pages=list(pages) if pages is not None else None, max_chars=max_chars)

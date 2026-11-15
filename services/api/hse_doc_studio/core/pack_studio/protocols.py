@@ -513,3 +513,9 @@ class IPackVersions(Protocol):
         registry: BaseRegistry,
         today: date,
     ) -> ReleasedVersionView: ...
+
+
+class IPdfTextReader(Protocol):
+    """Текст PDF сборки предпросмотра по страницам (для MCP `pack_preview_read`): текст и число страниц."""
+
+    def read(self, data: bytes, *, pages: Sequence[int] | None, max_chars: int) -> tuple[str, int]: ...

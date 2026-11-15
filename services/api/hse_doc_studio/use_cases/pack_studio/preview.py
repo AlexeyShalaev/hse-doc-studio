@@ -172,10 +172,16 @@ class PackPreviewService:
 
     # ── что можно собрать ───────────────────────────────────────────────────
 
-    async def options(self, actor: Actor, workspace_id: UUID, pack: str, template: str, version: str) -> PreviewOptions:
+    async def describe(
+        self, actor: Actor, workspace_id: UUID, pack: str, template: str, version: str
+    ) -> VersionDescription:
+        """Разобранная модель версии (в отдельном процессе, кэш по дайджесту входа): её читает и MCP `pack_read`."""
         _ws, root = await self._workspaces.ready(actor, workspace_id)
         ref = version_ref(pack, template, version)
-        desc = await self._description(root, ref, (await self._renderer.inputs(root, ref)).tree)
+        return await self._description(root, ref, (await self._renderer.inputs(root, ref)).tree)
+
+    async def options(self, actor: Actor, workspace_id: UUID, pack: str, template: str, version: str) -> PreviewOptions:
+        desc = await self.describe(actor, workspace_id, pack, template, version)
         examples = _examples(desc)
         default = _default_example(examples)
         chosen = next(e for e in examples if e.id == default)
