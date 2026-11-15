@@ -6,6 +6,16 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.29.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.28.0...v0.29.0) - 2026-11-15
+
+- Template Studio: a new /pack-studio section for template authors. A server-side working copy of the pack repository, a file tree, an editor with completion for form fields and \hse macros, and a Problems panel that checks the pack as you type. Administrators grant access with the Template author right.
+- Template Studio, git: branches, Save version, one-click Propose changes (pack checks, push, a GitHub PR or GitLab MR), pushing to a fork when you lack rights, CI status, a diff view, Pull main branch and Start over. Administrators can add a service access to the repository so authors do not need their own tokens.
+- Template Studio, preview: build a PDF of a template version from its examples or from automatic data sets (normal, long, empty) with chosen switches, plus the build log and cancel.
+- Command line for template authors: hse-doc-studio pack lint, check, classify, new-version and freeze, with JSON output.
+- Templates: fixed labels cut off at a comma inside the text (for example "Monospace font (code, listings)"). New versions: hse-cs-sse coursework 2026.1.6, hse-cs-se coursework and thesis 2026.1.2, internship 2026.1.1. The PDF does not change. The pack linter now catches this.
+- Settings, AI clients (MCP): the tool list no longer overflows, and the command field has no extra empty line.
+- Security: dnspython updated to 2.9.2 (CVE-2026-128089).
+
 ## [0.28.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.27.0...v0.28.0) - 2026-11-14
 
 - Mail log, version 2. Mail the mail server rejected temporarily is resent by the Studio itself: up to 5 attempts after 1, 5, 15 and 30 minutes. The log shows which messages are still being retried and which failed for good. A message has a “Send again” button, and the log has “Send unsent”. Self-diagnostics gains an “Email delivery” check that warns when mail stops going out.
