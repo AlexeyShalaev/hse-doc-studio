@@ -309,6 +309,13 @@ const mockWorkspaces = async (page: Page): Promise<Fake> => {
   return fake;
 };
 
+/** Дерево раскрывает только паки: открыть путь до черновой версии (шаблон, версии, сама версия). */
+const expandToDraft = async (page: Page): Promise<void> => {
+  for (const dir of ["hse-cs-sse/templates", TPL, `${TPL}/versions`, DRAFT]) {
+    await page.getByTestId(`tree-dir-${dir}`).click();
+  }
+};
+
 const login = async (page: Page): Promise<void> => loginOnPhone(page, ADMIN_EMAIL, adminPassword());
 
 /** Включить или выключить раздел настоящим API админки (сессия страницы, CSRF из bootstrap). */
@@ -361,6 +368,7 @@ for (const lang of LANGS) {
       await page.getByTestId("ws-create-submit").click();
       await expect(page.getByTestId("ws-cloning")).toBeVisible();
       await expect(page.getByTestId("pack-tree")).toBeVisible({ timeout: 15_000 });
+      await expandToDraft(page);
       await expect(page.getByTestId("tree-released-2026.1.5")).toBeVisible();
       await shot(page, L, "ps-10-workspace");
 
@@ -435,6 +443,7 @@ for (const lang of LANGS) {
         await expect(page.getByTestId("ws-tree-open")).toBeVisible({ timeout: 15_000 });
         await expectNoHorizontalScroll(page);
         await page.getByTestId("ws-tree-open").click();
+        await expandToDraft(page);
         await page.getByTestId(`tree-file-${MANIFEST}`).click();
         await expect(page.getByTestId("problems-panel")).toContainText("/status");
         await expect(page.getByTestId("git-bar")).toBeVisible();
