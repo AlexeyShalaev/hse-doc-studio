@@ -389,7 +389,8 @@ for (const lang of LANGS) {
         text("несохранённые", "Unsaved"),
       );
       await page.getByTestId("editor-save").click();
-      await expect(page.getByTestId("editor-status")).toContainText(text("Сохранено", "Saved"));
+      // Точный текст: «Unsaved changes» тоже содержит «saved».
+      await expect(page.getByTestId("editor-status")).toHaveText(lang === "ru" ? "Сохранено" : "Saved");
       expect(fake.writes).toHaveLength(1);
       expect(fake.writes[0]?.path).toBe(META);
       expect(fake.writes[0]?.ifMatch).toBe('"j1"');
