@@ -28,12 +28,25 @@ class TemplateInfoResponse(BaseModel):
     default_version: str
 
 
+class PackOriginResponse(BaseModel):
+    """Откуда пак: вшит в Студию (`builtin`) или подключён в «Каталогах паков» (`subscribed`, срез T17)."""
+
+    kind: str
+    source_kind: str | None = None
+    label: str | None = None
+    url: str | None = None
+    ref: str | None = None
+    revision: str | None = None
+    replaces_builtin: bool = False
+
+
 class PackResponse(BaseModel):
     id: str
     name: dict[str, str]
     description: dict[str, str]
     maintainer: dict[str, str]
     templates: list[TemplateInfoResponse]
+    origin: PackOriginResponse = PackOriginResponse(kind="builtin")
 
 
 class VersionListItemResponse(BaseModel):

@@ -308,6 +308,13 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("POST", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/renumber"): _A,
     ("POST", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/move-edits"): _A,
     ("POST", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/release"): _A,
+    # «Подключить к каталогу этой Студии» (template-studio.md, 10.3, срез T17): папка бывает только локально, на
+    # сервере каталоги паков ведёт админ в `/api/admin/pack-catalog`.
+    ("GET", "/pack-studio/workspaces/{workspace_id}/catalog"): _LOCAL,
+    ("PATCH", "/pack-studio/workspaces/{workspace_id}/catalog"): _LOCAL,
+    ("DELETE", "/pack-studio/workspaces/{workspace_id}/catalog"): _LOCAL,
+    ("POST", "/pack-studio/workspaces/{workspace_id}/catalog/check"): _LOCAL,
+    ("POST", "/pack-studio/workspaces/{workspace_id}/catalog/apply"): _LOCAL,
     # Профиль подписанта: только свой, путь без id пользователя (только сервер)
     ("GET", "/account/signer-profile"): _A,
     ("GET", "/account/signer-profile/image"): _A,
@@ -433,6 +440,16 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("POST", "/api/admin/pack-studio/service-access/{access_id}/check"): _ADM,
     ("GET", "/api/admin/pack-studio/official"): _ADM,
     ("PUT", "/api/admin/pack-studio/official"): _ADM,
+    # Каталоги паков (template-studio.md, 10.3, срез T17)
+    ("GET", "/api/admin/pack-catalog"): _ADM,
+    ("POST", "/api/admin/pack-catalog/sources"): _ADM,
+    ("POST", "/api/admin/pack-catalog/sources/archive"): _ADM,
+    ("PATCH", "/api/admin/pack-catalog/sources/{source_id}"): _ADM,
+    ("DELETE", "/api/admin/pack-catalog/sources/{source_id}"): _ADM,
+    ("PUT", "/api/admin/pack-catalog/sources/{source_id}/archive"): _ADM,
+    ("POST", "/api/admin/pack-catalog/sources/{source_id}/check"): _ADM,
+    ("POST", "/api/admin/pack-catalog/sources/{source_id}/apply"): _ADM,
+    ("GET", "/api/admin/pack-catalog/sources/{source_id}/history"): _ADM,
     ("GET", "/api/admin/mail-log/summary"): _ADM,
     ("GET", "/api/admin/mail-log/{entry_id}"): _ADM,
     ("POST", "/api/admin/mail-log/resend"): _ADM,

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date
+from enum import StrEnum
 from typing import Any, Literal
 
 from hse_doc_studio.core.enums import (
@@ -606,6 +607,38 @@ class TemplateInfo:
     icon: str
     accent_hue: int
     default_version: str
+    # Версии, которые есть в каталоге для существующих проектов, но в мастер проекта не попадают: их источник
+    # отключён или больше их не несёт (каталоги паков, docs/design/template-studio.md, 10.4).
+    hidden_versions: frozenset[str] = frozenset()
+
+
+class PackOriginKind(StrEnum):
+    # Пак вшит в образ Студии (или лежит в каталоге `HSE_STUDIO__PACKS_DIR`).
+    builtin = "builtin"
+    # Пак подключён в «Каталогах паков» (срез T17): версии лежат в хранилище `data_dir/packs-store`.
+    subscribed = "subscribed"
+
+
+@dataclass(frozen=True)
+class PackOrigin:
+    """Откуда пак в каталоге этой Студии: мастер проекта показывает подключённые паки с источником."""
+
+    kind: PackOriginKind = PackOriginKind.builtin
+    source_id: str | None = None
+    # Вид источника: `git`, `archive` или `folder`.
+    source_kind: str | None = None
+    label: str | None = None
+    # Адрес git без секретов; у архива и папки None.
+    url: str | None = None
+    # Тег, ветка или sha, на которые подписан источник git.
+    ref: str | None = None
+    # Применённая ревизия: sha коммита, дайджест архива или снимка папки.
+    revision: str | None = None
+    # Пак заменяет вшитый пак с тем же id (явная галочка «Заменить встроенный»).
+    replaces_builtin: bool = False
+
+
+BUILTIN_ORIGIN = PackOrigin()
 
 
 @dataclass(frozen=True)
@@ -616,3 +649,6 @@ class PackInfo:
     maintainer: dict[str, str]
     license: str
     templates: tuple[TemplateInfo, ...]
+    origin: PackOrigin = BUILTIN_ORIGIN
+    # False: источник пака отключён. Пак остаётся в каталоге для существующих проектов, но мастер его не предлагает.
+    listed: bool = True

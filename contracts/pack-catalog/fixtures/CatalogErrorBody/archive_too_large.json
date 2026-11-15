@@ -1,0 +1,5 @@
+{
+  "detail": "Архив слишком большой.",
+  "code": "archive_too_large",
+  "limit": 104857600
+}

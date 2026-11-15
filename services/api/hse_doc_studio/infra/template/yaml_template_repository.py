@@ -1,7 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-from dataclasses import replace
+import threading
+import time
+from collections.abc import Callable, Iterable, Mapping
+from dataclasses import dataclass, field, replace
 from datetime import date
 from pathlib import Path
 from typing import Any, Literal
@@ -62,10 +64,12 @@ from hse_doc_studio.core.enums import (
     TemplateVersionStatus,
 )
 from hse_doc_studio.core.meta_usage import PERSON_KEYS
+from hse_doc_studio.core.pack_catalog.store import CatalogState, StoredPack, StoredTemplate
 from hse_doc_studio.core.signatures.anchors import AnchorKind, is_anchor_id
 from hse_doc_studio.core.signatures.dates import MAX_DATE_MARKS, SHEET_HEIGHT_MM, SHEET_WIDTH_MM, frame_problem
-from hse_doc_studio.core.template_versions import MANIFEST_FORMAT
+from hse_doc_studio.core.template_versions import MANIFEST_FORMAT, parse_version_key
 from hse_doc_studio.core.value_objects import ChecksOverride, RequirementsFormat
+from hse_doc_studio.infra.pack_catalog.store import PacksStore
 from hse_doc_studio.infra.template.releases import ReleaseEntry, load_releases, version_digest
 
 logger = structlog.get_logger()
@@ -77,7 +81,10 @@ logger = structlog.get_logger()
 
 
 def _parse_pack(pack_dir: Path) -> PackInfo | None:
-    pack_yaml = pack_dir / "pack.yaml"
+    return _parse_pack_manifest(pack_dir / "pack.yaml", lambda pack_id: _parse_templates(pack_dir, pack_id=pack_id))
+
+
+def _parse_pack_manifest(pack_yaml: Path, templates_of: Callable[[str], list[TemplateInfo]]) -> PackInfo | None:
     if not pack_yaml.exists():
         logger.warning("pack.yaml not found", path=str(pack_yaml))
         return None
@@ -85,7 +92,7 @@ def _parse_pack(pack_dir: Path) -> PackInfo | None:
         data = _load_yaml(pack_yaml)
         if data is None:
             return None
-        templates = _parse_templates(pack_dir, pack_id=data["id"])
+        templates = templates_of(str(data["id"]))
         return PackInfo(
             id=data["id"],
             name=_localized(data.get("name", {})),
@@ -114,7 +121,10 @@ def _parse_templates(pack_dir: Path, pack_id: str) -> list[TemplateInfo]:
 
 
 def _parse_template_info(template_dir: Path, pack_id: str) -> TemplateInfo | None:
-    tpl_yaml = template_dir / "template.yaml"
+    return _parse_template_manifest(template_dir / "template.yaml", pack_id)
+
+
+def _parse_template_manifest(tpl_yaml: Path, pack_id: str) -> TemplateInfo | None:
     if not tpl_yaml.exists():
         logger.warning("template.yaml not found", path=str(tpl_yaml))
         return None
@@ -1223,111 +1233,317 @@ def _localized_or_flat(value: Any) -> dict[str, str]:
 # Repository
 # ---------------------------------------------------------------------------
 
+_Key = tuple[str, str, str]
+# Как часто процесс сверяет отпечаток `catalog.json` хранилища: так «Применить» в одном процессе api доходит до
+# остальных (другие воркеры, новый под) без рестарта и без общей памяти.
+DEFAULT_RECHECK_S = 2.0
 
-class YamlTemplateRepository:
-    """Loads and caches template definitions from a directory of YAML packs."""
 
-    def __init__(self, packs_dir: Path) -> None:
-        self._packs_dir = packs_dir
-        self._packs: list[PackInfo] = []
-        # Map (pack_id, template_id, version) -> TemplateVersion
-        self._versions: dict[tuple[str, str, str], TemplateVersion] = {}
-        self._loaded = False
+@dataclass(frozen=True)
+class _Part:
+    """Разобранная часть каталога: паки, версии и каталоги версий на диске."""
 
-    def load(self) -> None:
-        """Recursively read packs_dir, parse all YAML files, cache results."""
-        self._packs = []
-        self._versions = {}
+    packs: tuple[PackInfo, ...] = ()
+    versions: Mapping[_Key, TemplateVersion] = field(default_factory=dict)
+    dirs: Mapping[_Key, Path] = field(default_factory=dict)
 
-        if not self._packs_dir.exists():
-            logger.warning("packs_dir does not exist", path=str(self._packs_dir))
-            self._loaded = True
-            return
 
-        for pack_dir in sorted(self._packs_dir.iterdir()):
-            if not pack_dir.is_dir():
-                continue
-            pack_info = _parse_pack(pack_dir)
-            if pack_info is None:
-                continue
-            self._packs.append(pack_info)
-            self._load_pack_versions(pack_info, pack_dir)
+@dataclass(frozen=True)
+class _Snapshot:
+    packs: tuple[PackInfo, ...] = ()
+    versions: Mapping[_Key, TemplateVersion] = field(default_factory=dict)
+    dirs: Mapping[_Key, Path] = field(default_factory=dict)
+    # Версии, каталоги которых лежат в хранилище подключённых паков.
+    subscribed: frozenset[_Key] = frozenset()
+    revision: int = 0
+    stamp: object = None
 
-        self._loaded = True
-        logger.info(
-            "template repository loaded",
-            packs=len(self._packs),
-            versions=len(self._versions),
+
+def _with_placeholder(version_obj: TemplateVersion, placeholder: str) -> TemplateVersion:
+    # Подсказка группы — свойство шаблона (template.yaml), версия может её переопределить; так её правка не требует
+    # выпуска версии.
+    if not version_obj.author_group_placeholder and placeholder:
+        return replace(version_obj, author_group_placeholder=placeholder)
+    return version_obj
+
+
+def _template_placeholder(tpl_yaml: Path) -> tuple[str | None, str]:
+    data = _load_yaml(tpl_yaml) if tpl_yaml.exists() else None
+    if not isinstance(data, dict):
+        return None, ""
+    return str(data.get("id") or "") or None, str(data.get("author_group_placeholder") or "").strip()
+
+
+def _latest(versions: Iterable[str]) -> str | None:
+    keyed = [(key, v) for v in versions if (key := parse_version_key(v)) is not None]
+    return max(keyed)[1] if keyed else None
+
+
+def _load_builtin(packs_dir: Path) -> _Part:
+    """Паки каталога `packs_dir` в раскладке репозитория (`<пак>/templates/<шаблон>/versions/<версия>/`)."""
+    if not packs_dir.exists():
+        logger.warning("packs_dir does not exist", path=str(packs_dir))
+        return _Part()
+    packs: list[PackInfo] = []
+    versions: dict[_Key, TemplateVersion] = {}
+    dirs: dict[_Key, Path] = {}
+    for pack_dir in sorted(packs_dir.iterdir()):
+        pack_info = _parse_pack(pack_dir) if pack_dir.is_dir() else None
+        if pack_info is None:
+            continue
+        packs.append(pack_info)
+        templates_dir = pack_dir / "templates"
+        for template_dir in sorted(templates_dir.iterdir()) if templates_dir.exists() else ():
+            if template_dir.is_dir():
+                _load_builtin_template(pack_info.id, template_dir, versions, dirs)
+    return _Part(tuple(packs), versions, dirs)
+
+
+def _load_builtin_template(
+    pack_id: str, template_dir: Path, versions: dict[_Key, TemplateVersion], dirs: dict[_Key, Path]
+) -> None:
+    tpl_id, placeholder = _template_placeholder(template_dir / "template.yaml")
+    versions_dir = template_dir / "versions"
+    if tpl_id is None or not versions_dir.exists():
+        return
+    releases = load_releases(template_dir)
+    for version_dir in sorted(versions_dir.iterdir()):
+        if not version_dir.is_dir():
+            continue
+        version_obj = _parse_version(
+            version_dir, pack_id=pack_id, template_id=tpl_id, release=releases.get(version_dir.name)
+        )
+        if version_obj is None:
+            continue
+        key = (pack_id, tpl_id, version_obj.version)
+        versions[key] = _with_placeholder(version_obj, placeholder)
+        # Путь по id пака, шаблона и версии, как его всегда строила Студия (каталоги названы своими id).
+        dirs[key] = (
+            template_dir.parent.parent.parent / pack_id / "templates" / tpl_id / "versions" / version_obj.version
         )
 
-    def _load_pack_versions(self, pack_info: PackInfo, pack_dir: Path) -> None:
-        """Iterate templates_dir, read template.yaml, delegate to _load_template_versions."""
-        templates_dir = pack_dir / "templates"
-        if not templates_dir.exists():
-            return
-        for template_dir in sorted(templates_dir.iterdir()):
-            if not template_dir.is_dir():
-                continue
-            tpl_yaml = template_dir / "template.yaml"
-            if not tpl_yaml.exists():
-                continue
-            tpl_data = _load_yaml(tpl_yaml)
-            if tpl_data is None:
-                continue
-            template_id = tpl_data.get("id", template_dir.name)
-            placeholder = str(tpl_data.get("author_group_placeholder") or "").strip()
-            self._load_template_versions(pack_info, template_dir, template_id, placeholder)
 
-    def _load_template_versions(
-        self, pack_info: PackInfo, template_dir: Path, template_id: str, group_placeholder: str = ""
+def _load_stored_pack(store: PacksStore, stored: StoredPack) -> _Part:
+    """Пак из хранилища по записи `catalog.json`; битая запись или каталог выпадает, остальное работает."""
+    pack_yaml = store.resolve(stored.meta)
+    if pack_yaml is None:
+        logger.warning("packs store: pack manifest missing", pack=stored.id, meta=stored.meta)
+        return _Part()
+    versions: dict[_Key, TemplateVersion] = {}
+    dirs: dict[_Key, Path] = {}
+    infos = [
+        info
+        for tpl in stored.templates
+        if (info := _load_stored_template(store, stored.id, tpl, versions, dirs)) is not None
+    ]
+    pack_info = _parse_pack_manifest(pack_yaml, lambda _pack_id: infos)
+    if pack_info is None or pack_info.id != stored.id:
+        logger.warning("packs store: pack manifest unusable", pack=stored.id)
+        return _Part()
+    return _Part((replace(pack_info, origin=stored.origin, listed=stored.listed),), versions, dirs)
+
+
+def _load_stored_template(
+    store: PacksStore,
+    pack_id: str,
+    tpl: StoredTemplate,
+    versions: dict[_Key, TemplateVersion],
+    dirs: dict[_Key, Path],
+) -> TemplateInfo | None:
+    tpl_yaml = store.resolve(tpl.meta)
+    info = _parse_template_manifest(tpl_yaml, pack_id) if tpl_yaml is not None else None
+    if info is None or tpl_yaml is None or info.id != tpl.id:
+        logger.warning("packs store: template manifest unusable", pack=pack_id, template=tpl.id)
+        return None
+    _, placeholder = _template_placeholder(tpl_yaml)
+    listed: list[str] = []
+    hidden: set[str] = set()
+    for entry in tpl.versions:
+        version_dir = store.resolve(entry.dir)
+        release = ReleaseEntry(entry.version, entry.digest, _update_class(entry.kind))
+        version_obj = (
+            _parse_version(version_dir, pack_id=pack_id, template_id=tpl.id, release=release)
+            if version_dir is not None and version_dir.is_dir()
+            else None
+        )
+        if version_dir is None or version_obj is None or version_obj.version != entry.version:
+            logger.warning("packs store: version unusable", pack=pack_id, template=tpl.id, dir=entry.dir)
+            continue
+        key = (pack_id, tpl.id, entry.version)
+        versions[key] = _with_placeholder(version_obj, placeholder)
+        dirs[key] = version_dir
+        if entry.listed:
+            listed.append(entry.version)
+        else:
+            hidden.add(entry.version)
+    default = info.default_version if info.default_version in listed else (_latest(listed) or "")
+    return replace(info, default_version=default, hidden_versions=frozenset(hidden))
+
+
+def _update_class(raw: str | None) -> TemplateUpdateClass | None:
+    try:
+        return TemplateUpdateClass(raw) if raw else None
+    except ValueError:
+        return None
+
+
+def _hide_all(info: TemplateInfo, versions: Iterable[str]) -> TemplateInfo:
+    return replace(info, hidden_versions=info.hidden_versions | frozenset(versions))
+
+
+def _merge(builtin: _Part, stored: list[_Part], *, revision: int, stamp: object) -> _Snapshot:
+    """Вшитые паки плюс подключённые. Подключённый пак с id вшитого его заменяет только с `replaces_builtin`;
+    версии вшитого при этом остаются для проектов, но в мастер не попадают."""
+    packs: dict[str, PackInfo] = {p.id: p for p in builtin.packs}
+    versions: dict[_Key, TemplateVersion] = dict(builtin.versions)
+    dirs: dict[_Key, Path] = dict(builtin.dirs)
+    subscribed: set[_Key] = set()
+    for part in stored:
+        if not part.packs:
+            continue
+        info = part.packs[0]
+        base = packs.get(info.id)
+        replaces = base is not None and info.origin.replaces_builtin and info.listed
+        for key, version_obj in part.versions.items():
+            if key in versions and not replaces:
+                continue  # вшитая версия с тем же номером остаётся (источник отключён или не заменяет пак)
+            versions[key] = version_obj
+            dirs[key] = part.dirs[key]
+            subscribed.add(key)
+        packs[info.id] = info if base is None else _merge_pack(base, info, part, builtin, replaces=replaces)
+    return _Snapshot(
+        packs=tuple(packs.values()),
+        versions=versions,
+        dirs=dirs,
+        subscribed=frozenset(subscribed),
+        revision=revision,
+        stamp=stamp,
+    )
+
+
+def _merge_pack(base: PackInfo, info: PackInfo, part: _Part, builtin: _Part, *, replaces: bool) -> PackInfo:
+    """Пак с id вшитого. `replaces`: подключённый главнее, версии вшитого скрыты от мастера. Иначе (источник
+    отключён или не заменяет пак) главнее вшитый, а версии подключённого остаются только для его проектов."""
+    base_versions = [key for key in builtin.versions if key[0] == info.id]
+    if replaces:
+        own = set(part.versions)
+        store_ids = {t.id for t in info.templates}
+        templates = [
+            _hide_all(t, (v for (_p, tid, v) in base_versions if tid == t.id and (info.id, tid, v) not in own))
+            for t in info.templates
+        ]
+        templates += [
+            _hide_all(t, (v for (_p, tid, v) in base_versions if tid == t.id))
+            for t in base.templates
+            if t.id not in store_ids
+        ]
+        return replace(info, templates=tuple(templates))
+    if not info.origin.replaces_builtin:
+        logger.warning("packs store: pack id collides with a builtin pack", pack=info.id)
+    store_only = [key for key in part.versions if key not in builtin.versions]
+    base_ids = {t.id for t in base.templates}
+    merged = [_hide_all(t, (v for (_p, tid, v) in store_only if tid == t.id)) for t in base.templates]
+    merged += [
+        _hide_all(t, (v for (_p, tid, v) in part.versions if tid == t.id))
+        for t in info.templates
+        if t.id not in base_ids
+    ]
+    return replace(base, templates=tuple(merged))
+
+
+class YamlTemplateRepository:
+    """Каталог шаблонов: вшитые паки (`packs_dir`) плюс подключённые из хранилища `packs-store` (срез T17).
+
+    Вшитые паки читаются один раз. Подключённые перечитываются, когда меняется `catalog.json` хранилища: процесс
+    сверяет его отпечаток не чаще раза в `recheck_s` секунд при обращении к каталогу, а «Применить» в этом же
+    процессе зовёт `reload()` сразу. Новое состояние собирается целиком и подменяется одной ссылкой: читатель
+    видит либо старый каталог, либо новый.
+    """
+
+    def __init__(
+        self, packs_dir: Path, *, store: PacksStore | None = None, recheck_s: float = DEFAULT_RECHECK_S
     ) -> None:
-        """Iterate versions_dir, parse each version, store in self._versions."""
-        versions_dir = template_dir / "versions"
-        if not versions_dir.exists():
-            return
-        releases = load_releases(template_dir)
-        for version_dir in sorted(versions_dir.iterdir()):
-            if not version_dir.is_dir():
-                continue
-            version_obj = _parse_version(
-                version_dir,
-                pack_id=pack_info.id,
-                template_id=template_id,
-                release=releases.get(version_dir.name),
-            )
-            if version_obj is not None:
-                # Подсказка группы — свойство шаблона (template.yaml), версия может
-                # её переопределить; так её правка не требует выпуска версии.
-                if not version_obj.author_group_placeholder and group_placeholder:
-                    version_obj = replace(version_obj, author_group_placeholder=group_placeholder)
-                key = (pack_info.id, template_id, version_obj.version)
-                self._versions[key] = version_obj
+        self._packs_dir = packs_dir
+        self._store = store
+        self._recheck_s = recheck_s
+        self._builtin: _Part | None = None
+        self._snapshot = _Snapshot()
+        self._loaded = False
+        self._checked_at = 0.0
+        self._lock = threading.Lock()
+
+    def load(self) -> None:
+        """Перечитать всё: вшитые паки и хранилище."""
+        with self._lock:
+            self._builtin = _load_builtin(self._packs_dir)
+            self._rebuild()
+        logger.info(
+            "template repository loaded",
+            packs=len(self._snapshot.packs),
+            versions=len(self._snapshot.versions),
+            subscribed=len(self._snapshot.subscribed),
+        )
+
+    def reload(self) -> int:
+        """Перечитать подключённые паки (вшитые не меняются за жизнь процесса). Возвращает ревизию каталога."""
+        with self._lock:
+            if self._builtin is None:
+                self._builtin = _load_builtin(self._packs_dir)
+            self._rebuild()
+        return self._snapshot.revision
+
+    @property
+    def revision(self) -> int:
+        """Ревизия каталога подключённых паков (0, пока ничего не подключали)."""
+        self._ensure_loaded()
+        return self._snapshot.revision
+
+    def subscribed_keys(self) -> frozenset[tuple[str, str, str]]:
+        """Версии, каталоги которых лежат в хранилище подключённых паков."""
+        self._ensure_loaded()
+        return self._snapshot.subscribed
+
+    def _rebuild(self) -> None:
+        builtin = self._builtin or _Part()
+        stamp = self._store.stamp() if self._store is not None else None
+        state = self._store.read() if self._store is not None else CatalogState()
+        stored = [_load_stored_pack(self._store, pack) for pack in state.packs] if self._store is not None else []
+        self._snapshot = _merge(builtin, stored, revision=state.revision, stamp=stamp)
+        self._loaded = True
+        self._checked_at = time.monotonic()
 
     def _ensure_loaded(self) -> None:
         if not self._loaded:
             self.load()
+            return
+        if self._store is None or time.monotonic() - self._checked_at < self._recheck_s:
+            return
+        self._checked_at = time.monotonic()
+        if self._store.stamp() != self._snapshot.stamp:
+            logger.info("packs store changed, reloading catalog", previous=self._snapshot.revision)
+            self.reload()
 
     def list_packs(self) -> list[PackInfo]:
         self._ensure_loaded()
-        return list(self._packs)
+        return list(self._snapshot.packs)
 
     def get_version(self, pack_id: str, template_id: str, version: str) -> TemplateVersion | None:
         self._ensure_loaded()
-        return self._versions.get((pack_id, template_id, version))
+        return self._snapshot.versions.get((pack_id, template_id, version))
 
     def list_versions(self, pack_id: str, template_id: str) -> list[str]:
         self._ensure_loaded()
-        return [ver for (pid, tid, ver) in self._versions if pid == pack_id and tid == template_id]
+        return [ver for (pid, tid, ver) in self._snapshot.versions if pid == pack_id and tid == template_id]
 
     def version_dir(self, pack_id: str, template_id: str, version: str) -> Path | None:
         """Filesystem directory of a version's authored sources.
 
         Paths declared in the pack (a form's `output.template`) are relative to
-        this directory.
+        this directory. A subscribed version lives in the packs store by digest.
         """
         self._ensure_loaded()
-        candidate = self._packs_dir / pack_id / "templates" / template_id / "versions" / version
-        return candidate if candidate.exists() else None
+        candidate = self._snapshot.dirs.get((pack_id, template_id, version))
+        return candidate if candidate is not None and candidate.exists() else None
 
     def content_digest(self, pack_id: str, template_id: str, version: str) -> str | None:
         """Дайджест каталога версии, посчитанный по диску (а не взятый из реестра):

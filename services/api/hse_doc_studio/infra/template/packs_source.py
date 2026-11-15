@@ -42,6 +42,11 @@ def template_keys(repo: ITemplateRepository) -> frozenset[TemplateKey]:
     return frozenset(keys)
 
 
+def _subscribed(repo: ITemplateRepository) -> frozenset[TemplateKey]:
+    keys = getattr(repo, "subscribed_keys", None)
+    return frozenset(TemplateKey(*key) for key in keys()) if callable(keys) else frozenset()
+
+
 def write_manifest(packs_dir: Path, out: Path) -> dict[str, Any]:
     repo = YamlTemplateRepository(packs_dir)
     repo.load()
@@ -124,10 +129,14 @@ class FilesystemPacksSource:
         self._manifest = manifest
         self._mountinfo = mountinfo
         self._cached: PacksSource | None = None
+        self._revision: int | None = None
 
     def describe(self) -> PacksSource:
-        if self._cached is None:
+        # Подключённые паки (срез T17) меняют каталог без рестарта: опись строится заново на новой ревизии.
+        revision = getattr(self._templates, "revision", 0)
+        if self._cached is None or revision != self._revision:
             self._cached = self._build()
+            self._revision = revision
         return self._cached
 
     def _build(self) -> PacksSource:
@@ -142,6 +151,7 @@ class FilesystemPacksSource:
             builtin=builtin,
             builtin_studio=builtin_studio,
             available=template_keys(self._templates),
+            subscribed=_subscribed(self._templates),
         )
         if source.missing_builtin:
             logger.warning(

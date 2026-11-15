@@ -442,6 +442,13 @@ tags:
 | `HSE_STUDIO__PACK_STUDIO__OFFICIAL_BASE_BRANCH` | str | `master` | оба | Base branch of the official repository. |
 | `HSE_STUDIO__PACK_STUDIO__OFFICIAL_LICENSE` | str | `Apache-2.0` | оба | License a contribution to the official packs goes under (its LICENSE). |
 | `HSE_STUDIO__PACK_STUDIO__OFFICIAL_BOT_DAILY_LIMIT` | int | `5` | оба | Proposals one person may send through the bot access per 24 hours (the admin may change it). |
+| `HSE_STUDIO__PACK_CATALOG__MAX_ARCHIVE_BYTES` | int | `104857600` | оба | Largest uploaded packs archive, and largest git object store fetched for one source revision. |
+| `HSE_STUDIO__PACK_CATALOG__MAX_FILES` | int | `20000` | оба | Most files in one source revision of packs. |
+| `HSE_STUDIO__PACK_CATALOG__MAX_BYTES` | int | `536870912` | оба | Largest total size of the files in one source revision. |
+| `HSE_STUDIO__PACK_CATALOG__INSPECT_TIMEOUT_S` | float | `120.0` | оба | Time limit of the isolated process that reads and lints a source revision. |
+| `HSE_STUDIO__PACK_CATALOG__INSPECT_MEMORY_BYTES` | int | `1073741824` | оба | Memory limit of that isolated process (Linux). |
+| `HSE_STUDIO__PACK_CATALOG__RELOAD_CHECK_S` | float | `2.0` | оба | How often an api process looks for a new packs catalog revision applied by another process. |
+| `HSE_STUDIO__PACK_CATALOG__TRACK_TICK_S` | float | `3600.0` | оба | Tick of daily tracking: tracked git sources older than a day are checked and applied. |
 | `HSE_STUDIO__MODE` | local / server | `local` | оба | Instance mode: 'local' (single-user install) or 'server' (shared; not supported yet). |
 | `HSE_STUDIO__DATA_DIR` | Path | `~/.config/hse-studio` | оба | Local data storage directory |
 | `HSE_STUDIO__HOST_DATA_DIR` | str | не задано | оба | Host path of data_dir for sibling-container mounts; None when backend runs natively. |
