@@ -1,6 +1,32 @@
 {
   "releases": [
     {
+      "version": "0.30.0",
+      "date": "2026-11-15",
+      "notes": [
+        {
+          "ru": "Исправлено: письма-уведомления (запрос подписи, «Все подписали» и другие) не уходили и попадали в журнал писем с ошибкой InterfaceError. Теперь письмо отправляется после того, как действие сохранено, и не уходит, если действие отменилось.",
+          "en": "Fixed: notification emails (signature requests, \"Everyone has signed\" and others) were not sent and showed up in the mail log with an InterfaceError. Now an email is sent after the action is saved, and not at all if the action was rolled back."
+        },
+        {
+          "ru": "Студия шаблонов: «Официальные паки». Отдельная кнопка открывает паки главного репозитория HSE Doc Studio, правки уходят через PR. Можно своим токеном GitHub или вообще без аккаунта: через бота установки, который отправляет правки из своего форка. Для бота только папка packs, лимит предложений в сутки, согласие с лицензией и запись в аудит. Настройка бота описана в справке.",
+          "en": "Template Studio: Official packs. A separate button opens the packs of the main HSE Doc Studio repository, and changes go out as a PR. Use your own GitHub token or no account at all: the installation's bot sends changes from its own fork. The bot path is limited to the packs folder, a daily proposal limit, license consent and audit records. Bot setup is described in the docs."
+        },
+        {
+          "ru": "Студия шаблонов: мастер «Новая версия». Копия выпущенной версии, класс версии (patch, minor, major) с причинами на каждой правке, номер по классу, заметки к версии с черновиком и выпуск в releases.yaml.",
+          "en": "Template Studio: New version wizard. A copy of a released version, the version class (patch, minor, major) with reasons on every edit, a number based on the class, version notes with a draft, and release into releases.yaml."
+        },
+        {
+          "ru": "Студия шаблонов: статус CI у PR показывает, что проверки ждут одобрения сопровождающего, а после слияния говорит, когда версия появится у пользователей.",
+          "en": "Template Studio: PR CI status now shows when checks are waiting for a maintainer's approval, and after merge says when the version reaches users."
+        },
+        {
+          "ru": "Исправлено: предпросмотр шаблона изредка показывал «сборка прервана» у сборки, которая на самом деле закончилась.",
+          "en": "Fixed: template preview occasionally showed \"build interrupted\" for a build that had actually finished."
+        }
+      ]
+    },
+    {
       "version": "0.29.0",
       "date": "2026-11-15",
       "notes": [

@@ -6,6 +6,14 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.30.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.29.0...v0.30.0) - 2026-11-15
+
+- Fixed: notification emails (signature requests, "Everyone has signed" and others) were not sent and showed up in the mail log with an InterfaceError. Now an email is sent after the action is saved, and not at all if the action was rolled back.
+- Template Studio: Official packs. A separate button opens the packs of the main HSE Doc Studio repository, and changes go out as a PR. Use your own GitHub token or no account at all: the installation's bot sends changes from its own fork. The bot path is limited to the packs folder, a daily proposal limit, license consent and audit records. Bot setup is described in the docs.
+- Template Studio: New version wizard. A copy of a released version, the version class (patch, minor, major) with reasons on every edit, a number based on the class, version notes with a draft, and release into releases.yaml.
+- Template Studio: PR CI status now shows when checks are waiting for a maintainer's approval, and after merge says when the version reaches users.
+- Fixed: template preview occasionally showed "build interrupted" for a build that had actually finished.
+
 ## [0.29.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.28.0...v0.29.0) - 2026-11-15
 
 - Template Studio: a new /pack-studio section for template authors. A server-side working copy of the pack repository, a file tree, an editor with completion for form fields and \hse macros, and a Problems panel that checks the pack as you type. Administrators grant access with the Template author right.
