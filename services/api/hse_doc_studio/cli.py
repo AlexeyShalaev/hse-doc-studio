@@ -163,7 +163,9 @@ def _parser() -> argparse.ArgumentParser:
     )
     from hse_doc_studio.cli_pack import configure_parser  # noqa: PLC0415
 
-    configure_parser(sub.add_parser("pack", help="команды автора паков: lint, check, classify, new-version, freeze"))
+    configure_parser(
+        sub.add_parser("pack", help="команды автора паков: lint, check, classify, new-version, freeze, ci init")
+    )
     return parser
 
 
