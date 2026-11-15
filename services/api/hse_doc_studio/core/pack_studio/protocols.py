@@ -11,6 +11,8 @@ from uuid import UUID
 from hse_doc_studio.core.git_sync.entities import RemoteTarget
 from hse_doc_studio.core.pack_studio.entities import (
     GrantSubjectKind,
+    PackDiagnostic,
+    PackEditorHints,
     PackStudioGrant,
     PackTree,
     PackWorkspace,
@@ -134,3 +136,24 @@ class IYamlEditor(Protocol):
     def insert_item(self, text: str, path: YamlPath, index: int, value: Any) -> str: ...
     def delete(self, text: str, path: YamlPath) -> str: ...
     def move_item(self, text: str, path: YamlPath, src: int, dst: int) -> str: ...
+
+
+class IPackInspector(Protocol):
+    """Проверки и подсказки редактора поверх файлов рабочего пространства, в процессе и без TeX (срез T8).
+
+    Пути от папки паков `root` уже прошли `validate_rel_path`. Jinja пака только разбирается (песочница T3), не
+    исполняется.
+    """
+
+    def lint_version(self, root: Path, version_dir: str, *, released: bool) -> tuple[PackDiagnostic, ...]:
+        """`pack_lint` версии и схемы её манифестов (`version.yaml`, `doc.yaml`); у выпущенной ошибки схемы это
+        предупреждения: её каталог неизменен, исправляется новой версией."""
+        ...
+
+    def check_manifest(self, root: Path, path: str) -> tuple[PackDiagnostic, ...] | None:
+        """Схема манифеста вне версии (`pack.yaml`, `template.yaml`, `releases.yaml`); None: файл не манифест."""
+        ...
+
+    def hints(self, root: Path, version_dir: str) -> PackEditorHints:
+        """Поля анкеты и макросы `\\hse...` динамических инклудов версии для автодополнения."""
+        ...

@@ -23,12 +23,14 @@ from hse_doc_studio.core.pack_studio.protocols import (
 )
 from hse_doc_studio.core.paths import PathMapping
 from hse_doc_studio.core.repositories import ISettingsRepository
+from hse_doc_studio.infra.pack_studio.inspector import PackInspector
 from hse_doc_studio.infra.pack_studio.local_store import JsonPackWorkspaceRepository, LocalSectionStore
 from hse_doc_studio.infra.pack_studio.workspace_files import LocalPackWorkspaceFiles
 from hse_doc_studio.infra.pack_studio.workspace_git import PackWorkspaceGit, workspace_dirs
 from hse_doc_studio.infra.pack_studio.yaml_edits import PackYamlEditor
 from hse_doc_studio.use_cases.pack_studio.access import PackStudioAccess
 from hse_doc_studio.use_cases.pack_studio.files import PackFilesService
+from hse_doc_studio.use_cases.pack_studio.insight import PackInsightService
 from hse_doc_studio.use_cases.pack_studio.workspaces import PackWorkspaceService, WorkspaceTasks
 
 
@@ -89,6 +91,10 @@ class PackStudioProvider(Provider):
     @provide
     def get_files_service(self, workspaces: PackWorkspaceService, files: IPackWorkspaceFiles) -> PackFilesService:
         return PackFilesService(workspaces, files, PackYamlEditor())
+
+    @provide
+    def get_insight_service(self, workspaces: PackWorkspaceService) -> PackInsightService:
+        return PackInsightService(workspaces, PackInspector())
 
     @staticmethod
     def build_service(  # noqa: PLR0913 — те же порты, что у провайдера

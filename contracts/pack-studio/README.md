@@ -23,6 +23,8 @@ API `/api/v1/pack-studio/*` и `/api/admin/pack-studio*` (`docs/design/template-
 | `PUT /pack-studio/workspaces/{id}/files/{path}` | `PackFileVersion` | файл целиком, `If-Match` по желанию |
 | `PATCH /pack-studio/workspaces/{id}/files/{path}` | `PackYamlPatchResponse` | `PackYamlPatchRequest`: точечные правки YAML, весь набор или ничего |
 | `DELETE /pack-studio/workspaces/{id}/files/{path}` | 204 | файл (`If-Match` по желанию) или папка |
+| `POST /pack-studio/workspaces/{id}/lint` | `PackLint` | `PackLintRequest`: файл версии даёт `pack_lint` всей версии и схемы её манифестов, `pack.yaml`, `template.yaml`, `releases.yaml` схему файла, прочее `scope: none`; находки с файлом и строкой для редактора (срез T8) |
+| `GET /pack-studio/workspaces/{id}/hints?path=` | `PackEditorHints` | автодополнение: поля анкеты версии файла и макросы `\hse...` её динамических инклудов (срез T8) |
 | `GET/PUT /api/admin/pack-studio` | `PackStudioAdmin` | админ: включение раздела и список прав |
 | `POST /api/admin/pack-studio/grants` | `PackStudioGrant` | `CreatePackStudioGrantRequest`: человеку или группе |
 | `DELETE /api/admin/pack-studio/grants/{id}` | 204 | снять право |

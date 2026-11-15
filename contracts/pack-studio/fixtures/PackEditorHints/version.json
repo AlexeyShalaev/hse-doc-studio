@@ -1,0 +1,37 @@
+{
+  "version": "hse-cs-sse/templates/coursework/versions/2026.1.6",
+  "meta_fields": [
+    {
+      "key": "year",
+      "type": "string",
+      "label": {
+        "ru": "Учебный год (год защиты КП)",
+        "en": "Academic year (defence year)"
+      },
+      "group": "study"
+    },
+    {
+      "key": "name_en",
+      "type": "string",
+      "label": {
+        "ru": "Название работы на английском",
+        "en": "Title in English"
+      },
+      "group": "proposal"
+    }
+  ],
+  "macros": [
+    {
+      "name": "hseTitleEn",
+      "keys": [
+        "name_en"
+      ],
+      "source": "hse-cs-sse/templates/coursework/versions/2026.1.6/files/common/meta.tex.j2"
+    },
+    {
+      "name": "hseWorkLang",
+      "keys": [],
+      "source": "hse-cs-sse/templates/coursework/versions/2026.1.6/files/common/meta.tex.j2"
+    }
+  ]
+}

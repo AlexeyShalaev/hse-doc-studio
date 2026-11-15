@@ -1,0 +1,41 @@
+{
+  "scope": "version",
+  "target": "hse-cs-sse/templates/coursework/versions/2026.1.6",
+  "released": false,
+  "errors": 2,
+  "warnings": 2,
+  "findings": [
+    {
+      "severity": "error",
+      "check": "lint",
+      "message": "common/meta.tex.j2:12: Jinja TemplateSyntaxError (unexpected '}') — файл уйдёт verbatim (ветки/плейсхолдеры будут потеряны)",
+      "path": "hse-cs-sse/templates/coursework/versions/2026.1.6/files/common/meta.tex.j2",
+      "line": 12,
+      "pointer": null
+    },
+    {
+      "severity": "error",
+      "check": "schema",
+      "message": "/meta_fields/year/type: 'text' is not one of ['string', 'bool', 'person', 'select', 'font']",
+      "path": "hse-cs-sse/templates/coursework/versions/2026.1.6/version.yaml",
+      "line": 142,
+      "pointer": "/meta_fields/year/type"
+    },
+    {
+      "severity": "warning",
+      "check": "lint",
+      "message": "signatures.slots[author]: placements.report: место уже плашки открепленной ЭП, при подписи ЭП рамка расширится до 70 мм влево",
+      "path": "hse-cs-sse/templates/coursework/versions/2026.1.6/version.yaml",
+      "line": 373,
+      "pointer": null
+    },
+    {
+      "severity": "warning",
+      "check": "lint",
+      "message": "v1-раскладка (нет `langs:`): проверены только Jinja-шаблоны",
+      "path": null,
+      "line": null,
+      "pointer": null
+    }
+  ]
+}

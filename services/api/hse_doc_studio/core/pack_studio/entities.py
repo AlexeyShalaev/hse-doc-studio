@@ -163,3 +163,81 @@ class SectionState:
 
     enabled: bool
     locked: bool
+
+
+# ── Диагностики и подсказки редактора (срез T8) ─────────────────────────────
+
+
+class DiagnosticSeverity(StrEnum):
+    error = "error"
+    warning = "warning"
+
+
+class DiagnosticCheck(StrEnum):
+    """`lint`: `pack_lint` версии; `schema`: схема манифеста (`contracts/pack/*.schema.json`)."""
+
+    lint = "lint"
+    schema = "schema"
+
+
+@dataclass(frozen=True)
+class PackDiagnostic:
+    """Находка проверки для редактора и панели «Проблемы».
+
+    `path` это файл от папки паков, к которому относится находка (None: версия целиком, файл не определён), `line`
+    строка с единицы, если её удалось найти; `pointer` путь в данных манифеста для находок схемы (`/meta_fields/x`).
+    """
+
+    severity: DiagnosticSeverity
+    check: DiagnosticCheck
+    message: str
+    path: str | None = None
+    line: int | None = None
+    pointer: str | None = None
+
+
+class LintScope(StrEnum):
+    """Что проверено: каталог версии (`pack_lint` и схемы её манифестов), один манифест вне версии по схеме или
+    ничего (файл не относится ни к версии, ни к манифестам пака)."""
+
+    version = "version"
+    file = "file"
+    none = "none"
+
+
+@dataclass(frozen=True)
+class PackLintReport:
+    scope: LintScope
+    # Каталог версии или файл, который проверен (от папки паков); None при `none`.
+    target: str | None
+    # Версия выпущена (по базе git или реестру папки): ошибки схемы в ней только предупреждения.
+    released: bool
+    findings: tuple[PackDiagnostic, ...]
+
+
+@dataclass(frozen=True)
+class MetaFieldHint:
+    """Поле анкеты версии для автодополнения `project.meta.<ключ>`."""
+
+    key: str
+    type: str | None
+    label: Mapping[str, str] | None
+    group: str | None
+
+
+@dataclass(frozen=True)
+class MacroHint:
+    """Макрос `\\hse...` динамического инклуда версии и поля, которые он печатает."""
+
+    name: str
+    keys: tuple[str, ...]
+    # Шаблон инклуда от папки паков (`.../files/common/meta.tex.j2`).
+    source: str
+
+
+@dataclass(frozen=True)
+class PackEditorHints:
+    # Каталог версии, по которой собраны подсказки; None: путь вне версии, подсказок нет.
+    version: str | None
+    meta_fields: tuple[MetaFieldHint, ...] = ()
+    macros: tuple[MacroHint, ...] = ()

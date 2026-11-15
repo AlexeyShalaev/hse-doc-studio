@@ -1,0 +1,17 @@
+{
+  "scope": "file",
+  "target": "hse-cs-sse/pack.yaml",
+  "released": false,
+  "errors": 1,
+  "warnings": 0,
+  "findings": [
+    {
+      "severity": "error",
+      "check": "schema",
+      "message": "/: 'maintainer' is a required property",
+      "path": "hse-cs-sse/pack.yaml",
+      "line": 1,
+      "pointer": "/"
+    }
+  ]
+}

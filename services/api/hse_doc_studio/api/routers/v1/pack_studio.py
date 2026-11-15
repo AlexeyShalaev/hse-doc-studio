@@ -21,7 +21,13 @@ from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.routers.v1.files import _content_type_for
 from hse_doc_studio.api.schemas.pack_studio import (
     CreatePackWorkspaceRequest,
+    PackDiagnosticResponse,
+    PackEditorHintsResponse,
     PackFileVersionResponse,
+    PackLintRequest,
+    PackLintResponse,
+    PackMacroHintResponse,
+    PackMetaFieldHintResponse,
     PackStudioSectionResponse,
     PackTreeFile,
     PackTreePack,
@@ -36,10 +42,17 @@ from hse_doc_studio.api.schemas.pack_studio import (
     UpdatePackStudioSectionRequest,
 )
 from hse_doc_studio.core.access.context import require_actor
-from hse_doc_studio.core.pack_studio.entities import PackTree, WorkspaceKind
+from hse_doc_studio.core.pack_studio.entities import (
+    DiagnosticSeverity,
+    PackEditorHints,
+    PackLintReport,
+    PackTree,
+    WorkspaceKind,
+)
 from hse_doc_studio.core.pack_studio.errors import PackStudioError, PackStudioErrorCode
 from hse_doc_studio.use_cases.pack_studio.access import PackStudioAccess, SectionView
 from hse_doc_studio.use_cases.pack_studio.files import PackFilesService, YamlOp
+from hse_doc_studio.use_cases.pack_studio.insight import PackInsightService
 from hse_doc_studio.use_cases.pack_studio.workspaces import (
     CreateWorkspaceInput,
     PackWorkspaceService,
@@ -136,6 +149,39 @@ def tree_response(workspace_id: UUID, base_sha: str | None, tree: PackTree) -> P
     )
 
 
+def lint_response(report: PackLintReport) -> PackLintResponse:
+    findings = [
+        PackDiagnosticResponse(
+            severity=f.severity.value,
+            check=f.check.value,
+            message=f.message,
+            path=f.path,
+            line=f.line,
+            pointer=f.pointer,
+        )
+        for f in report.findings
+    ]
+    return PackLintResponse(
+        scope=report.scope.value,
+        target=report.target,
+        released=report.released,
+        errors=sum(1 for f in report.findings if f.severity is DiagnosticSeverity.error),
+        warnings=sum(1 for f in report.findings if f.severity is DiagnosticSeverity.warning),
+        findings=findings,
+    )
+
+
+def hints_response(hints: PackEditorHints) -> PackEditorHintsResponse:
+    return PackEditorHintsResponse(
+        version=hints.version,
+        meta_fields=[
+            PackMetaFieldHintResponse(key=f.key, type=f.type, label=dict(f.label) if f.label else None, group=f.group)
+            for f in hints.meta_fields
+        ],
+        macros=[PackMacroHintResponse(name=m.name, keys=list(m.keys), source=m.source) for m in hints.macros],
+    )
+
+
 def _reason(value: str | None) -> ReadOnlyReason | None:
     if value == "version_released":
         return "version_released"
@@ -216,6 +262,29 @@ async def get_tree(workspace_id: UUID, files: FromDishka[PackFilesService], resp
     response.headers.update(_NO_STORE)
     view = await files.tree(require_actor(), workspace_id)
     return tree_response(workspace_id, view.workspace.base_sha, view.tree)
+
+
+# ── проверки и подсказки редактора (срез T8) ────────────────────────────────
+
+
+@router.post("/pack-studio/workspaces/{workspace_id}/lint", response_model=PackLintResponse)
+async def lint_path(
+    workspace_id: UUID, body: PackLintRequest, insight: FromDishka[PackInsightService]
+) -> PackLintResponse:
+    """Файл версии: `pack_lint` версии и схемы её манифестов; манифест вне версии: схема; прочее: ничего.
+
+    Находки разложены по файлам и строкам для редактора и панели «Проблемы» (template-studio.md, 4.4, 5.0).
+    """
+    return lint_response(await insight.lint(require_actor(), workspace_id, body.path))
+
+
+@router.get("/pack-studio/workspaces/{workspace_id}/hints", response_model=PackEditorHintsResponse)
+async def editor_hints(
+    workspace_id: UUID, path: str, insight: FromDishka[PackInsightService], response: Response
+) -> PackEditorHintsResponse:
+    """Автодополнение `.j2` и `.tex` (5.4): поля анкеты версии файла и макросы `\\hse...` её динамических инклудов."""
+    response.headers.update(_NO_STORE)
+    return hints_response(await insight.hints(require_actor(), workspace_id, path))
 
 
 # ── файлы ───────────────────────────────────────────────────────────────────
