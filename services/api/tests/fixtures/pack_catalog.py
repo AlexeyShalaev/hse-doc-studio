@@ -72,7 +72,9 @@ def subscribe(
     meta = store.put_meta(pack_id, None, "pack.yaml", (pack_dir / "pack.yaml").read_bytes())
     templates: list[StoredTemplate] = []
     for template_dir in sorted((pack_dir / "templates").iterdir()):
-        tpl_meta = store.put_meta(pack_id, template_dir.name, "template.yaml", (template_dir / "template.yaml").read_bytes())
+        tpl_meta = store.put_meta(
+            pack_id, template_dir.name, "template.yaml", (template_dir / "template.yaml").read_bytes()
+        )
         versions = []
         for version_dir in sorted((template_dir / "versions").iterdir()):
             digest = version_digest(version_dir)
@@ -87,7 +89,9 @@ def subscribe(
         label="acme-packs",
         replaces_builtin=replaces_builtin,
     )
-    pack = StoredPack(id=pack_id, meta=meta, source_id=source_id, origin=origin, templates=tuple(templates), listed=listed)
+    pack = StoredPack(
+        id=pack_id, meta=meta, source_id=source_id, origin=origin, templates=tuple(templates), listed=listed
+    )
     new = CatalogState(
         revision=revision if revision is not None else state.revision + 1,
         packs=(*(p for p in state.packs if p.id != pack_id), pack),

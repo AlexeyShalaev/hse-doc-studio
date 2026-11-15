@@ -118,7 +118,9 @@ async def test__folder__builtin_id_needs_replace_builtin(stand: Stand) -> None:
     shutil.copytree(_REPO_PACKS / "hse-cs-sse", folder / "hse-cs-sse")
 
     ws_id, refused = await _connect(stand, folder)
-    allowed = (await stand.client.post(f"{API}/workspaces/{ws_id}/catalog/check", json={"replace_builtin": True})).json()
+    allowed = (
+        await stand.client.post(f"{API}/workspaces/{ws_id}/catalog/check", json={"replace_builtin": True})
+    ).json()
 
     assert refused["blockers"] == ["pack_conflict"]
     assert refused["packs"][0]["conflict"] == "builtin"

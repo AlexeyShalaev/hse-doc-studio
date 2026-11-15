@@ -12,7 +12,6 @@ from hse_doc_studio.core.pack_catalog.entities import CatalogEvent, CatalogSourc
 from hse_doc_studio.core.pack_catalog.plan import CatalogPlan
 from hse_doc_studio.core.pack_catalog.store import CatalogState
 
-
 # Псевдонимы: внутри класса имя `list` занято методом и в аннотациях означало бы его.
 _Events = list[CatalogEvent]
 _Sources = list[CatalogSource]
