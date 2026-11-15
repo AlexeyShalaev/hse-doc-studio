@@ -34,6 +34,7 @@ from hse_doc_studio.core.repositories import (
     ISettingsRepository,
 )
 from hse_doc_studio.core.services import ChatContextService
+from hse_doc_studio.core.uow import spawn_detached
 from hse_doc_studio.infra.ai.agent.run_manager import AgentRunManager
 from hse_doc_studio.use_cases.chat._agent_loop import AgentLoop, LoopResult
 from hse_doc_studio.use_cases.chat._prompt import build_system_prompt
@@ -265,7 +266,7 @@ class SystemStartChatTurnUC:
         tool_answers: dict[str, dict[str, str]],
     ) -> None:
         cancel = asyncio.Event()
-        task = asyncio.create_task(self._run_turn_task(run, provider, model, cancel, approved_call_ids, tool_answers))
+        task = spawn_detached(self._run_turn_task(run, provider, model, cancel, approved_call_ids, tool_answers))
         self._run_manager.register(run.id, task, run.session_id, run.project_folder)
 
     async def _run_turn_task(

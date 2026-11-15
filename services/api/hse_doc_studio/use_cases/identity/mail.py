@@ -16,6 +16,7 @@ from hse_doc_studio.core.identity.entities import MailKind
 from hse_doc_studio.core.mail import MailTemplate, resolve_lang
 from hse_doc_studio.core.mail.compose import fixed_path
 from hse_doc_studio.core.mail.journal import MailLinkKind, MailOrigin, MailRefKind, MailRequest, MailSkipReason
+from hse_doc_studio.core.uow import after_commit, spawn_detached
 from hse_doc_studio.use_cases.mail.dispatch import MailDispatcher
 
 logger = structlog.get_logger(__name__)
@@ -86,14 +87,19 @@ class LinkDelivery:
             await self._mail.skip(request, MailSkipReason.smtp_off)
             return link
         if self._background:
-            # Задача копирует контекст: журнал запишет того же вызвавшего и тот же `request_id`, что у запроса.
-            task = asyncio.create_task(self._send_in_background(request))
-            self._pending.add(task)
-            task.add_done_callback(self._pending.discard)
+            # Токен ссылки пишет транзакция вызывающего: письмо уходит после её коммита и не о токене, которого
+            # нет. Задача без транзакции, с остальным контекстом: журнал запишет того же вызвавшего и тот же
+            # `request_id`, что у запроса.
+            after_commit(lambda: self._spawn(request))
             return None
         # Сбой почты не ломает регистрацию: человек получит ссылку другим путём, сбой записан в журнал.
         outcome = await self._mail.send(request)
         return None if outcome.sent else link
+
+    def _spawn(self, request: MailRequest) -> None:
+        task = spawn_detached(self._send_in_background(request), name="link-mail")
+        self._pending.add(task)
+        task.add_done_callback(self._pending.discard)
 
     async def notify(
         self,

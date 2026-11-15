@@ -61,6 +61,12 @@ _SCHEMAS: dict[str, Any] = {
     "PackVersionMoved": s.PackVersionMovedResponse,
     "PackReleaseRequest": s.PackReleaseRequest,
     "PackRelease": s.PackReleaseResponse,
+    # Срез T22: официальные паки и доступ бота
+    "PackOfficial": s.PackOfficialResponse,
+    "OpenPackOfficialRequest": s.OpenPackOfficialRequest,
+    "PackServiceAccessCheck": s.PackServiceAccessCheckResponse,
+    "PackStudioOfficialAdmin": s.PackStudioOfficialAdminResponse,
+    "UpdatePackStudioOfficialRequest": s.UpdatePackStudioOfficialRequest,
     # Срез T9: места подписей и метки даты на PDF предпросмотра
     "PackSignatures": s.PackSignaturesResponse,
     "PackSignaturesPatchRequest": s.PackSignaturesPatchRequest,

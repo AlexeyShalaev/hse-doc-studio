@@ -50,6 +50,45 @@
     "labelHint": "Empty: the repository path.",
     "token": "Token",
     "tokenHint": "https only. Rights as in the pack repository profile: write, pull requests, checks status.",
-    "submit": "Add"
+    "submit": "Add",
+    "forkMode": "Fork only (bot)",
+    "forkModeHint": "The branch goes only to the fork of the token account, the PR is opened from the fork. The Studio never pushes into the repository itself. Needs a classic GitHub token with the public_repo scope.",
+    "forkAt": "bot, fork {{url}}",
+    "forkPending": "bot, no fork yet",
+    "check": {
+      "button": "Check \"{{name}}\"",
+      "title": "Check of \"{{name}}\"",
+      "ok": "The access works.",
+      "failed": "The access has problems.",
+      "login": "Token account: {{login}}",
+      "scopes": "Token scopes: {{scopes}}",
+      "fork": "Fork: {{url}}",
+      "close": "Done"
+    },
+    "problem": {
+      "token_rejected": "GitHub did not accept the token: it is revoked, expired or mistyped.",
+      "fine_grained_token": "This is a fine-grained token: GitHub does not let it open a PR in someone else's repository. Create a classic token with the public_repo scope.",
+      "scope_missing": "The token has no public_repo (or repo) scope: the fork and the PR will fail.",
+      "fork_unavailable": "The fork could not be found or created. Check the token scope and that the account has no repository with the same name.",
+      "bot_can_push": "The bot account has write access to the official repository. It is not needed: the Studio pushes only to the fork anyway, but better remove it.",
+      "provider_unsupported": "The check only supports GitHub."
+    }
+  },
+  "official": {
+    "title": "Official packs",
+    "lead": "The Official packs button in the Pack Studio opens the packs of the Studio repository. Contributing without your own GitHub account goes through a service account (bot): the branch goes only to its fork, the PR is opened from the fork.",
+    "help": "How to set up the bot",
+    "repo": "Repository: {{url}}, folder {{path}}, branch {{branch}}. Set by HSE_STUDIO__PACK_STUDIO__OFFICIAL_REPO_URL.",
+    "hidden": "No official repository is set (HSE_STUDIO__PACK_STUDIO__OFFICIAL_REPO_URL is empty): there is no Official packs button.",
+    "botReady": "Bot: access \"{{label}}\", fork {{url}}.",
+    "botNoFork": "Bot: access \"{{label}}\". The fork appears on the access check or the first proposal.",
+    "botDirect": "The service access to the official repository is not in fork mode: it pushes the branch straight into the repository. For a bot, remove it and add it again with Fork only checked.",
+    "noBot": "No bot is set up: people without a GitHub token cannot propose changes.",
+    "addBot": "Add a bot",
+    "enabled": "Contributing without a GitHub account",
+    "enabledHint": "Turn off so that the bot sends nothing. Proposing with your own token keeps working.",
+    "limit": "Proposals per person per day",
+    "limitHint": "Against spam in the bot's name. Default {{value}} (HSE_STUDIO__PACK_STUDIO__OFFICIAL_BOT_DAILY_LIMIT).",
+    "save": "Save"
   }
 }

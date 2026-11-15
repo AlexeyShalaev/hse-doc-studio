@@ -1,0 +1,20 @@
+{
+  "access": {
+    "id": "8e7d6c5b-4a39-4281-8f9e-2d3c4b5a6f70",
+    "url": "https://github.com/AlexeyShalaev/hse-doc-studio",
+    "label": "Бот официальных паков",
+    "token_family": "github_pat",
+    "created_by": "u_admin",
+    "created_by_name": "Администратор",
+    "created_at": "2026-11-15T10:00:00Z",
+    "fork_mode": true,
+    "fork_url": null
+  },
+  "ok": false,
+  "login": "hse-doc-studio-bot",
+  "scopes": null,
+  "can_push": false,
+  "problems": [
+    "fine_grained_token"
+  ]
+}

@@ -11,6 +11,7 @@ export {
 } from "./api/packStudioApi";
 export type { PackFile, PackVersionRef } from "./api/packStudioApi";
 export {
+  CI_APPROVAL_POLL_MS,
   CI_POLL_MS,
   PREVIEW_POLL_MS,
   WORKSPACE_POLL_MS,
@@ -18,6 +19,11 @@ export {
   packStudioKeys,
   previewPollInterval,
   useAddPackServiceAccess,
+  useCheckPackServiceAccess,
+  useOpenPackOfficial,
+  usePackOfficial,
+  usePackOfficialAdmin,
+  useSetPackOfficialAdmin,
   useCancelPackPreview,
   useCommitPack,
   useCreatePackVersion,

@@ -29,6 +29,7 @@ from hse_doc_studio.core.mail.journal import (
     resend_request,
 )
 from hse_doc_studio.core.mail.ports import IMailRelevance
+from hse_doc_studio.core.uow import spawn_detached
 from hse_doc_studio.use_cases.admin.users import require_admin
 from hse_doc_studio.use_cases.mail.dispatch import MailDispatcher, MailOutcome
 
@@ -187,7 +188,7 @@ class ResendMailBatchUC:
         if started:
             requests = [(e.id, resend_request(e, self._public_url)) for e in ready if e.id is not None]
             # Задача копирует контекст запроса: в журнале вызвавший это админ, как у одиночного повтора.
-            task = asyncio.create_task(self._send_all(requests))
+            task = spawn_detached(self._send_all(requests), name="mail-resend-batch")
             _BATCHES.add(task)
             task.add_done_callback(_BATCHES.discard)
             await self._audit.record(

@@ -20,9 +20,12 @@ from hse_doc_studio.core.git_sync.protocols import (
     IGitRemoteRunner,
     IGitTransport,
 )
+from hse_doc_studio.core.identity.commit_identity import noreply_domain
 from hse_doc_studio.core.identity.protocols import IAuditLog
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.mode import StudioMode
+from hse_doc_studio.core.pack_studio.official import OfficialRepo
+from hse_doc_studio.core.pack_studio.official import official_repo as make_official_repo
 from hse_doc_studio.core.pack_studio.protocols import (
     IPackChecker,
     IPackHosting,
@@ -59,6 +62,7 @@ from hse_doc_studio.use_cases.pack_studio.access import PackStudioAccess
 from hse_doc_studio.use_cases.pack_studio.files import PackFilesService
 from hse_doc_studio.use_cases.pack_studio.git import PackGitService
 from hse_doc_studio.use_cases.pack_studio.insight import PackInsightService
+from hse_doc_studio.use_cases.pack_studio.official import OfficialPacks
 from hse_doc_studio.use_cases.pack_studio.places import PackPlacesService
 from hse_doc_studio.use_cases.pack_studio.preview import PackPreviewService, PreviewLimits
 from hse_doc_studio.use_cases.pack_studio.versions import PackVersionService
@@ -73,6 +77,16 @@ def workspace_limits() -> WorkspaceLimits:
         max_clone_bytes=cfg.max_clone_bytes,
         max_tree_bytes=cfg.max_tree_bytes,
         max_tree_files=cfg.max_tree_files,
+    )
+
+
+def official_repo() -> OfficialRepo | None:
+    cfg = settings.pack_studio
+    return make_official_repo(
+        cfg.official_repo_url,
+        packs_path=cfg.official_packs_path,
+        base_branch=cfg.official_base_branch,
+        license=cfg.official_license,
     )
 
 
@@ -145,6 +159,17 @@ class PackStudioProvider(Provider):
     ) -> PackWorkspaceService:
         return self.build_service(repo, files, git, plumbing.transport, credentials, policy, paths, tasks, audit=None)
 
+    @provide
+    def get_official(self, workspaces: PackWorkspaceService, access: PackStudioAccess) -> OfficialPacks:
+        # Локально бота нет: официальные паки только своим токеном.
+        return OfficialPacks(
+            official_repo(),
+            workspaces,
+            access,
+            None,
+            default_daily_limit=settings.pack_studio.official_bot_daily_limit,
+        )
+
     @provide(scope=Scope.REQUEST)
     def get_git_service(  # noqa: PLR0913 — порты сценария
         self,
@@ -156,8 +181,11 @@ class PackStudioProvider(Provider):
         resolver: ProviderResolver,
         author: ICommitAuthorProvider,
         policy: GitSyncPolicy,
+        official: OfficialPacks,
     ) -> PackGitService:
-        return self.build_git_service(workspaces, git, plumbing, hosting, checker, resolver, author, policy, audit=None)
+        return self.build_git_service(
+            workspaces, git, plumbing, hosting, checker, resolver, author, policy, audit=None, official=official
+        )
 
     @staticmethod
     def build_hosting(plumbing: PackGitPlumbing, *, egress: IEgressPolicy | None) -> IPackHosting:
@@ -182,7 +210,9 @@ class PackStudioProvider(Provider):
         policy: GitSyncPolicy,
         *,
         audit: IAuditLog | None,
+        official: OfficialPacks | None = None,
     ) -> PackGitService:
+        public_url = settings.auth.public_url
         return PackGitService(
             workspaces,
             git,
@@ -194,6 +224,9 @@ class PackStudioProvider(Provider):
             policy,
             diff_max_bytes=settings.pack_studio.max_diff_bytes,
             audit=audit,
+            official=official,
+            noreply_domain=noreply_domain(public_url),
+            site_url=public_url.rstrip("/") if public_url else None,
         )
 
     @provide

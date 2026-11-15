@@ -45,6 +45,7 @@ from hse_doc_studio.core.git_sync.protocols import (
 from hse_doc_studio.core.git_sync.refs import bundle_ref
 from hse_doc_studio.core.git_sync.secret import Secret
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.uow import spawn_detached
 from hse_doc_studio.core.vcs.errors import VcsInvalidRefError
 from hse_doc_studio.core.vcs.protocols import IVcsFolderLocks
 from hse_doc_studio.core.vcs.refs import validate_ref_name
@@ -272,9 +273,7 @@ class ImportBundleUC:
         except BaseException:
             self._scratch.discard(inp.upload.workdir)
             raise
-        task = asyncio.create_task(
-            self._run(project, operation.id, branch, inp), name=f"git-bundle-import-{operation.id}"
-        )
+        task = spawn_detached(self._run(project, operation.id, branch, inp), name=f"git-bundle-import-{operation.id}")
         self._operations.attach_task(operation.id, task)
         return StartSyncOutput(operation_id=operation.id)
 

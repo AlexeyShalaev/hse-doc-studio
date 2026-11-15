@@ -132,10 +132,15 @@ class PullRequestRef:
 
 
 class CiState(StrEnum):
-    """Сводка проверок по вершине ветки: нет проверок, идут, все прошли, что-то упало, неизвестно."""
+    """Сводка проверок по вершине ветки: нет проверок, идут, все прошли, что-то упало, неизвестно.
+
+    `awaiting_approval` (срез T22): GitHub не запускает проверки PR из форка нового участника, пока сопровождающий
+    не одобрит запуск. Это не ошибка предложения и не «идут»: ждать нужно человека, а не раннер.
+    """
 
     none = "none"
     pending = "pending"
+    awaiting_approval = "awaiting_approval"
     success = "success"
     failure = "failure"
     unknown = "unknown"
@@ -149,6 +154,23 @@ class CheckState(StrEnum):
     neutral = "neutral"
     skipped = "skipped"
     cancelled = "cancelled"
+    # Запуск ждёт одобрения сопровождающего (PR из форка нового участника, срез T22).
+    awaiting_approval = "awaiting_approval"
+
+
+class PullRequestState(StrEnum):
+    open = "open"
+    merged = "merged"
+    closed = "closed"
+
+
+@dataclass(frozen=True)
+class HostingAccount:
+    """Чей токен (срез T22, проверка доступа бота): логин и области классического токена (`X-OAuth-Scopes`);
+    `scopes` None: хостинг областей не назвал (точный токен GitHub, GitHub App, другой провайдер)."""
+
+    login: str
+    scopes: tuple[str, ...] | None = None
 
 
 @dataclass(frozen=True)
@@ -171,6 +193,8 @@ class CiReport:
     available: bool = True
     reason: str | None = None
     web_url: str | None = None
+    # Срез T22: состояние PR у хостинга, если его удалось узнать (после слияния интерфейс говорит, когда ждать).
+    pr_state: PullRequestState | None = None
 
 
 _FINAL_OK = frozenset({CheckState.success, CheckState.neutral, CheckState.skipped})
@@ -178,12 +202,15 @@ _RUNNING = frozenset({CheckState.queued, CheckState.running})
 
 
 def summarize_checks(checks: Iterable[CiCheck]) -> CiState:
-    """Упавшая проверка важнее идущей, идущая важнее прошедших; отменённая считается упавшей."""
+    """Упавшая проверка важнее ждущей одобрения, та важнее идущей, идущая важнее прошедших; отменённая считается
+    упавшей."""
     states = [check.state for check in checks]
     if not states:
         return CiState.none
     if any(state in {CheckState.failure, CheckState.cancelled} for state in states):
         return CiState.failure
+    if CheckState.awaiting_approval in states:
+        return CiState.awaiting_approval
     if any(state in _RUNNING for state in states):
         return CiState.pending
     return CiState.success if all(state in _FINAL_OK for state in states) else CiState.unknown
@@ -300,8 +327,13 @@ def proposal_body(
     *,
     proposed_by: str | None,
     extra: str | None = None,
+    via_bot: str | None = None,
 ) -> str:
-    """Описание PR (4.3, шаг 3): версии, класс и причины, заметки ru/en, сводка проверок, кто предложил."""
+    """Описание PR (4.3, шаг 3): версии, класс и причины, заметки ru/en, сводка проверок, кто предложил.
+
+    `via_bot` (срез T22): адрес установки Студии, бот которой отправил предложение от имени автора; почта автора в
+    описание не попадает.
+    """
     lines: list[str] = []
     if extra and extra.strip():
         lines += [extra.strip(), ""]
@@ -313,6 +345,12 @@ def proposal_body(
     lines.append(
         f"Предложено в Студии шаблонов пользователем {proposed_by}." if proposed_by else "Предложено в Студии шаблонов."
     )
+    if via_bot is not None:
+        where = f" ({via_bot})" if via_bot else ""
+        lines.append(
+            f"Отправлено служебным аккаунтом установки Студии{where} от имени автора: у автора может не быть "
+            "аккаунта GitHub, его адрес почты не раскрывается."
+        )
     return "\n".join(lines).strip()[:BODY_MAX]
 
 

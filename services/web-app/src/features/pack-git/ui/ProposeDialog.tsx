@@ -5,6 +5,7 @@ import {
   forkRequired,
   lintFailure,
   packErrorText,
+  usePackOfficial,
   useProposePack,
   type ForkRequired,
   type LintFailure,
@@ -42,6 +43,92 @@ const prWord = (provider: PackGit["provider"]): "mr" | "pr" =>
 const trimmed = (value: string): string | null => {
   const text = value.trim();
   return text === "" ? null : text;
+};
+
+/** Лицензия и правила вклада: из ответа сервера (отказ без согласия) или из «Официальных паков». */
+type LicenseInfo = {
+  license: string;
+  licenseUrl: string | null;
+  contributingUrl: string | null;
+};
+
+const textField = (data: Record<string, unknown> | undefined, key: string) => {
+  const value = data?.[key];
+  return typeof value === "string" && value !== "" ? value : null;
+};
+
+const consentAsked = (error: unknown): LicenseInfo | null => {
+  if (!(error instanceof ApiError) || error.code !== "license_consent_required")
+    return null;
+  const data = error.data as Record<string, unknown> | undefined;
+  return {
+    license: textField(data, "license") ?? "",
+    licenseUrl: textField(data, "license_url"),
+    contributingUrl: textField(data, "contributing_url"),
+  };
+};
+
+/** Согласие перед первой отправкой в официальные паки (template-studio.md, 4.7). */
+const LicenseConsent = ({
+  info,
+  checked,
+  onChange,
+}: {
+  info: LicenseInfo;
+  checked: boolean;
+  onChange: (value: boolean) => void;
+}) => {
+  const { t } = useTranslation("packStudio");
+  const uid = useId();
+  return (
+    <div className="flex flex-col" style={{ gap: "0.375rem" }}>
+      <label
+        className="ps-choice"
+        htmlFor={`${uid}-license`}
+        data-testid="git-propose-license"
+      >
+        <input
+          id={`${uid}-license`}
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => {
+            onChange(e.target.checked);
+          }}
+          style={{ accentColor: "var(--accent)" }}
+          data-testid="git-propose-license-accept"
+        />
+        <span className="ps-choice-text">
+          <span>
+            {t("git.official.consent", {
+              license: info.license || t("git.official.repoLicense"),
+            })}
+          </span>
+          <span className="ps-choice-hint">
+            {t("git.official.consentHint")}
+          </span>
+        </span>
+      </label>
+      <span
+        className="ps-choice-hint"
+        style={{ display: "flex", gap: "0.75rem" }}
+      >
+        {info.licenseUrl && (
+          <a href={info.licenseUrl} target="_blank" rel="noopener noreferrer">
+            {t("git.official.license")}
+          </a>
+        )}
+        {info.contributingUrl && (
+          <a
+            href={info.contributingUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {t("git.official.rules")}
+          </a>
+        )}
+      </span>
+    </div>
+  );
 };
 
 /** Итог «Предложить изменения»: PR или MR, ссылка compare, сводка проверок. */
@@ -168,6 +255,11 @@ const ProposeResult = ({
         </section>
       )}
       <p className="ps-dialog-text">{t("git.propose.ciHint")}</p>
+      {result.git.workspace.official === true && (
+        <p className="ps-dialog-text" data-testid="git-propose-release-hint">
+          {t("git.official.afterMerge")}
+        </p>
+      )}
     </div>
   );
 };
@@ -193,9 +285,30 @@ export const ProposeDialog = ({
   const [message, setMessage] = useState("");
   const [forkMode, setForkMode] = useState<ForkMode>("url");
   const [forkUrl, setForkUrl] = useState("");
+  const [accepted, setAccepted] = useState(false);
   const uid = useId();
   const word = prWord(git.provider);
   const ws = git.workspace;
+  const isOfficial = ws.official === true;
+  const official = usePackOfficial(isOpen && isOfficial);
+  const viaBot = isOfficial && ws.service_access;
+  const repo = official.data?.repo;
+  const asked = consentAsked(propose.error);
+  // Согласие спрашивается до первой отправки и ещё раз, если сервер о нём попросил.
+  const consentInfo: LicenseInfo | null =
+    asked ??
+    (isOfficial && !ws.license_accepted_at
+      ? {
+          license: repo?.license ?? "",
+          licenseUrl: repo?.license_url ?? null,
+          contributingUrl: repo?.contributing_url ?? null,
+        }
+      : null);
+  const bot = official.data?.bot;
+  const left =
+    bot?.daily_limit != null && bot.used != null
+      ? Math.max(bot.daily_limit - bot.used, 0)
+      : null;
 
   const reset = () => {
     propose.reset();
@@ -205,6 +318,7 @@ export const ProposeDialog = ({
     setMessage("");
     setForkMode("url");
     setForkUrl("");
+    setAccepted(false);
   };
   const close = () => {
     if (propose.isPending) return;
@@ -219,6 +333,7 @@ export const ProposeDialog = ({
         description: trimmed(description),
         message: git.dirty ? trimmed(message) : null,
         ...(fork ? { fork } : {}),
+        ...(consentInfo && accepted ? { accept_license: true } : {}),
       },
       {
         onSuccess: (result) => {
@@ -247,7 +362,9 @@ export const ProposeDialog = ({
   const error = propose.error;
   // fork_required уже разобран шагом «форк»: его текст показывает сам шаг.
   const shownError =
-    error && !forkRequired(error) && !lintFailure(error) ? error : null;
+    error && !forkRequired(error) && !lintFailure(error) && !asked
+      ? error
+      : null;
   const denied =
     shownError instanceof ApiError && shownError.code === "push_denied";
 
@@ -375,8 +492,25 @@ export const ProposeDialog = ({
             base: git.base_branch ?? "",
           })}
         </p>
-        {ws.service_access && (
-          <p className="ps-dialog-text">{t("git.propose.service")}</p>
+        {viaBot ? (
+          <div data-testid="git-propose-bot">
+            <Notice
+              tone="info"
+              role="status"
+              text={
+                left !== null
+                  ? `${t("git.official.bot")} ${t("git.official.quota", {
+                      left,
+                      limit: bot?.daily_limit ?? 0,
+                    })}`
+                  : t("git.official.bot")
+              }
+            />
+          </div>
+        ) : (
+          ws.service_access && (
+            <p className="ps-dialog-text">{t("git.propose.service")}</p>
+          )
         )}
         {ws.fork_url && (
           <p className="ps-dialog-text mono">
@@ -424,6 +558,13 @@ export const ProposeDialog = ({
           />
         )}
         <p className="ps-dialog-text">{t("git.propose.checksHint")}</p>
+        {consentInfo && (
+          <LicenseConsent
+            info={consentInfo}
+            checked={accepted}
+            onChange={setAccepted}
+          />
+        )}
         {shownError !== null && (
           <Notice
             tone="err"
@@ -446,7 +587,7 @@ export const ProposeDialog = ({
           {t("common.cancel")}
         </Button>
         <Button
-          disabled={propose.isPending}
+          disabled={propose.isPending || (consentInfo !== null && !accepted)}
           onClick={() => {
             send(null);
           }}

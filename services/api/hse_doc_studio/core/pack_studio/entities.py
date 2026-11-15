@@ -70,6 +70,8 @@ class PackWorkspace:
     # folder: абсолютный путь папки в файловой системе Студии (контейнерный, если Студия в Docker).
     folder: str | None = None
     error: WorkspaceError | None = None
+    # Официальные паки (срез T22): когда человек согласился, что вклад идёт под лицензией репозитория и публичен.
+    license_accepted_at: datetime | None = None
 
 
 @dataclass(frozen=True)

@@ -7,6 +7,7 @@ import { useCapabilities } from "@entities/session";
 import { FolderPickerModal } from "@features/folder-picker";
 import {
   CreateWorkspaceDialog,
+  OfficialPacksCard,
   WorkspaceList,
 } from "@features/pack-workspaces";
 import { Button } from "@shared/ui";
@@ -40,6 +41,7 @@ export const WorkspacesScreen = () => {
           {t("workspaces.create")}
         </Button>
       </header>
+      <OfficialPacksCard onOpen={open} />
       <WorkspaceList
         onOpen={open}
         onCreate={() => {

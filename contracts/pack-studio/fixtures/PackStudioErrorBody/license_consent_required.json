@@ -1,0 +1,7 @@
+{
+  "detail": "Перед первой отправкой подтвердите, что вклад публичен и идёт под лицензией репозитория.",
+  "code": "license_consent_required",
+  "license": "Apache-2.0",
+  "license_url": "https://github.com/AlexeyShalaev/hse-doc-studio/blob/master/LICENSE",
+  "contributing_url": "https://github.com/AlexeyShalaev/hse-doc-studio/blob/master/CONTRIBUTING.md#contributing-to-the-official-packs"
+}

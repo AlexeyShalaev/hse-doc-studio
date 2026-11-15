@@ -11,6 +11,7 @@ import type {
   CreatePackStudioGrantRequest,
   CreatePackVersionRequest,
   CreatePackWorkspaceRequest,
+  OpenPackOfficialRequest,
   PackCiStatus,
   PackGit,
   PackPreviewBuild,
@@ -20,6 +21,7 @@ import type {
   PackSignaturesPatchRequest,
   PackWorkspace,
   StartPackPreviewRequest,
+  UpdatePackStudioOfficialRequest,
 } from "./schemas";
 
 export const packStudioKeys = {
@@ -79,6 +81,8 @@ export const packStudioKeys = {
     [...packStudioKeys.previewBuild(id, buildId), "log"] as const,
   admin: () => [...packStudioKeys.all, "admin"] as const,
   serviceAccess: () => [...packStudioKeys.admin(), "service-access"] as const,
+  official: () => [...packStudioKeys.all, "official"] as const,
+  officialAdmin: () => [...packStudioKeys.admin(), "official"] as const,
 };
 
 /** Статус проверок хостинга опрашивается раз в 30 с, пока они идут (template-studio.md, 4.4). */
@@ -86,10 +90,21 @@ export const CI_POLL_MS = 30_000;
 /** Сборка предпросмотра в очереди или идёт: опрос чаще, она занимает секунды. */
 export const PREVIEW_POLL_MS = 1500;
 
-/** Интервал опроса статуса проверок: раз в 30 с, пока `pending`, иначе не опрашивать. */
+/** Проверки ждут одобрения сопровождающего: это может занять часы, спрашиваем реже. */
+export const CI_APPROVAL_POLL_MS = 120_000;
+
+/** Интервал опроса статуса проверок: раз в 30 с, пока `pending`, раз в 2 минуты,
+ * пока запуск ждёт одобрения; после слияния или закрытия PR не опрашивать. */
 export const ciPollInterval = (
   status: PackCiStatus | undefined,
-): number | false => (status?.state === "pending" ? CI_POLL_MS : false);
+): number | false => {
+  if (status?.pr_state === "merged" || status?.pr_state === "closed") {
+    return false;
+  }
+  if (status?.state === "pending") return CI_POLL_MS;
+  if (status?.state === "awaiting_approval") return CI_APPROVAL_POLL_MS;
+  return false;
+};
 
 /** Интервал опроса сборки предпросмотра: пока она в очереди или идёт. */
 export const previewPollInterval = (
@@ -154,6 +169,27 @@ export const useCreatePackWorkspace = () => {
       packStudioApi.createWorkspace(body),
     onSuccess: (workspace) => {
       rememberWorkspace(client, workspace);
+    },
+  });
+};
+
+// ── официальные паки (срез T22) ─────────────────────────────────────────────
+
+export const usePackOfficial = (enabled = true) =>
+  useQuery({
+    queryKey: packStudioKeys.official(),
+    queryFn: () => packStudioApi.official(),
+    enabled,
+  });
+
+export const useOpenPackOfficial = () => {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: OpenPackOfficialRequest) =>
+      packStudioApi.openOfficial(body),
+    onSuccess: (workspace) => {
+      rememberWorkspace(client, workspace);
+      void client.invalidateQueries({ queryKey: packStudioKeys.official() });
     },
   });
 };
@@ -561,6 +597,34 @@ export const useAddPackServiceAccess = () => {
       void client.invalidateQueries({
         queryKey: packStudioKeys.serviceAccess(),
       });
+    },
+  });
+};
+
+export const useCheckPackServiceAccess = () => {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (accessId: string) =>
+      packStudioApi.checkServiceAccess(accessId),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: packStudioKeys.admin() });
+    },
+  });
+};
+
+export const usePackOfficialAdmin = () =>
+  useQuery({
+    queryKey: packStudioKeys.officialAdmin(),
+    queryFn: () => packStudioApi.officialAdmin(),
+  });
+
+export const useSetPackOfficialAdmin = () => {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (body: UpdatePackStudioOfficialRequest) =>
+      packStudioApi.setOfficialAdmin(body),
+    onSuccess: (state) => {
+      client.setQueryData(packStudioKeys.officialAdmin(), state);
     },
   });
 };
