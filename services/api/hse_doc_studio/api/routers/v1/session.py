@@ -94,6 +94,7 @@ async def bootstrap(request: Request, response: Response) -> BootstrapResponse:
     if settings.mode is StudioMode.local:
         local = _local_bootstrap()
         local.capabilities.pack_studio = await _pack_studio_allowed(request, Actor.local())
+        local.capabilities.pack_studio_standalone = local.capabilities.pack_studio and settings.pack_studio.standalone
         return local
     uc = await request.state.dishka_container.get(BootstrapUC)
     result = await uc.execute(credentials_from_request(request).session_secret)

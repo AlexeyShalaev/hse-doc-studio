@@ -266,6 +266,16 @@ class PackWorkspaceService:
             self._tasks.spawn(ws.id, lambda: self._clone(ws, target))
         return self._view(ws)
 
+    async def ensure_folder(self, actor: Actor, folder: str) -> WorkspaceView | None:
+        """Профиль standalone (D2, срез T19): папка паков профиля открыта пространством. Уже открыта: None.
+
+        Пространство над этой папкой, удалённое человеком, вернётся при следующем старте: это папка профиля.
+        """
+        checked = await asyncio.to_thread(self._checked_folder, folder)
+        if any(ws.folder == str(checked) for ws in await self._repo.list(owner_of(actor))):
+            return None
+        return await self.create(actor, CreateWorkspaceInput(kind=WorkspaceKind.folder, folder=str(checked)))
+
     async def refresh(self, actor: Actor, workspace_id: UUID) -> WorkspaceView:
         ws = await self._load(actor, workspace_id)
         if ws.kind is not WorkspaceKind.git:
@@ -307,7 +317,8 @@ class PackWorkspaceService:
             id=uuid4(),
             owner_id=owner,
             kind=WorkspaceKind.folder,
-            label=_label(inp.label, folder.name or str(folder)),
+            # Имя папки на хосте: в Docker папка паков смонтирована под служебным именем (`/packs`).
+            label=_label(inp.label, _folder_name(self._paths.display(str(folder))) or folder.name or str(folder)),
             packs_path=packs_path,
             created_at=now,
             updated_at=now,
@@ -487,6 +498,10 @@ class PackWorkspaceService:
 def _label(raw: str | None, fallback: str) -> str:
     text = (raw or "").strip() or fallback
     return text[:LABEL_MAX]
+
+
+def _folder_name(path: str) -> str:
+    return path.replace("\\", "/").rstrip("/").rsplit("/", 1)[-1]
 
 
 def _repo_label(url: RemoteUrl) -> str:

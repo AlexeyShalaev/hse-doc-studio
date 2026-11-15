@@ -52,9 +52,21 @@ export const showsLanding = (bootstrap: Bootstrap, pathname: string): boolean =>
 
 export type GateLocation = { pathname: string; search: string; hash: string };
 
+// Не из @entities/pack-studio: шлюз в общем чанке, код раздела грузится лениво.
+const PACK_STUDIO_HOME = "/pack-studio";
+// Профиль standalone (template-studio.md, D2): экраны проектов уводят в Студию шаблонов.
+// Настройки остаются: в них доступы git (токен для PR) и шрифты.
+const STANDALONE_PROJECT_EXACT = ["/", "/inbox", "/wizard", "/onboarding/demo"];
+const STANDALONE_PROJECT_PREFIXES = ["/projects/", "/wizard/"];
+
+const isProjectPath = (path: string): boolean =>
+  STANDALONE_PROJECT_EXACT.includes(path) ||
+  STANDALONE_PROJECT_PREFIXES.some((prefix) => path.startsWith(prefix));
+
 /**
  * Куда отправить человека в серверном режиме, или null, если остаться.
- * В локальном режиме шлюз только уводит с экранов входа на главную.
+ * В локальном режиме шлюз только уводит с экранов входа на главную, а в
+ * профиле standalone ещё и с экранов проектов на /pack-studio.
  * Чистая функция: все решения шлюза читаются и проверяются в одном месте.
  *
  * - мастер первого запуска не пройден: на /first-run с любого адреса;
@@ -69,8 +81,12 @@ export const resolveGateRedirect = (
 ): string | null => {
   const path = trimSlash(location.pathname);
   // Локальный режим без входа: экраны сессии ему не нужны, адрес как раньше
-  // вёл бы на 404, а теперь ведёт на главную.
+  // вёл бы на 404, а теперь ведёт на главную (в профиле standalone на Студию шаблонов).
   if (bootstrap.mode !== "server") {
+    const standalone = bootstrap.capabilities.pack_studio_standalone;
+    if (standalone && (isPublicPath(path) || isProjectPath(path))) {
+      return PACK_STUDIO_HOME;
+    }
     return isPublicPath(path) ? "/" : null;
   }
 

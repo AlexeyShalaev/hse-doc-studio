@@ -75,6 +75,7 @@ const SERVER_CAPABILITIES: Capabilities = {
   git_remote: true,
   git_server_login: false,
   pack_studio: false,
+  pack_studio_standalone: false,
 };
 
 export const DEMO_STUDENT: SessionUser = {
@@ -235,6 +236,7 @@ const localBase = (): Bootstrap => ({
     // Локальная Студия входит на сервер Студии кодом и клонирует его проекты.
     git_server_login: true,
     pack_studio: false,
+    pack_studio_standalone: false,
   },
   csrf_token: null,
   guest: null,

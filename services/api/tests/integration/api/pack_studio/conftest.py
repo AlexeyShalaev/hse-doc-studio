@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest_asyncio
+from dishka import AsyncContainer
 from hse_doc_studio.api.config import settings as app_settings
 from hse_doc_studio.infra.template.releases import freeze
 from httpx import ASGITransport, AsyncClient, Response
@@ -55,9 +56,10 @@ def write_pack(root: Path, files: Mapping[str, str] = PACK_FILES, *, release: bo
 
 
 class Stand:
-    def __init__(self, client: AsyncClient, root: Path) -> None:
+    def __init__(self, client: AsyncClient, root: Path, container: AsyncContainer | None = None) -> None:
         self.client = client
         self.root = root
+        self.container = container
 
     async def enable(self) -> None:
         resp = await self.client.put(f"{API}/section", json={"enabled": True})
@@ -95,7 +97,7 @@ async def stand(tmp_path: Path) -> AsyncIterator[Stand]:
     container = create_test_container(data_dir)
     client = AsyncClient(transport=ASGITransport(app=create_test_app(container)), base_url="http://test")
     try:
-        yield Stand(client, tmp_path)
+        yield Stand(client, tmp_path, container)
     finally:
         await client.aclose()
         await container.close()
