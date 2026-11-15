@@ -74,6 +74,21 @@ REPRODUCIBLE_LATEXMK_OPTIONS = (f"-latexoption=-output-comment={OUTPUT_COMMENT}"
 # Под не-root формат движка собирается заранее вне `-output-directory`, см. DockerCompileExecutor._tex_launcher.
 NONROOT_FORMAT_PREPARE = 'cd /tmp && fmtutil-user --byfmt "$0" >&2; cd "$OLDPWD" && exec "$@"'
 
+# Встроенный раннер (root, кэш /root на томе): формата движка в образе может не быть (texlive/texlive:TL2024-historic
+# без xelatex.fmt). Сам kpathsea строит его через mktexfmt при сборке, но с `-output-directory=<rel>` формат не
+# собирается (относительный TEXMFOUTPUT, см. DockerCompileExecutor._tex_launcher), и первая сборка падает с «I can't
+# find the format file». Поэтому формат строится заранее и только если его нет: `fmtutil-user` кладёт его в TEXMFVAR
+# (`/root/.texliveYYYY`), то есть в том кэша, и следующие сборки идут сразу. `$0` имя формата, `$1` движок kpathsea.
+ROOT_FORMAT_ENSURE = (
+    'kpsewhich -engine="$1" "$0.fmt" >/dev/null 2>&1 || (cd /tmp && fmtutil-user --byfmt "$0" >&2); shift; exec "$@"'
+)
+# Движок kpathsea, под которым ищется формат (`web2c/<движок>/<формат>.fmt`).
+FORMAT_ENGINE = {
+    "xelatex": "xetex",
+    "lualatex": "luahbtex",
+    "pdflatex": "pdftex",
+}
+
 
 @dataclass(frozen=True)
 class TexSource:

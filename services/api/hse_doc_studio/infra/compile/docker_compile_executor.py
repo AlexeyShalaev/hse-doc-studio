@@ -14,9 +14,12 @@ import structlog
 from hse_doc_studio.core.jobs.artifacts import IArtifactStore, PublishPdfRequest
 from hse_doc_studio.infra.compile.host_path_resolver import HostPathResolver
 from hse_doc_studio.infra.compile.latexmk import ENGINE_FLAG as _ENGINE_FLAG
+from hse_doc_studio.infra.compile.latexmk import FORMAT_ENGINE as _FORMAT_ENGINE
+from hse_doc_studio.infra.compile.latexmk import NONROOT_FORMAT_PREPARE as _NONROOT_FORMAT_PREPARE
 from hse_doc_studio.infra.compile.latexmk import NONROOT_TEX_ENV as _NONROOT_TEX_ENV
 from hse_doc_studio.infra.compile.latexmk import REPRODUCIBLE_LATEXMK_OPTIONS as _REPRODUCIBLE_LATEXMK_OPTIONS
 from hse_doc_studio.infra.compile.latexmk import REPRODUCIBLE_TEX_ENV as _REPRODUCIBLE_TEX_ENV
+from hse_doc_studio.infra.compile.latexmk import ROOT_FORMAT_ENSURE as _ROOT_FORMAT_ENSURE
 from hse_doc_studio.infra.compile.latexmk import SENTINEL_DONE as _SENTINEL_DONE
 from hse_doc_studio.infra.compile.latexmk import SENTINEL_FAILED as _SENTINEL_FAILED
 from hse_doc_studio.infra.compile.latexmk import SENTINEL_PAGES as _SENTINEL_PAGES
@@ -135,16 +138,17 @@ class DockerCompileExecutor:
         self._fonts_mount_target = fonts_mount_target
 
     def _tex_launcher(self, engine: str) -> list[str]:
-        """Префикс команды: под не-root формат движка собирается заранее вне `-output-directory`.
+        """Префикс команды: формат движка собирается заранее, вне `-output-directory`.
 
         При `-output-directory=<rel>` kpathsea отдаёт mktexfmt относительный TEXMFOUTPUT, и `xetex -ini` в
         временном каталоге не может записать xelatex.log («I can't write on file»), формат не строится, latexmk
-        выходит с кодом 12. Каталоги TeX у не-root в tmpfs, поэтому формат нужен свежий на каждую сборку.
+        выходит с кодом 12. Каталоги TeX у не-root в tmpfs, поэтому формат нужен свежий на каждую сборку. Встроенный
+        раннер (root) строит формат, только если его нет ни в образе, ни в томе кэша (`ROOT_FORMAT_ENSURE`).
         """
         limits = self._limits
-        if limits is None or limits.user is None or not limits.read_only_rootfs:
-            return []
-        return ["sh", "-c", 'cd /tmp && fmtutil-user --byfmt "$0" >&2; cd "$OLDPWD" && exec "$@"', engine]
+        if limits is not None and limits.user is not None and limits.read_only_rootfs:
+            return ["sh", "-c", _NONROOT_FORMAT_PREPARE, engine]
+        return ["sh", "-c", _ROOT_FORMAT_ENSURE, engine, _FORMAT_ENGINE.get(engine, engine)]
 
     def _isolation_args(self) -> list[str]:
         return self._limits.docker_args() if self._limits is not None else []
