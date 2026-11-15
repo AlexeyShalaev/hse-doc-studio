@@ -7,6 +7,7 @@ from dishka.integrations.fastapi import FromDishka
 from fastapi import APIRouter, Header, HTTPException, Request
 from fastapi.responses import Response
 
+from hse_doc_studio.api.config import settings
 from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.schemas.file import (
     CreateDirRequest,
@@ -15,7 +16,9 @@ from hse_doc_studio.api.schemas.file import (
     MoveFileRequest,
 )
 from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.file_paths import INVALID_FILE_PATH, InvalidFilePathError
 from hse_doc_studio.core.file_version import file_etag
+from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.use_cases.files.create_dir import CreateDirInput, CreateDirUC
 from hse_doc_studio.use_cases.files.delete_file import DeleteFileInput, DeleteFileUC
 from hse_doc_studio.use_cases.files.get_file import GetFileInput, GetFileUC
@@ -49,6 +52,42 @@ _EXTENSION_CONTENT_TYPES: dict[str, str] = {
     ".js": "application/javascript",
     ".zip": "application/zip",
 }
+
+
+FILE_TOO_LARGE = "file_too_large"
+PATH_CONFLICT = "path_conflict"
+_MIB = 1024 * 1024
+
+
+def _too_large(limit: int) -> HTTPException:
+    mib = max(limit // _MIB, 1)
+    return HTTPException(
+        status_code=413,
+        detail={
+            "code": FILE_TOO_LARGE,
+            "detail": localized_error(
+                f"Файл больше допустимого: не более {mib} МБ.", f"The file is too large: at most {mib} MB."
+            ),
+            "limit": limit,
+        },
+    )
+
+
+async def _read_limited_body(request: Request, limit: int) -> bytes:
+    """Тело записи не больше `limit` байт: отказ по заявленной длине до чтения, иначе по принятым байтам.
+
+    Читать целиком через `request.body()` нельзя: файл в сотни мегабайт лёг бы в память процесса
+    раньше любой проверки.
+    """
+    declared = request.headers.get("content-length")
+    if declared is not None and declared.isdigit() and int(declared) > limit:
+        raise _too_large(limit)
+    body = bytearray()
+    async for chunk in request.stream():
+        body += chunk
+        if len(body) > limit:
+            raise _too_large(limit)
+    return bytes(body)
 
 
 def _content_type_for(filename: str) -> str:
@@ -138,9 +177,26 @@ async def put_file(
     response: Response,
     if_match: str | None = Header(default=None, alias="If-Match"),
 ) -> None:
-    content = await request.body()
+    content = await _read_limited_body(request, settings.server.project_file_max_bytes)
     try:
         result = await uc.execute(PutFileInput(project_id=project_id, path=path, content=content, if_match=if_match))
+    except InvalidFilePathError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail={"code": INVALID_FILE_PATH, "detail": exc.message(), "problem": exc.problem.value},
+        ) from exc
+    except (IsADirectoryError, NotADirectoryError, FileExistsError) as exc:
+        # Путь занят папкой или папка на пути занята файлом: `a.png` есть папка, `a.png/b.png` под файлом.
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": PATH_CONFLICT,
+                "detail": localized_error(
+                    "Путь занят: на этом месте или на пути к нему уже есть папка или файл с таким именем.",
+                    "The path is taken: a folder or a file with this name is already there or on the way to it.",
+                ),
+            },
+        ) from exc
     except StaleFileError as exc:
         # 409, а не 412: клиенту нужен не только отказ, но и текущее содержимое —
         # интерфейс предлагает «взять с диска / оставить своё» прямо на месте.

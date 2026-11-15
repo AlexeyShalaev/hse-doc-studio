@@ -55,7 +55,7 @@ Storage runs on the `pgsty/minio` image (a MinIO fork with the web console resto
 
 ### Reverse proxy
 
-The runner holds a poll request for up to 25 seconds. Set a read timeout of at least 60 seconds and turn response buffering off. For nginx: `proxy_read_timeout 75s; proxy_buffering off; client_max_body_size 512m;`. The body limit must cover file uploads (up to 256 MiB) as well as project import.
+The runner holds a poll request for up to 25 seconds. Set a read timeout of at least 60 seconds and turn response buffering off. For nginx: `proxy_read_timeout 75s; proxy_buffering off; client_max_body_size 512m;`. The body limit must cover file uploads (up to 256 MiB) as well as project import. A single file uploaded into a project from the browser is limited by the api itself with `HSE_STUDIO__SERVER__PROJECT_FILE_MAX_BYTES` (50 MiB by default, below the roughly 100 MB limit of git hosting services), which answers 413 before writing.
 
 The api is published on `127.0.0.1` by default (`BIND_ADDRESS` in `.env`): the proxy must run on the same host, otherwise set the address explicitly. Run one runner per host and data directory; `--scale runner=N` is not supported because the registration token is single-use.
 

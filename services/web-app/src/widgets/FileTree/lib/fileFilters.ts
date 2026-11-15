@@ -41,10 +41,48 @@ const segmentsOf = (path: string): string[] =>
 export const isHiddenDirPath = (path: string): boolean =>
   segmentsOf(path).some((seg) => HIDDEN_DIR_SEGMENTS.has(seg));
 
-export const isHiddenPath = (path: string): boolean => {
+// Сборка кладёт PDF рядом с исходником под тем же именем (vkr/vkr.tex даёт vkr/vkr.pdf). Такой PDF
+// прячется вместе с прочими артефактами, а PDF без исходника рядом (рисунок, скан, загруженный
+// с компьютера файл) виден всегда. То же правило у истории версий (core/vcs/build_pdf.py).
+const BUILD_PDF_SOURCE_EXTENSIONS = [
+  ".tex",
+  ".docx",
+  ".doc",
+  ".odt",
+  ".rtf",
+  ".pptx",
+  ".ppt",
+  ".odp",
+  ".md",
+  ".html",
+  ".htm",
+];
+
+export const isBuildOutputPdf = (
+  path: string,
+  isFile: (path: string) => boolean,
+): boolean => {
+  if (!path.endsWith(".pdf")) return false;
+  // Копия «<имя>.local.pdf», которую синхронизация откладывает рядом, тоже собранная.
+  const stem = path
+    .slice(0, -".pdf".length)
+    .replace(/\.local(\d+|-[0-9a-f]{6})?$/, "");
+  return BUILD_PDF_SOURCE_EXTENSIONS.some((ext) => isFile(`${stem}${ext}`));
+};
+
+/**
+ * Скрыто без «показать сгенерированные»: служебные папки, артефакты LaTeX и собранные PDF.
+ * Без `isFile` (нет списка файлов) прячется любой PDF, как раньше.
+ */
+export const isHiddenPath = (
+  path: string,
+  isFile?: (path: string) => boolean,
+): boolean => {
   const lower = path.toLowerCase();
   if (segmentsOf(path).some((seg) => HIDDEN_DIR_SEGMENTS.has(seg))) return true;
-  if (lower.endsWith(".pdf")) return true;
+  if (lower.endsWith(".pdf")) {
+    return isFile === undefined || isBuildOutputPdf(path, isFile);
+  }
   return ARTIFACT_EXTENSIONS.some((ext) => lower.endsWith(ext));
 };
 

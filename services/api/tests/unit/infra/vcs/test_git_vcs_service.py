@@ -114,6 +114,37 @@ def test__status__pdf_changes_ignored_unless_track_pdf(tmp_path: Path) -> None:
     assert svc.status(project, VcsSettings(track_pdf=True)).dirty is True
 
 
+def test__commit__user_pdf_and_binary_files_go_into_history_byte_for_byte(tmp_path: Path) -> None:
+    # Рисунок в PDF без одноимённого исходника рядом положил пользователь: это работа, а не сборка.
+    svc, project = _init_with_files(tmp_path)
+    images = Path(project.folder) / "vkr" / "images"
+    images.mkdir()
+    png = bytes(range(256)) * 4
+    (images / "scheme.png").write_bytes(png)
+    (images / "figure.pdf").write_bytes(b"%PDF-1.7\n\xff\xfe figure")
+    (Path(project.folder) / "vkr" / "vkr.pdf").write_bytes(b"%PDF compiled")
+
+    status = svc.status(project, VcsSettings(track_pdf=False))
+    assert status.dirty is True
+    commit = svc.commit(project, message="upload", kind=VcsCommitKind.manual)
+
+    assert commit is not None
+    files = {f.path for f in svc.commit_detail(project, commit.id).files}
+    assert files == {"vkr/images/scheme.png", "vkr/images/figure.pdf"}
+    blob = svc.run_bytes(project, ["cat-file", "blob", "HEAD:vkr/images/scheme.png"]).stdout  # type: ignore[arg-type]
+    assert blob == png
+
+
+def test__status__only_compiled_pdf_is_ignored_without_track_pdf(tmp_path: Path) -> None:
+    svc, project = _init_with_files(tmp_path)
+    (Path(project.folder) / "vkr" / "vkr.pdf").write_bytes(b"compiled")
+    assert svc.status(project, VcsSettings(track_pdf=False)).dirty is False
+    (Path(project.folder) / "scan.pdf").write_bytes(b"uploaded")
+    status = svc.status(project, VcsSettings(track_pdf=False))
+    assert status.dirty is True
+    assert status.untracked == 1
+
+
 def test__diff__shows_modified_file(tmp_path: Path) -> None:
     svc, project = _init_with_files(tmp_path)
     (Path(project.folder) / "vkr" / "vkr.tex").write_text("v2 changed\n", encoding="utf-8", newline="\n")

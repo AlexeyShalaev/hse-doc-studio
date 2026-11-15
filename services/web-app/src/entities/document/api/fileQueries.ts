@@ -8,6 +8,7 @@ import { useCallback } from "react";
 import axios from "axios";
 import { z } from "zod";
 import { apiClient } from "@shared/api/client";
+import { env } from "@shared/config";
 import { noteProjectEdit } from "@shared/lib/editActivity";
 import type { FileTreeItemResponse } from "@shared/api/types";
 
@@ -76,13 +77,29 @@ export const useFileVersion = (
     retry: false,
   });
 
+/** Плоский список файлов и папок проекта (тот же, что у дерева). */
+export const fetchFileTree = (
+  projectId: string,
+): Promise<FileTreeItemResponse[]> =>
+  apiClient
+    .get(`/projects/${projectId}/files`)
+    .then((r) => FileTreeResponseSchema.parse(r.data));
+
+/**
+ * Путь файла в адресе: каждый сегмент кодируется отдельно, слэши остаются.
+ * Без этого «рис 1#a.png» обрезался бы на «#», а «?» уходил бы в строку запроса.
+ */
+export const encodeFilePath = (path: string): string =>
+  path.split("/").map(encodeURIComponent).join("/");
+
+/** Адрес содержимого файла для `<img>`, просмотрщика PDF и ссылки «Скачать». */
+export const fileContentUrl = (projectId: string, path: string): string =>
+  `${env.VITE_API_BASE_URL}/api/v1/projects/${projectId}/files/${encodeFilePath(path)}`;
+
 export const useFileTree = (projectId: string) =>
   useQuery<FileTreeItemResponse[]>({
     queryKey: fileKeys.tree(projectId),
-    queryFn: () =>
-      apiClient
-        .get(`/projects/${projectId}/files`)
-        .then((r) => FileTreeResponseSchema.parse(r.data)),
+    queryFn: () => fetchFileTree(projectId),
     // Файл, созданный в VS Code, должен появиться в дереве сам, без перезагрузки.
     refetchInterval: 15000,
     refetchIntervalInBackground: false,

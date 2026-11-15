@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from hse_doc_studio.core.agent.entities import AgentToolContext, ToolResult, ToolSpec
 from hse_doc_studio.core.enums import ToolKind
+from hse_doc_studio.core.file_paths import InvalidFilePathError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.use_cases.files.delete_file import DeleteFileInput, DeleteFileUC
 from hse_doc_studio.use_cases.files.list_file_tree import ListFileTreeInput, ListFileTreeUC
@@ -78,6 +79,8 @@ class WriteFileTool(McpTool):
                     if_match=optional_text(args, "if_match"),
                 )
             )
+        except InvalidFilePathError as exc:
+            return ToolResult.error(exc.message())
         except StaleFileError:
             return ToolResult.error(
                 localized_error(

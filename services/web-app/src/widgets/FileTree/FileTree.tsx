@@ -4,9 +4,11 @@ import {
   AlertTriangle,
   FilePlus,
   FolderPlus,
+  FolderUp,
   Lock,
   Pencil,
   Trash2,
+  Upload,
 } from "lucide-react";
 import {
   useCreateDir,
@@ -22,6 +24,7 @@ import {
   buildFileTree,
   type FileNode,
 } from "./lib/buildFileTree";
+import { isExternalDrag } from "./lib/dragTypes";
 import { InlineInput, TreeNode, type TreeNodeContext } from "./TreeNode";
 
 export type FileTreeProps = {
@@ -35,6 +38,18 @@ export type FileTreeProps = {
    * this component's own header. Omitted → hidden files stay hidden.
    */
   showHidden?: boolean;
+  /**
+   * Загрузка файлов с компьютера (features/project-file-upload): пункты «Загрузить сюда» в меню
+   * папки и корня и приём перетаскивания файлов. Сама загрузка живёт у оболочки панели, дерево
+   * только говорит, куда класть. Без этого свойства дерево файлы с компьютера не принимает.
+   */
+  upload?: FileTreeUpload;
+};
+
+export type FileTreeUpload = {
+  enabled: boolean;
+  pick: (destFolder: string, kind: "files" | "folder") => void;
+  drop: (dataTransfer: DataTransfer, destFolder: string) => void;
 };
 
 // `node: null` is the root menu, opened by right-clicking empty space.
@@ -52,6 +67,8 @@ const basenameOf = (path: string): string =>
 type FileTreeMenuProps = {
   menu: ContextMenu;
   onCreate: (parentPath: string, kind: "file" | "folder") => void;
+  /** Есть, когда в проект можно загружать файлы с компьютера. */
+  onUpload: ((parentPath: string, kind: "files" | "folder") => void) | null;
   onRename: (node: FileNode) => void;
   onDelete: (node: FileNode) => void;
   onClose: () => void;
@@ -61,19 +78,50 @@ type FileTreeMenuProps = {
 const FileTreeMenu = ({
   menu,
   onCreate,
+  onUpload,
   onRename,
   onDelete,
   onClose,
 }: FileTreeMenuProps) => {
   const { t } = useTranslation("appChrome");
+  const { t: tUpload } = useTranslation("fileUpload");
   const { node } = menu;
+  const uploadItems = (parentPath: string) =>
+    onUpload && (
+      <>
+        <button
+          type="button"
+          className="row-btn"
+          style={{ gap: "0.5rem" }}
+          onClick={() => {
+            onUpload(parentPath, "files");
+            onClose();
+          }}
+        >
+          <Upload size="0.8125rem" style={{ flexShrink: 0 }} />
+          <span>{tUpload("actions.uploadHere")}</span>
+        </button>
+        <button
+          type="button"
+          className="row-btn"
+          style={{ gap: "0.5rem" }}
+          onClick={() => {
+            onUpload(parentPath, "folder");
+            onClose();
+          }}
+        >
+          <FolderUp size="0.8125rem" style={{ flexShrink: 0 }} />
+          <span>{tUpload("actions.uploadFolderHere")}</span>
+        </button>
+      </>
+    );
   return (
     <div
       className="flex flex-col"
       style={{
         position: "fixed",
         left: Math.min(menu.x, window.innerWidth - 210),
-        top: Math.min(menu.y, window.innerHeight - 130),
+        top: Math.min(menu.y, window.innerHeight - 200),
         width: "12.5rem",
         zIndex: 61,
         background: "var(--bg-1)",
@@ -118,6 +166,7 @@ const FileTreeMenu = ({
             <FolderPlus size="0.8125rem" style={{ flexShrink: 0 }} />
             <span>{t("fileTree.newFolder")}</span>
           </button>
+          {uploadItems("")}
         </>
       ) : (
         <>
@@ -153,6 +202,7 @@ const FileTreeMenu = ({
                 <FolderPlus size="0.8125rem" style={{ flexShrink: 0 }} />
                 <span>{t("fileTree.newFolderHere")}</span>
               </button>
+              {uploadItems(node.path)}
             </>
           )}
           {node.deletable ? (
@@ -209,8 +259,12 @@ export const FileTree = ({
   selectedPath,
   onSelect,
   showHidden = false,
+  upload,
 }: FileTreeProps) => {
   const { t } = useTranslation("appChrome");
+  const { t: tUpload } = useTranslation("fileUpload");
+  // Над пустым местом дерева тащат файлы с компьютера: подсветить корень как цель.
+  const [rootDropping, setRootDropping] = useState(false);
   const { data: items, isLoading, isError } = useFileTree(projectId);
   const [menu, setMenu] = useState<ContextMenu | null>(null);
   const [editingPath, setEditingPath] = useState<string | null>(null);
@@ -331,6 +385,26 @@ export const FileTree = ({
     [projectId, moveFile, routeGuard],
   );
 
+  const canDropFiles = upload?.enabled === true;
+
+  const onUpload = useCallback(
+    (destFolder: string, kind: "files" | "folder"): void => {
+      if (!upload?.enabled) return;
+      if (destFolder) forceOpen(destFolder);
+      upload.pick(destFolder, kind);
+    },
+    [upload, forceOpen],
+  );
+
+  const onDropFiles = useCallback(
+    (dataTransfer: DataTransfer, destFolder: string): void => {
+      if (!upload?.enabled) return;
+      if (destFolder) forceOpen(destFolder);
+      upload.drop(dataTransfer, destFolder);
+    },
+    [upload, forceOpen],
+  );
+
   const onEditCancel = useCallback((): void => {
     setEditingPath(null);
     setCreating(null);
@@ -369,6 +443,8 @@ export const FileTree = ({
       creating,
       onCreateSubmit,
       onMove,
+      canDropFiles,
+      onDropFiles,
     }),
     [
       selectedPath,
@@ -382,6 +458,8 @@ export const FileTree = ({
       creating,
       onCreateSubmit,
       onMove,
+      canDropFiles,
+      onDropFiles,
     ],
   );
 
@@ -403,11 +481,19 @@ export const FileTree = ({
   return (
     <div className="flex flex-col" style={{ height: "100%", minHeight: 0 }}>
       <div
+        data-testid="file-tree-root"
         style={{
           flex: 1,
           minHeight: 0,
           overflowY: "auto",
           padding: "0.125rem 0 0.625rem",
+          borderRadius: "var(--r-2, 0.25rem)",
+          ...(rootDropping
+            ? {
+                background: "var(--accent-soft)",
+                boxShadow: "inset 0 0 0 1px var(--accent-line)",
+              }
+            : null),
         }}
         onContextMenu={(e) => {
           // Right-clicking empty space (not a row — rows stopPropagation) opens
@@ -416,12 +502,30 @@ export const FileTree = ({
           setMenu({ node: null, x: e.clientX, y: e.clientY });
         }}
         onDragOver={(e) => {
+          // Без preventDefault файл, брошенный мимо цели, браузер открыл бы вместо Студии.
           e.preventDefault();
+          if (!isExternalDrag(e.dataTransfer)) return;
+          e.dataTransfer.dropEffect = canDropFiles ? "copy" : "none";
+          // Над строкой целью становится её папка, корень не подсвечивается.
+          const overRow =
+            e.target instanceof Element && e.target.closest(".row-btn");
+          setRootDropping(canDropFiles && !overRow);
+        }}
+        onDragLeave={(e) => {
+          const next = e.relatedTarget;
+          if (!(next instanceof Node) || !e.currentTarget.contains(next)) {
+            setRootDropping(false);
+          }
         }}
         onDrop={(e) => {
+          e.preventDefault();
+          setRootDropping(false);
           const src = e.dataTransfer.getData(DRAG_MIME);
           if (src) onMove(src, "");
+          else if (isExternalDrag(e.dataTransfer))
+            onDropFiles(e.dataTransfer, "");
         }}
+        title={rootDropping ? tUpload("actions.dropHere") : undefined}
       >
         {creating?.parentPath === "" && (
           <div
@@ -471,6 +575,7 @@ export const FileTree = ({
             style={{ padding: "0.875rem", fontSize: "0.75rem" }}
           >
             {t("fileTree.emptyTree")}
+            {canDropFiles && ` ${tUpload("actions.dropHint")}`}
           </div>
         ) : (
           tree.map((node) => (
@@ -483,6 +588,7 @@ export const FileTree = ({
         <FileTreeMenu
           menu={menu}
           onCreate={startCreate}
+          onUpload={canDropFiles ? onUpload : null}
           onRename={(node) => {
             setEditingPath(node.path);
           }}

@@ -162,6 +162,87 @@ for (const lang of LANGS) {
       await logout(page);
     });
 
+    test("свои файлы загружаются в раздел «Файлы» без порчи байтов", async ({
+      page,
+    }) => {
+      expect(createdId).not.toBe("");
+      await login(page, USERS.anna.email);
+      await page.goto(`/projects/${createdId}/files`);
+      const t = (ru: string, en: string): string => (lang === "ru" ? ru : en);
+      // Не UTF-8 и все значения байта: перекодировка в текст где угодно по пути испортила бы файл.
+      const png = Buffer.concat([
+        Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+        Buffer.from(Array.from({ length: 256 }, (_, i) => i)),
+      ]);
+      const pick = async (): Promise<void> => {
+        const chooser = page.waitForEvent("filechooser");
+        await page
+          .getByRole("button", { name: t("Загрузить файлы", "Upload files") })
+          .first()
+          .click();
+        await (
+          await chooser
+        ).setFiles({ name: "logo.png", mimeType: "image/png", buffer: png });
+      };
+
+      await pick();
+      const tree = page.getByTestId("file-tree-root");
+      await expect(tree.getByText("logo.png", { exact: true })).toBeVisible();
+      const stored = await page.request.get(
+        `/api/v1/projects/${createdId}/files/logo.png`,
+      );
+      expect(stored.status()).toBe(200);
+      expect(Buffer.from(await stored.body()).equals(png)).toBe(true);
+
+      // То же имя ещё раз: вопрос «заменить, оставить оба, пропустить».
+      await pick();
+      const conflict = page.getByRole("dialog", {
+        name: t("Файл уже есть", "File already exists"),
+      });
+      await expect(conflict).toBeVisible();
+      await shot(page, lang, "07c-upload-conflict");
+      await conflict
+        .getByRole("button", { name: t("Оставить оба", "Keep both") })
+        .click();
+      await expect(
+        tree.getByText("logo (1).png", { exact: true }),
+      ).toBeVisible();
+
+      // Перетаскивание с компьютера на пустое место дерева кладёт файл в корень.
+      const dropped = await page.evaluateHandle(() => {
+        const data = new DataTransfer();
+        data.items.add(
+          new File(["@book{k, title={T}}"], "refs-upload.bib", {
+            type: "text/plain",
+          }),
+        );
+        return data;
+      });
+      await tree.dispatchEvent("dragover", { dataTransfer: dropped });
+      await tree.dispatchEvent("drop", { dataTransfer: dropped });
+      await expect(
+        tree.getByText("refs-upload.bib", { exact: true }),
+      ).toBeVisible();
+
+      // Служебные папки сервер не принимает ни от какого клиента.
+      const csrf = await page.evaluate(async () => {
+        const r = await fetch("/api/v1/session/bootstrap", {
+          credentials: "include",
+        });
+        return ((await r.json()) as { csrf_token: string | null }).csrf_token;
+      });
+      const refused = await page.request.put(
+        `/api/v1/projects/${createdId}/files/.hse-studio/project.json`,
+        { data: "{}", headers: csrf ? { "X-CSRF-Token": csrf } : {} },
+      );
+      expect(refused.status()).toBe(400);
+
+      await tree.getByText("logo.png", { exact: true }).click();
+      await expect(page.locator("img[alt*='logo.png']")).toBeVisible();
+      await shot(page, lang, "07d-uploaded-image");
+      await logout(page);
+    });
+
     test("второй пользователь не видит чужие проекты", async ({ page }) => {
       expect(createdId).not.toBe("");
       await login(page, USERS.boris.email);

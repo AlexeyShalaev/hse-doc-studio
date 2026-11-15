@@ -86,7 +86,7 @@
   },
   "fileTree": {
     "title": "Project files",
-    "showHidden": "Show generated files (.build, .pdf, .aux…)",
+    "showHidden": "Show generated files (.build, built PDFs, .aux…)",
     "hideHidden": "Hide generated files",
     "projectRoot": "Project root",
     "newFile": "New file",

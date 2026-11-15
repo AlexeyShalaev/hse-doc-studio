@@ -98,6 +98,14 @@ class HttpServerConfig(BaseModel):
     project_import_max_files: int = Field(
         default=50_000, ge=1, description="Сколько файлов допускается в архиве проекта при импорте."
     )
+    project_file_max_bytes: int = Field(
+        default=50 * 1024**2,
+        ge=1,
+        description=(
+            "Предел размера одного файла, записанного через файловый API (загрузка с компьютера, сохранение); "
+            "больший отклоняется до записи. Держите его ниже предела git-хостингов (около 100 МБ) и прокси."
+        ),
+    )
     project_quota_warn_percent: int = Field(
         default=80, ge=1, le=100, description="С какого процента предела статус проекта предупреждает о нехватке места."
     )

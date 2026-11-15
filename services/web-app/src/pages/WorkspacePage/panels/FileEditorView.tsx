@@ -1,11 +1,12 @@
 import { useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
-import { FileQuestion, FolderTree } from "lucide-react";
+import { Download, FileQuestion, FolderTree } from "lucide-react";
+import { fileContentUrl, useFileTree } from "@entities/document";
 import { SourceEditor, useProjectDiagnostics } from "@features/source-edit";
 import { isEditablePath, isGeneratedPath } from "@widgets/FileTree";
 import { toPosixPath } from "@shared/lib";
-import type { EditorDiagnostic } from "@shared/ui";
+import { PdfViewer, type EditorDiagnostic } from "@shared/ui";
 
 export type FileEditorViewProps = {
   projectId: string;
@@ -54,12 +55,86 @@ const EmptyDetail = () => {
   );
 };
 
+// Картинки, которые браузер показывает сам. SVG тоже: в `<img>` его скрипты не исполняются.
+const IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"];
+
+const isImagePath = (path: string): boolean => {
+  const lower = path.toLowerCase();
+  return IMAGE_EXTENSIONS.some((ext) => lower.endsWith(ext));
+};
+
 type BinaryDetailProps = {
+  projectId: string;
   path: string;
 };
 
-const BinaryDetail = ({ path }: BinaryDetailProps) => {
+/**
+ * Не текстовый файл: картинку и PDF показываем, остальное предлагаем скачать. В текстовый
+ * редактор такие файлы не попадают, иначе загруженный PNG открылся бы мусором.
+ */
+const BinaryDetail = ({ projectId, path }: BinaryDetailProps) => {
   const { t } = useTranslation("workspace");
+  const { data: items } = useFileTree(projectId);
+  // Версия файла в адресе: после замены загрузкой картинка и PDF перечитываются.
+  const version = items?.find((item) => item.path === path)?.modified_at ?? "";
+  const url = fileContentUrl(projectId, path);
+  const name = path.split("/").pop() ?? path;
+  const download = (
+    <a href={url} className="btn" download={name}>
+      <Download size="0.75rem" />
+      {t("files.download")}
+    </a>
+  );
+
+  if (path.toLowerCase().endsWith(".pdf")) {
+    return (
+      <PdfViewer
+        url={url}
+        refreshKey={version}
+        ariaLabel={path}
+        toolbarExtras={download}
+      />
+    );
+  }
+
+  if (isImagePath(path)) {
+    return (
+      <div
+        className="flex flex-1 flex-col items-center"
+        style={{ padding: "1rem", gap: "0.75rem", minHeight: 0 }}
+      >
+        <div
+          className="flex items-center"
+          style={{ gap: "0.75rem", maxWidth: "100%" }}
+        >
+          <span
+            className="mono dim truncate"
+            style={{ fontSize: "0.71875rem" }}
+          >
+            {path}
+          </span>
+          {download}
+        </div>
+        <div
+          className="flex flex-1 items-center justify-center"
+          style={{ minHeight: 0, width: "100%", overflow: "auto" }}
+        >
+          <img
+            src={version ? `${url}?v=${encodeURIComponent(version)}` : url}
+            alt={t("files.imagePreview", { name })}
+            style={{
+              maxWidth: "100%",
+              maxHeight: "100%",
+              objectFit: "contain",
+              background: "var(--bg-2)",
+              borderRadius: "var(--r-2)",
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="flex flex-1 items-center justify-center"
@@ -79,6 +154,7 @@ const BinaryDetail = ({ path }: BinaryDetailProps) => {
         >
           {t("files.binaryHint")}
         </p>
+        {download}
       </div>
     </div>
   );
@@ -145,7 +221,7 @@ export const FileEditorView = ({ projectId }: FileEditorViewProps) => {
           {...revealProps}
         />
       ) : (
-        <BinaryDetail path={selectedPath} />
+        <BinaryDetail projectId={projectId} path={selectedPath} />
       )}
     </div>
   );

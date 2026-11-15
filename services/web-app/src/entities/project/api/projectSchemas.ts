@@ -103,6 +103,8 @@ export const ProjectResponseSchema = z.object({
       measured_at: z.string(),
     })
     .nullish(),
+  // Предел одного файла при записи через PUT /files (GET /projects/{id}); старый сервер не сообщает.
+  file_max_bytes: z.number().nullish(),
 });
 
 export const CreateProjectRequestSchema = z.object({
