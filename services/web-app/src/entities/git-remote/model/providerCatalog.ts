@@ -20,6 +20,26 @@ const SshLinkTemplateSchema = z.object({
   path: z.string(),
 });
 
+const PermissionsSchema = z.object({
+  required: z.array(z.string()),
+  optional: z.array(z.string()),
+  too_broad: z.array(z.string()),
+  implies: z.record(z.string(), z.array(z.string())),
+  human: z.object({ ru: z.string(), en: z.string() }),
+});
+
+// Профиль прав под задачу (`packs`: репозиторий паков Студии шаблонов).
+// Без token_links ссылки основные, но {scopes} из профиля.
+const ProfileSchema = z.object({
+  permissions: PermissionsSchema,
+  token_links: z
+    .object({
+      primary: LinkTemplateSchema,
+      fallback: LinkTemplateSchema.nullable(),
+    })
+    .nullable(),
+});
+
 const ProviderSpecSchema = z.object({
   id: z.enum(GIT_PROVIDERS),
   label: z.string(),
@@ -51,13 +71,8 @@ const ProviderSpecSchema = z.object({
       fallback: LinkTemplateSchema.nullable(),
     })
     .nullable(),
-  permissions: z.object({
-    required: z.array(z.string()),
-    optional: z.array(z.string()),
-    too_broad: z.array(z.string()),
-    implies: z.record(z.string(), z.array(z.string())),
-    human: z.object({ ru: z.string(), en: z.string() }),
-  }),
+  permissions: PermissionsSchema,
+  profiles: z.record(z.string(), ProfileSchema).optional(),
   introspection: z
     .object({
       method: z.string(),
@@ -92,6 +107,8 @@ const CatalogSchema = z.object({
 });
 
 export type ProviderSpec = z.infer<typeof ProviderSpecSchema>;
+/** Профиль прав каталога: `packs` это репозиторий паков Студии шаблонов. */
+export type PermissionProfile = "packs";
 export type ProviderCatalog = z.infer<typeof CatalogSchema>;
 export type ProviderAuthVariant = ProviderSpec["auth_variants"][number];
 export type TokenSufficiency =
@@ -99,6 +116,14 @@ export type TokenSufficiency =
 
 export const PROVIDER_CATALOG: ProviderCatalog =
   CatalogSchema.parse(catalogJson);
+
+/** Права провайдера под профиль; профиля у провайдера нет: основные права. */
+export const permissionsFor = (
+  spec: ProviderSpec,
+  profile?: PermissionProfile | null,
+): ProviderSpec["permissions"] =>
+  (profile ? spec.profiles?.[profile]?.permissions : undefined) ??
+  spec.permissions;
 
 export const providerSpec = (provider: GitProvider): ProviderSpec => {
   const spec = PROVIDER_CATALOG.providers.find((item) => item.id === provider);
@@ -263,9 +288,10 @@ export type ScopeAssessment = {
 export const assessScopes = (
   provider: GitProvider,
   scopes: readonly string[] | null,
+  profile?: PermissionProfile | null,
 ): ScopeAssessment => {
   if (scopes === null) return { sufficiency: "unknown", missing: [] };
-  const { permissions } = providerSpec(provider);
+  const permissions = permissionsFor(providerSpec(provider), profile);
   const granted = new Set(scopes);
   for (const scope of scopes) {
     for (const implied of permissions.implies[scope] ?? [])

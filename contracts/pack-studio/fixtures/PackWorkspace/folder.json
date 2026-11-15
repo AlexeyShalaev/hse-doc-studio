@@ -7,6 +7,7 @@
   "packs_path": "packs",
   "url": null,
   "credential_id": null,
+  "service_access": false,
   "insecure_http": false,
   "folder": "/Users/anna/hse-doc-studio",
   "base_branch": null,
@@ -16,6 +17,8 @@
   "pr_url": null,
   "pr_number": null,
   "ci_status": null,
+  "fork_url": null,
+  "pushed_sha": null,
   "error": null,
   "created_at": "2026-11-14T09:28:41Z",
   "updated_at": "2026-11-14T09:30:00Z"

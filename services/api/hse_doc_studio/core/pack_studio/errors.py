@@ -51,6 +51,14 @@ class PackStudioErrorCode(StrEnum):
     lint_failed = "lint_failed"
     class_softer_than_changes = "class_softer_than_changes"
     preview_quota = "preview_quota"
+    # Срез T6: ветка, коммит, предложение изменений, служебный доступ репозитория
+    workspace_dirty = "workspace_dirty"
+    branch_name_invalid = "branch_name_invalid"
+    merge_conflict = "merge_conflict"
+    nothing_to_propose = "nothing_to_propose"
+    service_access_missing = "service_access_missing"
+    service_access_exists = "service_access_exists"
+    service_access_not_found = "service_access_not_found"
 
 
 _C = PackStudioErrorCode
@@ -157,7 +165,11 @@ _TABLE: dict[PackStudioErrorCode, tuple[int, str, str]] = {
         "Токену не хватает прав, чтобы открыть запрос на слияние.",
         "The token lacks the rights to open a pull request.",
     ),
-    _C.fork_required: (409, "Нужен форк репозитория.", "A fork of the repository is required."),
+    _C.fork_required: (
+        409,
+        "Нет права отправлять в этот репозиторий. Отправьте изменения в свой форк.",
+        "You cannot push to this repository. Push the changes to your fork.",
+    ),
     _C.ci_status_unavailable: (
         409,
         "Статус проверок хостинга недоступен.",
@@ -170,6 +182,37 @@ _TABLE: dict[PackStudioErrorCode, tuple[int, str, str]] = {
         "The version number is softer than the changes require.",
     ),
     _C.preview_quota: (429, "Слишком много сборок предпросмотра.", "Too many preview builds."),
+    _C.workspace_dirty: (
+        409,
+        "Есть несохранённые правки. Сначала сохраните версию (коммит).",
+        "There are uncommitted edits. Save a version (commit) first.",
+    ),
+    _C.branch_name_invalid: (
+        400,
+        "Недопустимое имя ветки.",
+        "Invalid branch name.",
+    ),
+    _C.merge_conflict: (
+        409,
+        "Базовая ветка правит те же места, что и ваша. Слияние отменено, рабочая ветка не изменилась.",
+        "The base branch changes the same lines as yours. The merge was cancelled, the work branch is unchanged.",
+    ),
+    _C.nothing_to_propose: (
+        409,
+        "Предлагать нечего: рабочая ветка не отличается от базовой.",
+        "Nothing to propose: the work branch does not differ from the base branch.",
+    ),
+    _C.service_access_missing: (
+        404,
+        "Для этого репозитория нет служебного доступа. Его задаёт администратор установки.",
+        "This repository has no service access. The instance administrator sets it up.",
+    ),
+    _C.service_access_exists: (
+        409,
+        "Для этого репозитория служебный доступ уже задан.",
+        "This repository already has a service access.",
+    ),
+    _C.service_access_not_found: (404, "Служебный доступ не найден.", "Service access not found."),
 }
 
 

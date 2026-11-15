@@ -21,13 +21,28 @@ from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.routers.v1.files import _content_type_for
 from hse_doc_studio.api.schemas.pack_studio import (
     CreatePackWorkspaceRequest,
+    PackBranchRequest,
+    PackCheckFinding,
+    PackCheckSummary,
+    PackCiCheck,
+    PackCiResponse,
+    PackCommitRequest,
+    PackCommitResponse,
+    PackDiffResponse,
+    PackFileChange,
     PackFileVersionResponse,
+    PackGitResponse,
+    PackProposeRequest,
+    PackProposeResponse,
+    PackPullRequest,
+    PackStartOverRequest,
     PackStudioSectionResponse,
     PackTreeFile,
     PackTreePack,
     PackTreeResponse,
     PackTreeTemplate,
     PackTreeVersion,
+    PackVersionClass,
     PackWorkspaceErrorBody,
     PackWorkspaceResponse,
     PackYamlPatchRequest,
@@ -40,6 +55,7 @@ from hse_doc_studio.core.pack_studio.entities import PackTree, WorkspaceKind
 from hse_doc_studio.core.pack_studio.errors import PackStudioError, PackStudioErrorCode
 from hse_doc_studio.use_cases.pack_studio.access import PackStudioAccess, SectionView
 from hse_doc_studio.use_cases.pack_studio.files import PackFilesService, YamlOp
+from hse_doc_studio.use_cases.pack_studio.git import ForkChoice, GitView, PackGitService, ProposeInput
 from hse_doc_studio.use_cases.pack_studio.workspaces import (
     CreateWorkspaceInput,
     PackWorkspaceService,
@@ -83,6 +99,7 @@ def workspace_response(view: WorkspaceView) -> PackWorkspaceResponse:
         packs_path=ws.packs_path,
         url=ws.remote_url,
         credential_id=None if ws.credential_id is None else str(ws.credential_id),
+        service_access=ws.service_access_id is not None,
         insecure_http=ws.insecure_http,
         folder=view.folder_display,
         base_branch=ws.base_branch,
@@ -92,6 +109,8 @@ def workspace_response(view: WorkspaceView) -> PackWorkspaceResponse:
         pr_url=ws.pr_url,
         pr_number=ws.pr_number,
         ci_status=ws.ci_status,
+        fork_url=ws.fork_url,
+        pushed_sha=ws.pushed_sha,
         error=None if ws.error is None else PackWorkspaceErrorBody(code=ws.error.code, detail=ws.error.detail),
         created_at=ws.created_at,
         updated_at=ws.updated_at,
@@ -181,6 +200,7 @@ async def create_workspace(
             label=body.label,
             url=body.url,
             credential_id=body.credential_id,
+            service_access=body.service_access,
             insecure_http=body.insecure_http,
             base_branch=body.base_branch,
             folder=body.folder,
@@ -285,3 +305,129 @@ async def _body(request: Request, files: PackFilesService) -> bytes:
             raise PackStudioError(PackStudioErrorCode.file_too_large, limit=limit)
         chunks.append(chunk)
     return b"".join(chunks)
+
+
+# ── git: ветка, коммит, предложение, проверки (срез T6) ─────────────────────
+
+
+def git_response(view: GitView) -> PackGitResponse:
+    st = view.status
+    return PackGitResponse(
+        workspace=workspace_response(WorkspaceView(workspace=view.workspace, busy=False)),
+        provider=view.provider.value,
+        head_sha=st.head_sha,
+        branch=st.branch,
+        base_branch=view.workspace.base_branch,
+        uncommitted=[PackFileChange(path=c.path, status=c.status.value) for c in st.uncommitted],
+        dirty=st.dirty,
+        changed=[PackFileChange(path=c.path, status=c.status.value) for c in st.changed],
+        ahead=st.ahead,
+        behind=st.behind,
+        compare_url=view.compare_url,
+    )
+
+
+@router.get("/pack-studio/workspaces/{workspace_id}/git", response_model=PackGitResponse)
+async def get_git(workspace_id: UUID, git: FromDishka[PackGitService], response: Response) -> PackGitResponse:
+    response.headers.update(_NO_STORE)
+    return git_response(await git.view(require_actor(), workspace_id))
+
+
+@router.get("/pack-studio/workspaces/{workspace_id}/git/diff", response_model=PackDiffResponse)
+async def get_git_diff(workspace_id: UUID, git: FromDishka[PackGitService], response: Response) -> PackDiffResponse:
+    """Единый diff от базовой ветки: коммиты рабочей ветки и правки на диске (показ перед «Предложить»)."""
+    response.headers.update(_NO_STORE)
+    text, truncated = await git.diff(require_actor(), workspace_id)
+    return PackDiffResponse(diff=text, truncated=truncated)
+
+
+@router.post("/pack-studio/workspaces/{workspace_id}/git/branch", response_model=PackGitResponse)
+async def switch_branch(
+    workspace_id: UUID, body: PackBranchRequest, git: FromDishka[PackGitService]
+) -> PackGitResponse:
+    """Создать рабочую ветку (правки остаются) или перейти на свою прежнюю, локальную или с сервера (дерево чистое)."""
+    return git_response(await git.switch(require_actor(), workspace_id, body.name))
+
+
+@router.post("/pack-studio/workspaces/{workspace_id}/git/commit", response_model=PackCommitResponse)
+async def commit(workspace_id: UUID, body: PackCommitRequest, git: FromDishka[PackGitService]) -> PackCommitResponse:
+    """«Сохранить версию»: коммит правок от профиля человека; без ветки она создаётся."""
+    view = await git.commit(require_actor(), workspace_id, body.message)
+    return PackCommitResponse(git=git_response(view.git), sha=view.sha, committed=view.committed)
+
+
+@router.post("/pack-studio/workspaces/{workspace_id}/git/propose", response_model=PackProposeResponse)
+async def propose(workspace_id: UUID, body: PackProposeRequest, git: FromDishka[PackGitService]) -> PackProposeResponse:
+    """«Предложить изменения»: коммит, проверки пака, push ветки, PR GitHub или MR GitLab (4.3)."""
+    fork = ForkChoice(url=body.fork.url, create=body.fork.create) if body.fork is not None else None
+    view = await git.propose(
+        require_actor(),
+        workspace_id,
+        ProposeInput(title=body.title, description=body.description, message=body.message, fork=fork),
+    )
+    pull = view.pull_request
+    return PackProposeResponse(
+        git=git_response(view.git),
+        pushed_sha=view.pushed_sha,
+        pushed_to=view.pushed_to,
+        pull_request=PackPullRequest(number=pull.number, url=pull.url, created=pull.created) if pull else None,
+        compare_url=view.compare_url,
+        pr_error=(
+            PackWorkspaceErrorBody(code=view.pr_error.code.value, detail=view.pr_error.detail)
+            if view.pr_error is not None
+            else None
+        ),
+        checks=PackCheckSummary(
+            errors=view.report.errors,
+            warnings=view.report.warnings,
+            findings=[
+                PackCheckFinding(
+                    severity="error" if f.severity == "error" else "warning",
+                    check=f.check,
+                    path=f.path,
+                    message=f.message,
+                )
+                for f in view.report.findings
+            ],
+            classes=[
+                PackVersionClass(
+                    path=c.path,
+                    base=c.base,
+                    minimum=c.minimum,
+                    suggested=c.suggested,
+                    by_number=c.by_number,
+                    headline=dict(c.headline),
+                )
+                for c in view.report.classes
+            ],
+        ),
+    )
+
+
+@router.get("/pack-studio/workspaces/{workspace_id}/git/checks", response_model=PackCiResponse)
+async def get_checks(workspace_id: UUID, git: FromDishka[PackGitService], response: Response) -> PackCiResponse:
+    """Статус проверок хостинга по отправленной вершине (4.4); опрос раз в 30 с, пока `pending`."""
+    response.headers.update(_NO_STORE)
+    report = await git.checks(require_actor(), workspace_id)
+    return PackCiResponse(
+        state=report.state.value,
+        sha=report.sha,
+        checks=[PackCiCheck(name=c.name, state=c.state.value, url=c.url, summary=c.summary) for c in report.checks],
+        available=report.available,
+        reason=report.reason,
+        web_url=report.web_url,
+    )
+
+
+@router.post("/pack-studio/workspaces/{workspace_id}/git/merge-base", response_model=PackGitResponse)
+async def merge_base(workspace_id: UUID, git: FromDishka[PackGitService]) -> PackGitResponse:
+    """Выборка базы и слияние её в рабочую ветку; конфликт отменяет слияние (`merge_conflict` со списком файлов)."""
+    return git_response(await git.merge_base(require_actor(), workspace_id))
+
+
+@router.post("/pack-studio/workspaces/{workspace_id}/git/start-over", response_model=PackGitResponse)
+async def start_over(
+    workspace_id: UUID, body: PackStartOverRequest, git: FromDishka[PackGitService]
+) -> PackGitResponse:
+    """«Начать заново от базовой ветки» после слияния PR: дерево на свежую базу, ветка и PR забываются."""
+    return git_response(await git.start_over(require_actor(), workspace_id, discard=body.discard))

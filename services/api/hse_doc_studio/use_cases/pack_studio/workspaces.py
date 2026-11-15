@@ -16,11 +16,11 @@ import asyncio
 import contextlib
 import json
 import shutil
-from collections.abc import Callable, Coroutine
+from collections.abc import Awaitable, Callable, Coroutine
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 from uuid import UUID, uuid4
 
 import structlog
@@ -42,12 +42,14 @@ from hse_doc_studio.core.pack_studio.entities import (
     WorkspaceState,
 )
 from hse_doc_studio.core.pack_studio.errors import PackStudioError, PackStudioErrorCode
+from hse_doc_studio.core.pack_studio.git_flow import repo_key, repo_path_of
 from hse_doc_studio.core.pack_studio.paths import validate_packs_path
 from hse_doc_studio.core.pack_studio.protection import Protection
 from hse_doc_studio.core.pack_studio.protocols import (
     IPackWorkspaceFiles,
     IPackWorkspaceGit,
     IPackWorkspaceRepository,
+    IServiceAccessRepository,
     WorkspaceDirs,
     WorkspaceLimits,
 )
@@ -60,6 +62,7 @@ AUDIT_CREATE = "pack_studio.workspace_create"
 AUDIT_DELETE = "pack_studio.workspace_delete"
 LABEL_MAX = 120
 _RELEASES_CACHE = "base-releases.json"
+_T = TypeVar("_T")
 
 
 @dataclass(frozen=True)
@@ -71,6 +74,8 @@ class CreateWorkspaceInput:
     credential_id: UUID | None = None
     insecure_http: bool = False
     base_branch: str | None = None
+    # Служебный доступ репозитория вместо личного (4.2, только сервер): его задаёт админ установки.
+    service_access: bool = False
     # folder (только локально): путь хоста или контейнера
     folder: str | None = None
     # Папка паков внутри репозитория или папки; None: `packs` у git, у папки `packs`, если она есть, иначе сама папка.
@@ -90,7 +95,7 @@ class WorkspaceTasks:
     """Фоновые операции рабочих пространств в памяти процесса: одна на пространство, ссылки держатся до конца."""
 
     def __init__(self) -> None:
-        self._tasks: dict[UUID, asyncio.Task[None]] = {}
+        self._tasks: dict[UUID, asyncio.Task[Any]] = {}
 
     def is_busy(self, workspace_id: UUID) -> bool:
         task = self._tasks.get(workspace_id)
@@ -103,6 +108,22 @@ class WorkspaceTasks:
         self._tasks[workspace_id] = task
         task.add_done_callback(lambda done: self._forget(workspace_id, done))
 
+    async def exclusive(self, workspace_id: UUID, work: Callable[[], Awaitable[_T]]) -> _T:
+        """Операция запроса под тем же замком, что фоновые: вторая на пространство получает `workspace_busy`.
+
+        Обрыв запроса операцию не прерывает: git доходит до конца, и состояние пространства записывается.
+        """
+        if self.is_busy(workspace_id):
+            raise PackStudioError(PackStudioErrorCode.workspace_busy)
+
+        async def run() -> _T:
+            return await work()
+
+        task: asyncio.Task[Any] = asyncio.create_task(run())
+        self._tasks[workspace_id] = task
+        task.add_done_callback(lambda done: self._forget(workspace_id, done))
+        return await asyncio.shield(task)
+
     async def cancel(self, workspace_id: UUID) -> None:
         task = self._tasks.get(workspace_id)
         if task is None or task.done():
@@ -111,7 +132,7 @@ class WorkspaceTasks:
         with contextlib.suppress(asyncio.CancelledError):
             await task
 
-    def _forget(self, workspace_id: UUID, task: asyncio.Task[None]) -> None:
+    def _forget(self, workspace_id: UUID, task: asyncio.Task[Any]) -> None:
         if self._tasks.get(workspace_id) is task:
             del self._tasks[workspace_id]
 
@@ -143,6 +164,7 @@ class PackWorkspaceService:
         local_mode: bool,
         audit: IAuditLog | None = None,
         dirs_factory: Callable[[Path], WorkspaceDirs],
+        service_access: IServiceAccessRepository | None = None,
     ) -> None:
         self._repo = repo
         self._files = files
@@ -159,6 +181,7 @@ class PackWorkspaceService:
         self._local = local_mode
         self._audit = audit
         self._dirs_factory = dirs_factory
+        self._service_access = service_access
 
     @property
     def limits(self) -> WorkspaceLimits:
@@ -187,6 +210,44 @@ class PackWorkspaceService:
     def packs_root(self, ws: PackWorkspace) -> Path:
         base = Path(ws.folder or "") if ws.kind is WorkspaceKind.folder else self._dirs(ws.id).tree
         return base if ws.packs_path == "." else base / ws.packs_path
+
+    # ── для git рабочего пространства (срез T6) ──
+
+    @property
+    def tasks(self) -> WorkspaceTasks:
+        return self._tasks
+
+    async def git_ready(self, actor: Actor, workspace_id: UUID) -> PackWorkspace:
+        """Готовое пространство над git; папка отвечает `not_a_git_workspace`."""
+        ws, _ = await self.ready(actor, workspace_id)
+        if ws.kind is not WorkspaceKind.git:
+            raise PackStudioError(PackStudioErrorCode.not_a_git_workspace)
+        return ws
+
+    def dirs_of(self, ws: PackWorkspace) -> WorkspaceDirs:
+        return self._dirs(ws.id)
+
+    def target_of(self, ws: PackWorkspace) -> RemoteTarget:
+        return self._target(ws)
+
+    async def fetch_base(self, ws: PackWorkspace) -> PackWorkspace:
+        """Выборка базы сейчас (под замком вызывающего): вершина, выпущенные версии; сбой идёт исключением."""
+        target = self._target(ws)
+        dirs = self._dirs(ws.id)
+        branch = ws.base_branch or ""
+        sha = await self._git.fetch(dirs, target, branch=branch, limits=self._limits)
+        released = await self._git.released(dirs, target, branch=branch, packs_path=ws.packs_path)
+        await asyncio.to_thread(_save_released, dirs.root / _RELEASES_CACHE, released)
+        now = _now()
+        current = await self._repo.get(ws.id, ws.owner_id) or ws
+        updated = replace(current, base_sha=sha, fetched_at=now, error=None, updated_at=now)
+        await self._repo.update(updated)
+        return updated
+
+    async def save(self, ws: PackWorkspace) -> PackWorkspace:
+        updated = replace(ws, updated_at=_now())
+        await self._repo.update(updated)
+        return updated
 
     # ── изменения ────────────────────────────────────────────────────────────
 
@@ -280,8 +341,9 @@ class PackWorkspaceService:
             if credential is None:
                 raise git_error(GitErrorCode.credentials_missing)
             check_credential_matches(url, credential)
+        service_id = await self._service_access_for(url) if inp.service_access else None
         packs_path = validate_packs_path(inp.packs_path if inp.packs_path is not None else self._default_packs_path)
-        target = RemoteTarget(url=url, credential_id=inp.credential_id, insecure_http=inp.insecure_http)
+        target = RemoteTarget(url=url, credential_id=inp.credential_id or service_id, insecure_http=inp.insecure_http)
         branch = await self._base_branch(target, inp.base_branch)
         now = _now()
         ws = PackWorkspace(
@@ -295,10 +357,20 @@ class PackWorkspaceService:
             state=WorkspaceState.cloning,
             remote_url=url.display_url,
             credential_id=inp.credential_id,
+            service_access_id=service_id,
             insecure_http=inp.insecure_http,
             base_branch=branch,
         )
         return ws, target
+
+    async def _service_access_for(self, url: RemoteUrl) -> UUID:
+        """Служебный доступ этого репозитория (4.2); локально его нет вовсе."""
+        if self._service_access is None or url.host is None:
+            raise PackStudioError(PackStudioErrorCode.service_access_missing)
+        found = await self._service_access.find(repo_key(url.host, url.port, repo_path_of(url.display_url, None)))
+        if found is None:
+            raise PackStudioError(PackStudioErrorCode.service_access_missing)
+        return found.id
 
     async def _base_branch(self, target: RemoteTarget, requested: str | None) -> str:
         """Ветка существует на сервере; без явной это ветка по умолчанию (HEAD сервера)."""
@@ -388,7 +460,9 @@ class PackWorkspaceService:
             allow_http=self._policy.allow_insecure_http,
             allow_local=self._policy.allow_local_remotes,
         )
-        return RemoteTarget(url=url, credential_id=ws.credential_id, insecure_http=ws.insecure_http)
+        return RemoteTarget(
+            url=url, credential_id=ws.credential_id or ws.service_access_id, insecure_http=ws.insecure_http
+        )
 
     def _released(self, ws: PackWorkspace, root: Path) -> ReleasedVersions:
         if ws.kind is WorkspaceKind.git:

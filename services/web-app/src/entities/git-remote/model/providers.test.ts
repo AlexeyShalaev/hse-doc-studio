@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { GIT_PROVIDERS, type GitProvider } from "../api/gitRemoteSchemas";
 import {
   PROVIDER_CATALOG,
+  type PermissionProfile,
   apiBase,
   assessScopes,
   detectProvider,
@@ -76,6 +77,7 @@ type Vectors = {
     owner: string | null;
     repo: string | null;
     expires_in_days: number | null;
+    profile?: PermissionProfile;
     expect: { primary: Link; fallback: Link };
   }[];
   ssh_link_cases: {
@@ -88,6 +90,7 @@ type Vectors = {
   scope_cases: {
     provider: GitProvider;
     scopes: string[] | null;
+    profile?: PermissionProfile;
     expect: unknown;
   }[];
 };
@@ -197,6 +200,7 @@ describe("векторы провайдеров", () => {
         owner: c.owner,
         repo: c.repo,
         expiresInDays: c.expires_in_days,
+        profile: c.profile ?? null,
       });
       expect({ primary: links.primary, fallback: links.fallback }).toEqual(
         c.expect,
@@ -224,7 +228,9 @@ describe("векторы провайдеров", () => {
       (c) => [`${c.provider} ${JSON.stringify(c.scopes)}`, c] as const,
     ),
   )("права токена: %s", (_name, c) => {
-    expect(assessScopes(c.provider, c.scopes)).toEqual(c.expect);
+    expect(assessScopes(c.provider, c.scopes, c.profile ?? null)).toEqual(
+      c.expect,
+    );
   });
 });
 

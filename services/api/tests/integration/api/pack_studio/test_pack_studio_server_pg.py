@@ -312,3 +312,110 @@ def test__section__forced_by_environment__is_locked_for_admin(server: TestClient
     assert state["locked"] is True
     assert resp.status_code == 409
     assert resp.json()["code"] == "section_locked"
+
+
+# ── срез T6: служебный доступ репозитория ───────────────────────────────────
+
+_SERVICE_TOKEN = "glpat-service0123456789abcd"
+
+
+def _service_secret(access_id: str) -> tuple[str | None, str]:
+    from hse_doc_studio.core.pack_studio.protocols import IServiceAccessRepository  # noqa: PLC0415
+    from hse_doc_studio.infra.db.session import SessionProvider  # noqa: PLC0415
+    from sqlalchemy import text  # noqa: PLC0415
+
+    async def work(container: Any) -> tuple[str | None, str]:
+        secret = await (await container.get(IServiceAccessRepository)).secret(uuid.UUID(access_id))
+        sessions = await container.get(SessionProvider)
+        async with sessions.use() as db:
+            stored = (
+                await db.execute(
+                    text("SELECT secret_enc FROM pack_studio_service_access WHERE id = :i"), {"i": access_id}
+                )
+            ).scalar_one()
+        return (None if secret is None else secret.reveal()), str(stored)
+
+    return asyncio.run(_in_container(work))  # type: ignore[no-any-return]
+
+
+def test__service_access__admin_adds_lists_and_removes__secret_sealed_and_audited(server: TestClient) -> None:
+    admin = _admin(server)
+
+    created = admin.post(
+        f"{ADMIN_API}/service-access",
+        json={"url": "https://gitlab.example.org/fcs/packs.git", "token": _SERVICE_TOKEN, "label": "Паки ФКН"},
+    )
+    duplicate = admin.post(
+        f"{ADMIN_API}/service-access",
+        json={"url": "https://GitLab.example.org/FCS/packs", "token": _SERVICE_TOKEN},
+    )
+    listed = admin.get(f"{ADMIN_API}/service-access").json()
+    revealed, stored = _service_secret(created.json()["id"])
+    removed = admin.delete(f"{ADMIN_API}/service-access/{created.json()['id']}")
+    missing = admin.delete(f"{ADMIN_API}/service-access/{created.json()['id']}")
+
+    assert created.status_code == 201, created.text
+    body = created.json()
+    assert (body["url"], body["label"], body["token_family"]) == (
+        "https://gitlab.example.org/fcs/packs.git",
+        "Паки ФКН",
+        "glpat",
+    )
+    assert _SERVICE_TOKEN not in created.text
+    assert duplicate.status_code == 409
+    assert duplicate.json()["code"] == "service_access_exists"
+    assert [a["id"] for a in listed] == [body["id"]]
+    assert revealed == _SERVICE_TOKEN
+    assert _SERVICE_TOKEN not in stored
+    assert removed.status_code == 204
+    assert missing.status_code == 404
+    assert missing.json()["code"] == "service_access_not_found"
+    (added,) = _audit(admin, "pack_studio.service_access_add")
+    assert _SERVICE_TOKEN not in str(added)
+    assert len(_audit(admin, "pack_studio.service_access_remove")) == 1
+
+
+def test__service_access__routes_are_admin_only(server: TestClient) -> None:
+    _, anna = _author(server)
+
+    assert anna.get(f"{ADMIN_API}/service-access").status_code == 404
+    resp = anna.post(f"{ADMIN_API}/service-access", json={"url": "https://github.com/a/b", "token": "x"})
+    assert resp.status_code == 404
+
+
+def test__service_access__workspace_without_one__is_refused(server: TestClient) -> None:
+    admin = _admin(server)
+    _enable(admin)
+
+    resp = admin.post(
+        f"{API}/workspaces",
+        json={"kind": "git", "url": "https://gitlab.example.org/fcs/packs.git", "service_access": True},
+    )
+    both = admin.post(
+        f"{API}/workspaces",
+        json={
+            "kind": "git",
+            "url": "https://gitlab.example.org/fcs/packs.git",
+            "service_access": True,
+            "credential_id": str(uuid.uuid4()),
+        },
+    )
+
+    assert resp.status_code == 404, resp.text
+    assert resp.json()["code"] == "service_access_missing"
+    assert both.status_code == 422
+
+
+def test__git_routes__workspace_not_ready__answer_workspace_not_ready(server: TestClient) -> None:
+    admin = _admin(server)
+    _enable(admin)
+    anna_id, anna = _author(server)
+    admin.post(f"{ADMIN_API}/grants", json={"user_id": anna_id})
+    ws_id = _workspace_of(anna_id)
+
+    resp = anna.get(f"{API}/workspaces/{ws_id}/git")
+    propose = anna.post(f"{API}/workspaces/{ws_id}/git/propose", json={})
+
+    assert resp.status_code == 409
+    assert resp.json()["code"] == "workspace_not_ready"
+    assert propose.json()["code"] == "workspace_not_ready"

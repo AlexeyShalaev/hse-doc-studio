@@ -11,7 +11,7 @@ import json
 import re
 import unicodedata
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from enum import StrEnum
 from functools import lru_cache
@@ -132,6 +132,21 @@ class SshLinkTemplates:
 
 
 @dataclass(frozen=True)
+class ProfileSpec:
+    """Профиль прав под задачу (`packs`: репозиторий паков Студии шаблонов): свои права и, если заданы, ссылки."""
+
+    permissions: Permissions
+    token_primary: LinkTemplate | None
+    token_fallback: LinkTemplate | None
+    # False: у профиля нет своих ссылок, берутся основные ссылки провайдера (с {scopes} профиля).
+    has_links: bool
+
+
+# Профиль прав репозитория паков (template-studio.md, 4.2).
+PACKS_PROFILE = "packs"
+
+
+@dataclass(frozen=True)
 class ProviderSpec:
     id: GitProvider
     label: str
@@ -146,6 +161,17 @@ class ProviderSpec:
     introspection: Introspection | None
     ssh_links: SshLinkTemplates | None
     docs_url: str | None
+    profiles: Mapping[str, ProfileSpec] = field(default_factory=dict)
+
+    def permissions_for(self, profile: str | None) -> Permissions:
+        chosen = self.profiles.get(profile) if profile else None
+        return chosen.permissions if chosen is not None else self.permissions
+
+    def links_for(self, profile: str | None) -> tuple[LinkTemplate | None, LinkTemplate | None]:
+        chosen = self.profiles.get(profile) if profile else None
+        if chosen is not None and chosen.has_links:
+            return chosen.token_primary, chosen.token_fallback
+        return self.token_primary, self.token_fallback
 
 
 @dataclass(frozen=True)
@@ -232,6 +258,16 @@ def _permissions(raw: dict[str, Any]) -> Permissions:
     )
 
 
+def _profile(raw: dict[str, Any]) -> ProfileSpec:
+    links = raw.get("token_links")
+    return ProfileSpec(
+        permissions=_permissions(raw["permissions"]),
+        token_primary=_link(links.get("primary")) if links else None,
+        token_fallback=_link(links.get("fallback")) if links else None,
+        has_links=links is not None,
+    )
+
+
 def _spec(raw: dict[str, Any]) -> ProviderSpec:
     links = raw["token_links"] or {}
     introspection = raw["introspection"]
@@ -261,6 +297,7 @@ def _spec(raw: dict[str, Any]) -> ProviderSpec:
             SshLinkTemplates(user_keys=_link(ssh["user_keys"]), deploy_key=_link(ssh["deploy_key"])) if ssh else None
         ),
         docs_url=raw["docs_url"],
+        profiles={name: _profile(item) for name, item in (raw.get("profiles") or {}).items()},
     )
 
 
@@ -453,13 +490,17 @@ def token_links(
     owner: str | None = None,
     repo: str | None = None,
     expires_in_days: int | None = None,
+    profile: str | None = None,
 ) -> TokenLinks:
     """Ссылки на выпуск токена: основная и запасная (для старых версий сервера или широкого токена).
 
     Имя и описание очищаются и укорачиваются до лимитов провайдера, затем кодируются строго.
     `expires_in_days` попадает в ссылку только там, где у страницы есть такой параметр (1..366).
+    `profile` (`packs`) берёт права и ссылки профиля; профиля у провайдера нет: основные.
     """
     spec = provider_spec(provider)
+    permissions = spec.permissions_for(profile)
+    primary, fallback = spec.links_for(profile)
     base = _checked_base(web_base)
     clean_name = clean_text(name, spec.name_limit)
     clean_description = clean_text(description, spec.description_limit)
@@ -467,14 +508,14 @@ def token_links(
     values: dict[str, str | None] = {
         "name": encode_component(clean_name) if clean_name else None,
         "description": encode_component(clean_description) if clean_description else None,
-        "scopes": ",".join(encode_component(scope) for scope in spec.permissions.required),
+        "scopes": ",".join(encode_component(scope) for scope in (*permissions.required, *permissions.optional)),
         "target_name": encode_component(single_owner) if single_owner else None,
         "expires_in": str(min(max(expires_in_days, 1), _MAX_EXPIRES_DAYS)) if expires_in_days is not None else None,
     }
     path = _path_of(owner, repo)
     return TokenLinks(
-        primary=_render(spec.token_primary, base, path, values),
-        fallback=_render(spec.token_fallback, base, path, values),
+        primary=_render(primary, base, path, values),
+        fallback=_render(fallback, base, path, values),
     )
 
 
@@ -496,13 +537,15 @@ def ssh_links(
 # --- права токена -------------------------------------------------------------
 
 
-def assess_scopes(provider: GitProvider | str, scopes: Iterable[str] | None) -> ScopeAssessment:
-    """Хватает ли найденных прав для чтения и записи.
+def assess_scopes(
+    provider: GitProvider | str, scopes: Iterable[str] | None, profile: str | None = None
+) -> ScopeAssessment:
+    """Хватает ли найденных прав для чтения и записи (или для задачи профиля `profile`).
 
     None значит, что права прочитать нельзя (старый сервер, точный токен): вывод unknown, дальше работает проверка git.
     Не хватает прав (push не пройдёт) важнее, чем лишние права.
     """
-    permissions = provider_spec(provider).permissions
+    permissions = provider_spec(provider).permissions_for(profile)
     if scopes is None:
         return ScopeAssessment(Sufficiency.unknown)
     given = set(scopes)

@@ -428,6 +428,8 @@ tags:
 | `HSE_STUDIO__PACK_STUDIO__MAX_TREE_BYTES` | int | `268435456` | оба | Largest total size of the files under the packs folder. |
 | `HSE_STUDIO__PACK_STUDIO__MAX_TREE_FILES` | int | `20000` | оба | Most files under the packs folder. |
 | `HSE_STUDIO__PACK_STUDIO__DEFAULT_PACKS_PATH` | str | `packs` | оба | Packs folder inside a repository by default. |
+| `HSE_STUDIO__PACK_STUDIO__HOSTING_TIMEOUT_S` | float | `20.0` | оба | Timeout for one request to the git hosting API (pull request, CI status). |
+| `HSE_STUDIO__PACK_STUDIO__MAX_DIFF_BYTES` | int | `1048576` | оба | Largest diff of a workspace against its base branch shown at once. |
 | `HSE_STUDIO__MODE` | local / server | `local` | оба | Instance mode: 'local' (single-user install) or 'server' (shared; not supported yet). |
 | `HSE_STUDIO__DATA_DIR` | Path | `~/.config/hse-studio` | оба | Local data storage directory |
 | `HSE_STUDIO__HOST_DATA_DIR` | str | не задано | оба | Host path of data_dir for sibling-container mounts; None when backend runs natively. |

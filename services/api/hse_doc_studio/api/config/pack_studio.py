@@ -32,3 +32,9 @@ class PackStudioConfig(BaseModel):
     )
     max_tree_files: int = Field(default=20_000, ge=10, description="Most files under the packs folder.")
     default_packs_path: str = Field(default="packs", description="Packs folder inside a repository by default.")
+    hosting_timeout_s: float = Field(
+        default=20.0, gt=0, description="Timeout for one request to the git hosting API (pull request, CI status)."
+    )
+    max_diff_bytes: int = Field(
+        default=1_048_576, ge=1024, description="Largest diff of a workspace against its base branch shown at once."
+    )

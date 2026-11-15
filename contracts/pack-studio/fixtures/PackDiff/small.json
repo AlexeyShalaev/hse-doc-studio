@@ -1,0 +1,4 @@
+{
+  "diff": "diff --git a/packs/demo/pack.yaml b/packs/demo/pack.yaml\n--- a/packs/demo/pack.yaml\n+++ b/packs/demo/pack.yaml\n@@ -1 +1 @@\n-id: demo\n+id: demo # правка\n",
+  "truncated": false
+}

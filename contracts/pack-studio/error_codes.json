@@ -31,5 +31,12 @@
   "ci_status_unavailable",
   "lint_failed",
   "class_softer_than_changes",
-  "preview_quota"
+  "preview_quota",
+  "workspace_dirty",
+  "branch_name_invalid",
+  "merge_conflict",
+  "nothing_to_propose",
+  "service_access_missing",
+  "service_access_exists",
+  "service_access_not_found"
 ]
