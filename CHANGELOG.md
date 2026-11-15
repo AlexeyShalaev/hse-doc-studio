@@ -6,6 +6,13 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.34.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.33.0...v0.34.0) - 2026-11-15
+
+- Files: upload your own files into a project from the browser. Upload files and Upload folder buttons, folder menu items and drag and drop from the computer into the tree. On a name clash you can replace, keep both or skip. Progress is shown, one file is up to 50 MiB.
+- Files: an image opens in Files, a PDF in the viewer, anything else is downloaded. Uploaded PDFs (figures, scans) now go into history and git sync, only built PDFs are excluded.
+- Fixed: the preview said the document was never compiled when the build succeeded but checks found errors. The preview now shows the PDF with a note, and the status reads Check errors instead of build error. A failure of the checks themselves no longer loses the built PDF.
+- Fixed: the git tab of a Template Studio workspace failed with a 502 "transport 'https' not allowed" after the base was updated. The state is computed without downloading files, missing files for a diff are fetched with the workspace token, and git errors are shown as a clear message.
+
 ## [0.33.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.32.0...v0.33.0) - 2026-11-15
 
 - Template Studio: a Form tab for version.yaml and doc.yaml. Fields and groups, questionnaires, documents, languages and translations, and variants are edited with the mouse, no hand-written YAML. A field preview and where it is printed are shown alongside. YAML comments and order are kept, and an edit that breaks the pack is not saved.
