@@ -7,12 +7,5 @@
     "license": "Apache-2.0",
     "license_url": "https://github.com/AlexeyShalaev/hse-doc-studio/blob/master/LICENSE",
     "contributing_url": "https://github.com/AlexeyShalaev/hse-doc-studio/blob/master/CONTRIBUTING.md#contributing-to-the-official-packs"
-  },
-  "bot": {
-    "available": false,
-    "reason": "local",
-    "daily_limit": null,
-    "used": null
-  },
-  "workspace_id": "2b3c4d5e-6f70-4812-9a3b-4c5d6e7f8091"
+  }
 }

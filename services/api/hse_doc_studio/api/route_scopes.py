@@ -439,7 +439,6 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("DELETE", "/api/admin/pack-studio/service-access/{access_id}"): _ADM,
     ("POST", "/api/admin/pack-studio/service-access/{access_id}/check"): _ADM,
     ("GET", "/api/admin/pack-studio/official"): _ADM,
-    ("PUT", "/api/admin/pack-studio/official"): _ADM,
     # Каталоги паков (template-studio.md, 10.3, срез T17)
     ("GET", "/api/admin/pack-catalog"): _ADM,
     ("POST", "/api/admin/pack-catalog/sources"): _ADM,

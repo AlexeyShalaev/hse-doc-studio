@@ -20,7 +20,7 @@ from hse_doc_studio.core.git_sync.protocols import (
     ISecretCipher,
 )
 from hse_doc_studio.core.identity.instance_settings import InstanceEnvOverrides, effective_build_settings
-from hse_doc_studio.core.identity.protocols import IAuditLog, IAuditReader, IInstanceSettingsRepository
+from hse_doc_studio.core.identity.protocols import IAuditLog, IInstanceSettingsRepository
 from hse_doc_studio.core.jobs.applier import IJobApplyLedger
 from hse_doc_studio.core.jobs.queue import IJobQueue
 from hse_doc_studio.core.jobs.quotas import IProjectOrgReader
@@ -46,7 +46,6 @@ from hse_doc_studio.core.storage.manifest import IBlobRegistry, ManifestLimits
 from hse_doc_studio.core.uow import IUnitOfWork
 from hse_doc_studio.core.vcs.protocols import ICommitAuthorProvider
 from hse_doc_studio.infra.db.repositories.pack_studio import (
-    InstanceOfficialSettingsStore,
     InstanceSectionStore,
     PostgresPackStudioGrantRepository,
     PostgresPackWorkspaceRepository,
@@ -60,7 +59,6 @@ from hse_doc_studio.infra.jobs.artifact_store import LocalDiskArtifactStore
 from hse_doc_studio.infra.jobs.queue_dispatcher import QueueJobDispatcher
 from hse_doc_studio.infra.jobs.result_applier import VolumeJobResultApplier
 from hse_doc_studio.infra.pack_catalog.audit import UowCatalogAudit
-from hse_doc_studio.infra.pack_studio.bot_counter import AuditBotProposalCounter
 from hse_doc_studio.infra.pack_studio.credential_access import PackStudioCredentialAccess
 from hse_doc_studio.infra.pack_studio.plumbing import PackGitPlumbing
 from hse_doc_studio.infra.pack_studio.preview_dispatch import NoHashCacheRegistry, PreviewJobDispatcher
@@ -175,25 +173,8 @@ class ServerPackStudioProvider(Provider):
         )
 
     @provide(override=True)
-    def get_official(  # noqa: PLR0913 — порты сценария
-        self,
-        workspaces: PackWorkspaceService,
-        access: PackStudioAccess,
-        instance: IInstanceSettingsRepository,
-        service: IServiceAccessRepository,
-        reader: IAuditReader,
-        audit: IAuditLog,
-    ) -> OfficialPacks:
-        return OfficialPacks(
-            official_repo(),
-            workspaces,
-            access,
-            InstanceOfficialSettingsStore(instance),
-            default_daily_limit=settings.pack_studio.official_bot_daily_limit,
-            service_access=service,
-            counter=AuditBotProposalCounter(reader),
-            audit=audit,
-        )
+    def get_official(self, workspaces: PackWorkspaceService, audit: IAuditLog) -> OfficialPacks:
+        return OfficialPacks(official_repo(), workspaces, audit=audit)
 
     @provide(override=True, scope=Scope.REQUEST)
     def get_git_service(  # noqa: PLR0913 — порты сценария
@@ -272,7 +253,6 @@ class ServerPackStudioProvider(Provider):
         audit: IAuditLog,
         uow: IUnitOfWork,
         service: IServiceAccessRepository,
-        official: OfficialPacks,
         hosting: IPackHosting,
         resolver: ProviderResolver,
     ) -> PackStudioAdminUC:
@@ -284,7 +264,7 @@ class ServerPackStudioProvider(Provider):
             uow,
             service,
             allow_insecure_http=settings.git.allow_insecure_http,
-            official=official,
+            official=official_repo(),
             hosting=hosting,
             resolver=resolver,
         )

@@ -16,7 +16,6 @@ import {
 import {
   PackServiceAccessCheckSchema,
   PackServiceAccessListSchema,
-  PackServiceAccessSchema,
   PackStudioAdminSchema,
   PackStudioOfficialAdminSchema,
   packStudioApi,
@@ -51,20 +50,20 @@ const fixtureOf = <T,>(
   schema.parse(
     JSON.parse(readFileSync(join(FIXTURES, "..", dir, `${name}.json`), "utf8")),
   );
-const NO_BOT = fixtureOf(
+const OFFICIAL = fixtureOf(
   PackStudioOfficialAdminSchema,
   "PackStudioOfficialAdmin",
-  "no_bot",
+  "configured",
 );
-const BOT = fixtureOf(
-  PackServiceAccessSchema,
-  "PackServiceAccess",
-  "github_bot",
+const HIDDEN = fixtureOf(
+  PackStudioOfficialAdminSchema,
+  "PackStudioOfficialAdmin",
+  "hidden",
 );
-const FINE_GRAINED = fixtureOf(
+const CANNOT_PUSH = fixtureOf(
   PackServiceAccessCheckSchema,
   "PackServiceAccessCheck",
-  "fine_grained",
+  "cannot_push",
 );
 
 const mount = () =>
@@ -86,7 +85,7 @@ describe("админка: Студия шаблонов", () => {
     await i18n.changeLanguage("ru");
   });
   beforeEach(() => {
-    vi.spyOn(packStudioApi, "officialAdmin").mockResolvedValue(NO_BOT);
+    vi.spyOn(packStudioApi, "officialAdmin").mockResolvedValue(OFFICIAL);
   });
   afterEach(() => {
     vi.restoreAllMocks();
@@ -195,64 +194,51 @@ describe("админка: Студия шаблонов", () => {
     expect(screen.getByTestId("ps-service-token")).toHaveValue("");
   });
 
-  it("официальные паки: бот добавляется с адресом репозитория и режимом форка, лимит сохраняется", async () => {
+  it("официальные паки: только адрес репозитория, без бота, выключателя и лимита", async () => {
     vi.spyOn(packStudioApi, "admin").mockResolvedValue(admin("enabled"));
     noService();
-    const add = vi
-      .spyOn(packStudioApi, "addServiceAccess")
-      .mockResolvedValue(BOT);
-    const save = vi
-      .spyOn(packStudioApi, "setOfficialAdmin")
-      .mockResolvedValue({ ...NO_BOT, daily_limit: 3 });
     mount();
     const section = await screen.findByTestId("ps-official");
-    expect(section).toHaveTextContent(NO_BOT.repo?.web_url ?? "");
-    expect(screen.getByTestId("ps-official-enabled")).toHaveAttribute(
-      "aria-checked",
-      "false",
-    );
+    expect(section).toHaveTextContent(OFFICIAL.repo?.web_url ?? "");
+    expect(screen.queryByTestId("ps-official-add-bot")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("ps-official-enabled")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("ps-official-limit")).not.toBeInTheDocument();
 
-    await userEvent.click(screen.getByTestId("ps-official-add-bot"));
-    expect(screen.getByTestId("ps-service-url")).toHaveValue(NO_BOT.repo?.url);
-    expect(screen.getByTestId("ps-service-fork")).toBeChecked();
-    await userEvent.type(screen.getByTestId("ps-service-token"), "ghp_1");
-    await userEvent.click(screen.getByTestId("ps-service-submit"));
-    await waitFor(() => {
-      expect(add).toHaveBeenCalledWith({
-        url: NO_BOT.repo?.url,
-        token: "ghp_1",
-        label: null,
-        fork_mode: true,
-      });
-    });
-
-    const limit = screen.getByTestId("ps-official-limit");
-    await userEvent.clear(limit);
-    await userEvent.type(limit, "3");
-    await userEvent.click(screen.getByTestId("ps-official-limit-save"));
-    await waitFor(() => {
-      expect(save).toHaveBeenCalledWith({ bot_enabled: false, daily_limit: 3 });
-    });
+    await userEvent.click(screen.getByTestId("ps-service-open"));
+    expect(screen.queryByTestId("ps-service-fork")).not.toBeInTheDocument();
   });
 
-  it("проверка доступа бота: точный токен назван проблемой словами", async () => {
+  it("официальный репозиторий не задан: раздел говорит, что кнопки нет", async () => {
     vi.spyOn(packStudioApi, "admin").mockResolvedValue(admin("enabled"));
-    vi.spyOn(packStudioApi, "serviceAccess").mockResolvedValue([BOT]);
+    vi.spyOn(packStudioApi, "officialAdmin").mockResolvedValue(HIDDEN);
+    noService();
+    mount();
+    expect(await screen.findByTestId("ps-official")).toHaveTextContent(
+      "OFFICIAL_REPO_URL",
+    );
+  });
+
+  it("проверка служебного доступа: нет права записи названо проблемой словами", async () => {
+    vi.spyOn(packStudioApi, "admin").mockResolvedValue(admin("enabled"));
+    vi.spyOn(packStudioApi, "serviceAccess").mockResolvedValue([
+      CANNOT_PUSH.access,
+    ]);
     const check = vi
       .spyOn(packStudioApi, "checkServiceAccess")
-      .mockResolvedValue(FINE_GRAINED);
+      .mockResolvedValue(CANNOT_PUSH);
     mount();
-    const row = await screen.findByTestId(`ps-service-${BOT.id}`);
-    expect(row).toHaveTextContent("бот, форк");
+    const row = await screen.findByTestId(
+      `ps-service-${CANNOT_PUSH.access.id}`,
+    );
     await userEvent.click(within(row).getByTestId("ps-service-check"));
     await waitFor(() => {
-      expect(check).toHaveBeenCalledWith(BOT.id);
+      expect(check).toHaveBeenCalledWith(CANNOT_PUSH.access.id);
     });
     expect(
-      await screen.findByTestId("ps-service-problem-fine_grained_token"),
-    ).toHaveTextContent("public_repo");
+      await screen.findByTestId("ps-service-problem-cannot_push"),
+    ).toHaveTextContent("права записи");
     expect(screen.getByTestId("ps-service-check-result")).toHaveTextContent(
-      "hse-doc-studio-bot",
+      "fcs-packs",
     );
   });
 });

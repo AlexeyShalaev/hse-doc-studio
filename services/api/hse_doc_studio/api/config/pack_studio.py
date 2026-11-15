@@ -70,9 +70,3 @@ class PackStudioConfig(BaseModel):
     official_license: str = Field(
         default="Apache-2.0", description="License a contribution to the official packs goes under (its LICENSE)."
     )
-    official_bot_daily_limit: int = Field(
-        default=5,
-        ge=1,
-        le=1000,
-        description="Proposals one person may send through the bot access per 24 hours (the admin may change it).",
-    )

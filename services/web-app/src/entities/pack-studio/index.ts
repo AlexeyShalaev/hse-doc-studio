@@ -23,7 +23,6 @@ export {
   useOpenPackOfficial,
   usePackOfficial,
   usePackOfficialAdmin,
-  useSetPackOfficialAdmin,
   useCancelPackPreview,
   useCommitPack,
   useCreatePackVersion,

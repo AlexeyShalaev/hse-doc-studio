@@ -365,12 +365,8 @@ class IPackHosting(Protocol):
         ...
 
     async def account(self, repo: HostingRepo, target: RemoteTarget) -> HostingAccount | None:
-        """Срез T22: чей токен цели (`GET /user` GitHub); None, если хостинг его не принял или не умеет."""
-        ...
-
-    async def sync_fork(self, fork: HostingRepo, target: RemoteTarget, *, branch: str) -> bool:
-        """Срез T22: подтянуть базовую ветку форка к исходному репозиторию (GitHub `merge-upstream`), чтобы push
-        из частичного клона нёс только свои коммиты. Сбой не ошибка: False."""
+        """Чей токен цели (`GET /user` GitHub, проверка служебного доступа); None, если хостинг его не принял или не
+        умеет."""
         ...
 
 
@@ -388,10 +384,6 @@ class ServiceAccess:
     token_family: str | None = None
     created_by: str | None = None
     created_by_name: str | None = None
-    # Срез T22: доступ бота. Ветка уходит только в форк аккаунта токена (`fork_url`), PR из форка в репозиторий;
-    # в сам репозиторий push не делается никогда.
-    fork_mode: bool = False
-    fork_url: str | None = None
 
 
 class IServiceAccessRepository(Protocol):
@@ -406,9 +398,6 @@ class IServiceAccessRepository(Protocol):
 
     async def delete(self, access_id: UUID) -> ServiceAccess | None: ...
     async def secret(self, access_id: UUID) -> Secret | None: ...
-    async def set_fork_url(self, access_id: UUID, fork_url: str) -> None:
-        """Срез T22: форк аккаунта бота, найденный или созданный через API хостинга."""
-        ...
 
 
 # ── Предпросмотр (раздел 6, срез T7) ─────────────────────────────────────────
@@ -524,19 +513,3 @@ class IPackVersions(Protocol):
         registry: BaseRegistry,
         today: date,
     ) -> ReleasedVersionView: ...
-
-
-class IOfficialSettingsStore(Protocol):
-    """Срез T22: вклад через бота в настройках установки (выбор админа поверх умолчаний окружения)."""
-
-    async def get(self) -> tuple[bool | None, int | None]:
-        """(включён ли вклад через бота, лимит предложений в сутки); None: админ не менял."""
-        ...
-
-    async def set(self, *, enabled: bool, daily_limit: int) -> None: ...
-
-
-class IBotProposalCounter(Protocol):
-    """Срез T22: сколько предложений человек отправил через доступ бота с момента `since` (по журналу аудита)."""
-
-    async def count_since(self, user_id: str, since: datetime) -> int: ...

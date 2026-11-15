@@ -421,10 +421,10 @@ def test__git_routes__workspace_not_ready__answer_workspace_not_ready(server: Te
     assert propose.json()["code"] == "workspace_not_ready"
 
 
-# ── срез T22: официальные паки и доступ бота ────────────────────────────────
+# ── срез T22: официальные паки (вклад только своим аккаунтом) ───────────────
 
 _OFFICIAL = "https://github.com/AlexeyShalaev/hse-doc-studio"
-_BOT_TOKEN = "ghp_bot0123456789abcdefABCDEF012345678"
+_GITHUB_TOKEN = "ghp_svc0123456789abcdefABCDEF012345678"
 
 
 def _official_workspace_of(owner_id: str) -> str:
@@ -455,55 +455,49 @@ def _granted_author(server: TestClient, admin: Person) -> tuple[str, Person]:
     return anna_id, anna
 
 
-def _add_bot(admin: Person) -> dict[str, Any]:
-    resp = admin.post(
-        f"{ADMIN_API}/service-access",
-        json={"url": _OFFICIAL, "token": _BOT_TOKEN, "label": "Бот", "fork_mode": True},
-    )
-    assert resp.status_code == 201, resp.text
-    return dict(resp.json())
-
-
-def test__official__info_follows_bot_setup_and_admin_switch(server: TestClient) -> None:
+def test__official__info__repository_without_bot_and_no_workspace(server: TestClient) -> None:
     admin = _admin(server)
     _enable(admin)
     _, anna = _granted_author(server, admin)
 
-    before = anna.get(f"{API}/official").json()
-    bot = _add_bot(admin)
-    ready = anna.get(f"{API}/official").json()
-    off = admin.put(f"{ADMIN_API}/official", json={"bot_enabled": False, "daily_limit": 3})
-    disabled = anna.get(f"{API}/official").json()
+    info = anna.get(f"{API}/official")
 
-    assert before["repo"]["url"] == _OFFICIAL
-    assert before["repo"]["license"] == "Apache-2.0"
-    assert before["bot"] == {"available": False, "reason": "not_configured", "daily_limit": None, "used": None}
-    assert (bot["fork_mode"], bot["fork_url"]) == (True, None)
-    assert _BOT_TOKEN not in str(bot)
-    assert ready["bot"] == {"available": True, "reason": None, "daily_limit": 5, "used": 0}
-    assert ready["workspace_id"] is None
-    assert off.status_code == 200, off.text
-    assert (off.json()["bot_enabled"], off.json()["daily_limit"]) == (False, 3)
-    assert off.json()["service_access"]["id"] == bot["id"]
-    assert disabled["bot"]["reason"] == "disabled"
-    (event,) = _audit(admin, "pack_studio.official_update")
-    assert event["details"] == {"bot_enabled": False, "daily_limit": 3}
+    assert info.status_code == 200, info.text
+    assert info.json()["repo"]["url"] == _OFFICIAL
+    assert info.json()["repo"]["license"] == "Apache-2.0"
+    assert info.json()["workspace_id"] is None
+    assert "bot" not in info.json()
 
 
-def test__official__admin_settings__defaults_validation_and_admin_only(server: TestClient) -> None:
+def test__official__admin_view__repository_only_and_admin_only(server: TestClient) -> None:
     admin = _admin(server)
     _, anna = _author(server)
 
     state = admin.get(f"{ADMIN_API}/official")
-    bad = admin.put(f"{ADMIN_API}/official", json={"bot_enabled": True, "daily_limit": 0})
+    put = admin.put(f"{ADMIN_API}/official", json={"bot_enabled": True, "daily_limit": 3})
 
     assert state.status_code == 200, state.text
-    assert state.json()["bot_enabled"] is True
-    assert state.json()["daily_limit"] == state.json()["default_daily_limit"] == 5  # noqa: PLR2004
-    assert state.json()["service_access"] is None
-    assert bad.status_code == 422
+    assert state.json() == {"repo": state.json()["repo"]}
+    assert state.json()["repo"]["url"] == _OFFICIAL
+    assert put.status_code == 405
     assert anna.get(f"{ADMIN_API}/official").status_code == 404
     assert anna.post(f"{ADMIN_API}/service-access/{uuid.uuid4()}/check").status_code == 404
+
+
+def test__service_access__no_fork_mode__plain_t6_access(server: TestClient) -> None:
+    admin = _admin(server)
+
+    bot = admin.post(
+        f"{ADMIN_API}/service-access",
+        json={"url": _OFFICIAL, "token": _GITHUB_TOKEN, "label": "Бот", "fork_mode": True},
+    )
+    plain = admin.post(f"{ADMIN_API}/service-access", json={"url": _OFFICIAL, "token": _GITHUB_TOKEN})
+
+    assert bot.status_code == 422
+    assert plain.status_code == 201, plain.text
+    assert "fork_mode" not in plain.json()
+    assert "fork_url" not in plain.json()
+    assert _GITHUB_TOKEN not in plain.text
 
 
 def test__official__existing_workspace__marked_and_opened_again(server: TestClient) -> None:
@@ -514,7 +508,7 @@ def test__official__existing_workspace__marked_and_opened_again(server: TestClie
 
     info = anna.get(f"{API}/official").json()
     card = anna.get(f"{API}/workspaces/{ws_id}").json()
-    opened = anna.post(f"{API}/official/workspace", json={"access": "bot"})
+    opened = anna.post(f"{API}/official/workspace", json={"credential_id": str(uuid.uuid4())})
 
     assert info["workspace_id"] == ws_id
     assert card["official"] is True
@@ -523,18 +517,16 @@ def test__official__existing_workspace__marked_and_opened_again(server: TestClie
     assert opened.json()["id"] == ws_id
 
 
-def test__official__bot_not_set_up__open_refused(server: TestClient) -> None:
+def test__official__open_without_own_token__refused(server: TestClient) -> None:
     admin = _admin(server)
     _enable(admin)
     _, anna = _granted_author(server, admin)
 
-    resp = anna.post(f"{API}/official/workspace", json={"access": "bot"})
-    bad = anna.post(f"{API}/official/workspace", json={"access": "token"})
+    bot = anna.post(f"{API}/official/workspace", json={"access": "bot"})
+    empty = anna.post(f"{API}/official/workspace", json={})
 
-    assert resp.status_code == 409, resp.text
-    assert resp.json()["code"] == "official_bot_unavailable"
-    assert resp.json()["reason"] == "not_configured"
-    assert bad.status_code == 422
+    assert bot.status_code == 422
+    assert empty.status_code == 422
 
 
 def test__official__no_repository_configured__hidden_and_refused(server: TestClient) -> None:
@@ -543,33 +535,10 @@ def test__official__no_repository_configured__hidden_and_refused(server: TestCli
     _enable(admin)
 
     info = admin.get(f"{API}/official").json()
-    resp = admin.post(f"{API}/official/workspace", json={"access": "token", "credential_id": str(uuid.uuid4())})
+    admin_view = admin.get(f"{ADMIN_API}/official").json()
+    resp = admin.post(f"{API}/official/workspace", json={"credential_id": str(uuid.uuid4())})
 
     assert info["repo"] is None
+    assert admin_view["repo"] is None
     assert resp.status_code == 404
     assert resp.json()["code"] == "official_unavailable"
-
-
-def test__official__bot_proposals_counted_from_audit_per_person_and_window(server: TestClient) -> None:
-    from hse_doc_studio.core.identity.protocols import IAuditLog, IAuditReader  # noqa: PLC0415
-    from hse_doc_studio.infra.pack_studio.bot_counter import AuditBotProposalCounter  # noqa: PLC0415
-
-    anna_id, _ = _author(server)
-    boris_id, _ = _author(server, "boris")
-
-    async def work(container: Any) -> tuple[int, int, int]:
-        audit = await container.get(IAuditLog)
-        uow = await container.get(IUnitOfWork)
-        async with uow.begin():
-            for actor, bot in ((anna_id, True), (anna_id, True), (anna_id, False), (boris_id, True)):
-                await audit.record("pack_studio.proposed", actor_id=actor, details={"bot": bot})
-        counter = AuditBotProposalCounter(await container.get(IAuditReader))
-        since = datetime.now(UTC).replace(year=2000)
-        future = datetime.now(UTC).replace(year=2100)
-        return (
-            await counter.count_since(anna_id, since),
-            await counter.count_since(boris_id, since),
-            await counter.count_since(anna_id, future),
-        )
-
-    assert asyncio.run(_in_container(work)) == (2, 1, 0)

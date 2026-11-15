@@ -377,23 +377,3 @@ async def test__account__rejected_token__none() -> None:
         return httpx.Response(401, json={"message": "Bad credentials"})
 
     assert await _hosting(handler).account(GH, _target()) is None
-
-
-async def test__sync_fork__posts_merge_upstream_and_never_raises() -> None:
-    seen: list[httpx.Request] = []
-    fork = HostingRepo(GitProvider.github, "bot/packs", "https://github.com", "https://api.github.com")
-
-    def handler(request: httpx.Request) -> httpx.Response:
-        seen.append(request)
-        return httpx.Response(200, json={"merge_type": "fast-forward"})
-
-    def broken(_request: httpx.Request) -> httpx.Response:
-        raise httpx.ConnectError("down")
-
-    synced = await _hosting(handler).sync_fork(fork, _target("https://github.com/bot/packs.git"), branch="master")
-
-    assert synced is True
-    (request,) = seen
-    assert (request.method, request.url.path) == ("POST", "/repos/bot/packs/merge-upstream")
-    assert json.loads(request.content) == {"branch": "master"}
-    assert await _hosting(broken).sync_fork(fork, _target("https://github.com/bot/packs.git"), branch="master") is False

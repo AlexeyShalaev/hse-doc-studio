@@ -5,8 +5,7 @@
 
 - человеку с правом «Автор шаблонов» (админ установки имеет его всегда); гостю и фоновой задаче без актора нет;
 - для адреса того самого репозитория (хост, порт и путь совпадают): форк или другой репозиторий служебным токеном не
-  открыть, даже подменив адрес пространства. Исключение (срез T22): доступ бота (`fork_mode`) отдаётся ещё и для
-  адреса своего форка (`fork_url`, его записывает только сервер по ответу хостинга или админ), куда уходит ветка.
+  открыть, даже подменив адрес пространства.
 
 Этот запускатель git и клиент хостинга собираются только для Студии шаблонов: остальная Студия о служебных доступах
 не знает. Каждое использование служебного секрета пишется в журнал (`pack_studio.service_access_use`).
@@ -26,7 +25,6 @@ from hse_doc_studio.core.git_sync.url import RemoteUrl
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.identity.protocols import IAuditLog
 from hse_doc_studio.core.pack_studio.git_flow import repo_key, repo_path_of
-from hse_doc_studio.core.pack_studio.official import url_key
 from hse_doc_studio.core.pack_studio.protocols import (
     IPackStudioGrantRepository,
     IServiceAccessRepository,
@@ -78,8 +76,7 @@ class PackStudioCredentialAccess:
         access = await self._allowed(credential_id)
         if access is None or remote.host is None:
             raise _not_found()
-        key = repo_key(remote.host, remote.port, repo_path_of(remote.display_url, None))
-        if key != access.repo_key and key != _fork_key(access):
+        if repo_key(remote.host, remote.port, repo_path_of(remote.display_url, None)) != access.repo_key:
             raise _not_found()
         secret = await self._service.secret(access.id)
         if secret is None:
@@ -100,10 +97,3 @@ class PackStudioCredentialAccess:
         if not actor.is_instance_admin and not await self._grants.has_grant(actor.id):
             return None
         return await self._service.get(credential_id)
-
-
-def _fork_key(access: ServiceAccess) -> str | None:
-    """Ключ форка бота; у прямого служебного доступа и без записанного форка None."""
-    if not access.fork_mode or not access.fork_url:
-        return None
-    return url_key(access.fork_url)

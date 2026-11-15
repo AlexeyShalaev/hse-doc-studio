@@ -20,7 +20,6 @@ from hse_doc_studio.core.git_sync.protocols import (
     IGitRemoteRunner,
     IGitTransport,
 )
-from hse_doc_studio.core.identity.commit_identity import noreply_domain
 from hse_doc_studio.core.identity.protocols import IAuditLog
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.mode import StudioMode
@@ -169,15 +168,8 @@ class PackStudioProvider(Provider):
         return self.build_service(repo, files, git, plumbing.transport, credentials, policy, paths, tasks, audit=None)
 
     @provide
-    def get_official(self, workspaces: PackWorkspaceService, access: PackStudioAccess) -> OfficialPacks:
-        # Локально бота нет: официальные паки только своим токеном.
-        return OfficialPacks(
-            official_repo(),
-            workspaces,
-            access,
-            None,
-            default_daily_limit=settings.pack_studio.official_bot_daily_limit,
-        )
+    def get_official(self, workspaces: PackWorkspaceService) -> OfficialPacks:
+        return OfficialPacks(official_repo(), workspaces)
 
     @provide(scope=Scope.REQUEST)
     def get_git_service(  # noqa: PLR0913 — порты сценария
@@ -221,7 +213,6 @@ class PackStudioProvider(Provider):
         audit: IAuditLog | None,
         official: OfficialPacks | None = None,
     ) -> PackGitService:
-        public_url = settings.auth.public_url
         return PackGitService(
             workspaces,
             git,
@@ -234,8 +225,6 @@ class PackStudioProvider(Provider):
             diff_max_bytes=settings.pack_studio.max_diff_bytes,
             audit=audit,
             official=official,
-            noreply_domain=noreply_domain(public_url),
-            site_url=public_url.rstrip("/") if public_url else None,
         )
 
     @provide

@@ -52,7 +52,6 @@ from hse_doc_studio.api.schemas.pack_studio import (
     PackMacroHintResponse,
     PackMetaFieldHintResponse,
     PackMoveEditsRequest,
-    PackOfficialBot,
     PackOfficialRepo,
     PackOfficialResponse,
     PackPreviewBuildResponse,
@@ -118,7 +117,7 @@ from hse_doc_studio.use_cases.pack_studio.access import PackStudioAccess, Sectio
 from hse_doc_studio.use_cases.pack_studio.files import PackFilesService, YamlOp
 from hse_doc_studio.use_cases.pack_studio.git import ForkChoice, GitView, PackGitService, ProposeInput
 from hse_doc_studio.use_cases.pack_studio.insight import PackInsightService
-from hse_doc_studio.use_cases.pack_studio.official import OfficialAccess, OfficialInfo, OfficialPacks
+from hse_doc_studio.use_cases.pack_studio.official import OfficialInfo, OfficialPacks
 from hse_doc_studio.use_cases.pack_studio.preview import PackPreviewService, PreviewOptions, StartPreviewInput
 from hse_doc_studio.use_cases.pack_studio.versions import CreateVersionInput, PackVersionService, ReleaseInput
 from hse_doc_studio.use_cases.pack_studio.workspaces import (
@@ -178,15 +177,8 @@ def official_repo_response(repo: OfficialRepo | None) -> PackOfficialRepo | None
 
 
 def official_response(info: OfficialInfo) -> PackOfficialResponse:
-    quota = info.bot.quota
     return PackOfficialResponse(
         repo=official_repo_response(info.repo),
-        bot=PackOfficialBot(
-            available=info.bot.available,
-            reason=info.bot.reason.value if info.bot.reason else None,
-            daily_limit=quota.limit if quota else None,
-            used=quota.used if quota else None,
-        ),
         workspace_id=None if info.workspace_id is None else str(info.workspace_id),
     )
 
@@ -353,7 +345,7 @@ async def create_workspace(
 
 @router.get("/pack-studio/official", response_model=PackOfficialResponse)
 async def get_official(official: FromDishka[OfficialPacks], response: Response) -> PackOfficialResponse:
-    """Официальные паки (срез T22): репозиторий установки (null: кнопки нет), доступ бота, своё пространство."""
+    """Официальные паки (срез T22): репозиторий установки (null: кнопки нет) и своё пространство."""
     response.headers.update(_NO_STORE)
     return official_response(await official.info(require_actor()))
 
@@ -362,8 +354,8 @@ async def get_official(official: FromDishka[OfficialPacks], response: Response) 
 async def open_official(
     body: OpenPackOfficialRequest, official: FromDishka[OfficialPacks], response: Response
 ) -> PackWorkspaceResponse:
-    """Пространство над официальным репозиторием: уже созданное (200) или новое (202, клон в фоне)."""
-    view, created = await official.open(require_actor(), OfficialAccess(body.access), body.credential_id)
+    """Пространство над официальным репозиторием своим токеном: уже созданное (200) или новое (202, клон в фоне)."""
+    view, created = await official.open(require_actor(), body.credential_id)
     response.status_code = 202 if created else 200
     return workspace_response(view)
 

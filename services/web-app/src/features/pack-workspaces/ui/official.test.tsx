@@ -25,7 +25,7 @@ const read = (dir: string, name: string): unknown =>
 const official = (name: string): PackOfficial =>
   PackOfficialSchema.parse(read("PackOfficial", name));
 const WORKSPACE = PackWorkspaceSchema.parse(
-  read("PackWorkspace", "git_official_bot"),
+  read("PackWorkspace", "git_official"),
 );
 
 const credential = (id: string, host: string) => ({
@@ -73,7 +73,7 @@ describe("официальные паки", () => {
   });
 
   it("пространство уже есть: «Открыть» ведёт в него без окна", async () => {
-    const data = official("local_existing");
+    const data = official("existing");
     vi.spyOn(packStudioApi, "official").mockResolvedValue(data);
     const onOpen = mount();
     await userEvent.click(await screen.findByTestId("official-open"));
@@ -81,37 +81,10 @@ describe("официальные паки", () => {
     expect(screen.queryByTestId("official-dialog")).not.toBeInTheDocument();
   });
 
-  it("бот доступен: по умолчанию без своего аккаунта, с остатком лимита", async () => {
+  it("свой токен: в списке только доступы хоста репозитория, бота нет", async () => {
     vi.spyOn(packStudioApi, "official").mockResolvedValue(
-      official("bot_available"),
+      official("available"),
     );
-    vi.spyOn(gitRemoteApi, "listCredentials").mockResolvedValue([]);
-    const open = vi
-      .spyOn(packStudioApi, "openOfficial")
-      .mockResolvedValue(WORKSPACE);
-    const onOpen = mount();
-    await userEvent.click(await screen.findByTestId("official-open"));
-    expect(await screen.findByTestId("official-access-bot")).toBeChecked();
-    expect(screen.getByTestId("official-dialog")).toHaveTextContent(
-      "Сегодня можно ещё 4 из 5 предложений.",
-    );
-    await userEvent.click(screen.getByTestId("official-submit"));
-    await waitFor(() => {
-      expect(open).toHaveBeenCalledWith({ access: "bot" });
-    });
-    expect(onOpen).toHaveBeenCalledWith(WORKSPACE.id);
-  });
-
-  it("свой токен: в списке только доступы хоста репозитория", async () => {
-    vi.spyOn(packStudioApi, "official").mockResolvedValue({
-      ...official("bot_available"),
-      bot: {
-        available: false,
-        reason: "not_configured",
-        daily_limit: null,
-        used: null,
-      },
-    });
     vi.spyOn(gitRemoteApi, "listCredentials").mockResolvedValue([
       credential("gl", "gitlab.example.org"),
       credential("gh", "github.com"),
@@ -119,27 +92,26 @@ describe("официальные паки", () => {
     const open = vi
       .spyOn(packStudioApi, "openOfficial")
       .mockResolvedValue(WORKSPACE);
-    mount();
+    const onOpen = mount();
     await userEvent.click(await screen.findByTestId("official-open"));
-    expect(await screen.findByTestId("official-access-token")).toBeChecked();
+    expect(
+      await screen.findByTestId("official-access-token"),
+    ).toHaveTextContent("ваш форк");
     expect(screen.queryByTestId("official-access-bot")).not.toBeInTheDocument();
-    expect(screen.getByTestId("official-bot-reason")).toHaveTextContent(
-      "не настроил",
+    expect(screen.getByTestId("official-dialog")).not.toHaveTextContent(
+      "служебный аккаунт",
     );
     await userEvent.click(screen.getByTestId("official-submit"));
     await waitFor(() => {
-      expect(open).toHaveBeenCalledWith({
-        access: "token",
-        credential_id: "gh",
-      });
+      expect(open).toHaveBeenCalledWith({ credential_id: "gh" });
     });
+    expect(onOpen).toHaveBeenCalledWith(WORKSPACE.id);
   });
 
-  it("ни бота, ни токена: объяснение, что нужен токен, отправить нечем", async () => {
-    vi.spyOn(packStudioApi, "official").mockResolvedValue({
-      ...official("local_existing"),
-      workspace_id: null,
-    });
+  it("нет токена GitHub: объяснение, что нужен токен, отправить нечем", async () => {
+    vi.spyOn(packStudioApi, "official").mockResolvedValue(
+      official("available"),
+    );
     vi.spyOn(gitRemoteApi, "listCredentials").mockResolvedValue([
       credential("gl", "gitlab.example.org"),
     ]);

@@ -291,7 +291,6 @@ export const ProposeDialog = ({
   const ws = git.workspace;
   const isOfficial = ws.official === true;
   const official = usePackOfficial(isOpen && isOfficial);
-  const viaBot = isOfficial && ws.service_access;
   const repo = official.data?.repo;
   const asked = consentAsked(propose.error);
   // Согласие спрашивается до первой отправки и ещё раз, если сервер о нём попросил.
@@ -304,11 +303,6 @@ export const ProposeDialog = ({
           contributingUrl: repo?.contributing_url ?? null,
         }
       : null);
-  const bot = official.data?.bot;
-  const left =
-    bot?.daily_limit != null && bot.used != null
-      ? Math.max(bot.daily_limit - bot.used, 0)
-      : null;
 
   const reset = () => {
     propose.reset();
@@ -492,25 +486,8 @@ export const ProposeDialog = ({
             base: git.base_branch ?? "",
           })}
         </p>
-        {viaBot ? (
-          <div data-testid="git-propose-bot">
-            <Notice
-              tone="info"
-              role="status"
-              text={
-                left !== null
-                  ? `${t("git.official.bot")} ${t("git.official.quota", {
-                      left,
-                      limit: bot?.daily_limit ?? 0,
-                    })}`
-                  : t("git.official.bot")
-              }
-            />
-          </div>
-        ) : (
-          ws.service_access && (
-            <p className="ps-dialog-text">{t("git.propose.service")}</p>
-          )
+        {ws.service_access && (
+          <p className="ps-dialog-text">{t("git.propose.service")}</p>
         )}
         {ws.fork_url && (
           <p className="ps-dialog-text mono">

@@ -8,7 +8,6 @@ import {
   PackOfficialSchema,
   PackServiceAccessCheckSchema,
   PackStudioOfficialAdminSchema,
-  UpdatePackStudioOfficialRequestSchema,
   CreatePackServiceAccessRequestSchema,
   CreatePackStudioGrantRequestSchema,
   CreatePackVersionRequestSchema,
@@ -117,12 +116,11 @@ const SCHEMAS: Record<string, ZodType> = {
   PackVersionMoved: PackVersionMovedSchema,
   PackReleaseRequest: PackReleaseRequestSchema,
   PackRelease: PackReleaseSchema,
-  // Срез T22: официальные паки и доступ бота
+  // Срез T22: официальные паки и проверка служебного доступа
   PackOfficial: PackOfficialSchema,
   OpenPackOfficialRequest: OpenPackOfficialRequestSchema,
   PackServiceAccessCheck: PackServiceAccessCheckSchema,
   PackStudioOfficialAdmin: PackStudioOfficialAdminSchema,
-  UpdatePackStudioOfficialRequest: UpdatePackStudioOfficialRequestSchema,
   PackSignatures: PackSignaturesSchema,
   PackSignaturesPatchRequest: PackSignaturesPatchRequestSchema,
 };

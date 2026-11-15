@@ -243,17 +243,6 @@ class HttpPackHosting:
         scopes = None if raw is None else tuple(part.strip() for part in raw.split(",") if part.strip())
         return HostingAccount(login=login, scopes=scopes)
 
-    async def sync_fork(self, fork: HostingRepo, target: RemoteTarget, *, branch: str) -> bool:
-        if fork.provider is not GitProvider.github or fork.api_base is None:
-            return False
-        try:
-            reply = await self._call(
-                fork, target, "POST", f"/repos/{fork.path}/merge-upstream", json={"branch": branch}
-            )
-        except GitSyncError:
-            return False
-        return reply.ok
-
     # ── GitHub и GitLab ──
 
     async def _github_checks(

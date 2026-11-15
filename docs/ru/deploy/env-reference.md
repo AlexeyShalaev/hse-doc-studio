@@ -441,7 +441,6 @@ tags:
 | `HSE_STUDIO__PACK_STUDIO__OFFICIAL_PACKS_PATH` | str | `packs` | оба | Packs folder inside the official repository. |
 | `HSE_STUDIO__PACK_STUDIO__OFFICIAL_BASE_BRANCH` | str | `master` | оба | Base branch of the official repository. |
 | `HSE_STUDIO__PACK_STUDIO__OFFICIAL_LICENSE` | str | `Apache-2.0` | оба | License a contribution to the official packs goes under (its LICENSE). |
-| `HSE_STUDIO__PACK_STUDIO__OFFICIAL_BOT_DAILY_LIMIT` | int | `5` | оба | Proposals one person may send through the bot access per 24 hours (the admin may change it). |
 | `HSE_STUDIO__PACK_CATALOG__MAX_ARCHIVE_BYTES` | int | `104857600` | оба | Largest uploaded packs archive, and largest git object store fetched for one source revision. |
 | `HSE_STUDIO__PACK_CATALOG__MAX_FILES` | int | `20000` | оба | Most files in one source revision of packs. |
 | `HSE_STUDIO__PACK_CATALOG__MAX_BYTES` | int | `536870912` | оба | Largest total size of the files in one source revision. |

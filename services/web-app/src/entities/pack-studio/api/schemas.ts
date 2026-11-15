@@ -377,9 +377,6 @@ export const PackServiceAccessSchema = z.strictObject({
   created_by: z.string().nullable(),
   created_by_name: z.string().nullable(),
   created_at: z.string(),
-  // Срез T22: доступ бота, ветка уходит только в его форк.
-  fork_mode: z.boolean().optional(),
-  fork_url: z.string().nullish(),
 });
 
 export const PackServiceAccessListSchema = z.array(PackServiceAccessSchema);
@@ -388,15 +385,11 @@ export const CreatePackServiceAccessRequestSchema = z.strictObject({
   url: z.string().min(1).max(2048),
   token: z.string().min(1).max(4096),
   label: z.string().max(120).nullish(),
-  fork_mode: z.boolean().optional(),
 });
 
 export const PackServiceAccessProblemSchema = z.enum([
   "token_rejected",
-  "fine_grained_token",
-  "scope_missing",
-  "fork_unavailable",
-  "bot_can_push",
+  "cannot_push",
   "provider_unsupported",
 ]);
 
@@ -422,41 +415,20 @@ export const PackOfficialRepoSchema = z.strictObject({
   contributing_url: z.string(),
 });
 
-export const PackOfficialBotUnavailableSchema = z.enum([
-  "local",
-  "not_configured",
-  "disabled",
-  "no_right",
-]);
-
 export const PackOfficialSchema = z.strictObject({
   // null: установка не задала официальный репозиторий, кнопки нет.
   repo: PackOfficialRepoSchema.nullable(),
-  bot: z.strictObject({
-    available: z.boolean(),
-    reason: PackOfficialBotUnavailableSchema.nullable(),
-    daily_limit: z.number().int().nullable(),
-    used: z.number().int().nullable(),
-  }),
   workspace_id: z.string().nullable(),
 });
 
-export const OpenPackOfficialRequestSchema = z.union([
-  z.strictObject({ access: z.literal("bot") }),
-  z.strictObject({ access: z.literal("token"), credential_id: z.string() }),
-]);
-
-export const PackStudioOfficialAdminSchema = z.strictObject({
-  repo: PackOfficialRepoSchema.nullable(),
-  bot_enabled: z.boolean(),
-  daily_limit: z.number().int(),
-  default_daily_limit: z.number().int(),
-  service_access: PackServiceAccessSchema.nullable(),
+// Вклад в официальные паки только своим аккаунтом: личный доступ git.
+export const OpenPackOfficialRequestSchema = z.strictObject({
+  credential_id: z.string(),
 });
 
-export const UpdatePackStudioOfficialRequestSchema = z.strictObject({
-  bot_enabled: z.boolean(),
-  daily_limit: z.number().int().min(1).max(1000),
+// Админка: официальный репозиторий из окружения установки, только чтение.
+export const PackStudioOfficialAdminSchema = z.strictObject({
+  repo: PackOfficialRepoSchema.nullable(),
 });
 
 // Предпросмотр (срез T7): документы версии, переключатели, наборы данных и сборки.
@@ -908,9 +880,6 @@ export type OpenPackOfficialRequest = z.infer<
 >;
 export type PackStudioOfficialAdmin = z.infer<
   typeof PackStudioOfficialAdminSchema
->;
-export type UpdatePackStudioOfficialRequest = z.infer<
-  typeof UpdatePackStudioOfficialRequestSchema
 >;
 export type PackPlaceBox = z.infer<typeof PackPlaceBoxSchema>;
 export type PackMarkBox = z.infer<typeof PackMarkBoxSchema>;

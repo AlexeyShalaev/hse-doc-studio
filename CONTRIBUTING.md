@@ -120,9 +120,10 @@ silently changes every project created on it. Released versions are listed in
 ## Contributing to the official packs
 
 The packs in `packs/` are the official packs: they ship inside the Studio image and reach
-users with the next Studio release. Anyone can propose a change, also without a clone of
-this repository: open **Pack Studio, Official packs** in a Studio instance (your own GitHub
-token, or the instance service account if its administrator set one up).
+users with the next Studio release. Anyone with a GitHub account can propose a change, also
+without a clone of this repository: open **Pack Studio, Official packs** in a Studio instance
+and use your own GitHub token. The branch goes to your fork and the PR is opened from your
+account. There is no bot or shared account: every PR to the official packs comes from a person.
 
 No Studio server at hand? Start the Pack Studio on your own computer with one command:
 `docker compose -f deploy/pack-studio/docker-compose.yml up -d`, then open
@@ -131,8 +132,7 @@ In a checkout of this repository, `make pack-studio` runs it from sources over `
 
 - Contributions are public and are made under the repository license (Apache-2.0, see
   `LICENSE`); the Pack Studio asks for this consent before the first proposal.
-- Change only `packs/**`. A PR sent through an instance service account may not touch
-  anything else, and its commits carry the author's name with a Studio noreply address.
+- Change only `packs/**`. A PR from the Official packs workspace may not touch anything else.
 - Never edit a released version (see above): copy it to the next version, fill `changes:`
   in ru and en, and keep the class no softer than the changes require.
 - PRs from forks of first-time contributors wait for a maintainer to approve the CI run;
