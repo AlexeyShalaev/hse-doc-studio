@@ -76,6 +76,17 @@ export const packStudioKeys = {
     ] as const,
   signatures: (id: string, ref: PackVersionRef, buildId: string | null) =>
     [...packStudioKeys.signaturesOf(id, ref), buildId ?? ""] as const,
+  // Модель версии для форм (срезы T11 и T12): одна на версию, ответ правки ложится в тот же ключ.
+  modelAll: (id: string) => [...packStudioKeys.workspace(id), "model"] as const,
+  model: (id: string, ref: PackVersionRef) =>
+    [
+      ...packStudioKeys.modelAll(id),
+      ref.pack,
+      ref.template,
+      ref.version,
+    ] as const,
+  docLibrary: (id: string) =>
+    [...packStudioKeys.workspace(id), "doc-library"] as const,
   previewLog: (id: string, buildId: string) =>
     [...packStudioKeys.previewBuild(id, buildId), "log"] as const,
   admin: () => [...packStudioKeys.all, "admin"] as const,
@@ -680,3 +691,26 @@ export const usePatchPackSignatures = (
     },
   });
 };
+
+/** Модель версии для форм (срезы T11 и T12): манифесты как данные, документы, где печатается поле. */
+export const usePackVersionModel = (id: string, ref: PackVersionRef | null) =>
+  useQuery({
+    queryKey: packStudioKeys.model(
+      id,
+      ref ?? { pack: "", template: "", version: "" },
+    ),
+    queryFn: () =>
+      packStudioApi.versionModel(
+        id,
+        ref ?? { pack: "", template: "", version: "" },
+      ),
+    enabled: ref !== null,
+  });
+
+/** Документы-заготовки пространства: последняя версия каждого шаблона. */
+export const usePackDocLibrary = (id: string, enabled: boolean) =>
+  useQuery({
+    queryKey: packStudioKeys.docLibrary(id),
+    queryFn: () => packStudioApi.docLibrary(id),
+    enabled,
+  });

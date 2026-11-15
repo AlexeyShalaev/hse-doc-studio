@@ -19,25 +19,23 @@ const field = (kind: ParamField["kind"], ...path: string[]): ParamField => ({
 });
 
 /** Поля известных структурных проверок; у проверок без параметров список пуст. */
-export const STRUCTURAL_FIELDS: Readonly<Record<string, readonly ParamField[]>> =
-  {
-    page_geometry: [
-      field("number", "expected", "left_mm"),
-      field("number", "expected", "right_mm"),
-      field("number", "expected", "top_mm"),
-      field("number", "expected", "bottom_mm"),
-      field("number", "tolerance_mm"),
-    ],
-    line_spacing: [field("number", "expected"), field("number", "tolerance")],
-    font_size: [field("number", "expected"), field("numbers", "allowed")],
-    paragraph_indent: [
-      field("number", "expected"),
-      field("number", "tolerance"),
-    ],
-    page_count: [field("number", "min"), field("number", "max")],
-    figure_numbering: [],
-    float_orphans: [],
-  };
+export const STRUCTURAL_FIELDS: Readonly<
+  Record<string, readonly ParamField[]>
+> = {
+  page_geometry: [
+    field("number", "expected", "left_mm"),
+    field("number", "expected", "right_mm"),
+    field("number", "expected", "top_mm"),
+    field("number", "expected", "bottom_mm"),
+    field("number", "tolerance_mm"),
+  ],
+  line_spacing: [field("number", "expected"), field("number", "tolerance")],
+  font_size: [field("number", "expected"), field("numbers", "allowed")],
+  paragraph_indent: [field("number", "expected"), field("number", "tolerance")],
+  page_count: [field("number", "min"), field("number", "max")],
+  figure_numbering: [],
+  float_orphans: [],
+};
 
 /** Есть ли у правила поля формы: движок `structural` и известная проверка. */
 export const typedCheck = (engine: string, params: Params): string | null => {
@@ -98,7 +96,10 @@ export const fieldValue = (
   const trimmed = text.trim();
   if (trimmed === "") return undefined;
   if (kind === "numbers") {
-    const items = trimmed.split(/[,\s]+/).filter(Boolean).map(Number);
+    const items = trimmed
+      .split(/[,\s]+/)
+      .filter(Boolean)
+      .map(Number);
     return items.every((n) => Number.isFinite(n)) ? items : null;
   }
   const n = Number(trimmed.replace(",", "."));

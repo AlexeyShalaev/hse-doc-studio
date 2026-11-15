@@ -231,7 +231,13 @@
     "name": "Студия шаблонов (lazy, pages/PackStudioPage и фичи pack-*)",
     "path": "dist/assets/pack-studio-app-*.js",
     "gzip": true,
-    "limit": "28 kB"
+    "limit": "28.5 kB"
+  },
+  {
+    "name": "Студия шаблонов, формы проверок (lazy, features/pack-checks-form)",
+    "path": "dist/assets/pack-checks-form-*.js",
+    "gzip": true,
+    "limit": "6.4 kB"
   },
   {
     "name": "Студия шаблонов, форма точек сдачи (lazy, features/pack-submission-form)",
@@ -252,6 +258,18 @@
     "limit": "7 kB"
   },
   {
+    "name": "Студия шаблонов, формы манифестов (lazy, features/pack-forms)",
+    "path": "dist/assets/pack-forms-*.js",
+    "gzip": true,
+    "limit": "12 kB"
+  },
+  {
+    "name": "Словарь форм Студии шаблонов (ru и en, features/pack-forms)",
+    "path": "dist/assets/locale-packForms-*.js",
+    "gzip": true,
+    "limit": "7 kB"
+  },
+  {
     "name": "Студия шаблонов, «Подключить к каталогу этой Студии» (lazy, features/pack-catalog-connect)",
     "path": "dist/assets/pack-catalog-connect-*.js",
     "gzip": true,
@@ -261,6 +279,6 @@
     "name": "Словарь Студии шаблонов (ru и en)",
     "path": "dist/assets/locale-packStudio-*.js",
     "gzip": true,
-    "limit": "23.6 kB"
+    "limit": "26.3 kB"
   }
 ]

@@ -2,11 +2,10 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   packErrorText,
-  usePackChecks,
-  usePatchPackChecks,
+  usePackChecksForm,
+  usePatchPackChecksForm,
   versionRefOf,
   type PackChecks,
-  type PackChecksConfigRequest,
 } from "@entities/pack-studio";
 import { BlockHead, Check } from "@features/pack-submission-form/ui/kit";
 import { ApiError } from "@shared/api";
@@ -26,7 +25,13 @@ export type PackChecksConfigFormProps = {
 const DEFAULT = "default";
 const OVERRIDES = ["info", "warn", "err", "skipped"] as const;
 
-const configOf = (data: PackChecks): Required<PackChecksConfigRequest> => ({
+type Config = {
+  disabled_categories: string[];
+  disabled: string[];
+  severity_override: Record<string, (typeof OVERRIDES)[number]>;
+};
+
+const configOf = (data: PackChecks): Config => ({
   disabled_categories: [...data.config.disabled_categories],
   disabled: [...data.config.disabled],
   severity_override: Object.fromEntries(
@@ -52,8 +57,8 @@ export const PackChecksConfigForm = ({
   const { t, i18n } = useTranslation("packStudio");
   const versionRef = useMemo(() => versionRefOf(path), [path]);
   const ref = versionRef ?? { pack: "", template: "", version: "" };
-  const query = usePackChecks(workspaceId, versionRef);
-  const patch = usePatchPackChecks(workspaceId, ref);
+  const query = usePackChecksForm(workspaceId, versionRef);
+  const patch = usePatchPackChecksForm(workspaceId, ref);
   const [error, setError] = useState<unknown>(null);
 
   if (versionRef === null) return null;
@@ -75,7 +80,7 @@ export const PackChecksConfigForm = ({
   const data = query.data;
   const config = configOf(data);
   const disabled = data.config.read_only !== null || patch.isPending;
-  const save = (next: Required<PackChecksConfigRequest>) => {
+  const save = (next: Config) => {
     patch.mutate(
       { kind: "config", body: next, etag: data.config.etag },
       {
@@ -96,7 +101,9 @@ export const PackChecksConfigForm = ({
     ...new Set([...categoriesOf(data), ...config.disabled_categories]),
   ];
   const known = new Set(
-    data.files.flatMap((f) => f.rules.flatMap((r) => (r.entry ? [r.entry.id] : []))),
+    data.files.flatMap((f) =>
+      f.rules.flatMap((r) => (r.entry ? [r.entry.id] : [])),
+    ),
   );
   const orphans = [
     ...config.disabled,

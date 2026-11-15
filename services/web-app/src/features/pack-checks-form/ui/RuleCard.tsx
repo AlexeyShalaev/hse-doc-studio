@@ -59,7 +59,8 @@ const ParamsEditor = ({
   const typed = typedCheck(draft.rule.engine, draft.params);
   const [texts, setTexts] = useState<Record<string, string>>({});
   if (draft.rule.engine === "structural") {
-    const check = typeof draft.params.check === "string" ? draft.params.check : "";
+    const check =
+      typeof draft.params.check === "string" ? draft.params.check : "";
     const fields = typed ? (STRUCTURAL_FIELDS[typed] ?? []) : [];
     return (
       <div className="pcf-params" data-testid={`rule-${String(index)}-params`}>
@@ -88,7 +89,8 @@ const ParamsEditor = ({
         </div>
         {fields.map((f) => {
           const key = f.path.join(".");
-          const shown = texts[key] ?? fieldText(getAt(draft.params, f.path), f.kind);
+          const shown =
+            texts[key] ?? fieldText(getAt(draft.params, f.path), f.kind);
           const value = fieldValue(shown, f.kind);
           return (
             <Input
@@ -97,13 +99,18 @@ const ParamsEditor = ({
               value={shown}
               isMono
               disabled={ctx.disabled}
-              error={value === null ? t("checksForm.param.notNumber") : undefined}
+              {...(value === null
+                ? { error: t("checksForm.param.notNumber") }
+                : {})}
               onChange={(e) => {
                 const text = e.target.value;
                 setTexts({ ...texts, [key]: text });
                 const parsed = fieldValue(text, f.kind);
                 if (parsed !== null) {
-                  onChange({ ...draft, params: setAt(draft.params, f.path, parsed) });
+                  onChange({
+                    ...draft,
+                    params: setAt(draft.params, f.path, parsed),
+                  });
                 }
               }}
               data-testid={`rule-${String(index)}-param-${key}`}
@@ -174,7 +181,8 @@ export const RuleCard = ({
   const initial = draftOf(rule, paramsYaml);
   const dirty = JSON.stringify(draft) !== JSON.stringify(initial);
   const yamlMode = draft.rule.engine !== "structural";
-  const all = draft.rule.applies_to === null || draft.rule.applies_to === undefined;
+  const all =
+    draft.rule.applies_to === null || draft.rule.applies_to === undefined;
   const applies = draft.rule.applies_to ?? [];
   const setRule = (patch: Partial<PackCheckRule>) => {
     setDraft({ ...draft, rule: { ...draft.rule, ...patch } });
@@ -200,7 +208,9 @@ export const RuleCard = ({
           </span>
           {checked && (
             <span
-              className={errors > 0 ? "ps-mark ps-mark-warn" : "ps-mark ps-mark-ok"}
+              className={
+                errors > 0 ? "ps-mark ps-mark-warn" : "ps-mark ps-mark-ok"
+              }
               data-testid={`rule-${String(index)}-result`}
             >
               {errors > 0
@@ -211,7 +221,10 @@ export const RuleCard = ({
         </summary>
         <div className="pcf-rule-body">
           {(findings ?? []).length > 0 && (
-            <ul className="pcf-findings" data-testid={`rule-${String(index)}-findings`}>
+            <ul
+              className="pcf-findings"
+              data-testid={`rule-${String(index)}-findings`}
+            >
               {(findings ?? []).map((f, i) => (
                 <li key={`${String(i)}:${f.message}`}>
                   <span className={`ps-mark pcf-sev-${f.severity}`}>
@@ -232,11 +245,9 @@ export const RuleCard = ({
           )}
           <Input
             label={t("checksForm.rule.id")}
-            hint={
-              draft.rule.id.startsWith(`${prefix}/`)
-                ? undefined
-                : t("checksForm.rule.prefixHint", { prefix })
-            }
+            {...(draft.rule.id.startsWith(`${prefix}/`)
+              ? {}
+              : { hint: t("checksForm.rule.prefixHint", { prefix }) })}
             value={draft.rule.id}
             isMono
             disabled={ctx.disabled}
@@ -277,7 +288,8 @@ export const RuleCard = ({
                 value={draft.rule.default_severity}
                 onValueChange={(value) => {
                   setRule({
-                    default_severity: value as PackCheckRule["default_severity"],
+                    default_severity:
+                      value as PackCheckRule["default_severity"],
                   });
                 }}
                 isDisabled={ctx.disabled}

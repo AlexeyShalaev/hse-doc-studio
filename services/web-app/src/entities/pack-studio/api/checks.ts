@@ -68,7 +68,13 @@ export const PackChecksSchema = z.strictObject({
 });
 
 export const PackChecksOpSchema = z.strictObject({
-  op: z.enum(["set_header", "add_rule", "set_rule", "remove_rule", "move_rule"]),
+  op: z.enum([
+    "set_header",
+    "add_rule",
+    "set_rule",
+    "remove_rule",
+    "move_rule",
+  ]),
   header: PackChecksHeaderSchema.nullish(),
   index: z.number().int().min(0).nullish(),
   to: z.number().int().min(0).nullish(),
@@ -110,9 +116,7 @@ const ifMatch = (etag: string | null) =>
 
 export const packChecksApi = {
   get: (id: string, ref: PackVersionRef): Promise<PackChecks> =>
-    apiClient
-      .get(checksPath(id, ref), quiet)
-      .then(parseResp(PackChecksSchema)),
+    apiClient.get(checksPath(id, ref), quiet).then(parseResp(PackChecksSchema)),
   /** Правки файла правил с `If-Match` по его ETag: весь набор или ничего. */
   patchFile: (
     id: string,
@@ -156,7 +160,7 @@ export const packChecksKeys = {
 const EMPTY_REF: PackVersionRef = { pack: "", template: "", version: "" };
 
 /** Файлы правил и `checks_version` версии (срез T14). */
-export const usePackChecks = (id: string, ref: PackVersionRef | null) =>
+export const usePackChecksForm = (id: string, ref: PackVersionRef | null) =>
   useQuery({
     queryKey: packChecksKeys.of(id, ref ?? EMPTY_REF),
     queryFn: () => packChecksApi.get(id, ref ?? EMPTY_REF),
@@ -173,15 +177,21 @@ type ChecksEdit =
   | { kind: "config"; body: PackChecksConfigRequest; etag: string | null };
 
 /** Правка проверок: ответ сразу ложится в кэш, записанный файл и git помечаются устаревшими. */
-export const usePatchPackChecks = (id: string, ref: PackVersionRef) => {
+export const usePatchPackChecksForm = (id: string, ref: PackVersionRef) => {
   const client = useQueryClient();
   return useMutation({
+    // Та же очередь, что у правок формы версии (T11): записи манифестов идут по одной.
+    scope: { id: `pack-model:${id}` },
     mutationFn: (edit: ChecksEdit) =>
       edit.kind === "file"
         ? packChecksApi.patchFile(id, ref, edit.name, edit.body, edit.etag)
         : packChecksApi.putConfig(id, ref, edit.body, edit.etag),
     onSuccess: (data, edit) => {
       client.setQueryData(packChecksKeys.of(id, ref), data);
+      // Модель общей формы версии берёт новый ETag манифеста и список файлов правил.
+      void client.invalidateQueries({
+        queryKey: packStudioKeys.model(id, ref),
+      });
       const path =
         edit.kind === "file"
           ? data.files.find((f) => f.name === edit.name)?.path

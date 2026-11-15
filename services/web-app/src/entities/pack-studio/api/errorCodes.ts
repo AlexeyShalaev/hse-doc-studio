@@ -55,6 +55,7 @@ export const PACK_STUDIO_ERROR_CODES = [
   "license_consent_required",
   "paths_outside_packs",
   "place_invalid",
+  "model_invalid",
   "submission_invalid",
   "checks_invalid",
 ] as const;

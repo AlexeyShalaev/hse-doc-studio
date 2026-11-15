@@ -243,3 +243,14 @@ export const findingTarget = (
   }
   return { path: clean, line: null };
 };
+
+/** Какая форма поверх YAML есть у файла (template-studio.md, 5.0): манифест версии, файл правил (T14). */
+export type PackFormKind = "version" | "checks";
+
+export const packFormKind = (path: string): PackFormKind | null => {
+  const dir = versionDirOf(path);
+  if (dir === null) return null;
+  const rest = path.slice(dir.length + 1);
+  if (rest === "version.yaml") return "version";
+  return /^checks\/[^/]+\.yaml$/.test(rest) ? "checks" : null;
+};

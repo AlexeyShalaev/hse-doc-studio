@@ -861,3 +861,112 @@ class PackSignaturesPatchRequest(StrictModel):
     # Сборка, по якорям которой автор видит рамки: место на якоре двигается относительно её линии.
     build_id: UUID | None = None
     ops: list[PackPlaceOp] = Field(min_length=1, max_length=50)
+
+
+# ── Срезы T11 и T12: формы версии (модель, точечные правки манифестов, операции) ──
+
+ModelActionName = Literal["rename_field", "add_document", "remove_document", "add_translation"]
+
+
+class PackModelFile(StrictModel):
+    """Манифест версии или документа: путь от папки паков, ETag и данные `safe_load` (даты строкой ISO)."""
+
+    path: str
+    etag: str
+    data: Any
+
+
+class PackDocFile(StrictModel):
+    """Файл папки документа: путь от `files/` версии, путь без языкового кода и код ("" у файла для всех языков)."""
+
+    path: str
+    bare: str
+    lang: str
+    size: int
+
+
+class PackModelDocument(StrictModel):
+    id: str
+    # `files/<id>/doc.yaml`; None у записи v1 прямо в ростере (её данные в `data`) и у папки без манифеста.
+    manifest: PackModelFile | None
+    data: Any
+    files: list[PackDocFile]
+    # Где манифест версии называет документ (слоты подписей, места, профили сдачи).
+    references: list[str]
+
+
+class PackFieldUsage(StrictModel):
+    """Поле печатается в документе: через макросы `\\hse...` динамических инклудов или прямо из исходника."""
+
+    field: str
+    document: str
+    macros: list[str]
+    direct: bool
+    # Поле действует на весь документ (строка инклуда вне макросов, например шрифт).
+    whole: bool
+
+
+class PackVersionModelResponse(StrictModel):
+    workspace_id: str
+    pack: str
+    template: str
+    version: str
+    read_only: ReadOnlyReason | None
+    manifest: PackModelFile
+    documents: list[PackModelDocument]
+    usage: list[PackFieldUsage]
+    # Файлы проверок версии без `.yaml` (`gost_ref` документа).
+    checks: list[str]
+    # Находки лоадера и схемы по манифестам версии сейчас.
+    problems: list[str]
+    # Файлы, которые записала или удалила эта правка (от папки паков); у чтения пусто.
+    changed: list[str]
+
+
+class PackModelPatchRequest(StrictModel):
+    # Манифест от каталога версии: `version.yaml` или `files/<id>/doc.yaml`; `If-Match` по его ETag.
+    file: str = Field(min_length=1, max_length=300)
+    ops: list[PackYamlOp] = Field(min_length=1, max_length=50)
+
+
+class PackModelActionRequest(StrictModel):
+    """Операция на несколько файлов; `If-Match` по ETag `version.yaml`."""
+
+    action: ModelActionName
+    field: str | None = Field(default=None, max_length=64)
+    to: str | None = Field(default=None, max_length=64)
+    document: str | None = Field(default=None, max_length=64)
+    name: dict[str, str] | None = None
+    # add_document: папка заготовки от папки паков.
+    source: str | None = Field(default=None, max_length=512)
+    lang: str | None = Field(default=None, max_length=8)
+    # add_translation: пути без языкового кода от `files/` (пусто: все файлы с редакцией языка по умолчанию).
+    files: list[str] = Field(default_factory=list, max_length=200)
+
+    @model_validator(mode="after")
+    def _fields(self) -> PackModelActionRequest:
+        needed = {
+            "rename_field": ("field", "to"),
+            "add_document": ("document",),
+            "remove_document": ("document",),
+            "add_translation": ("document", "lang"),
+        }[self.action]
+        missing = [name for name in needed if not getattr(self, name)]
+        if missing:
+            raise ValueError(f"{self.action} needs {', '.join(missing)}")
+        return self
+
+
+class PackDocLibraryItem(StrictModel):
+    """Документ-заготовка: последняя версия шаблона пространства."""
+
+    path: str
+    pack: str
+    template: str
+    version: str
+    id: str
+    name: dict[str, str]
+
+
+class PackDocLibraryResponse(StrictModel):
+    documents: list[PackDocLibraryItem]

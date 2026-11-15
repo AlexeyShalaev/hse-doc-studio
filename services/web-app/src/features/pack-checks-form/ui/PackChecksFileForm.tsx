@@ -3,16 +3,19 @@ import { Plus, Save, Undo2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   packErrorText,
-  usePackChecks,
+  usePackChecksForm,
   usePackPreviewOptions,
-  usePatchPackChecks,
+  usePatchPackChecksForm,
   versionRefOf,
   type PackChecksFile,
   type PackChecksHeader,
   type PackChecksOp,
   type PackPreviewBuild,
 } from "@entities/pack-studio";
-import { BlockHead, LocalizedFields } from "@features/pack-submission-form/ui/kit";
+import {
+  BlockHead,
+  LocalizedFields,
+} from "@features/pack-submission-form/ui/kit";
 import { ApiError } from "@shared/api";
 import { pickLocalized } from "@shared/lib";
 import { Button, ErrorState, Input, Select, Spinner } from "@shared/ui";
@@ -145,7 +148,7 @@ const NewRule = ({
       <BlockHead title={t("checksForm.newRule.title")} />
       <Input
         label={t("checksForm.rule.id")}
-        hint={clash ? t("checksForm.newRule.taken") : undefined}
+        {...(clash ? { hint: t("checksForm.newRule.taken") } : {})}
         value={id}
         isMono
         disabled={disabled}
@@ -211,8 +214,8 @@ export const PackChecksFileForm = ({
   const versionRef = useMemo(() => versionRefOf(path), [path]);
   const ref = versionRef ?? { pack: "", template: "", version: "" };
   const name = path.split("/").pop() ?? "";
-  const query = usePackChecks(workspaceId, versionRef);
-  const patch = usePatchPackChecks(workspaceId, ref);
+  const query = usePackChecksForm(workspaceId, versionRef);
+  const patch = usePatchPackChecksForm(workspaceId, ref);
   const options = usePackPreviewOptions(workspaceId, ref);
   const [error, setError] = useState<unknown>(null);
   const [build, setBuild] = useState<PackPreviewBuild | null>(null);
@@ -304,7 +307,9 @@ export const PackChecksFileForm = ({
             <span data-testid="checks-error">
               {stale ? t("submission.stale") : packErrorText(error)}
               {reasonOf(error) && (
-                <span className="ps-preview-detail mono">{reasonOf(error)}</span>
+                <span className="ps-preview-detail mono">
+                  {reasonOf(error)}
+                </span>
               )}
             </span>
           }
@@ -377,7 +382,8 @@ export const PackChecksFileForm = ({
                   applies_to: null,
                   default_severity: "warn",
                   engine,
-                  params: engine === "structural" ? { check: "page_geometry" } : {},
+                  params:
+                    engine === "structural" ? { check: "page_geometry" } : {},
                 },
               },
             ]);

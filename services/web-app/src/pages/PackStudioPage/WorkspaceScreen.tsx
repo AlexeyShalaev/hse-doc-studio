@@ -15,6 +15,7 @@ import {
   findVersion,
   findingTarget,
   packErrorText,
+  packFormKind,
   packStudioKeys,
   usePackTree,
   usePackWorkspace,
@@ -48,13 +49,14 @@ import {
   Spinner,
   type RevealRequest,
 } from "@shared/ui";
+import { loadPackFormsNamespace } from "@shared/lib/i18n/packFormsNamespace";
 import { Notice } from "@shared/ui/ConflictKit";
 
-// Форма точек сдачи (срез T13): свой чанк, грузится, когда открывают вкладку «Форма».
-const PackSubmissionForm = lazy(() =>
-  import("@features/pack-submission-form").then((m) => ({
-    default: m.PackSubmissionForm,
-  })),
+// Формы манифестов (срезы T11 и дальше): свой чанк, грузится с первой открытой формой.
+const PackFormPane = lazy(() =>
+  Promise.all([import("@features/pack-forms"), loadPackFormsNamespace()]).then(
+    ([m]) => ({ default: m.PackFormPane }),
+  ),
 );
 
 // «Подключить к каталогу этой Студии»: окно и сущность каталога грузятся по первому нажатию.
@@ -149,12 +151,6 @@ const NotReady = ({ workspace }: { workspace: PackWorkspace }) => {
 
 type PendingOpen = { path: string; line: number | null };
 
-/** Манифест версии шаблона (`.../versions/<v>/version.yaml`): у него есть форма. */
-const isVersionManifest = (path: string): boolean => {
-  const dir = versionDirOf(path);
-  return dir !== null && path === `${dir}/version.yaml`;
-};
-
 /**
  * Рабочее пространство: дерево слева, редактор файла по центру, «Проблемы» и
  * предпросмотр справа. Открытый файл живёт в адресе (`?file=`): ссылку можно
@@ -244,7 +240,7 @@ export const WorkspaceScreen = () => {
     [file, go],
   );
 
-  // Места подписей или форма записали манифест: открытый он же без правок открывается заново (после свежего
+  // Места подписей записали манифест: открытый он же без правок открывается заново (после свежего
   // чтения файла), с правками его запись упрётся в «файл изменился» и покажет, что делать. Сам
   // редактор с предпросмотром не пересоздаётся: окно мест остаётся открытым.
   const [contentRevision, setContentRevision] = useState(0);
@@ -260,6 +256,17 @@ export const WorkspaceScreen = () => {
     },
     [client, file, workspaceId],
   );
+
+  // Форма записала файлы версии: как сохранение в редакторе, плюс места подписей и класс версии.
+  const onFormSaved = useCallback(() => {
+    setEpoch((n) => n + 1);
+    void client.invalidateQueries({
+      queryKey: packStudioKeys.git(workspaceId),
+    });
+    void client.invalidateQueries({
+      queryKey: packStudioKeys.signaturesAll(workspaceId),
+    });
+  }, [client, workspaceId]);
 
   const onFilesChanged = useCallback(() => {
     dirtyRef.current = false;
@@ -435,8 +442,7 @@ export const WorkspaceScreen = () => {
                   problemsFocus={problemsFocus}
                   contentRevision={contentRevision}
                   form={
-                    isVersionManifest(file) ? (
-                      // Формы манифеста версии (5.5-5.8, срез T13): точки сдачи и порядок маршрута.
+                    packFormKind(file) ? (
                       <Suspense
                         fallback={
                           <div
@@ -447,11 +453,10 @@ export const WorkspaceScreen = () => {
                           </div>
                         }
                       >
-                        <PackSubmissionForm
+                        <PackFormPane
                           workspaceId={ws.id}
                           path={file}
-                          lintEpoch={epoch + placesSaves}
-                          onSaved={onPlacesSaved}
+                          onSaved={onFormSaved}
                         />
                       </Suspense>
                     ) : undefined

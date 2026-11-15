@@ -71,8 +71,7 @@ export const CheckOnPreview = ({
       documentFits(doc, combination),
   );
   const chosen = docs.find((doc) => doc.id === document) ?? docs[0];
-  const running =
-    current?.status === "queued" || current?.status === "running";
+  const running = current?.status === "queued" || current?.status === "running";
   const findings = build?.checks?.length ?? 0;
 
   return (

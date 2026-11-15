@@ -1,0 +1,11 @@
+{
+  "file": "version.yaml",
+  "ops": [
+    {
+      "op": "set",
+      "path": ["meta_fields", "year", "label"],
+      "value": { "ru": "Учебный год (год защиты)", "en": "Academic year (defence year)" }
+    },
+    { "op": "move", "path": ["meta_groups"], "index": 1, "to": 0 }
+  ]
+}

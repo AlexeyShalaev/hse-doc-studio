@@ -159,6 +159,9 @@ export default defineConfig(({ mode }) => {
             if (id.endsWith("/src/features/pack-submission-form/index.ts")) {
               return "assets/pack-submission-form-[hash].js";
             }
+            if (id.endsWith("/src/features/pack-checks-form/index.ts")) {
+              return "assets/pack-checks-form-[hash].js";
+            }
             // locale-admin-<имя>-<язык>: по имени словаря бюджеты size-limit
             // (.size-limit.json) держат каждый раздел отдельно.
             const locale =
@@ -183,6 +186,12 @@ export default defineConfig(({ mode }) => {
               /\/locales\/([a-z]{2})\/packStudio\/packStudio\.json$/.exec(id);
             if (packStudio) {
               return `assets/locale-packStudio-${packStudio[1] ?? ""}-[hash].js`;
+            }
+            // Словарь форм Студии шаблонов: грузится вместе с чанком форм.
+            const packForms =
+              /\/locales\/([a-z]{2})\/packForms\/packForms\.json$/.exec(id);
+            if (packForms) {
+              return `assets/locale-packForms-${packForms[1] ?? ""}-[hash].js`;
             }
             // Тексты редких окон страницы подписанта: грузятся, когда окно открывают.
             const signingRare =
