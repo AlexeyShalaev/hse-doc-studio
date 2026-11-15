@@ -45,6 +45,7 @@ from hse_doc_studio.core.pack_studio.preview import (
     VersionDescription,
 )
 from hse_doc_studio.core.pack_studio.protection import Protection
+from hse_doc_studio.core.pack_studio.submission import SubmissionOp, VersionSubmission
 from hse_doc_studio.core.pack_studio.versions import (
     BaseRegistry,
     CreatedVersion,
@@ -255,6 +256,18 @@ class IPackPlaces(Protocol):
     def apply(
         self, text: str, ops: Sequence[PlaceOp], *, document: str | None, anchors: BuildAnchors | None
     ) -> str: ...
+
+
+class IPackSubmission(Protocol):
+    """Профили сдачи и порядок маршрута в `version.yaml` (срез T13): модель и правки точечными правками YAML.
+
+    Невыполнимая правка или правка, после которой лоадер или схема не поймут профиль, это `SubmissionEditError`;
+    нечитаемый манифест это `ValueError`.
+    """
+
+    def describe(self, text: str) -> VersionSubmission: ...
+
+    def apply(self, text: str, ops: Sequence[SubmissionOp]) -> str: ...
 
 
 class IPackInspector(Protocol):

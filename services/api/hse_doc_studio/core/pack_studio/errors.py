@@ -75,6 +75,8 @@ class PackStudioErrorCode(StrEnum):
     paths_outside_packs = "paths_outside_packs"
     # Срез T9: места подписей и метки даты на PDF предпросмотра
     place_invalid = "place_invalid"
+    # Срез T13: формы профилей сдачи и порядка маршрута
+    submission_invalid = "submission_invalid"
 
 
 _C = PackStudioErrorCode
@@ -284,6 +286,11 @@ _TABLE: dict[PackStudioErrorCode, tuple[int, str, str]] = {
         400,
         "Место подписи нельзя записать: рамка за краем листа или слот не относится к документу.",
         "The signature place cannot be written: the box is off the page or the slot does not apply to the document.",
+    ),
+    _C.submission_invalid: (
+        400,
+        "Правку точки сдачи нельзя записать: шаблон её не поймёт. Причина ниже.",
+        "The checkpoint change cannot be written: the template would not understand it. The reason is below.",
     ),
 }
 

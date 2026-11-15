@@ -67,7 +67,15 @@ export type PackFileEditorProps = {
    * заново, а вкладка предпросмотра рядом остаётся как была.
    */
   contentRevision?: number | undefined;
+  /**
+   * Форма поверх манифеста (template-studio.md, 5.0; срезы T11-T14): вкладка «Форма» рядом с
+   * «Исходником». Без неё вкладка выключена. Форма пишет файл сама, редактор кода остаётся
+   * открытым под ней со своими несохранёнными правками.
+   */
+  form?: ReactNode;
 };
+
+type MainView = "source" | "form";
 
 type SidePane = "problems" | "preview";
 
@@ -336,6 +344,7 @@ export const PackFileEditor = ({
   onDismissGate,
   problemsFocus,
   contentRevision = 0,
+  form,
 }: PackFileEditorProps) => {
   const { t } = useTranslation("packStudio");
   const phone = useIsPhoneWidth();
@@ -347,6 +356,8 @@ export const PackFileEditor = ({
   // Подсказки автодополнения: редактор читает их из кэша запросов.
   usePackHints(workspaceId, versionDir);
   const [pane, setPane] = useState<SidePane>("problems");
+  const [view, setView] = useState<MainView>("source");
+  const showForm = view === "form" && form !== undefined && form !== null;
   // Пришли находки перед отправкой: «Проблемы» выходят вперёд (состояние от пропа без эффекта).
   const [seenFocus, setSeenFocus] = useState(problemsFocus);
   if (problemsFocus !== seenFocus) {
@@ -413,25 +424,44 @@ export const PackFileEditor = ({
             <button
               type="button"
               role="tab"
-              aria-selected
-              className="ps-view-tab active"
+              aria-selected={!showForm}
+              className={clsx("ps-view-tab", !showForm && "active")}
+              onClick={() => {
+                setView("source");
+              }}
+              data-testid="view-tab-source"
             >
               {t("editor.source")}
             </button>
-            {/* Формы поверх YAML: срезы T11–T14. */}
+            {/* Формы поверх YAML: срезы T11-T14; манифест без своей формы её не получает. */}
             <button
               type="button"
               role="tab"
-              aria-selected={false}
-              className="ps-view-tab"
-              disabled
-              title={t("editor.formSoon")}
+              aria-selected={showForm}
+              className={clsx("ps-view-tab", showForm && "active")}
+              disabled={form === undefined || form === null}
+              title={
+                form === undefined || form === null
+                  ? t("editor.formSoon")
+                  : undefined
+              }
+              onClick={() => {
+                setView("form");
+              }}
+              data-testid="view-tab-form"
             >
               {t("editor.form")}
             </button>
           </div>
         )}
-        {main}
+        {showForm && <div className="ps-editor-form">{form}</div>}
+        <div
+          className="ps-editor-source"
+          hidden={showForm}
+          data-testid="view-source"
+        >
+          {main}
+        </div>
       </div>
       <aside className="ps-side" aria-label={t("problems.title")}>
         <div className="ps-view-tabs" role="tablist">

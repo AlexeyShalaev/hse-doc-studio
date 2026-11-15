@@ -22,7 +22,6 @@ import {
   versionRefOf,
   type PackPreviewBuild,
   type PackPreviewOptions,
-  type PackPreviewSwitch,
   type PackVersionRef,
 } from "@entities/pack-studio";
 import { ApiError } from "@shared/api";
@@ -43,6 +42,8 @@ import {
   exampleOf,
   type Combination,
 } from "../lib/combination";
+import { selectionKey, usePreviewSelection } from "../lib/selection";
+import { useSwitchText } from "../lib/switchText";
 
 /** Что нужно вкладке «Места подписей» (срез T9): удачная сборка документа версии. */
 export type PackPlacesSlot = {
@@ -68,46 +69,6 @@ export type PackPreviewPaneProps = {
 };
 
 type BuildViewMode = "pdf" | "places";
-
-const KNOWN_SWITCHES = new Set([
-  "lang",
-  "kind",
-  "staffing",
-  "supervisor",
-  "co_supervisor",
-  "academic_supervisor",
-  "nda",
-]);
-
-const KNOWN_VALUES = new Set([
-  "solo",
-  "team2",
-  "team3",
-  "university",
-  "company",
-  "none",
-  "yes",
-  "no",
-]);
-
-/** Подпись переключателя: своя у поля анкеты, иначе из словаря. */
-const useSwitchText = () => {
-  const { t, i18n } = useTranslation("packStudio");
-  return {
-    label: (sw: PackPreviewSwitch): string =>
-      sw.label
-        ? pickLocalized(sw.label, i18n.language, sw.id)
-        : KNOWN_SWITCHES.has(sw.id)
-          ? t(`preview.switch.${sw.id}`)
-          : sw.id.replace(/^meta\./, ""),
-    value: (sw: PackPreviewSwitch, value: string): string =>
-      sw.id === "lang"
-        ? value.toUpperCase()
-        : sw.id !== "kind" && KNOWN_VALUES.has(value)
-          ? t(`preview.value.${value}`)
-          : value,
-  };
-};
 
 /** Текст неудачной сборки: свой для кодов предпросмотра, затем общий словарь ошибок. */
 const useBuildErrorText = () => {
@@ -433,8 +394,13 @@ const PreviewForVersion = ({
   const [mode, setMode] = useState<BuildViewMode>("pdf");
   const options = usePackPreviewOptions(workspaceId, versionRef);
   const start = useStartPackPreview(workspaceId);
-  const [example, setExample] = useState<string | null>(null);
-  const [overrides, setOverrides] = useState<Combination>({});
+  // Набор и переключатели общие с «Маршрутом в этой комбинации» формы точек (срез T13).
+  const {
+    selection: { example, overrides },
+    setExample,
+    setSwitch,
+    reset,
+  } = usePreviewSelection(selectionKey(workspaceId, versionRef));
   const [document, setDocument] = useState<string | null>(null);
   const [buildId, setBuildId] = useState<string | null>(null);
   const [builtAt, setBuiltAt] = useState(revision);
@@ -560,9 +526,7 @@ const PreviewForVersion = ({
           setExample(id);
         }}
         combination={combination}
-        onSwitch={(id, value) => {
-          setOverrides((prev) => ({ ...prev, [id]: value }));
-        }}
+        onSwitch={setSwitch}
         document={documentId}
         onDocument={setDocument}
       />
@@ -577,13 +541,7 @@ const PreviewForVersion = ({
           {build.data ? t("preview.rebuild") : t("preview.build")}
         </Button>
         {Object.keys(overrides).length > 0 && (
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => {
-              setOverrides({});
-            }}
-          >
+          <Button size="sm" variant="ghost" onClick={reset}>
             <CircleX size="0.75rem" />
             {t("preview.resetSwitches")}
           </Button>

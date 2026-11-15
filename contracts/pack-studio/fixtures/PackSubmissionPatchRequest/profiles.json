@@ -1,0 +1,24 @@
+{
+  "ops": [
+    {
+      "op": "add_profile",
+      "head": {
+        "id": "pre-defence",
+        "name": { "ru": "Предзащита КП", "en": "Course project pre-defence" },
+        "description": { "ru": "Готовность не менее 80 %.", "en": "At least 80% ready." }
+      }
+    },
+    {
+      "op": "set_profile",
+      "profile": 1,
+      "head": {
+        "id": "final",
+        "name": { "ru": "Защита КП", "en": "Course project defence" },
+        "description": {},
+        "deadline_hint": { "ru": "Обычно в июне", "en": "Usually in June" }
+      }
+    },
+    { "op": "move_profile", "profile": 2, "to": 1 },
+    { "op": "remove_profile", "profile": 0 }
+  ]
+}

@@ -234,6 +234,12 @@
     "limit": "28 kB"
   },
   {
+    "name": "Студия шаблонов, форма точек сдачи (lazy, features/pack-submission-form)",
+    "path": "dist/assets/pack-submission-form-*.js",
+    "gzip": true,
+    "limit": "9.2 kB"
+  },
+  {
     "name": "Админка, «Студия шаблонов» (lazy, features/pack-studio-admin)",
     "path": "dist/assets/pack-studio-admin-*.js",
     "gzip": true,
@@ -255,6 +261,6 @@
     "name": "Словарь Студии шаблонов (ru и en)",
     "path": "dist/assets/locale-packStudio-*.js",
     "gzip": true,
-    "limit": "20.2 kB"
+    "limit": "23.6 kB"
   }
 ]

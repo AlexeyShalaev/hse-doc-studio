@@ -1,0 +1,5 @@
+{
+  "detail": "Правку точки сдачи нельзя записать: шаблон её не поймёт. Причина ниже.",
+  "code": "submission_invalid",
+  "reason": "profile final: deadline_hint.ru names a concrete date: deadlines change every year"
+}

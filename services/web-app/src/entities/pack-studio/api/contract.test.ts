@@ -54,6 +54,12 @@ import {
   UpdatePackStudioAdminRequestSchema,
   UpdatePackStudioSectionRequestSchema,
 } from "./schemas";
+import {
+  PackSubmissionPatchRequestSchema,
+  PackSubmissionRoutesRequestSchema,
+  PackSubmissionRoutesSchema,
+  PackSubmissionSchema,
+} from "./submission";
 
 // Контракт Студии шаблонов: те же эталоны из contracts/pack-studio разбирает и
 // бэкенд-тест (tests/unit/contract/test_pack_studio_contract.py).
@@ -123,6 +129,11 @@ const SCHEMAS: Record<string, ZodType> = {
   PackStudioOfficialAdmin: PackStudioOfficialAdminSchema,
   PackSignatures: PackSignaturesSchema,
   PackSignaturesPatchRequest: PackSignaturesPatchRequestSchema,
+  // Срез T13: профили сдачи, пункты и порядок маршрута формой
+  PackSubmission: PackSubmissionSchema,
+  PackSubmissionPatchRequest: PackSubmissionPatchRequestSchema,
+  PackSubmissionRoutesRequest: PackSubmissionRoutesRequestSchema,
+  PackSubmissionRoutes: PackSubmissionRoutesSchema,
 };
 
 const readJson = (path: string): unknown =>

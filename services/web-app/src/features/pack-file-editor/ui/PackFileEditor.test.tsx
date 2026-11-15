@@ -1,5 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -228,6 +234,28 @@ describe("редактор файла пака", () => {
     expect(packStudioApi.lint).not.toHaveBeenCalled();
     await userEvent.click(screen.getByTestId("side-tab-preview"));
     expect(screen.getByTestId("preview-placeholder")).toBeInTheDocument();
+  });
+
+  it("вкладка «Форма»: выключена без формы, с формой показывает её, а буфер «Исходника» остаётся", async () => {
+    stub();
+    mount();
+    await screen.findByTestId("code");
+    expect(screen.getByTestId("view-tab-form")).toBeDisabled();
+    cleanup();
+
+    stub();
+    mount({ form: <div data-testid="the-form">форма</div> });
+    const code = await screen.findByTestId("code");
+    await userEvent.type(code, "x");
+    await userEvent.click(screen.getByTestId("view-tab-form"));
+
+    expect(screen.getByTestId("the-form")).toBeInTheDocument();
+    expect(screen.getByTestId("view-source")).not.toBeVisible();
+    await userEvent.click(screen.getByTestId("view-tab-source"));
+    expect(screen.queryByTestId("the-form")).not.toBeInTheDocument();
+    expect(screen.getByTestId<HTMLTextAreaElement>("code").value).toContain(
+      "x",
+    );
   });
 
   it("находки проверки перед отправкой сверху «Проблем»: переход к файлу и строке, скрытие", async () => {

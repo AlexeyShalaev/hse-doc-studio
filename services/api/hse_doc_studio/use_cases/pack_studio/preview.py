@@ -242,6 +242,27 @@ class PackPreviewService:
             builds.append(self._active.get(planned.build.id) or await self._stored(planned.build))
         return builds
 
+    async def synthetic(  # noqa: PLR0913 — путь версии, набор и комбинация
+        self,
+        actor: Actor,
+        workspace_id: UUID,
+        pack: str,
+        template: str,
+        version: str,
+        example: str | None,
+        combination: Mapping[str, str] | None,
+    ) -> tuple[VersionDescription, PreviewExample, dict[str, str], SyntheticProject]:
+        """Модель версии (тот же разбор в отдельном процессе и кэш, что у сборки) и синтетический проект комбинации:
+        «Маршрут в этой комбинации» (срез T13) считается на нём без сборки."""
+        _ws, root = await self._workspaces.ready(actor, workspace_id)
+        ref = version_ref(pack, template, version)
+        desc = await self._description(root, ref, (await self._renderer.inputs(root, ref)).tree)
+        try:
+            chosen, combo, project = self._project(desc, StartPreviewInput((), example, combination))
+        except PreviewInputError as exc:
+            raise _invalid(exc) from exc
+        return desc, chosen, combo, project
+
     async def wait_launched(self) -> None:
         """Дожидается фоновых рендеров и постановок (тесты и остановка приложения)."""
         while self._launches:

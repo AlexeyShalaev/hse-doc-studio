@@ -155,6 +155,10 @@ export default defineConfig(({ mode }) => {
             if (id.endsWith("/src/pages/PackStudioPage/index.ts")) {
               return "assets/pack-studio-app-[hash].js";
             }
+            // Формы манифестов Студии шаблонов (срезы T11-T14): грузятся вкладкой «Форма».
+            if (id.endsWith("/src/features/pack-submission-form/index.ts")) {
+              return "assets/pack-submission-form-[hash].js";
+            }
             // locale-admin-<имя>-<язык>: по имени словаря бюджеты size-limit
             // (.size-limit.json) держат каждый раздел отдельно.
             const locale =

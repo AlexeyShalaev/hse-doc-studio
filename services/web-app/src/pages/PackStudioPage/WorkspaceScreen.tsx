@@ -50,6 +50,13 @@ import {
 } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 
+// Форма точек сдачи (срез T13): свой чанк, грузится, когда открывают вкладку «Форма».
+const PackSubmissionForm = lazy(() =>
+  import("@features/pack-submission-form").then((m) => ({
+    default: m.PackSubmissionForm,
+  })),
+);
+
 // «Подключить к каталогу этой Студии»: окно и сущность каталога грузятся по первому нажатию.
 const ConnectCatalogDialog = lazy(() =>
   import("@features/pack-catalog-connect").then((m) => ({
@@ -142,6 +149,12 @@ const NotReady = ({ workspace }: { workspace: PackWorkspace }) => {
 
 type PendingOpen = { path: string; line: number | null };
 
+/** Манифест версии шаблона (`.../versions/<v>/version.yaml`): у него есть форма. */
+const isVersionManifest = (path: string): boolean => {
+  const dir = versionDirOf(path);
+  return dir !== null && path === `${dir}/version.yaml`;
+};
+
 /**
  * Рабочее пространство: дерево слева, редактор файла по центру, «Проблемы» и
  * предпросмотр справа. Открытый файл живёт в адресе (`?file=`): ссылку можно
@@ -231,7 +244,7 @@ export const WorkspaceScreen = () => {
     [file, go],
   );
 
-  // Места подписей записали манифест: открытый он же без правок открывается заново (после свежего
+  // Места подписей или форма записали манифест: открытый он же без правок открывается заново (после свежего
   // чтения файла), с правками его запись упрётся в «файл изменился» и покажет, что делать. Сам
   // редактор с предпросмотром не пересоздаётся: окно мест остаётся открытым.
   const [contentRevision, setContentRevision] = useState(0);
@@ -421,6 +434,28 @@ export const WorkspaceScreen = () => {
                   }}
                   problemsFocus={problemsFocus}
                   contentRevision={contentRevision}
+                  form={
+                    isVersionManifest(file) ? (
+                      // Формы манифеста версии (5.5-5.8, срез T13): точки сдачи и порядок маршрута.
+                      <Suspense
+                        fallback={
+                          <div
+                            className="flex justify-center"
+                            style={{ padding: "2rem" }}
+                          >
+                            <Spinner size="md" />
+                          </div>
+                        }
+                      >
+                        <PackSubmissionForm
+                          workspaceId={ws.id}
+                          path={file}
+                          lintEpoch={epoch + placesSaves}
+                          onSaved={onPlacesSaved}
+                        />
+                      </Suspense>
+                    ) : undefined
+                  }
                   preview={
                     <PackPreviewPane
                       workspaceId={ws.id}
