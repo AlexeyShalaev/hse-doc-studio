@@ -45,6 +45,17 @@ export type TemplateInfoResponse = {
   default_version: string;
 };
 
+/** Откуда пак: вшит в Студию (`builtin`) или подключён в «Каталогах паков» (`subscribed`). */
+export type PackOriginResponse = {
+  kind: string;
+  source_kind?: string | null | undefined;
+  label?: string | null | undefined;
+  url?: string | null | undefined;
+  ref?: string | null | undefined;
+  revision?: string | null | undefined;
+  replaces_builtin?: boolean | undefined;
+};
+
 export type PackResponse = {
   id: string;
   name: LocalizedString;
@@ -54,6 +65,7 @@ export type PackResponse = {
     email: string;
   };
   templates: TemplateInfoResponse[];
+  origin?: PackOriginResponse | undefined;
 };
 
 export type VersionListItemResponse = {

@@ -1,9 +1,10 @@
-import { useCallback, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   FileSearch,
   FolderTree,
+  Library,
   Lock,
   RefreshCw,
 } from "lucide-react";
@@ -37,6 +38,7 @@ import {
   WorkspaceStateBadge,
   workspaceSource,
 } from "@features/pack-workspaces";
+import { useBootstrap } from "@entities/session";
 import { useIsPhoneWidth } from "@shared/lib";
 import {
   Button,
@@ -47,6 +49,13 @@ import {
   type RevealRequest,
 } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
+
+// «Подключить к каталогу этой Студии»: окно и сущность каталога грузятся по первому нажатию.
+const ConnectCatalogDialog = lazy(() =>
+  import("@features/pack-catalog-connect").then((m) => ({
+    default: m.ConnectCatalogDialog,
+  })),
+);
 
 /** Крошки открытого файла: пак, шаблон, версия со статусом и замком, путь в версии. */
 const FileCrumbs = ({
@@ -163,6 +172,9 @@ export const WorkspaceScreen = () => {
   const [newVersion, setNewVersion] = useState<NewVersionTarget | null>(null);
   // Места подписей записаны в манифест версии: проверки заново, PDF при этом не устаревает.
   const [placesSaves, setPlacesSaves] = useState(0);
+  // Окно «Подключить к каталогу этой Студии» (только папка в локальной Студии).
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  const isLocal = useBootstrap().data?.mode === "local";
   const client = useQueryClient();
   const dirtyRef = useRef(false);
   const tokenRef = useRef(0);
@@ -316,6 +328,21 @@ export const WorkspaceScreen = () => {
               {t("tree.title")}
             </Button>
           )}
+          {ws.kind === "folder" && ready && isLocal && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setCatalogOpen(true);
+              }}
+              title={t("catalog.open")}
+              aria-label={t("catalog.open")}
+              data-testid="ws-catalog-open"
+            >
+              <Library size="0.75rem" />
+              <span className="ps-hide-phone">{t("catalog.open")}</span>
+            </Button>
+          )}
           {ws.kind === "git" && ready && (
             <Button
               size="sm"
@@ -444,6 +471,17 @@ export const WorkspaceScreen = () => {
         >
           <div className="ps-tree-sheet">{tree}</div>
         </Modal>
+      )}
+      {catalogOpen && (
+        <Suspense fallback={null}>
+          <ConnectCatalogDialog
+            workspaceId={ws.id}
+            isOpen={catalogOpen}
+            onClose={() => {
+              setCatalogOpen(false);
+            }}
+          />
+        </Suspense>
       )}
       <NewVersionDialog
         workspaceId={ws.id}

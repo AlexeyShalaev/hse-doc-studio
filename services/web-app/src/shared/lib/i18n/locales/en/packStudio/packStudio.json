@@ -580,5 +580,30 @@
     "dateMissing": "Mark on line {{anchor}}: the line is not in this build.",
     "dateRemove": "Remove the mark",
     "dateLines": "Mark on a date line:"
+  },
+  "catalog": {
+    "open": "Connect to this Studio catalog",
+    "title": "This Studio catalog",
+    "lead": "Released pack versions from this folder appear in the project wizard. Unreleased versions do not enter the catalog.",
+    "notConnected": "The folder is not connected to the catalog yet.",
+    "connected": "The folder is connected to the catalog.",
+    "applied": "Applied revision {{revision}}, {{when}}.",
+    "notApplied": "No revision applied yet.",
+    "on": "On",
+    "off": "Off",
+    "offHint": "The folder packs are hidden from the project wizard. Versions stay for existing projects.",
+    "pending_one": "Since the last check {{count}} new version is available.",
+    "pending_other": "Since the last check {{count}} new versions are available.",
+    "replaceBuiltin": "Replace built-in",
+    "replaceBuiltinHint": "A pack with the same id as a built-in one replaces it in the project wizard.",
+    "builtinConflict": "The folder has a pack with the id of a built-in pack. To offer your pack instead of the built-in one, check “Replace built-in” and check again.",
+    "check": "Check",
+    "enable": "Turn on",
+    "disable": "Turn off",
+    "disconnect": "Disconnect",
+    "disconnectTitle": "Disconnect the folder from the catalog?",
+    "disconnectLead": "The folder packs disappear from the project wizard. Versions stay: existing projects keep working on them.",
+    "close": "Close",
+    "done": "Done"
   }
 }

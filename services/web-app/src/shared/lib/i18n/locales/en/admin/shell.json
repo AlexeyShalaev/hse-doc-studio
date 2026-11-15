@@ -47,7 +47,8 @@
     "data": "Data retention",
     "diagnostics": "Self-diagnostics",
     "mcp": "MCP server",
-    "packStudio": "Template Studio"
+    "packStudio": "Template Studio",
+    "packCatalog": "Pack catalogs"
   },
   "overview": {
     "title": "Installation overview",

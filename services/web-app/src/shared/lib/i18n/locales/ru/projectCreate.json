@@ -53,7 +53,10 @@
     "templatesCount_one": "{{count}} шаблон",
     "templatesCount_few": "{{count}} шаблона",
     "templatesCount_many": "{{count}} шаблонов",
-    "templatesCount_other": "{{count}} шаблонов"
+    "templatesCount_other": "{{count}} шаблонов",
+    "subscribed": "Подключён: {{label}}",
+    "subscribedFallback": "Подключён из каталога установки",
+    "replacesBuiltin": "заменяет встроенный"
   },
   "template": {
     "selectPackFirst": "Выберите pack на предыдущем шаге."

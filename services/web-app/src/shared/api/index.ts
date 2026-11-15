@@ -29,6 +29,7 @@ export type {
   ChangeLogKind,
   // Catalog
   TemplateInfoResponse,
+  PackOriginResponse,
   PackResponse,
   VersionListItemResponse,
   DocumentVariantResponse,
