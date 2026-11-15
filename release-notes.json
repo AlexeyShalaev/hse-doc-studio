@@ -1,6 +1,40 @@
 {
   "releases": [
     {
+      "version": "0.29.0",
+      "date": "2026-11-15",
+      "notes": [
+        {
+          "ru": "Студия шаблонов: новый раздел /pack-studio для авторов шаблонов. Рабочая копия репозитория паков на сервере, дерево файлов, редактор с автодополнением полей анкеты и макросов \\hse и панель «Проблемы» с проверкой пака на лету. Доступ выдаёт администратор правом «Автор шаблонов».",
+          "en": "Template Studio: a new /pack-studio section for template authors. A server-side working copy of the pack repository, a file tree, an editor with completion for form fields and \\hse macros, and a Problems panel that checks the pack as you type. Administrators grant access with the Template author right."
+        },
+        {
+          "ru": "Студия шаблонов, git: ветка, «Сохранить версию», «Предложить изменения» одним действием (проверка пака, push, PR в GitHub или MR в GitLab), отправка в форк при отсутствии прав, статус CI, просмотр изменений, «Подтянуть основную ветку» и «Начать заново». Администратор может выдать служебный доступ к репозиторию, чтобы авторам не нужны были свои токены.",
+          "en": "Template Studio, git: branches, Save version, one-click Propose changes (pack checks, push, a GitHub PR or GitLab MR), pushing to a fork when you lack rights, CI status, a diff view, Pull main branch and Start over. Administrators can add a service access to the repository so authors do not need their own tokens."
+        },
+        {
+          "ru": "Студия шаблонов, предпросмотр: сборка PDF версии шаблона на примерах из examples или на автоматических наборах (обычный, длинный, пустой) с выбором переключателей, журнал сборки и отмена.",
+          "en": "Template Studio, preview: build a PDF of a template version from its examples or from automatic data sets (normal, long, empty) with chosen switches, plus the build log and cancel."
+        },
+        {
+          "ru": "Командная строка для авторов шаблонов: hse-doc-studio pack lint, check, classify, new-version и freeze, с выводом в JSON.",
+          "en": "Command line for template authors: hse-doc-studio pack lint, check, classify, new-version and freeze, with JSON output."
+        },
+        {
+          "ru": "Шаблоны: исправлены обрезанные подписи, где внутри текста была запятая (например, «Моноширинный шрифт (код, листинги)»). Новые версии: hse-cs-sse курсовая 2026.1.6, hse-cs-se курсовая и ВКР 2026.1.2, практика 2026.1.1. PDF не меняется. Линтер паков теперь ловит такие ошибки.",
+          "en": "Templates: fixed labels cut off at a comma inside the text (for example \"Monospace font (code, listings)\"). New versions: hse-cs-sse coursework 2026.1.6, hse-cs-se coursework and thesis 2026.1.2, internship 2026.1.1. The PDF does not change. The pack linter now catches this."
+        },
+        {
+          "ru": "Настройки, «ИИ-клиенты (MCP)»: список инструментов больше не вылезает за край, поле команды без лишней пустой строки.",
+          "en": "Settings, AI clients (MCP): the tool list no longer overflows, and the command field has no extra empty line."
+        },
+        {
+          "ru": "Безопасность: dnspython обновлён до 2.9.2 (CVE-2026-128089).",
+          "en": "Security: dnspython updated to 2.9.2 (CVE-2026-128089)."
+        }
+      ]
+    },
+    {
       "version": "0.28.0",
       "date": "2026-11-14",
       "notes": [

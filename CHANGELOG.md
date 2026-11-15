@@ -6,35 +6,15 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.29.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.28.0...v0.29.0) (2026-11-15)
+## [0.29.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.28.0...v0.29.0) - 2026-11-15
 
-
-### Features
-
-* **pack-studio:** ветка, коммит, PR и MR, форк, статус CI, служебный доступ (T6) ([3fa8e42](https://github.com/AlexeyShalaev/hse-doc-studio/commit/3fa8e428e0691f4f1fb130a30dc310f7c5e7a8c4))
-* **pack-studio:** ветка, коммит, PR/MR, форк, статус CI, служебный доступ (T6) ([4614af4](https://github.com/AlexeyShalaev/hse-doc-studio/commit/4614af4986d398bdb4229ff1d3ff28d4f784854c))
-* **pack-studio:** каркас /pack-studio, редактор с «Проблемами», админка и переключатель (T8) ([d1516cf](https://github.com/AlexeyShalaev/hse-doc-studio/commit/d1516cf3871fa398439fe0e06dcb6c7a6cd28c78))
-* **pack-studio:** панель git, предпросмотр и служебные доступы в интерфейсе (T6, T7) ([acd86f4](https://github.com/AlexeyShalaev/hse-doc-studio/commit/acd86f4e58efe799d0b5afab77f4b6309bcfd6d7))
-* **pack-studio:** панель git, предпросмотр и служебные доступы в интерфейсе (T6, T7) ([0366a03](https://github.com/AlexeyShalaev/hse-doc-studio/commit/0366a03cd77116d61226d5fb1163558670d231de))
-* **pack-studio:** предпросмотр версии шаблона на тестовых данных (T7) ([3ee2912](https://github.com/AlexeyShalaev/hse-doc-studio/commit/3ee29122c00c46032b2823f0f7f86801da5e925d))
-* **pack-studio:** предпросмотр версии шаблона на тестовых данных (T7) ([31ccc38](https://github.com/AlexeyShalaev/hse-doc-studio/commit/31ccc38d2b1377fe102f8f4879b3cbb59bd75318))
-* **pack-studio:** проверки открытого файла и подсказки автодополнения для редактора (T8) ([be61275](https://github.com/AlexeyShalaev/hse-doc-studio/commit/be61275d4b01301f4f9aa856752070ef75e8c799))
-* **pack-studio:** рабочие пространства, файлы и право «Автор шаблонов» (T5) ([39d1c04](https://github.com/AlexeyShalaev/hse-doc-studio/commit/39d1c04b14c86d0368ae6776bb262db71efa0197))
-* **pack-studio:** рабочие пространства, файлы с ETag, защита выпущенных версий и право «Автор шаблонов» (T5) ([3cab7d8](https://github.com/AlexeyShalaev/hse-doc-studio/commit/3cab7d85c3a00bd4385c3ac002afddea0e121816))
-* **packs:** CLI hse-doc-studio pack (Студия шаблонов, T2) ([e0a5210](https://github.com/AlexeyShalaev/hse-doc-studio/commit/e0a5210d41046d10336f6e0c18c9d2b03c60e62c))
-* **packs:** hse-doc-studio pack CLI: lint, check, classify, new-version, freeze ([f5dc10f](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f5dc10f26dd7d7ba02499945cd91d77a3b3fd5e5))
-
-
-### Bug Fixes
-
-* **deps:** dnspython 2.9.2 (CVE-2026-128089) ([3da9a77](https://github.com/AlexeyShalaev/hse-doc-studio/commit/3da9a77b4c0578b37fcfc648f307a06beeed474e))
-* **deps:** dnspython 2.9.2 (CVE-2026-128089) ([5484c36](https://github.com/AlexeyShalaev/hse-doc-studio/commit/5484c3616655301dfc1ea3360d302801d69a9958))
-* **pack-studio:** кнопки редактора не уходят под боковую панель при крупном тексте ([f59d292](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f59d2925fe3fbb63a5cb59a1be7f4dfb5f2b1388))
-* **pack-studio:** строка находки «version.yaml:N:» из каталога версии ([5cc93f2](https://github.com/AlexeyShalaev/hse-doc-studio/commit/5cc93f2d5a1bda60350cfac812b98a8785988c2c))
-* **packs:** quote comma texts in { ru, en } and lint them ([31bd55b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/31bd55bda5ddb6cdc38d72cb4708c1fdf6a23259))
-* **packs:** кавычки у текстов { ru, en }, разрезанных запятой, и правило линтера ([28d40b2](https://github.com/AlexeyShalaev/hse-doc-studio/commit/28d40b25a855c350370a3a17d66e9f7c011f0940))
-* **web:** MCP в настройках, список инструментов переносится, поле команды по числу строк ([e3caddc](https://github.com/AlexeyShalaev/hse-doc-studio/commit/e3caddc39a65b3466d800048e4698d2feedfc10c))
-* **web:** вёрстка раздела «ИИ-клиенты (MCP)» ([4b1af1b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/4b1af1bcf792c8450dccfdc171ba9c33f16e6f47))
+- Template Studio: a new /pack-studio section for template authors. A server-side working copy of the pack repository, a file tree, an editor with completion for form fields and \hse macros, and a Problems panel that checks the pack as you type. Administrators grant access with the Template author right.
+- Template Studio, git: branches, Save version, one-click Propose changes (pack checks, push, a GitHub PR or GitLab MR), pushing to a fork when you lack rights, CI status, a diff view, Pull main branch and Start over. Administrators can add a service access to the repository so authors do not need their own tokens.
+- Template Studio, preview: build a PDF of a template version from its examples or from automatic data sets (normal, long, empty) with chosen switches, plus the build log and cancel.
+- Command line for template authors: hse-doc-studio pack lint, check, classify, new-version and freeze, with JSON output.
+- Templates: fixed labels cut off at a comma inside the text (for example "Monospace font (code, listings)"). New versions: hse-cs-sse coursework 2026.1.6, hse-cs-se coursework and thesis 2026.1.2, internship 2026.1.1. The PDF does not change. The pack linter now catches this.
+- Settings, AI clients (MCP): the tool list no longer overflows, and the command field has no extra empty line.
+- Security: dnspython updated to 2.9.2 (CVE-2026-128089).
 
 ## [0.28.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.27.0...v0.28.0) - 2026-11-14
 
