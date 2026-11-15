@@ -6,20 +6,12 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.31.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.30.0...v0.31.0) (2026-11-15)
+## [0.31.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.30.0...v0.31.0) - 2026-11-15
 
-
-### Features
-
-* **deploy:** pack-studio compose profile and make pack-studio ([4c3702b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/4c3702b3960b618318e6349b2646771568e5fcd9))
-* **pack-catalog:** git and archive sources with check, apply and daily tracking ([55f6893](https://github.com/AlexeyShalaev/hse-doc-studio/commit/55f6893917900038ad20f1db9a85302d3f628fbf))
-* **pack-catalog:** каталоги паков, бэкенд (T17, часть 1) ([c7a66e5](https://github.com/AlexeyShalaev/hse-doc-studio/commit/c7a66e5c4c5b62fbe6191af0a4f7c59c07610479))
-* **pack-studio:** compose profile, make pack-studio and standalone mode (T19) ([cb3b883](https://github.com/AlexeyShalaev/hse-doc-studio/commit/cb3b88348e759870cea056c18cd6df22279bdf62))
-* **pack-studio:** signature places and date marks on the preview PDF (T9) ([198b0dc](https://github.com/AlexeyShalaev/hse-doc-studio/commit/198b0dc27621c49442d7e416f035409d70ae163b))
-* **pack-studio:** standalone profile opens its packs folder and hides projects ([2c2e340](https://github.com/AlexeyShalaev/hse-doc-studio/commit/2c2e340b2b8bf7365e5d0c36cca57f59c4d71209))
-* **templates:** packs store by digest and multi-root template catalog with hot reload ([8e15757](https://github.com/AlexeyShalaev/hse-doc-studio/commit/8e157577a51a820d1eac888d4b0d5f4acd3d26ed))
-* **web:** pack catalogs in admin, connect a folder in the Pack Studio, pack origin in the wizard ([f344e95](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f344e95982e73e9a5ed248bd858e7b953aeb2bf7))
-* **web:** каталоги паков, интерфейс (T17, часть 2) ([8f37111](https://github.com/AlexeyShalaev/hse-doc-studio/commit/8f37111a02dc61c82958bc1fb26a03c760ad4614))
+- Pack catalogs: an administrator connects packs from a git repository or an archive in the new admin section "Pack catalogs". The Studio checks the packs and shows a plan (new, changed and incompatible versions); after "Apply" they appear in the project wizard without a restart. Once a day the Studio picks up newly released versions on its own.
+- Template Studio: signature places and dates are now placed with the mouse right on the preview PDF.
+- Template Studio can run on your own machine: a docker compose profile in deploy/pack-studio or make pack-studio. It opens your packs folder and hides projects.
+- Official packs: changes can be proposed only with your own GitHub account, through your fork. The service bot was removed for security, together with its daily limit and admin settings.
 
 ## [0.30.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.29.0...v0.30.0) - 2026-11-15
 

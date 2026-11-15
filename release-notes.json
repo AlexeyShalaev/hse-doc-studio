@@ -1,6 +1,28 @@
 {
   "releases": [
     {
+      "version": "0.31.0",
+      "date": "2026-11-15",
+      "notes": [
+        {
+          "ru": "Каталоги паков: администратор подключает паки из git-репозитория или архива в разделе админки «Каталоги паков». Студия проверяет паки и показывает план (новые, изменённые, несовместимые версии), а после «Применить» они появляются в мастере проекта без перезапуска. Раз в сутки Студия сама подтягивает новые выпущенные версии.",
+          "en": "Pack catalogs: an administrator connects packs from a git repository or an archive in the new admin section \"Pack catalogs\". The Studio checks the packs and shows a plan (new, changed and incompatible versions); after \"Apply\" they appear in the project wizard without a restart. Once a day the Studio picks up newly released versions on its own."
+        },
+        {
+          "ru": "Студия шаблонов: места подписей и даты теперь ставятся мышкой прямо на PDF предпросмотра.",
+          "en": "Template Studio: signature places and dates are now placed with the mouse right on the preview PDF."
+        },
+        {
+          "ru": "Студию шаблонов можно запустить у себя: профиль docker compose в deploy/pack-studio или make pack-studio. Она открывает вашу папку с паками и не показывает проекты.",
+          "en": "Template Studio can run on your own machine: a docker compose profile in deploy/pack-studio or make pack-studio. It opens your packs folder and hides projects."
+        },
+        {
+          "ru": "Официальные паки: предложить изменения можно только со своим аккаунтом GitHub, через свой форк. Служебный бот убран ради безопасности, вместе с ним убраны дневной лимит и настройки бота в админке.",
+          "en": "Official packs: changes can be proposed only with your own GitHub account, through your fork. The service bot was removed for security, together with its daily limit and admin settings."
+        }
+      ]
+    },
+    {
       "version": "0.30.0",
       "date": "2026-11-15",
       "notes": [
