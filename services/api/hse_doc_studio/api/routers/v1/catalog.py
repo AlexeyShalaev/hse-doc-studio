@@ -9,6 +9,7 @@ from hse_doc_studio.api.schemas.catalog import (
     DocumentVariantResponse,
     MetaFieldResponse,
     MetaGroupResponse,
+    PackOriginResponse,
     PackResponse,
     SignatureSlotResponse,
     SubmissionDocItemResponse,
@@ -43,14 +44,30 @@ def _map_template_info(t: TemplateInfo) -> TemplateInfoResponse:
     )
 
 
-def _map_pack(pack: PackInfo) -> PackResponse:
+def _map_pack(pack: PackInfo, repo: ITemplateRepository) -> PackResponse:
+    origin = pack.origin
     return PackResponse(
         id=pack.id,
         name=pack.name,
         description=pack.description,
         maintainer=pack.maintainer,
-        templates=[_map_template_info(t) for t in pack.templates],
+        # Мастер проекта видит только шаблоны, у которых есть предлагаемые версии (каталоги паков, 10.4).
+        templates=[_map_template_info(t) for t in pack.templates if _listed_versions(repo, t)],
+        origin=PackOriginResponse(
+            kind=origin.kind.value,
+            source_kind=origin.source_kind,
+            label=origin.label,
+            url=origin.url,
+            ref=origin.ref,
+            revision=origin.revision,
+            replaces_builtin=origin.replaces_builtin,
+        ),
     )
+
+
+def _listed_versions(repo: ITemplateRepository, template: TemplateInfo) -> list[str]:
+    """Версии шаблона для мастера: без скрытых (источник отключён или больше их не несёт)."""
+    return [v for v in repo.list_versions(template.pack_id, template.id) if v not in template.hidden_versions]
 
 
 def _map_doc_def(doc: DocumentDefinition) -> DocumentDefinitionResponse:
@@ -165,7 +182,8 @@ async def list_packs(
     template_repo: FromDishka[ITemplateRepository],
 ) -> list[PackResponse]:
     packs = template_repo.list_packs()
-    return [_map_pack(p) for p in packs]
+    # Пак отключённого источника остаётся в каталоге для существующих проектов, но мастер его не предлагает.
+    return [mapped for p in packs if p.listed and (mapped := _map_pack(p, template_repo)).templates]
 
 
 @router.get(
@@ -194,6 +212,8 @@ async def list_versions(
     result: list[VersionListItemResponse] = []
 
     for ver_str in version_strings:
+        if ver_str in template.hidden_versions:
+            continue
         tv = template_repo.get_version(pack_id, template_id, ver_str)
         if tv is None:
             continue

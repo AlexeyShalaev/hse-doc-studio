@@ -1,0 +1,7 @@
+{
+  "detail": "Применить нельзя: проверка нашла препятствия.",
+  "code": "plan_blocked",
+  "blockers": [
+    "version_changed"
+  ]
+}

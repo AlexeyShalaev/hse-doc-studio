@@ -1,0 +1,57 @@
+{
+  "source": {
+    "id": "0b8e7d6c-5a4f-4e3d-9c2b-1a0f9e8d7c6b",
+    "kind": "folder",
+    "label": "my-packs",
+    "enabled": true,
+    "replace_builtin": false,
+    "track": false,
+    "packs_path": ".",
+    "url": null,
+    "ref": null,
+    "access": "none",
+    "credential_id": null,
+    "service_access_id": null,
+    "insecure_http": false,
+    "archive_name": null,
+    "archive_digest": null,
+    "folder": "/Users/author/my-packs",
+    "workspace_id": "3c2b1a09-8f7e-4d6c-9b5a-493827161504",
+    "applied_revision": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "applied_at": "2026-11-15T10:05:00Z",
+    "checked_revision": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "checked_at": "2026-11-15T10:04:00Z",
+    "check_ok": true,
+    "pending_versions": 0,
+    "error": null,
+    "busy": false,
+    "created_at": "2026-11-14T09:00:00Z",
+    "updated_at": "2026-11-15T10:05:00Z",
+    "created_by": null,
+    "packs": [
+      {
+        "id": "my-pack",
+        "name": {
+          "ru": "Выпускные работы Acme",
+          "en": "Acme theses"
+        },
+        "origin": "subscribed",
+        "source_id": "0b8e7d6c-5a4f-4e3d-9c2b-1a0f9e8d7c6b",
+        "listed": true,
+        "replaces_builtin": false,
+        "versions": [
+          {
+            "template": "thesis",
+            "version": "2026.1.0",
+            "listed": true
+          },
+          {
+            "template": "thesis",
+            "version": "2026.1.1",
+            "listed": true
+          }
+        ]
+      }
+    ]
+  }
+}

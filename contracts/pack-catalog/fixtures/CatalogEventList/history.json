@@ -1,0 +1,54 @@
+[
+  {
+    "id": "11111111-2222-4333-8444-555555555555",
+    "action": "apply",
+    "at": "2026-11-15T10:05:00Z",
+    "ok": true,
+    "actor_id": "u_admin",
+    "revision": "4b825dc642cb6eb9a060e54bf8d69288fbee4904",
+    "summary": {
+      "added": [
+        "acme-thesis/thesis@2026.1.0"
+      ],
+      "catalog_revision": 4
+    }
+  },
+  {
+    "id": "21111111-2222-4333-8444-555555555555",
+    "action": "check",
+    "at": "2026-11-15T10:04:00Z",
+    "ok": true,
+    "actor_id": "u_admin",
+    "revision": "4b825dc642cb6eb9a060e54bf8d69288fbee4904",
+    "summary": {
+      "new": 2,
+      "blockers": [],
+      "packs": [
+        "acme-thesis"
+      ]
+    }
+  },
+  {
+    "id": "31111111-2222-4333-8444-555555555555",
+    "action": "check",
+    "at": "2026-11-14T09:01:00Z",
+    "ok": false,
+    "actor_id": "u_admin",
+    "revision": null,
+    "summary": {
+      "error": "ref_not_found"
+    }
+  },
+  {
+    "id": "41111111-2222-4333-8444-555555555555",
+    "action": "add",
+    "at": "2026-11-14T09:00:00Z",
+    "ok": true,
+    "actor_id": "u_admin",
+    "revision": null,
+    "summary": {
+      "url": "https://git.example.org/acme/packs.git",
+      "ref": "v2026.1.1"
+    }
+  }
+]

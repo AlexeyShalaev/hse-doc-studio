@@ -51,6 +51,8 @@ class PackTemplateResponse(BaseModel):
     builtin: list[str]
     # Вшитые версии, которых нет в подключённом каталоге.
     missing: list[str]
+    # Версии из «Каталогов паков» (срез T17): лежат в хранилище `data_dir/packs-store`, а не в образе.
+    subscribed: list[str] = []
 
 
 class PacksSourceResponse(BaseModel):
@@ -373,11 +375,13 @@ def _host_path(path: str, overlays: tuple[ImageOverlay, ...]) -> str | None:
 
 
 def _pack_templates(source: PacksSource) -> list[PackTemplateResponse]:
-    groups: dict[tuple[str, str], tuple[set[str], set[str]]] = {}
+    groups: dict[tuple[str, str], tuple[set[str], set[str], set[str]]] = {}
     for key in source.available:
-        groups.setdefault((key.pack_id, key.template_id), (set(), set()))[0].add(key.version)
+        groups.setdefault((key.pack_id, key.template_id), (set(), set(), set()))[0].add(key.version)
     for key in source.builtin or ():
-        groups.setdefault((key.pack_id, key.template_id), (set(), set()))[1].add(key.version)
+        groups.setdefault((key.pack_id, key.template_id), (set(), set(), set()))[1].add(key.version)
+    for key in source.subscribed:
+        groups.setdefault((key.pack_id, key.template_id), (set(), set(), set()))[2].add(key.version)
     external = source.kind is PacksKind.external
     return [
         PackTemplateResponse(
@@ -386,8 +390,9 @@ def _pack_templates(source: PacksSource) -> list[PackTemplateResponse]:
             versions=sorted(available),
             builtin=sorted(builtin),
             missing=sorted(builtin - available) if external else [],
+            subscribed=sorted(subscribed),
         )
-        for (pack_id, template_id), (available, builtin) in sorted(groups.items())
+        for (pack_id, template_id), (available, builtin, subscribed) in sorted(groups.items())
     ]
 
 

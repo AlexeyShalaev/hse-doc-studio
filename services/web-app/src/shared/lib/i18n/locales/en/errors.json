@@ -283,6 +283,25 @@
     "official_unavailable": "This instance has no official packs repository.",
     "license_consent_required": "Before the first proposal, confirm that the contribution is public and goes under the repository license.",
     "paths_outside_packs": "The branch changes files outside the packs folder. Official packs and service access take only packs.",
-    "place_invalid": "The signature place cannot be written: the box is off the page or the slot does not apply to the document."
+    "place_invalid": "The signature place cannot be written: the box is off the page or the slot does not apply to the document.",
+    "source_not_found": "Catalog source not found. Reload the page.",
+    "source_busy": "This source is already being checked or applied. Wait for it to finish.",
+    "source_kind_not_allowed": "This kind of source is not available here: a folder connects only in the local Studio.",
+    "source_exists": "This folder is already connected to the catalog.",
+    "source_disabled": "The source is turned off. Turn it on to apply a new revision.",
+    "ref_not_found": "The repository has no such tag, branch or commit.",
+    "packs_path_missing": "The revision has no packs folder at the given path.",
+    "archive_missing": "The source archive is not uploaded or was lost. Upload it again.",
+    "archive_too_large": "The archive is too large.",
+    "archive_invalid": "Could not read the archive. A .zip or .tar.gz is needed.",
+    "archive_unsafe": "The archive has links, absolute paths or paths leaving its folder. Such an archive is refused.",
+    "tree_too_large": "The revision has too many files or they are too large.",
+    "tree_unsafe": "The packs folder has symbolic links. Such packs are not connected.",
+    "inspection_failed": "Could not read the packs of the revision within the time and memory limits.",
+    "not_checked": "Check the source first: only a checked revision is applied.",
+    "revision_moved": "The source changed after the check. Check it again.",
+    "plan_blocked": "Cannot apply: the check found blockers.",
+    "catalog_busy": "Another process is changing the pack catalog. Try again a bit later.",
+    "label_invalid": "The source name is too long."
   }
 }

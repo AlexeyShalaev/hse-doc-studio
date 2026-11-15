@@ -48,6 +48,8 @@ class PacksSource:
     builtin_studio: str | None = None
     # Версии, которые реально лежат в каталоге.
     available: frozenset[TemplateKey] = field(default_factory=frozenset)
+    # Из них подключённые в «Каталогах паков» (срез T17): лежат в хранилище `data_dir/packs-store`, а не в образе.
+    subscribed: frozenset[TemplateKey] = field(default_factory=frozenset)
 
     def lags_for(self, key: TemplateKey) -> bool:
         """Версия есть во вшитых паках этой Студии, но её нет в подключённом каталоге."""
@@ -67,7 +69,8 @@ class PacksSource:
 
 
 class ITemplatePacksSource(Protocol):
-    """Сведения о каталоге шаблонов. Каталог читается один раз на старте, ответ не меняется."""
+    """Сведения о каталоге шаблонов. Вшитый каталог читается один раз на старте; подключённые паки (срез T17)
+    меняются «Применить» в админке, и ответ меняется вместе с ревизией каталога."""
 
     def describe(self) -> PacksSource: ...
 

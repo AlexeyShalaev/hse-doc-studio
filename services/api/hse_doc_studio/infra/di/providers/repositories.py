@@ -52,6 +52,7 @@ from hse_doc_studio.infra.docker.environment_probe import DockerEnvironmentProbe
 from hse_doc_studio.infra.docker.mount_probe import DockerHealthProbe, MountProbe
 from hse_doc_studio.infra.docker.self_info import DockerSelfInfo
 from hse_doc_studio.infra.identity.project_access import LocalProjectAccessChecker
+from hse_doc_studio.infra.pack_catalog.store import PacksStore
 from hse_doc_studio.infra.persistence.agent_persona import JsonAgentPersonaRepository
 from hse_doc_studio.infra.persistence.ai_provider import JsonAIProviderRepository
 from hse_doc_studio.infra.persistence.changelog import JsonChangeLogRepository
@@ -79,6 +80,11 @@ from hse_doc_studio.infra.update.self_update_gateway import DockerSelfUpdateGate
 from hse_doc_studio.infra.update.update_manager import UpdateManager
 
 
+def packs_store() -> PacksStore:
+    """Хранилище подключённых паков (docs/design/template-studio.md, 10.3): `data_dir/packs-store`."""
+    return PacksStore(settings.data_dir.expanduser() / "packs-store")
+
+
 class LocalPersistenceProvider(Provider):
     scope = Scope.APP
 
@@ -102,7 +108,11 @@ class LocalPersistenceProvider(Provider):
 
     @provide
     def get_template_repo(self) -> ITemplateRepository:
-        repo = YamlTemplateRepository(settings.packs_dir)
+        # Вшитые паки плюс подключённые в «Каталогах паков» (срез T17): хранилище на томе данных общее для всех
+        # процессов api, каждый замечает новую ревизию каталога сам.
+        repo = YamlTemplateRepository(
+            settings.packs_dir, store=packs_store(), recheck_s=settings.pack_catalog.reload_check_s
+        )
         repo.load()
         return repo
 

@@ -48,7 +48,9 @@ def _setup(tmp_path: Path) -> tuple[MagicMock, SimpleNamespace]:
     (project_folder / "vkr" / "diagram.png").write_text("user", encoding="utf-8", newline="\n")
 
     template_repo = MagicMock()
-    template_repo._packs_dir = str(packs)
+    template_repo.version_dir.side_effect = lambda p, t, v, root=Path(packs): (
+        root / p / "templates" / t / "versions" / v
+    )
     template_repo.get_version.return_value = SimpleNamespace(
         pack_id="p", template_id="t", version="1", dynamic_includes=[]
     )

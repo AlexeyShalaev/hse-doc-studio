@@ -1,0 +1,22 @@
+[
+  "source_not_found",
+  "source_busy",
+  "source_kind_not_allowed",
+  "source_exists",
+  "source_disabled",
+  "ref_not_found",
+  "packs_path_missing",
+  "archive_missing",
+  "archive_too_large",
+  "archive_invalid",
+  "archive_unsafe",
+  "tree_too_large",
+  "tree_unsafe",
+  "inspection_failed",
+  "not_checked",
+  "revision_moved",
+  "plan_blocked",
+  "catalog_busy",
+  "folder_unavailable",
+  "label_invalid"
+]

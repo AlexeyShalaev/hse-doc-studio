@@ -35,6 +35,7 @@ export const ADMIN_NAMESPACES = [
   "mcp",
   "modelServers",
   "packStudio",
+  "packCatalog",
 ] as const;
 
 export type AdminNamespace = (typeof ADMIN_NAMESPACES)[number];

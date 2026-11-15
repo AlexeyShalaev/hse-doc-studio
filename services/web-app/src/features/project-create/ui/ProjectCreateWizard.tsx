@@ -145,6 +145,39 @@ const Logomark = () => (
 );
 
 // ── Step 0: Pack ─────────────────────────────────────────────────────────────
+
+/**
+ * Пак из «Каталогов паков» установки: откуда он пришёл (название источника, адрес и ref
+ * в подсказке). У встроенных паков строки нет.
+ */
+const PackOriginLine = ({ origin }: { origin: PackResponse["origin"] }) => {
+  const { t } = useTranslation("projectCreate");
+  if (origin?.kind !== "subscribed") return null;
+  const where = [origin.url, origin.ref].filter(Boolean).join(" @ ");
+  return (
+    <div
+      className="dim truncate"
+      style={{
+        fontSize: "0.65625rem",
+        marginTop: "0.25rem",
+        display: "flex",
+        alignItems: "center",
+        gap: "0.25rem",
+      }}
+      title={where || undefined}
+      data-testid="pack-origin"
+    >
+      <Layers size="0.6875rem" aria-hidden="true" style={{ flexShrink: 0 }} />
+      <span className="truncate">
+        {origin.label
+          ? t("pack.subscribed", { label: origin.label })
+          : t("pack.subscribedFallback")}
+        {origin.replaces_builtin && ` · ${t("pack.replacesBuiltin")}`}
+      </span>
+    </div>
+  );
+};
+
 const StepPack = () => {
   const { t, i18n } = useTranslation("projectCreate");
   const { data: packs, isLoading } = usePacks();
@@ -210,6 +243,7 @@ const StepPack = () => {
             >
               {t("pack.templatesCount", { count: pack.templates.length })}
             </div>
+            <PackOriginLine origin={pack.origin} />
           </button>
         );
       })}

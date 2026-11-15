@@ -11,6 +11,18 @@ const TemplateInfoSchema = z.object({
   default_version: z.string(),
 });
 
+// Откуда пак: вшит в Студию или подключён в «Каталогах паков» (срез T17). Старый сервер
+// поля не присылает: пак считается встроенным.
+export const PackOriginSchema = z.object({
+  kind: z.string(),
+  source_kind: z.string().nullish(),
+  label: z.string().nullish(),
+  url: z.string().nullish(),
+  ref: z.string().nullish(),
+  revision: z.string().nullish(),
+  replaces_builtin: z.boolean().default(false),
+});
+
 export const PackResponseSchema = z.object({
   id: z.string(),
   name: LocalizedStringSchema,
@@ -20,6 +32,7 @@ export const PackResponseSchema = z.object({
     email: z.string(),
   }),
   templates: z.array(TemplateInfoSchema),
+  origin: PackOriginSchema.optional(),
 });
 
 export const VersionListItemSchema = z.object({

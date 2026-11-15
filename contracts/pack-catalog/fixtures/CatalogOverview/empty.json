@@ -1,0 +1,29 @@
+{
+  "revision": 0,
+  "sources": [],
+  "packs": [
+    {
+      "id": "hse-cs-sse",
+      "name": {
+        "ru": "Выпускные работы Acme",
+        "en": "Acme theses"
+      },
+      "origin": "builtin",
+      "source_id": null,
+      "listed": true,
+      "replaces_builtin": false,
+      "versions": [
+        {
+          "template": "coursework",
+          "version": "2026.1.3",
+          "listed": true
+        }
+      ]
+    }
+  ],
+  "limits": {
+    "max_archive_bytes": 104857600,
+    "max_files": 20000,
+    "max_bytes": 536870912
+  }
+}

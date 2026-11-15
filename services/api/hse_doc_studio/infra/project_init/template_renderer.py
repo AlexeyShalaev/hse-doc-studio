@@ -417,16 +417,14 @@ class TemplateRenderer:
 def version_files_dir(template_repo: ITemplateRepository, version: TemplateVersion) -> Path | None:
     """Locate a version's authored `files/` directory.
 
-    Duck-types `_packs_dir` off the YAML repository (same access pattern as
-    `CreateProjectUC`), so this stays usable without threading the path through
-    every call site.
+    The repository knows where every version lives: a builtin pack under the
+    packs dir, a subscribed one in the packs store by digest (template-studio.md,
+    10.3). None: the version has no directory on disk.
     """
-    packs_dir = getattr(template_repo, "_packs_dir", None)
-    if packs_dir is None:
+    version_dir = template_repo.version_dir(version.pack_id, version.template_id, version.version)
+    if not isinstance(version_dir, Path):
         return None
-    return (
-        Path(packs_dir) / version.pack_id / "templates" / version.template_id / "versions" / version.version / "files"
-    )
+    return version_dir / "files"
 
 
 def build_render_context(
@@ -661,7 +659,7 @@ def regenerate_dynamic_includes(
         return
     files_dir = version_files_dir(template_repo, version)
     if files_dir is None:
-        logger.warning("regenerate_dynamic_includes: template_repo has no _packs_dir")
+        logger.warning("regenerate_dynamic_includes: version dir not found", version=version.version)
         return
     # Solo — одна база (корень); team — каждая база получает СВОЙ комплект
     # dynamic includes (meta.tex с темой/кодами владельца; shared — системные).
@@ -735,7 +733,7 @@ def instantiate_nda(  # noqa: C901, PLR0912
         return written
     files_dir = version_files_dir(template_repo, version)
     if files_dir is None:
-        # Недостижимо, пока src_dir найден (оба выводятся из _packs_dir), но
+        # Недостижимо, пока src_dir найден (оба выводятся из version_dir), но
         # тип честный: без files_dir не вычислить rel-путь.
         return written
     # Расписка NDA — персональный документ: каждый автор подписывает свою. В

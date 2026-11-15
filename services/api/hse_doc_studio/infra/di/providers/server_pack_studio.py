@@ -40,7 +40,7 @@ from hse_doc_studio.core.pack_studio.protocols import (
 )
 from hse_doc_studio.core.paths import PathMapping
 from hse_doc_studio.core.quotas.protocols import IQuotaGate
-from hse_doc_studio.core.repositories import ISettingsRepository
+from hse_doc_studio.core.repositories import ISettingsRepository, ITemplateRepository
 from hse_doc_studio.core.storage import IBlobStore, IObjectStore
 from hse_doc_studio.core.storage.manifest import IBlobRegistry, ManifestLimits
 from hse_doc_studio.core.uow import IUnitOfWork
@@ -58,6 +58,7 @@ from hse_doc_studio.infra.git_sync.git_transport import GitTransport
 from hse_doc_studio.infra.jobs.artifact_store import LocalDiskArtifactStore
 from hse_doc_studio.infra.jobs.queue_dispatcher import QueueJobDispatcher
 from hse_doc_studio.infra.jobs.result_applier import VolumeJobResultApplier
+from hse_doc_studio.infra.pack_catalog.audit import UowCatalogAudit
 from hse_doc_studio.infra.pack_studio.credential_access import PackStudioCredentialAccess
 from hse_doc_studio.infra.pack_studio.plumbing import PackGitPlumbing
 from hse_doc_studio.infra.pack_studio.preview_dispatch import NoHashCacheRegistry, PreviewJobDispatcher
@@ -67,6 +68,7 @@ from hse_doc_studio.infra.storage.blob_uploader import ManifestBlobUploader
 from hse_doc_studio.use_cases.admin.ops_quotas import QuotaService
 from hse_doc_studio.use_cases.git_sync.provider_resolver import ProviderResolver
 from hse_doc_studio.use_cases.jobs.wakeup import JobWakeup
+from hse_doc_studio.use_cases.pack_catalog.service import PackCatalogService
 from hse_doc_studio.use_cases.pack_studio.access import PackStudioAccess
 from hse_doc_studio.use_cases.pack_studio.admin import PackStudioAdminUC
 from hse_doc_studio.use_cases.pack_studio.git import PackGitService
@@ -126,6 +128,27 @@ class ServerPackStudioProvider(Provider):
             access=pack_access,
         )
         return PackGitPlumbing(runner=runner, transport=GitTransport(runner, settings.git), access=pack_access)
+
+    @provide(override=True)
+    def get_catalog_service(  # noqa: PLR0913 — порты каталога паков
+        self,
+        plumbing: PackGitPlumbing,
+        policy: GitSyncPolicy,
+        templates: ITemplateRepository,
+        credentials: IGitCredentialRepository,
+        service: IServiceAccessRepository,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+    ) -> PackCatalogService:
+        """«Каталоги паков» в админке: каждое действие в журнале аудита установки, доступы git и служебные."""
+        return PackStudioProvider.build_catalog(
+            plumbing,
+            policy,
+            templates,
+            credentials=credentials,
+            audit=UowCatalogAudit(audit, uow),
+            service_access=service,
+        )
 
     @provide(override=True)
     def get_pack_hosting(self, plumbing: PackGitPlumbing, egress: IEgressPolicy) -> IPackHosting:

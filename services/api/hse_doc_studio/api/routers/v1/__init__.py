@@ -38,6 +38,7 @@ from hse_doc_studio.api.routers.v1 import (
     onboarding,
     orgs,
     pack_studio,
+    pack_studio_catalog,
     pack_studio_places,
     passkeys,
     profile,
@@ -154,3 +155,4 @@ api_router.include_router(usage.router, tags=["quotas"])
 api_router.include_router(pack_studio.section_router, tags=["pack-studio"])
 api_router.include_router(pack_studio.router, tags=["pack-studio"])
 api_router.include_router(pack_studio_places.router, tags=["pack-studio"])
+api_router.include_router(pack_studio_catalog.router, tags=["pack-studio"])

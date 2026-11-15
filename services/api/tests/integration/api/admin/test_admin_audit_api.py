@@ -330,6 +330,14 @@ _AUDITED_ELSEWHERE: dict[tuple[str, str], str] = {
     ("DELETE", "/api/admin/pack-studio/service-access/{id}"): "pack_studio.service_access_remove",
     # Проверка служебного доступа у хостинга.
     ("POST", "/api/admin/pack-studio/service-access/{id}/check"): "pack_studio.service_access_check",
+    # Каталоги паков (template-studio.md, T17): проверяет tests/integration/api/pack_catalog/test_admin_catalog_pg.
+    ("POST", "/api/admin/pack-catalog/sources"): "pack_catalog.source_add",
+    ("POST", "/api/admin/pack-catalog/sources/archive"): "pack_catalog.source_add",
+    ("PATCH", "/api/admin/pack-catalog/sources/{id}"): "pack_catalog.source_update",
+    ("DELETE", "/api/admin/pack-catalog/sources/{id}"): "pack_catalog.source_remove",
+    ("PUT", "/api/admin/pack-catalog/sources/{id}/archive"): "pack_catalog.source_update",
+    ("POST", "/api/admin/pack-catalog/sources/{id}/check"): "pack_catalog.check",
+    ("POST", "/api/admin/pack-catalog/sources/{id}/apply"): "pack_catalog.apply",
 }
 
 # Изменяющие ручки без записи в журнале осознанно: только проверка соединения, состояние не меняется.

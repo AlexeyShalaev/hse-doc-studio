@@ -23,6 +23,8 @@ from hse_doc_studio.core.git_sync.protocols import (
 from hse_doc_studio.core.identity.protocols import IAuditLog
 from hse_doc_studio.core.jobs.protocols import IJobDispatcher
 from hse_doc_studio.core.mode import StudioMode
+from hse_doc_studio.core.pack_catalog.protocols import ICatalogAudit, ICatalogReloader
+from hse_doc_studio.core.pack_catalog.protocols import StageLimits as CatalogStageLimits
 from hse_doc_studio.core.pack_studio.official import OfficialRepo
 from hse_doc_studio.core.pack_studio.official import official_repo as make_official_repo
 from hse_doc_studio.core.pack_studio.protocols import (
@@ -40,8 +42,14 @@ from hse_doc_studio.core.pack_studio.protocols import (
     WorkspaceLimits,
 )
 from hse_doc_studio.core.paths import PathMapping
-from hse_doc_studio.core.repositories import ISettingsRepository
+from hse_doc_studio.core.repositories import ISettingsRepository, ITemplateRepository
 from hse_doc_studio.core.vcs.protocols import ICommitAuthorProvider
+from hse_doc_studio.infra.pack_catalog.archives import FsArchiveStore
+from hse_doc_studio.infra.pack_catalog.catalog import FsCatalogStore
+from hse_doc_studio.infra.pack_catalog.inspect import IsolatedRevisionInspector
+from hse_doc_studio.infra.pack_catalog.sources import JsonCatalogSourceRepository
+from hse_doc_studio.infra.pack_catalog.stage import RevisionStager
+from hse_doc_studio.infra.pack_catalog.store import PacksStore
 from hse_doc_studio.infra.pack_studio.hosting import HttpPackHosting
 from hse_doc_studio.infra.pack_studio.inspector import PackInspector
 from hse_doc_studio.infra.pack_studio.local_store import JsonPackWorkspaceRepository, LocalSectionStore
@@ -57,6 +65,7 @@ from hse_doc_studio.infra.pack_studio.workspace_files import LocalPackWorkspaceF
 from hse_doc_studio.infra.pack_studio.workspace_git import PackWorkspaceGit, workspace_dirs
 from hse_doc_studio.infra.pack_studio.yaml_edits import PackYamlEditor
 from hse_doc_studio.use_cases.git_sync.provider_resolver import ProviderResolver
+from hse_doc_studio.use_cases.pack_catalog.service import PackCatalogService
 from hse_doc_studio.use_cases.pack_studio.access import PackStudioAccess
 from hse_doc_studio.use_cases.pack_studio.files import PackFilesService
 from hse_doc_studio.use_cases.pack_studio.git import PackGitService
@@ -270,6 +279,51 @@ class PackStudioProvider(Provider):
     @provide
     def get_places_service(self, files: PackFilesService, previews: PackPreviewService) -> PackPlacesService:
         return PackPlacesService(files, previews, PackPlacesEditor())
+
+    @provide
+    def get_catalog_service(
+        self,
+        plumbing: PackGitPlumbing,
+        policy: GitSyncPolicy,
+        templates: ITemplateRepository,
+        credentials: IGitCredentialRepository,
+    ) -> PackCatalogService:
+        # Локально: «Подключить к каталогу этой Студии» над папкой; журнала аудита нет, история у источника.
+        return self.build_catalog(plumbing, policy, templates, credentials=credentials, audit=None)
+
+    @staticmethod
+    def build_catalog(  # noqa: PLR0913 — порты каталога паков
+        plumbing: PackGitPlumbing,
+        policy: GitSyncPolicy,
+        templates: ITemplateRepository,
+        *,
+        credentials: IGitCredentialRepository | None,
+        audit: ICatalogAudit | None,
+        service_access: IServiceAccessRepository | None = None,
+    ) -> PackCatalogService:
+        """Каталоги паков (template-studio.md, 10.3, срез T17): хранилище, источники и история на томе данных."""
+        cfg = settings.pack_catalog
+        root = settings.data_dir.expanduser() / "packs-store"
+        archives = FsArchiveStore(root)
+        reloader: ICatalogReloader | None = templates if hasattr(templates, "reload") else None  # type: ignore[assignment]
+        return PackCatalogService(
+            JsonCatalogSourceRepository(root),
+            RevisionStager(plumbing.runner, settings.git, policy, archives),
+            IsolatedRevisionInspector(timeout_s=cfg.inspect_timeout_s, memory_bytes=cfg.inspect_memory_bytes),
+            FsCatalogStore(PacksStore(root), reloader),
+            templates,
+            archives,
+            policy,
+            work_dir=settings.data_dir.expanduser() / "tmp" / "pack-catalog",
+            limits=CatalogStageLimits(
+                max_files=cfg.max_files, max_bytes=cfg.max_bytes, max_archive_bytes=cfg.max_archive_bytes
+            ),
+            app_version=settings.get_app_version(),
+            local_mode=settings.mode is StudioMode.local,
+            audit=audit,
+            credentials=credentials,
+            service_access=service_access,
+        )
 
     @staticmethod
     def build_service(  # noqa: PLR0913 — те же порты, что у провайдера

@@ -31,7 +31,11 @@ class ListTemplatesTool:
         packs = self._template_repo.list_packs()
         lines: list[str] = []
         for pack in packs:
+            if not pack.listed:
+                continue  # источник пака отключён: новые проекты на нём не создаются
             for template in pack.templates:
+                if template.default_version in template.hidden_versions:
+                    continue
                 name = template.name.get("ru") or template.name.get("en") or template.id
                 version = self._template_repo.get_version(pack.id, template.id, template.default_version)
                 staffing = f" staffing={','.join(version.supported_staffing)}" if version is not None else ""

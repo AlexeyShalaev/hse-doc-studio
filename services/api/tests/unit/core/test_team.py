@@ -190,7 +190,9 @@ def _missing_parts_env(tmp_path: Path) -> tuple[Project, MagicMock]:
     (shared / ".latexmkrc").write_text("edited rc", encoding="utf-8", newline="\n")
 
     template_repo = MagicMock()
-    template_repo._packs_dir = str(tmp_path / "packs")
+    template_repo.version_dir.side_effect = lambda p, t, v, root=Path(tmp_path / "packs"): (
+        root / p / "templates" / t / "versions" / v
+    )
     template_repo.list_packs.return_value = [SimpleNamespace(id="p", templates=[SimpleNamespace(id="t")])]
     return project, template_repo
 
