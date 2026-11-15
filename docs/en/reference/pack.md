@@ -57,6 +57,28 @@ How an update works:
 
 If a project is opened in an older Studio than the one that saved it last (or that Studio's pack lacks the project's template version), the project opens read-only and its data stays untouched.
 
+## For pack authors: what a pack consists of { #pack-layout }
+
+A pack is a folder; in the Studio repository the packs live in `packs/`. The easiest way to edit a pack is [Template Studio](../pack-studio/index.md): an editor with checks, previews, signature places with the mouse, the new version wizard and merge requests.
+
+```text
+<pack>/pack.yaml                                       id, ru and en names, description, maintainer, license, source
+<pack>/templates/<template>/template.yaml              the template outside versions: names, icon, colour, default_version, group hint
+<pack>/templates/<template>/releases.yaml              the release registry: version number, folder digest, class
+<pack>/templates/<template>/examples/<name>.yaml       preview sample data, not part of a version
+<pack>/templates/<template>/versions/<version>/version.yaml   the version manifest
+<pack>/templates/<template>/versions/<version>/files/  documents: doc.yaml, LaTeX sources, Jinja templates, common/
+<pack>/templates/<template>/versions/<version>/checks/ check rules
+```
+
+- The ids of the pack, the template and the version match their folder names: the Studio catalog finds a version by the path built from the ids.
+- `template.yaml` is outside versions: the group hint or the icon can change without a release. `default_version` is the version the project wizard offers to new projects.
+- `version.yaml` declares the documents, fields and field groups, questionnaires, signatures, submission profiles, languages and the engine. Service keys: `status` (`beta`, `stable`, `deprecated`), `released_at`, `release.kind` (the release class), `release.note` (the class explanation, the Studio does not show it), `changes` and `breaking_changes` (release notes, ru and en in pairs), `min_studio` (the lowest Studio version that understands the template version), `manifest_format` (the Studio hides a version with a newer format than its own).
+- `releases.yaml` is written by a release (`pack freeze` or the "New version" wizard), nobody edits it by hand. The folder of a released version is immutable: `pack check` recounts the digest and fails on any edit.
+- How to write the manifests is described by the JSON schemas in [`contracts/pack`](https://github.com/AlexeyShalaev/hse-doc-studio/tree/master/contracts/pack). `pack check` and the Template Studio "Problems" check against them; an unknown key is an error, though the Studio catalog itself skips it.
+
+Where the Studio takes packs from: the packs built into the image of this Studio version and connected catalogs. On a server an administrator connects catalogs ([Pack catalogs](../deploy/pack-catalogs.md)); locally the "Connect to this Studio catalog" button in a Template Studio workspace connects a packs folder. From connected catalogs only released versions reach the project wizard.
+
 ## For pack authors: signing presets
 
 A checkpoint's route preset is set in the template version's `version.yaml`. All keys are optional: a version without them works as before, and a Studio that does not know a key skips it.
