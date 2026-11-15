@@ -75,6 +75,8 @@ class PackStudioErrorCode(StrEnum):
     paths_outside_packs = "paths_outside_packs"
     # Срез T9: места подписей и метки даты на PDF предпросмотра
     place_invalid = "place_invalid"
+    # Срезы T11 и T12: формы версии (поля, анкеты, документы, языки)
+    model_invalid = "model_invalid"
     # Срез T15: пак и шаблон с нуля
     id_invalid = "id_invalid"
     name_required = "name_required"
@@ -293,6 +295,11 @@ _TABLE: dict[PackStudioErrorCode, tuple[int, str, str]] = {
         400,
         "Место подписи нельзя записать: рамка за краем листа или слот не относится к документу.",
         "The signature place cannot be written: the box is off the page or the slot does not apply to the document.",
+    ),
+    _C.model_invalid: (
+        400,
+        "Правку формы нельзя записать: пак после неё не прочитается так, как задумано.",
+        "The form edit cannot be written: the pack would not read as intended after it.",
     ),
     _C.id_invalid: (
         400,

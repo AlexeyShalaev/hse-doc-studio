@@ -9,6 +9,7 @@ export const McpToolGroupSchema = z.enum([
   "review",
   "history",
   "submission",
+  "packs",
   "admin",
 ]);
 

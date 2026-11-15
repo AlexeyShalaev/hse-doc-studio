@@ -7,7 +7,7 @@ from dishka import AsyncContainer, Provider, Scope, provide
 from hse_doc_studio.api.config import settings
 from hse_doc_studio.core.access.checker import IProjectAccessChecker
 from hse_doc_studio.core.identity.protocols import IAuditLog, IAuditReader, IInstanceSettingsRepository
-from hse_doc_studio.core.mcp.protocols import IMcpCallJournal, IMcpChangeAudit, IMcpSettingsStore
+from hse_doc_studio.core.mcp.protocols import IMcpCallJournal, IMcpChangeAudit, IMcpSettingsStore, IMcpToolGate
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.core.repositories import ISettingsRepository
 from hse_doc_studio.core.signing_route.ports import ISigningRouteGate
@@ -25,6 +25,8 @@ from hse_doc_studio.use_cases.mcp.list_tools import ListMcpToolsUC
 from hse_doc_studio.use_cases.mcp.resources import ReadMcpResourceUC
 from hse_doc_studio.use_cases.mcp.settings import GetMcpSettingsUC, UpdateMcpSettingsUC
 from hse_doc_studio.use_cases.mcp.signing_note import SigningNotes
+from hse_doc_studio.use_cases.mcp.tools.packs import PackStudioToolGate
+from hse_doc_studio.use_cases.pack_studio.access import PackStudioAccess
 from hse_doc_studio.use_cases.projects.get_project_access import GetProjectAccessUC
 
 
@@ -67,8 +69,15 @@ class McpProvider(Provider):
         return CallMcpToolUC(catalog, store, journal, access, project_access, notes)
 
     @provide
-    def get_list_mcp_tools_uc(self, catalog: McpCatalog, store: IMcpSettingsStore) -> ListMcpToolsUC:
-        return ListMcpToolsUC(catalog, store)
+    def get_mcp_tool_gate(self, access: PackStudioAccess) -> IMcpToolGate:
+        # Тулы Студии шаблонов видит только тот, кому открыт её раздел (template-studio.md, раздел 11).
+        return PackStudioToolGate(access)
+
+    @provide
+    def get_list_mcp_tools_uc(
+        self, catalog: McpCatalog, store: IMcpSettingsStore, gate: IMcpToolGate
+    ) -> ListMcpToolsUC:
+        return ListMcpToolsUC(catalog, store, gate)
 
     @provide
     def get_read_mcp_resource_uc(  # noqa: PLR0913 — порты чтения ресурса

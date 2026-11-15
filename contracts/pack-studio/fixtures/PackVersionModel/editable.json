@@ -1,0 +1,216 @@
+{
+  "workspace_id": "5b0c8f7e-2a41-4d6c-9e3b-7f1a2c3d4e5f",
+  "pack": "hse-cs-sse",
+  "template": "coursework",
+  "version": "2026.1.7",
+  "read_only": null,
+  "manifest": {
+    "path": "hse-cs-sse/templates/coursework/versions/2026.1.7/version.yaml",
+    "etag": "\"2b3595756a4b395c5e6a9119b0d17718\"",
+    "data": {
+      "id": "2026.1.7",
+      "released_at": "2026-11-20",
+      "status": "beta",
+      "langs": [
+        "ru",
+        "en"
+      ],
+      "documents": [
+        "report",
+        "presentation"
+      ],
+      "dynamic_includes": [
+        {
+          "template": "common/meta.tex.j2",
+          "output": "common/meta.tex"
+        }
+      ],
+      "meta_groups": [
+        {
+          "id": "study",
+          "label": {
+            "ru": "Учёба",
+            "en": "Studies"
+          }
+        },
+        {
+          "id": "title",
+          "label": {
+            "ru": "Титульные данные",
+            "en": "Title data"
+          }
+        }
+      ],
+      "meta_fields": {
+        "year": {
+          "type": "string",
+          "group": "study",
+          "label": {
+            "ru": "Учебный год",
+            "en": "Academic year"
+          },
+          "placeholder": "2027",
+          "required_at": "create",
+          "auto": "academic_year"
+        },
+        "proposal_stage": {
+          "type": "select",
+          "group": "title",
+          "label": {
+            "ru": "Редакция заявки",
+            "en": "Proposal edition"
+          },
+          "required_at": "never",
+          "default": "Предварительная",
+          "options": [
+            "Предварительная",
+            "Доработанная"
+          ]
+        }
+      },
+      "forms": [
+        {
+          "id": "ai_declaration",
+          "title": {
+            "ru": "Декларация об использовании ИИ",
+            "en": "AI usage declaration"
+          },
+          "required_for_pack": true,
+          "sections": [
+            {
+              "id": "usage",
+              "title": {
+                "ru": "Использование",
+                "en": "Usage"
+              },
+              "fields": [
+                {
+                  "id": "used_ai",
+                  "type": "select",
+                  "widget": "radio",
+                  "required": true,
+                  "label": {
+                    "ru": "Использование ИИ",
+                    "en": "AI usage"
+                  },
+                  "options": [
+                    {
+                      "id": "no",
+                      "label": {
+                        "ru": "Нет",
+                        "en": "No"
+                      }
+                    },
+                    {
+                      "id": "yes",
+                      "label": {
+                        "ru": "Да",
+                        "en": "Yes"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "documents": [
+    {
+      "id": "report",
+      "manifest": {
+        "path": "hse-cs-sse/templates/coursework/versions/2026.1.7/files/report/doc.yaml",
+        "etag": "\"9a1d1f0e7c2b44a1b8e0c3d2f1a0b9c8\"",
+        "data": {
+          "name": {
+            "ru": "Отчёт о курсовом проекте",
+            "en": "Course project report"
+          },
+          "source_file": "report/report.tex",
+          "output_file": "report/report.pdf",
+          "required": true,
+          "supported_langs": [
+            "ru",
+            "en"
+          ],
+          "scope": "personal",
+          "group": "work"
+        }
+      },
+      "data": {
+        "name": {
+          "ru": "Отчёт о курсовом проекте",
+          "en": "Course project report"
+        },
+        "source_file": "report/report.tex",
+        "output_file": "report/report.pdf",
+        "required": true,
+        "supported_langs": [
+          "ru",
+          "en"
+        ],
+        "scope": "personal",
+        "group": "work"
+      },
+      "files": [
+        {
+          "path": "report/preamble.tex",
+          "bare": "report/preamble.tex",
+          "lang": "",
+          "size": 2048
+        },
+        {
+          "path": "report/report.en.tex",
+          "bare": "report/report.tex",
+          "lang": "en",
+          "size": 8120
+        },
+        {
+          "path": "report/report.ru.tex",
+          "bare": "report/report.tex",
+          "lang": "ru",
+          "size": 9311
+        }
+      ],
+      "references": [
+        "signatures.slots[author].applies_to",
+        "pack_submission.profiles[final].items"
+      ]
+    },
+    {
+      "id": "presentation",
+      "manifest": null,
+      "data": null,
+      "files": [],
+      "references": []
+    }
+  ],
+  "usage": [
+    {
+      "field": "proposal_stage",
+      "document": "report",
+      "macros": [
+        "ifhseExtendedProposal"
+      ],
+      "direct": false,
+      "whole": false
+    },
+    {
+      "field": "year",
+      "document": "report",
+      "macros": [
+        "hseYear"
+      ],
+      "direct": false,
+      "whole": false
+    }
+  ],
+  "checks": [
+    "gost-7.32-2017",
+    "typography-ru"
+  ],
+  "problems": [],
+  "changed": []
+}

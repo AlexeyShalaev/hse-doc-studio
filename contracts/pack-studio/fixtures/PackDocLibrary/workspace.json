@@ -1,0 +1,12 @@
+{
+  "documents": [
+    {
+      "path": "hse-cs-se/templates/vkr/versions/2026.1.2/files/pdp_review",
+      "pack": "hse-cs-se",
+      "template": "vkr",
+      "version": "2026.1.2",
+      "id": "pdp_review",
+      "name": { "ru": "Отзыв руководителя практики", "en": "Practice supervisor review" }
+    }
+  ]
+}

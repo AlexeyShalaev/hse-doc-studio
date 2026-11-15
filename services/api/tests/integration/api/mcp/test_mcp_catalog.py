@@ -197,3 +197,13 @@ def test__rules__signing_route__read_and_send_only() -> None:
     assert names == {"get_signing_route", "list_signing_tasks", "send_for_signing"}
     # Пропустить подписанта через MCP тоже нельзя (13.10): это решение автора в интерфейсе.
     assert not [r.name for r in MCP_TOOL_RULES if "approve" in r.name or "return" in r.name or "skip" in r.name]
+
+
+def test__rules__pack_tools__packs_scope_outside_projects_and_propose_dangerous() -> None:
+    """Студия шаблонов (template-studio.md, 11): область токена `packs`, вне проекта; push и PR опасные."""
+    rules = [r for r in MCP_TOOL_RULES if r.meta.group is McpToolGroup.packs]
+
+    assert {r.name for r in rules} == {cls.spec.name for cls in MCP_TOOL_CLASSES if cls.spec.name.startswith("pack_")}
+    assert all(r.name.startswith("pack_") and r.scope == "packs" and not r.needs_project for r in rules)
+    assert not [r.name for r in rules if r.meta.server_only or r.meta.local_only]
+    assert {r.name for r in rules if r.meta.dangerous} == {"pack_propose"}

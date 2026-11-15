@@ -67,9 +67,34 @@ export type PackFileEditorProps = {
    * заново, а вкладка предпросмотра рядом остаётся как была.
    */
   contentRevision?: number | undefined;
+  /**
+   * Вкладка «Форма» поверх YAML (срезы T11 и дальше): правка структуры пака
+   * мышкой. Без неё у манифеста стоит выключенная вкладка.
+   */
+  form?: ReactNode;
 };
 
 type SidePane = "problems" | "preview";
+type MainView = "source" | "form";
+
+// Последний выбранный вид манифеста: форма или исходник (на вкладку браузера).
+const VIEW_KEY = "pack-studio:manifest-view";
+
+const readView = (): MainView => {
+  try {
+    return sessionStorage.getItem(VIEW_KEY) === "form" ? "form" : "source";
+  } catch {
+    return "source";
+  }
+};
+
+const rememberView = (view: MainView) => {
+  try {
+    sessionStorage.setItem(VIEW_KEY, view);
+  } catch {
+    // Хранилище недоступно: вид просто не запомнится.
+  }
+};
 
 /** Манифесты, у которых будет форма поверх YAML (5.0): пока открыт только «Исходник». */
 const hasForm = (path: string): boolean =>
@@ -336,6 +361,7 @@ export const PackFileEditor = ({
   onDismissGate,
   problemsFocus,
   contentRevision = 0,
+  form,
 }: PackFileEditorProps) => {
   const { t } = useTranslation("packStudio");
   const phone = useIsPhoneWidth();
@@ -347,6 +373,17 @@ export const PackFileEditor = ({
   // Подсказки автодополнения: редактор читает их из кэша запросов.
   usePackHints(workspaceId, versionDir);
   const [pane, setPane] = useState<SidePane>("problems");
+  const [view, setView] = useState<MainView>(readView);
+  // Несохранённая правка исходника: форма писала бы мимо неё, поэтому вкладка формы закрыта.
+  const [sourceDirty, setSourceDirty] = useState(false);
+  const trackDirty = useCallback(
+    (dirty: boolean) => {
+      setSourceDirty(dirty);
+      onDirtyChange?.(dirty);
+    },
+    [onDirtyChange],
+  );
+  const showForm = form !== undefined && view === "form";
   // Пришли находки перед отправкой: «Проблемы» выходят вперёд (состояние от пропа без эффекта).
   const [seenFocus, setSeenFocus] = useState(problemsFocus);
   if (problemsFocus !== seenFocus) {
@@ -390,7 +427,7 @@ export const PackFileEditor = ({
         diagnostics={diagnostics}
         reveal={reveal}
         onSaved={onSaved}
-        onDirtyChange={onDirtyChange}
+        onDirtyChange={trackDirty}
         actions={actions}
       />
     );
@@ -404,7 +441,7 @@ export const PackFileEditor = ({
       data-testid="pack-file-editor"
     >
       <div className="ps-editor-center">
-        {hasForm(path) && (
+        {(hasForm(path) || form !== undefined) && (
           <div
             className="ps-view-tabs"
             role="tablist"
@@ -413,25 +450,41 @@ export const PackFileEditor = ({
             <button
               type="button"
               role="tab"
-              aria-selected
-              className="ps-view-tab active"
+              aria-selected={!showForm}
+              className={clsx("ps-view-tab", !showForm && "active")}
+              data-testid="view-tab-source"
+              onClick={() => {
+                setView("source");
+                rememberView("source");
+              }}
             >
               {t("editor.source")}
             </button>
-            {/* Формы поверх YAML: срезы T11–T14. */}
+            {/* Формы поверх YAML: манифест версии (T11, T12), остальное в T13 и T14. */}
             <button
               type="button"
               role="tab"
-              aria-selected={false}
-              className="ps-view-tab"
-              disabled
-              title={t("editor.formSoon")}
+              aria-selected={showForm}
+              className={clsx("ps-view-tab", showForm && "active")}
+              disabled={form === undefined || (sourceDirty && !showForm)}
+              title={
+                form === undefined
+                  ? t("editor.formSoon")
+                  : sourceDirty && !showForm
+                    ? t("editor.formDirty")
+                    : undefined
+              }
+              data-testid="view-tab-form"
+              onClick={() => {
+                setView("form");
+                rememberView("form");
+              }}
             >
               {t("editor.form")}
             </button>
           </div>
         )}
-        {main}
+        {showForm ? form : main}
       </div>
       <aside className="ps-side" aria-label={t("problems.title")}>
         <div className="ps-view-tabs" role="tablist">

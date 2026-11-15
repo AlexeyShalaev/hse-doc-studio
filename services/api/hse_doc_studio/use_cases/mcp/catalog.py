@@ -16,7 +16,7 @@ from hse_doc_studio.core.access.actions import Action
 from hse_doc_studio.core.agent.entities import ToolSpec
 from hse_doc_studio.core.agent.tools import ToolDefinition
 from hse_doc_studio.core.enums import ToolKind
-from hse_doc_studio.core.mcp.entities import MCP_SIGN_SCOPE, McpToolGroup, McpToolMeta
+from hse_doc_studio.core.mcp.entities import MCP_PACKS_SCOPE, MCP_SIGN_SCOPE, McpToolGroup, McpToolMeta
 from hse_doc_studio.core.mcp.protocols import IDependencyResolver
 from hse_doc_studio.core.rate_limit import COMPILE, GIT_SYNC, INVITE, UPLOAD, RateRule
 from hse_doc_studio.use_cases.chat._registry import ToolRegistry
@@ -28,6 +28,7 @@ from hse_doc_studio.use_cases.mcp.tools import (
     documents,
     files,
     git,
+    packs,
     people,
     projects,
     review,
@@ -201,6 +202,23 @@ MCP_TOOL_RULES: tuple[McpToolRule, ...] = (
     # Отправка создаёт черновик тем же сценарием, что кнопка, и применяет пресет точки (места из шаблона, M25). Без
     # `touches`: места пишутся до отправки и входят в версию на подписи, пометка `signing_note` была бы неправдой.
     _rule("send_for_signing", _G.submission, _X, Action.SUBMISSION_CREATE, dangerous=True, server_only=True),
+    # Студия шаблонов (template-studio.md, раздел 11): вне проекта, токену нужна область `packs`, видны только тому,
+    # кому открыт раздел (`IMcpToolGate`); права на пространство и защиту выпущенных проверяют сценарии раздела.
+    _rule("pack_list_workspaces", _G.packs, _R, scope=MCP_PACKS_SCOPE),
+    _rule("pack_read", _G.packs, _R, scope=MCP_PACKS_SCOPE),
+    _rule("pack_read_file", _G.packs, _R, scope=MCP_PACKS_SCOPE),
+    _rule("pack_write_file", _G.packs, _W, rate=UPLOAD, scope=MCP_PACKS_SCOPE),
+    _rule("pack_lint", _G.packs, _R, scope=MCP_PACKS_SCOPE),
+    _rule("pack_classify", _G.packs, _R, scope=MCP_PACKS_SCOPE),
+    _rule("pack_preview_build", _G.packs, _X, rate=COMPILE, scope=MCP_PACKS_SCOPE),
+    _rule("pack_preview_read", _G.packs, _R, scope=MCP_PACKS_SCOPE),
+    _rule("pack_set_placement", _G.packs, _W, scope=MCP_PACKS_SCOPE),
+    _rule("pack_new_version", _G.packs, _W, scope=MCP_PACKS_SCOPE),
+    _rule("pack_version_notes", _G.packs, _W, scope=MCP_PACKS_SCOPE),
+    _rule("pack_release", _G.packs, _W, scope=MCP_PACKS_SCOPE),
+    _rule("pack_git_status", _G.packs, _R, scope=MCP_PACKS_SCOPE),
+    # Push и PR на хостинге доступом пространства: внешнее действие, как синхронизация проекта с git-remote.
+    _rule("pack_propose", _G.packs, _X, dangerous=True, rate=GIT_SYNC, scope=MCP_PACKS_SCOPE),
     # Админка (сценарии сами требуют админа установки)
     _rule("admin_list_users", _G.admin, _R),
     _rule("admin_queue_summary", _G.admin, _R),
@@ -257,6 +275,20 @@ MCP_TOOL_CLASSES: tuple[type[McpTool], ...] = (
     signing_route.GetSigningRouteTool,
     signing_route.ListSigningTasksTool,
     signing_route.SendForSigningTool,
+    packs.PackListWorkspacesTool,
+    packs.PackReadTool,
+    packs.PackReadFileTool,
+    packs.PackWriteFileTool,
+    packs.PackLintTool,
+    packs.PackClassifyTool,
+    packs.PackPreviewBuildTool,
+    packs.PackPreviewReadTool,
+    packs.PackSetPlacementTool,
+    packs.PackNewVersionTool,
+    packs.PackVersionNotesTool,
+    packs.PackReleaseTool,
+    packs.PackGitStatusTool,
+    packs.PackProposeTool,
     admin.AdminListUsersTool,
     admin.AdminQueueSummaryTool,
     admin.AdminRunnerSummaryTool,

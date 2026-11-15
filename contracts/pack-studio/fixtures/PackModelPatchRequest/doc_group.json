@@ -1,0 +1,4 @@
+{
+  "file": "files/report/doc.yaml",
+  "ops": [{ "op": "set", "path": ["group"], "value": "report" }]
+}

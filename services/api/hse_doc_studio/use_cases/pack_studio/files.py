@@ -23,6 +23,7 @@ from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.file_version import etag_matches, file_etag
 from hse_doc_studio.core.pack_studio.entities import PackTree, PackWorkspace
 from hse_doc_studio.core.pack_studio.errors import PackStudioError, PackStudioErrorCode
+from hse_doc_studio.core.pack_studio.model import FileChange
 from hse_doc_studio.core.pack_studio.paths import is_yaml, validate_rel_path
 from hse_doc_studio.core.pack_studio.protocols import IPackWorkspaceFiles, IYamlEditor
 from hse_doc_studio.use_cases.pack_studio.workspaces import PackWorkspaceService
@@ -136,6 +137,43 @@ class PackFilesService:
                 await asyncio.to_thread(self._files.write, root, path, data)
         return WrittenFile(path, file_etag(data), len(data), content=edited)
 
+    async def apply_changes(
+        self,
+        actor: Actor,
+        workspace_id: UUID,
+        guard: str,
+        if_match: str | None,
+        plan: Callable[[Path], Sequence[FileChange]],
+    ) -> tuple[FileChange, ...]:
+        """Операция на несколько файлов под замком пространства (формы T11 и T12: поле, документ, перевод).
+
+        `guard` это файл, на версию которого опирался клиент (`If-Match`), `plan` считает записи и удаления по папке
+        паков (в потоке, его `PackStudioError` уходит как есть). Защита выпущенных версий проверяется до первой
+        записи по всем путям; запись идёт по порядку плана.
+        """
+        guard_path = validate_rel_path(guard)
+        ws, root = await self._workspaces.ready(actor, workspace_id)
+        async with self._lock(ws.id):
+            protection = await self._workspaces.protection(ws, root)
+            protection.check_write(guard_path)
+            if await self._check_version(root, guard_path, if_match) is None:
+                raise PackStudioError(PackStudioErrorCode.file_not_found, path=guard_path)
+            changes = tuple(await asyncio.to_thread(plan, root))
+            for change in changes:
+                path = validate_rel_path(change.path)
+                if change.content is None and await asyncio.to_thread(self._files.is_dir, root, path):
+                    protection.check_delete_dir(path)
+                else:
+                    protection.check_write(path)
+                if change.content is not None:
+                    self._check_size(len(change.content))
+            for change in changes:
+                if change.content is None:
+                    await asyncio.to_thread(self._files.delete, root, change.path)
+                else:
+                    await asyncio.to_thread(self._files.write, root, change.path, change.content)
+        return changes
+
     async def delete(self, actor: Actor, workspace_id: UUID, raw_path: str, if_match: str | None) -> None:
         path = validate_rel_path(raw_path)
         ws, root = await self._workspaces.ready(actor, workspace_id)
@@ -182,6 +220,11 @@ class PackFilesService:
             lock = asyncio.Lock()
             self._locks[workspace_id] = lock
         return lock
+
+
+def apply_yaml_ops(editor: IYamlEditor, text: str, ops: Sequence[YamlOp]) -> str:
+    """Набор точечных правок по порядку; невыполнимая это `yaml_patch_conflict` с номером правки."""
+    return _apply(editor, text, ops)
 
 
 def _apply(editor: IYamlEditor, text: str, ops: Sequence[YamlOp]) -> str:

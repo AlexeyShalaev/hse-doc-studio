@@ -803,6 +803,86 @@ export const PackSignaturesPatchRequestSchema = z.strictObject({
   ops: z.array(PackPlaceOpSchema).min(1).max(50),
 });
 
+// Срезы T11 и T12: формы версии. Данные манифестов приходят как их читает
+// yaml.safe_load (даты строкой), форма разбирает их сама: схема пака богаче
+// контракта и растёт без правки этого файла.
+const PackModelFileSchema = z.strictObject({
+  path: z.string(),
+  etag: z.string(),
+  data: z.unknown(),
+});
+
+export const PackDocFileSchema = z.strictObject({
+  path: z.string(),
+  bare: z.string(),
+  lang: z.string(),
+  size: z.number(),
+});
+
+export const PackModelDocumentSchema = z.strictObject({
+  id: z.string(),
+  manifest: PackModelFileSchema.nullable(),
+  data: z.unknown(),
+  files: z.array(PackDocFileSchema),
+  references: z.array(z.string()),
+});
+
+export const PackFieldUsageSchema = z.strictObject({
+  field: z.string(),
+  document: z.string(),
+  macros: z.array(z.string()),
+  direct: z.boolean(),
+  whole: z.boolean(),
+});
+
+export const PackVersionModelSchema = z.strictObject({
+  workspace_id: z.string(),
+  pack: z.string(),
+  template: z.string(),
+  version: z.string(),
+  read_only: ReadOnlyReasonSchema.nullable(),
+  manifest: PackModelFileSchema,
+  documents: z.array(PackModelDocumentSchema),
+  usage: z.array(PackFieldUsageSchema),
+  checks: z.array(z.string()),
+  problems: z.array(z.string()),
+  changed: z.array(z.string()),
+});
+
+export const PackModelPatchRequestSchema = z.strictObject({
+  file: z.string().min(1).max(300),
+  ops: z.array(PackYamlOpSchema).min(1).max(50),
+});
+
+export const PackModelActionRequestSchema = z.strictObject({
+  action: z.enum([
+    "rename_field",
+    "add_document",
+    "remove_document",
+    "add_translation",
+  ]),
+  field: z.string().nullish(),
+  to: z.string().nullish(),
+  document: z.string().nullish(),
+  name: LocalizedSchema.nullish(),
+  source: z.string().nullish(),
+  lang: z.string().nullish(),
+  files: z.array(z.string()).optional(),
+});
+
+export const PackDocLibrarySchema = z.strictObject({
+  documents: z.array(
+    z.strictObject({
+      path: z.string(),
+      pack: z.string(),
+      template: z.string(),
+      version: z.string(),
+      id: z.string(),
+      name: LocalizedSchema,
+    }),
+  ),
+});
+
 export type PackStudioSection = z.infer<typeof PackStudioSectionSchema>;
 export type PackWorkspace = z.infer<typeof PackWorkspaceSchema>;
 export type CreatePackWorkspaceRequest = z.infer<
@@ -893,6 +973,15 @@ export type PackPlaceOp = z.infer<typeof PackPlaceOpSchema>;
 export type PackSignaturesPatchRequest = z.infer<
   typeof PackSignaturesPatchRequestSchema
 >;
+export type PackDocFile = z.infer<typeof PackDocFileSchema>;
+export type PackModelDocument = z.infer<typeof PackModelDocumentSchema>;
+export type PackFieldUsage = z.infer<typeof PackFieldUsageSchema>;
+export type PackVersionModel = z.infer<typeof PackVersionModelSchema>;
+export type PackModelPatchRequest = z.infer<typeof PackModelPatchRequestSchema>;
+export type PackModelActionRequest = z.infer<
+  typeof PackModelActionRequestSchema
+>;
+export type PackDocLibrary = z.infer<typeof PackDocLibrarySchema>;
 
 // ── Срез T15: пак и шаблон с нуля (template-studio.md, раздел 8) ──
 

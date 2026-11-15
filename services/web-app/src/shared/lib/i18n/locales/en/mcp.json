@@ -45,6 +45,10 @@
       "title": "Submission",
       "hint": "Checkpoints and packages, signature status."
     },
+    "packs": {
+      "title": "Pack Studio",
+      "hint": "Template packs: workspaces, files, checks, preview, new version, proposing changes. Needs the Pack author right and a token with the Pack Studio scope."
+    },
     "admin": {
       "title": "Administration",
       "hint": "Users, queue, runners, audit, mail log. Only for an instance administrator with an MCP: administration token."
