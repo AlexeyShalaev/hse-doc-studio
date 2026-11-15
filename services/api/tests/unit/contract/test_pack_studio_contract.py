@@ -33,6 +33,10 @@ _SCHEMAS: dict[str, Any] = {
     "PackLintRequest": s.PackLintRequest,
     "PackLint": s.PackLintResponse,
     "PackEditorHints": s.PackEditorHintsResponse,
+    "PackPreviewOptions": s.PackPreviewOptionsResponse,
+    "StartPackPreviewRequest": s.StartPackPreviewRequest,
+    "PackPreviewBuild": s.PackPreviewBuildResponse,
+    "PackPreviewStart": s.PackPreviewStartResponse,
 }
 
 

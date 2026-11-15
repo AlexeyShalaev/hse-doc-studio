@@ -10,6 +10,9 @@ import {
   PackFileVersionSchema,
   PackLintRequestSchema,
   PackLintSchema,
+  PackPreviewBuildSchema,
+  PackPreviewOptionsSchema,
+  PackPreviewStartSchema,
   PackStudioAdminSchema,
   PackStudioErrorBodySchema,
   PackStudioGrantSchema,
@@ -19,6 +22,7 @@ import {
   PackWorkspaceSchema,
   PackYamlPatchRequestSchema,
   PackYamlPatchResponseSchema,
+  StartPackPreviewRequestSchema,
   UpdatePackStudioAdminRequestSchema,
   UpdatePackStudioSectionRequestSchema,
 } from "./schemas";
@@ -58,6 +62,10 @@ const SCHEMAS: Record<string, ZodType> = {
   PackLintRequest: PackLintRequestSchema,
   PackLint: PackLintSchema,
   PackEditorHints: PackEditorHintsSchema,
+  PackPreviewOptions: PackPreviewOptionsSchema,
+  StartPackPreviewRequest: StartPackPreviewRequestSchema,
+  PackPreviewBuild: PackPreviewBuildSchema,
+  PackPreviewStart: PackPreviewStartSchema,
 };
 
 const readJson = (path: string): unknown =>

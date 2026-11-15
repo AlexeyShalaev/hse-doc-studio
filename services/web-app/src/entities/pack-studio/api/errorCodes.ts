@@ -36,6 +36,10 @@ export const PACK_STUDIO_ERROR_CODES = [
   "lint_failed",
   "class_softer_than_changes",
   "preview_quota",
+  "preview_not_found",
+  "preview_invalid",
+  "preview_not_ready",
+  "version_unreadable",
 ] as const;
 
 export type PackStudioErrorCode = (typeof PACK_STUDIO_ERROR_CODES)[number];

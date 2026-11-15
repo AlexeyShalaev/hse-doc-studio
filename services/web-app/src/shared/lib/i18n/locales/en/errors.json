@@ -264,6 +264,10 @@
     "ci_status_unavailable": "The hosting check status is unavailable.",
     "lint_failed": "Pack checks failed: fix the errors under “Problems”.",
     "class_softer_than_changes": "The version number is softer than the changes: a stricter class is needed.",
-    "preview_quota": "Too many preview builds at once. Wait a moment."
+    "preview_quota": "Too many preview builds at once. Wait a moment.",
+    "preview_not_found": "The preview build was not found: it may have been removed. Start it again.",
+    "preview_invalid": "The document, sample data or combination does not fit this template version.",
+    "preview_not_ready": "The preview build is not ready yet.",
+    "version_unreadable": "The template version could not be read: check version.yaml under “Problems”."
   }
 }

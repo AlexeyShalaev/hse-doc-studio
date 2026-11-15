@@ -257,3 +257,100 @@ class CreatePackStudioGrantRequest(StrictModel):
         if (self.user_id is None) == (self.group_id is None):
             raise ValueError("exactly one of user_id and group_id")
         return self
+
+
+# ── Предпросмотр (раздел 6, срез T7) ─────────────────────────────────────────
+
+PreviewStatusName = Literal["queued", "running", "succeeded", "failed", "cancelled"]
+PreviewExampleSource = Literal["file", "auto"]
+
+
+class PackPreviewDocument(StrictModel):
+    id: str
+    name: dict[str, str]
+    # Виды работы и составы, в которых документ есть: в остальных комбинациях его нет в проекте.
+    kinds: list[str]
+    staffing: list[str]
+
+
+class PackPreviewSwitch(StrictModel):
+    """Переключатель комбинации: `lang`, `kind`, `staffing`, `supervisor`, `co_supervisor`, `academic_supervisor`,
+    `nda` и `meta.<поле>` (до пяти полей select и bool); у полей анкеты есть `label` из пака."""
+
+    id: str
+    values: list[str]
+    default: str
+    label: dict[str, str] | None
+
+
+class PackPreviewExample(StrictModel):
+    """Набор данных: файл `templates/<шаблон>/examples/<id>.yaml` или автонабор `auto:normal|long|empty`."""
+
+    id: str
+    source: PreviewExampleSource
+    label: dict[str, str] | None
+    # Файл не разобран: набор виден, но собрать по нему нельзя.
+    error: str | None
+    # Значения переключателей, которые предлагает сам набор (`lang`, `kind`, `staffing` в файле).
+    defaults: dict[str, str]
+
+
+class PackPreviewOptionsResponse(StrictModel):
+    workspace_id: str
+    # Папки версии в пространстве (как в дереве) и id из манифестов.
+    pack: str
+    template: str
+    version: str
+    pack_id: str
+    template_id: str
+    version_id: str
+    documents: list[PackPreviewDocument]
+    switches: list[PackPreviewSwitch]
+    examples: list[PackPreviewExample]
+    default_example: str
+    # Полная комбинация по умолчанию для набора `default_example`.
+    combination: dict[str, str]
+
+
+class StartPackPreviewRequest(StrictModel):
+    documents: list[str] = Field(min_length=1, max_length=8)
+    # Нет: первый разобранный файл примера, иначе `auto:normal`.
+    example: str | None = Field(default=None, max_length=255)
+    # Недостающие переключатели берутся из набора, затем по умолчанию.
+    combination: dict[str, str] = Field(default_factory=dict, max_length=32)
+
+
+class PackPreviewErrorBody(StrictModel):
+    # `render_failed`, `interrupted`, `pdf_missing` и коды сборки проекта (`build_failed`, `font_missing`,
+    # `image_missing`, `docker_unavailable`, `no_runners`, `quota_exceeded`, ...).
+    code: str
+    detail: str | None
+
+
+class PackPreviewBuildResponse(StrictModel):
+    id: str
+    workspace_id: str
+    pack: str
+    template: str
+    version: str
+    document: str
+    example: str
+    combination: dict[str, str]
+    # Ключ кэша: одинаковый ключ значит тот же PDF.
+    key: str
+    status: PreviewStatusName
+    # Ответ взят из кэша, сборки не было.
+    cached: bool
+    created_at: datetime
+    started_at: datetime | None
+    finished_at: datetime | None
+    pages: int | None
+    error: PackPreviewErrorBody | None
+    # Исходник документа в синтетическом проекте (`report/report.tex`, у личного документа команды с папкой автора).
+    source_file: str | None
+    # Есть якоря мест подписей (`GET .../anchors`).
+    has_anchors: bool
+
+
+class PackPreviewStartResponse(StrictModel):
+    builds: list[PackPreviewBuildResponse]

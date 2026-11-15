@@ -207,6 +207,78 @@ export const CreatePackStudioGrantRequestSchema = z.union([
   z.strictObject({ group_id: z.string().min(1).max(64) }),
 ]);
 
+// Предпросмотр (срез T7, бэкенд в PR #392): только контракт. Панель предпросмотра
+// подключит следующий срез на месте заглушки во вкладке «Предпросмотр».
+export const PackPreviewDocumentSchema = z.strictObject({
+  id: z.string(),
+  name: LocalizedSchema,
+  kinds: z.array(z.string()),
+  staffing: z.array(z.string()),
+});
+
+export const PackPreviewSwitchSchema = z.strictObject({
+  id: z.string(),
+  values: z.array(z.string()),
+  default: z.string(),
+  label: LocalizedSchema.nullable(),
+});
+
+export const PackPreviewExampleSchema = z.strictObject({
+  id: z.string(),
+  source: z.enum(["file", "auto"]),
+  label: LocalizedSchema.nullable(),
+  error: z.string().nullable(),
+  defaults: z.record(z.string(), z.string()),
+});
+
+export const PackPreviewOptionsSchema = z.strictObject({
+  workspace_id: z.string(),
+  pack: z.string(),
+  template: z.string(),
+  version: z.string(),
+  pack_id: z.string(),
+  template_id: z.string(),
+  version_id: z.string(),
+  documents: z.array(PackPreviewDocumentSchema),
+  switches: z.array(PackPreviewSwitchSchema),
+  examples: z.array(PackPreviewExampleSchema),
+  default_example: z.string(),
+  combination: z.record(z.string(), z.string()),
+});
+
+export const StartPackPreviewRequestSchema = z.strictObject({
+  documents: z.array(z.string()).min(1).max(8),
+  example: z.string().max(255).nullish(),
+  combination: z.record(z.string(), z.string()).optional(),
+});
+
+export const PackPreviewBuildSchema = z.strictObject({
+  id: z.string(),
+  workspace_id: z.string(),
+  pack: z.string(),
+  template: z.string(),
+  version: z.string(),
+  document: z.string(),
+  example: z.string(),
+  combination: z.record(z.string(), z.string()),
+  key: z.string(),
+  status: z.enum(["queued", "running", "succeeded", "failed", "cancelled"]),
+  cached: z.boolean(),
+  created_at: z.string(),
+  started_at: z.string().nullable(),
+  finished_at: z.string().nullable(),
+  pages: z.number().int().nullable(),
+  error: z
+    .strictObject({ code: z.string(), detail: z.string().nullable() })
+    .nullable(),
+  source_file: z.string().nullable(),
+  has_anchors: z.boolean(),
+});
+
+export const PackPreviewStartSchema = z.strictObject({
+  builds: z.array(PackPreviewBuildSchema),
+});
+
 export type PackStudioSection = z.infer<typeof PackStudioSectionSchema>;
 export type PackWorkspace = z.infer<typeof PackWorkspaceSchema>;
 export type CreatePackWorkspaceRequest = z.infer<
@@ -230,4 +302,9 @@ export type PackStudioGrant = z.infer<typeof PackStudioGrantSchema>;
 export type PackStudioAdmin = z.infer<typeof PackStudioAdminSchema>;
 export type CreatePackStudioGrantRequest = z.infer<
   typeof CreatePackStudioGrantRequestSchema
+>;
+export type PackPreviewOptions = z.infer<typeof PackPreviewOptionsSchema>;
+export type PackPreviewBuild = z.infer<typeof PackPreviewBuildSchema>;
+export type StartPackPreviewRequest = z.infer<
+  typeof StartPackPreviewRequestSchema
 >;
