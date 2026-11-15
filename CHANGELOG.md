@@ -6,19 +6,13 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.33.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.32.0...v0.33.0) (2026-11-15)
+## [0.33.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.32.0...v0.33.0) - 2026-11-15
 
-
-### Features
-
-* **mcp:** Pack Studio tools pack_* (T16) ([5025ed9](https://github.com/AlexeyShalaev/hse-doc-studio/commit/5025ed9e7c48becc7c7a037c0c1c599ec8c217b8))
-* **mcp:** pack_create and pack_new_template for a pack from scratch ([ea4e3f5](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ea4e3f5cf9dc0babc397d953246e98f9279df43a))
-* **mcp:** pack_create and pack_new_template for a pack from scratch ([4995fd6](https://github.com/AlexeyShalaev/hse-doc-studio/commit/4995fd636569d3fceb46c3f46ba52c7eecd15a9d))
-* **pack-studio:** document forms: roster, languages, translations, variants (T12) ([fccda54](https://github.com/AlexeyShalaev/hse-doc-studio/commit/fccda546c2b04c2f7b85a3829c46ed21d4a583dc))
-* **pack-studio:** new pack and template from scratch (T15) ([fd04f35](https://github.com/AlexeyShalaev/hse-doc-studio/commit/fd04f3523fb57f52aecaa669e2a8deb9009c48fa))
-* **pack-studio:** version forms for fields, groups and questionnaires (T11) ([d3fd0cd](https://github.com/AlexeyShalaev/hse-doc-studio/commit/d3fd0cd5d1a696e4edb4898621324be99de22631))
-* **pack-studio:** формы проверок и правил, прогон проверок на предпросмотре (T14) ([7c93279](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7c932795d0ea13461ad17806d2e20b690a0c8422))
-* **pack-studio:** формы точек сдачи и порядка маршрута (T13) ([625936c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/625936c55c09c3b5e4ef7baf451281a1ecbaca0f))
+- Template Studio: a Form tab for version.yaml and doc.yaml. Fields and groups, questionnaires, documents, languages and translations, and variants are edited with the mouse, no hand-written YAML. A field preview and where it is printed are shown alongside. YAML comments and order are kept, and an edit that breaks the pack is not saved.
+- Template Studio: forms for submission checkpoints and the signing route (items, submission methods, signature slots with conditions and optional ones) and a "Route in this combination" block showing the route for the selected preview switches.
+- Template Studio: forms for checks and rules, and running the checks on the preview with findings shown next to each rule.
+- Template Studio: New pack and New template, from scratch with the Minimal scaffold (a GOST 7.32 report) or as a copy of an existing version with new ids.
+- MCP: pack_* tools for the Template Studio: reading and editing pack files, checks, preview, signature places, the new version wizard, creating a pack and a template, git and Propose changes. They need the packs token scope and the Template author right; sending a PR is off by default and needs confirmation.
 
 ## [0.32.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.31.0...v0.32.0) - 2026-11-15
 

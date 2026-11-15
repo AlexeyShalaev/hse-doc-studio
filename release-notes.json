@@ -1,6 +1,32 @@
 {
   "releases": [
     {
+      "version": "0.33.0",
+      "date": "2026-11-15",
+      "notes": [
+        {
+          "ru": "Студия шаблонов: вкладка «Форма» у version.yaml и doc.yaml. Поля и группы, анкеты, документы, языки и переводы, варианты правятся мышкой без ручного YAML. Рядом виден образец поля и где оно печатается. Комментарии и порядок в YAML сохраняются, правка, ломающая пак, не записывается.",
+          "en": "Template Studio: a Form tab for version.yaml and doc.yaml. Fields and groups, questionnaires, documents, languages and translations, and variants are edited with the mouse, no hand-written YAML. A field preview and where it is printed are shown alongside. YAML comments and order are kept, and an edit that breaks the pack is not saved."
+        },
+        {
+          "ru": "Студия шаблонов: формы точек сдачи и маршрута подписания (пункты, способы сдачи, слоты подписей с условиями и необязательностью) и блок «Маршрут в этой комбинации», который показывает маршрут при выбранных переключателях предпросмотра.",
+          "en": "Template Studio: forms for submission checkpoints and the signing route (items, submission methods, signature slots with conditions and optional ones) and a \"Route in this combination\" block showing the route for the selected preview switches."
+        },
+        {
+          "ru": "Студия шаблонов: формы проверок и правил и прогон проверок на предпросмотре, находки видны рядом с правилом.",
+          "en": "Template Studio: forms for checks and rules, and running the checks on the preview with findings shown next to each rule."
+        },
+        {
+          "ru": "Студия шаблонов: «Новый пак» и «Новый шаблон». С нуля из заготовки «Минимальный» (отчёт по ГОСТ 7.32) или копией существующей версии с новыми id.",
+          "en": "Template Studio: New pack and New template, from scratch with the Minimal scaffold (a GOST 7.32 report) or as a copy of an existing version with new ids."
+        },
+        {
+          "ru": "MCP: инструменты pack_* для Студии шаблонов: чтение и правка файлов пака, проверка, предпросмотр, места подписей, мастер новой версии, создание пака и шаблона, git и «Предложить изменения». Нужна область токена packs и право «Автор шаблонов»; отправка PR выключена по умолчанию и требует подтверждения.",
+          "en": "MCP: pack_* tools for the Template Studio: reading and editing pack files, checks, preview, signature places, the new version wizard, creating a pack and a template, git and Propose changes. They need the packs token scope and the Template author right; sending a PR is off by default and needs confirmation."
+        }
+      ]
+    },
+    {
       "version": "0.32.0",
       "date": "2026-11-15",
       "notes": [
