@@ -273,7 +273,7 @@ What you can do instead:
 
 ## What is available
 
-- **Tools.** Projects (list, card, create, metadata, supervisor and authors, template update, access and invitations in the cloud), files (tree, read, search, edit, write, move), builds (run and wait for the result, history, log, cancel), checks and the normcontrol report, requirements, review comments (cloud), history and git sync, submission profiles and packages, signature status, the signing route (cloud). Project tools take `project_id`; start with `list_projects`.
+- **Tools.** Projects (list, card, create, metadata, supervisor and authors, template update, access and invitations in the cloud), files (tree, read, search, edit, write, move), builds (run and wait for the result, history, log, cancel), checks and the normcontrol report, requirements, review comments (cloud), history and git sync, submission profiles and packages, signature status, the signing route (cloud), packs in the Pack Studio. Project tools take `project_id`; start with `list_projects`.
 - **Resources.** `studio://projects`, the project card `studio://projects/<id>`, files `studio://projects/<id>/files/<path>` and build PDFs.
 - **Prompts.** `fix_build`, `normcontrol` (go through findings), `review_changes` (describe changes before a snapshot).
 
@@ -343,6 +343,21 @@ The route from the template ([Route from the template](send-for-signing.md#prese
 
 You can edit and build documents out for signing through MCP: the route signs the version taken at sending, and edits do not reach it. If an editing or build tool touches a document of a running route, the answer gets a `signing_note`: which document is out for signing, that the changes will not reach the version for signing, and that a person sends the new version in the interface. This applies to `edit_tex`, `write_file`, `move_file`, `delete_file`, `compile_document`, `set_document_variant`, `set_project_meta`, `set_project_people`, `set_language`, `apply_template_update`, `vcs_restore` and `git_sync`. A shared file, project fields, a template update, a history restore and a sync touch every document out for signing. It is not a refusal; the action is done. `package_project` builds such documents from the version for signing and returns the `changed_after_sent` warning if the current build is newer.
 
+### Pack Studio (packs)
+
+The **Pack Studio** group works with [packs](../reference/pack.md) in the Pack Studio: workspaces, files, checks, preview, a new version and proposing changes. A client sees these tools only when the section is on and you have the Pack author right; in the cloud the token also needs the **Pack Studio** scope. The rights are the same as in the section: your own workspaces only, released versions are read-only.
+
+- **`pack_list_workspaces`** lists your workspaces; the other tools need their `id`. A version is named `<pack>/<template>/<version>` by folder names, for example `hse-cs-sse/coursework/2026.1.7`.
+- **`pack_read`** without `version` shows the tree (packs, templates, versions with their status, `released` for released ones); with `version` it shows the version model: documents, questionnaire fields, signature slots, submission points, forms, example data sets and files.
+- **`pack_read_file`** and **`pack_write_file`** read and write a whole file. `if_match` (the etag from reading) protects against someone else's edit. Writing to a released version answers `version_released`: create a new version first.
+- **`pack_lint`** checks a version or a manifest: findings with a file and a line. **`pack_classify`** shows the draft class (patch, minor, major) with its reasons and whether the number fits.
+- **`pack_preview_build`** builds a version document on test data on a runner (no local TeX needed) and waits up to 45 seconds; `example` and `combination` pick the data set and the combination (language, staffing, supervisor, fields). **`pack_preview_read`** returns the PDF text or the build log.
+- **`pack_set_placement`** sets signature places and date marks in `version.yaml`, like the visual place editor.
+- **`pack_new_version`**, **`pack_version_notes`** and **`pack_release`** are the steps of the New version wizard: a copy of the base as a draft, the `changes` notes in ru and en, the release with the registry entry.
+- **`pack_git_status`** shows the work branch, the edits, the PR and, with `checks: true`, the hosting checks status. **`pack_propose`** (Propose changes) commits, checks, pushes and opens a PR with the workspace access. The tool is dangerous and off by default; without `confirm: true` it sends nothing and only returns a summary worth showing to the person.
+
+A refusal comes as an error with a `code` from the Pack Studio list, for example `version_released`, `stale_file` (with the current `etag`), `lint_failed` (with findings) or `fork_required`.
+
 ### Builds
 
 **`compile_document`** starts a build, like the “Build” button. By default (`wait: true`) the tool waits up to 45 seconds for the result, which is less than MCP clients wait for an answer. If the build takes longer (for example, a cloud build on a personal runner), the answer is not an error: `status: in_progress` and the `compile_id`, and the build keeps running. With `wait: false` the tool returns the `compile_id` at once. `get_compile` with that `compile_id` shows the result; `cancel_compile` stops the build.
@@ -362,6 +377,7 @@ On **Admin → MCP server**:
 - the MCP server master switch;
 - tool groups and single tools with switches; dangerous ones are enabled by name;
 - the **Administration** group (users, queue, runners, audit, mail log) is off by default; even when on it is only available to an instance administrator whose token has the **MCP: administration** permission;
+- the **Pack Studio** group is visible only to people with the Pack author right;
 - the call log.
 
 **`admin_list_mail_log`** answers “did the email arrive” without opening **Admin → Mail**: mail log rows, newest first. Filters are `recipient` (exact address, case-insensitive), `template` (mail kind, such as `invite`), `status` (`sent`, `failed`, `not_sent`, `suppressed`) and `since` (an ISO 8601 date or moment, UTC when no time zone is given), at most 50 rows (`limit`, 20 by default). A row has the time, mail kind, address and subject, outcome, reason, SMTP reply code, who caused the email (`cause`: a person, a request without sign-in or a background task, and `actor_id`), the number of attempts (`attempts`), the time of the next automatic retry (`next_attempt_at`, empty when no more retries will happen), the time of the last attempt (`last_attempt_at`) and, for a manual resend, the id of the original email (`resent_from_id`); the recipient and the project appear only as ids. The response has no mail preview, names, links or failure text. The tool only reads, and reading is not audited.

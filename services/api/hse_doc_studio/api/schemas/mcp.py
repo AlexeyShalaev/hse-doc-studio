@@ -9,7 +9,7 @@ from pydantic import AwareDatetime, Field
 from hse_doc_studio.api.schemas.common import StrictModel
 
 McpToolGroupName = Literal[
-    "account", "projects", "files", "build", "checks", "review", "history", "submission", "admin"
+    "account", "projects", "files", "build", "checks", "review", "history", "submission", "packs", "admin"
 ]
 McpToolKindName = Literal["read", "write", "exec", "ask"]
 McpCallOutcomeName = Literal["ok", "error", "denied"]

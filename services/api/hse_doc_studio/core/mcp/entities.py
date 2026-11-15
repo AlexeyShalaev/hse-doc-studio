@@ -14,6 +14,8 @@ MCP_SCOPE = "mcp"
 MCP_ADMIN_SCOPE = "mcp:admin"
 # Подпись комплекта своим ключом (sign_submission): отдельное право, право mcp его не включает.
 MCP_SIGN_SCOPE = "sign"
+# Студия шаблонов (тулы `pack_*`): то же право токена `packs`, что у её маршрутов `/api/v1/pack-studio`.
+MCP_PACKS_SCOPE = "packs"
 
 
 class McpToolGroup(StrEnum):
@@ -25,6 +27,8 @@ class McpToolGroup(StrEnum):
     review = "review"
     history = "history"
     submission = "submission"
+    # Студия шаблонов: рабочие пространства паков, файлы, проверки, предпросмотр, версии, предложение изменений.
+    packs = "packs"
     admin = "admin"
 
 
