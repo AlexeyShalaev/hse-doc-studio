@@ -70,6 +70,7 @@ from hse_doc_studio.core.pack_studio.preview import (
     synthetic_project,
 )
 from hse_doc_studio.core.pack_studio.protocols import IPackPreviewRenderer, IPreviewDispatcher, IPreviewStore
+from hse_doc_studio.core.signatures.anchors import BuildAnchors, decode_anchors
 from hse_doc_studio.core.signatures.dates import DISPLAY_ZONE
 from hse_doc_studio.use_cases.compile.compile_job_hooks import compile_failure
 from hse_doc_studio.use_cases.pack_studio.workspaces import PackWorkspaceService, owner_of
@@ -267,6 +268,23 @@ class PackPreviewService:
         if build.status is not PreviewStatus.succeeded or data is None:
             raise PackStudioError(PackStudioErrorCode.preview_not_ready)
         return data
+
+    async def places_source(
+        self, actor: Actor, workspace_id: UUID, build_id: UUID, ref: VersionRef
+    ) -> tuple[PreviewBuild, BuildAnchors | None]:
+        """Сборка версии `ref` для мест подписей (срез T9) и её якоря; None, если якорей нет или PDF не собран."""
+        build = await self.get(actor, workspace_id, build_id)
+        if (build.pack, build.template, build.version) != (ref.pack, ref.template, ref.version):
+            raise PackStudioError(
+                PackStudioErrorCode.preview_invalid,
+                field="build_id",
+                value=str(build_id),
+                reason="the build is of another template version",
+            )
+        if build.status is not PreviewStatus.succeeded or not build.has_anchors:
+            return build, None
+        raw = await asyncio.to_thread(self._store.anchors, build.key)
+        return build, decode_anchors(raw) if raw is not None else None
 
     async def log(self, actor: Actor, workspace_id: UUID, build_id: UUID) -> str:
         build = await self.get(actor, workspace_id, build_id)

@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   CircleX,
   Eye,
   FileText,
   Maximize2,
+  PenLine,
   Play,
   ScrollText,
   Square,
@@ -43,13 +44,30 @@ import {
   type Combination,
 } from "../lib/combination";
 
+/** Что нужно вкладке «Места подписей» (срез T9): удачная сборка документа версии. */
+export type PackPlacesSlot = {
+  versionRef: PackVersionRef;
+  buildId: string;
+  pdfUrl: string;
+  documentLabel: string;
+  /** Язык комбинации: месяц в примере метки даты. */
+  lang: string;
+  /** Во весь экран: страница и каталог слотов рядом. */
+  wide: boolean;
+  onOpenWide: () => void;
+};
+
 export type PackPreviewPaneProps = {
   workspaceId: string;
   /** Открытый файл: предпросмотр собирает его версию шаблона. */
   path: string;
   /** Меняется после каждой записи: собранный PDF мог устареть. */
   revision: number;
+  /** Места подписей на собранном PDF (страница передаёт редактор мест пака); без него только PDF. */
+  places?: (slot: PackPlacesSlot) => ReactNode;
 };
+
+type BuildViewMode = "pdf" | "places";
 
 const KNOWN_SWITCHES = new Set([
   "lang",
@@ -147,12 +165,18 @@ const BuildView = ({
   stale,
   onLog,
   onFull,
+  places,
+  mode,
+  onMode,
 }: {
   workspaceId: string;
   build: PackPreviewBuild;
   stale: boolean;
   onLog: () => void;
   onFull: () => void;
+  places: ReactNode;
+  mode: BuildViewMode;
+  onMode: (mode: BuildViewMode) => void;
 }) => {
   const { t } = useTranslation("packStudio");
   const cancel = useCancelPackPreview(workspaceId);
@@ -219,8 +243,43 @@ const BuildView = ({
       </div>
     );
   }
+  const showPlaces = mode === "places" && places !== null;
   return (
     <div className="ps-preview-pdf" data-testid="preview-pdf">
+      {places !== null && (
+        <div
+          className="ps-view-tabs ps-preview-modes"
+          role="tablist"
+          aria-label={t("places.modes")}
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={!showPlaces}
+            className={showPlaces ? "ps-view-tab" : "ps-view-tab active"}
+            onClick={() => {
+              onMode("pdf");
+            }}
+            data-testid="preview-mode-pdf"
+          >
+            <FileText size="0.75rem" aria-hidden="true" />
+            {t("places.modePdf")}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={showPlaces}
+            className={showPlaces ? "ps-view-tab active" : "ps-view-tab"}
+            onClick={() => {
+              onMode("places");
+            }}
+            data-testid="preview-mode-places"
+          >
+            <PenLine size="0.75rem" aria-hidden="true" />
+            {t("places.title")}
+          </button>
+        </div>
+      )}
       <div className="ps-preview-meta">
         <span>
           {[
@@ -255,14 +314,18 @@ const BuildView = ({
         </span>
       </div>
       {stale && <Notice tone="info" role="status" text={t("preview.stale")} />}
-      <div className="ps-preview-viewer">
-        <PdfViewer
-          url={packPreviewPdfUrl(workspaceId, build.id)}
-          refreshKey={build.id}
-          ariaLabel={build.document}
-          initialFit
-        />
-      </div>
+      {showPlaces ? (
+        places
+      ) : (
+        <div className="ps-preview-viewer">
+          <PdfViewer
+            url={packPreviewPdfUrl(workspaceId, build.id)}
+            refreshKey={build.id}
+            ariaLabel={build.document}
+            initialFit
+          />
+        </div>
+      )}
     </div>
   );
 };
@@ -359,12 +422,15 @@ const PreviewForVersion = ({
   workspaceId,
   versionRef,
   revision,
+  places,
 }: {
   workspaceId: string;
   versionRef: PackVersionRef;
   revision: number;
+  places: PackPreviewPaneProps["places"];
 }) => {
-  const { t } = useTranslation("packStudio");
+  const { t, i18n } = useTranslation("packStudio");
+  const [mode, setMode] = useState<BuildViewMode>("pdf");
   const options = usePackPreviewOptions(workspaceId, versionRef);
   const start = useStartPackPreview(workspaceId);
   const [example, setExample] = useState<string | null>(null);
@@ -454,6 +520,27 @@ const PreviewForVersion = ({
 
   const running =
     build.data?.status === "queued" || build.data?.status === "running";
+  const built = build.data?.status === "succeeded" ? build.data : null;
+  const builtDoc = built
+    ? opts.documents.find((doc) => doc.id === built.document)
+    : undefined;
+  const placesFor = (wide: boolean): ReactNode =>
+    built && places
+      ? places({
+          versionRef,
+          buildId: built.id,
+          pdfUrl: packPreviewPdfUrl(workspaceId, built.id),
+          documentLabel: builtDoc
+            ? pickLocalized(builtDoc.name, i18n.language, built.document)
+            : built.document,
+          lang: built.combination.lang ?? combination.lang ?? "ru",
+          wide,
+          onOpenWide: () => {
+            setFull(true);
+          },
+        })
+      : null;
+  const fullPlaces = full && mode === "places" ? placesFor(true) : null;
   const startError = start.error;
   const quota =
     startError instanceof ApiError && startError.code === "preview_quota";
@@ -531,6 +618,9 @@ const PreviewForVersion = ({
           onFull={() => {
             setFull(true);
           }}
+          places={placesFor(false)}
+          mode={mode}
+          onMode={setMode}
         />
       ) : (
         <p className="ps-pane-empty">{t("preview.hint")}</p>
@@ -547,18 +637,19 @@ const PreviewForVersion = ({
         onClose={() => {
           setFull(false);
         }}
-        title={t("preview.title")}
-        width={980}
+        title={fullPlaces ? t("places.title") : t("preview.title")}
+        width={fullPlaces ? 1240 : 980}
       >
-        {build.data?.status === "succeeded" && (
-          <div style={{ height: "75vh", minHeight: "20rem" }}>
-            <PdfViewer
-              url={packPreviewPdfUrl(workspaceId, build.data.id)}
-              refreshKey={build.data.id}
-              ariaLabel={build.data.document}
-            />
-          </div>
-        )}
+        {fullPlaces ??
+          (build.data?.status === "succeeded" && (
+            <div style={{ height: "75vh", minHeight: "20rem" }}>
+              <PdfViewer
+                url={packPreviewPdfUrl(workspaceId, build.data.id)}
+                refreshKey={build.data.id}
+                ariaLabel={build.data.document}
+              />
+            </div>
+          ))}
       </Modal>
     </div>
   );
@@ -574,6 +665,7 @@ export const PackPreviewPane = ({
   workspaceId,
   path,
   revision,
+  places,
 }: PackPreviewPaneProps) => {
   const { t } = useTranslation("packStudio");
   const ref = versionRefOf(path);
@@ -594,6 +686,7 @@ export const PackPreviewPane = ({
       workspaceId={workspaceId}
       versionRef={ref}
       revision={revision}
+      places={places}
     />
   );
 };

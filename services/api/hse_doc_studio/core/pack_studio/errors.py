@@ -64,6 +64,8 @@ class PackStudioErrorCode(StrEnum):
     service_access_missing = "service_access_missing"
     service_access_exists = "service_access_exists"
     service_access_not_found = "service_access_not_found"
+    # Срез T9: места подписей и метки даты на PDF предпросмотра
+    place_invalid = "place_invalid"
 
 
 _C = PackStudioErrorCode
@@ -238,6 +240,11 @@ _TABLE: dict[PackStudioErrorCode, tuple[int, str, str]] = {
         "This repository already has a service access.",
     ),
     _C.service_access_not_found: (404, "Служебный доступ не найден.", "Service access not found."),
+    _C.place_invalid: (
+        400,
+        "Место подписи нельзя записать: рамка за краем листа или слот не относится к документу.",
+        "The signature place cannot be written: the box is off the page or the slot does not apply to the document.",
+    ),
 }
 
 

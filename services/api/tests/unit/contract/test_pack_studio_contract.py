@@ -50,6 +50,9 @@ _SCHEMAS: dict[str, Any] = {
     "StartPackPreviewRequest": s.StartPackPreviewRequest,
     "PackPreviewBuild": s.PackPreviewBuildResponse,
     "PackPreviewStart": s.PackPreviewStartResponse,
+    # Срез T9: места подписей и метки даты на PDF предпросмотра
+    "PackSignatures": s.PackSignaturesResponse,
+    "PackSignaturesPatchRequest": s.PackSignaturesPatchRequest,
 }
 
 

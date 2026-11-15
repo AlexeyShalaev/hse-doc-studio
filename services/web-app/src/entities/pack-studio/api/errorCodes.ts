@@ -47,6 +47,7 @@ export const PACK_STUDIO_ERROR_CODES = [
   "service_access_missing",
   "service_access_exists",
   "service_access_not_found",
+  "place_invalid",
 ] as const;
 
 export type PackStudioErrorCode = (typeof PACK_STUDIO_ERROR_CODES)[number];

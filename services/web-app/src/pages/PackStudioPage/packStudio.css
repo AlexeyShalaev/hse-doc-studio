@@ -897,6 +897,129 @@ button.ps-git-file:hover {
   word-break: break-word;
 }
 
+/* ── места подписей на PDF предпросмотра (срез T9) ── */
+.ps-preview-modes {
+  padding: 0;
+}
+.ps-places {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.ps-places-notes {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.375rem;
+}
+.ps-places-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  min-width: 0;
+}
+.ps-places-pdf {
+  display: flex;
+  flex-direction: column;
+  height: 30rem;
+  min-height: 18rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  overflow: hidden;
+}
+.ps-places-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.ps-places-wide .ps-places-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
+  align-items: start;
+}
+.ps-places-wide .ps-places-pdf {
+  height: 72vh;
+}
+.ps-places-wide .ps-places-panel {
+  max-height: 72vh;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+.ps-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.ps-slot-list,
+.ps-slot-others {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.ps-slot-others {
+  gap: 0.25rem;
+  margin-top: 0.375rem;
+  font-size: 0.6875rem;
+}
+.ps-slot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  background: var(--bg-0);
+  min-width: 0;
+}
+.ps-slot-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  min-width: 0;
+}
+.ps-slot-name {
+  font-size: 0.75rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.ps-slot-id {
+  font-size: 0.625rem;
+  color: var(--fg-3);
+}
+.ps-slot-marks,
+.ps-slot-actions,
+.ps-slot-lines {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+.ps-slot-where,
+.ps-slot-missing {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  font-size: 0.6875rem;
+  color: var(--fg-1, var(--fg-0));
+}
+.ps-slot-missing {
+  color: var(--c-warn);
+}
+.ps-slot-default,
+.ps-slot-hint {
+  margin: 0;
+  font-size: 0.65625rem;
+  line-height: 1.45;
+  color: var(--fg-2);
+}
+
 /* ── телефон: колонка, дерево в шторке, «Проблемы» под редактором ── */
 .ps-editor-phone {
   flex-direction: column;
@@ -953,6 +1076,19 @@ button.ps-git-file:hover {
     justify-content: flex-end;
   }
   .ps-preview-viewer {
+    height: 60vh;
+  }
+  .ps-places-pdf {
+    height: 60vh;
+  }
+  .ps-places-wide .ps-places-body {
+    display: flex;
+  }
+  .ps-places-wide .ps-places-pdf,
+  .ps-places-wide .ps-places-panel {
+    max-height: none;
+  }
+  .ps-places-wide .ps-places-pdf {
     height: 60vh;
   }
 }

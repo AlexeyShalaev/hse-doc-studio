@@ -201,7 +201,7 @@ def _parse_version(  # noqa: C901, PLR0915 — плоский разбор ма�
             slots=tuple(
                 slot
                 for slot in (
-                    _tolerant(_parse_signature_slot, s, "signatures.slots", ver_yaml) for s in sig_data.get("slots", [])
+                    _tolerant(parse_signature_slot, s, "signatures.slots", ver_yaml) for s in sig_data.get("slots", [])
                 )
                 if slot is not None
             ),
@@ -575,7 +575,7 @@ def _parse_form_field(data: dict[str, Any]) -> FormFieldDef | None:
         return None
 
 
-def _parse_signature_slot(data: dict[str, Any]) -> SignatureSlotDef:
+def parse_signature_slot(data: dict[str, Any]) -> SignatureSlotDef:
     placement_data = data.get("default_placement", {})
     placement = SignatureDefaultPlacement(
         page=int(placement_data.get("page", 1)),
@@ -869,7 +869,7 @@ def _doc_dates(
     for i, item in enumerate(items):
         where = f"default_dates.{doc_id}[{i}]"
         try:
-            marks.append(_default_date(item, where))
+            marks.append(parse_default_date(item, where))
         except (TypeError, ValueError, KeyError) as exc:
             if on_bad_anchor is None or not (isinstance(item, dict) and "anchor" in item):
                 raise
@@ -877,7 +877,8 @@ def _doc_dates(
     return tuple(marks)
 
 
-def _default_date(item: Any, where: str) -> SignatureDefaultDate | AnchorDate:
+def parse_default_date(item: Any, where: str) -> SignatureDefaultDate | AnchorDate:
+    """Метка даты `default_dates` (14.10): в мм с рамкой внутри листа A4 или на якоре (15.17.7); ошибка по-английски."""
     if not isinstance(item, dict):
         raise TypeError(f"{where} must be a mapping")
     if "anchor" in item:

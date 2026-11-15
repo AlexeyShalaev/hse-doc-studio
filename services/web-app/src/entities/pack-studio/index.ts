@@ -28,6 +28,8 @@ export {
   usePackPreviewLog,
   usePackPreviewOptions,
   usePackServiceAccess,
+  usePackSignatures,
+  usePatchPackSignatures,
   useProposePack,
   useRemovePackServiceAccess,
   useStartPackOver,

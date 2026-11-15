@@ -13,9 +13,9 @@ from hse_doc_studio.core.catalog import AnchorDate, AnchorPlace, SignatureDefaul
 from hse_doc_studio.core.enums import DateMarkAlign, DateMarkFormat
 from hse_doc_studio.infra.template.pack_lint import lint_version_dir
 from hse_doc_studio.infra.template.yaml_template_repository import (
-    _parse_signature_slot,
     parse_anchor_macros,
     parse_default_dates,
+    parse_signature_slot,
     parse_slot_placement,
 )
 
@@ -102,7 +102,7 @@ def test__parse_default_dates__anchored_mark_wrong__error(item: dict[str, Any]) 
 
 
 def test__parse_signature_slot__broken_anchored_mark_dropped_alone() -> None:
-    slot = _parse_signature_slot(
+    slot = parse_signature_slot(
         {
             "id": "supervisor",
             "applies_to": ["project_proposal"],
@@ -116,14 +116,14 @@ def test__parse_signature_slot__broken_anchored_mark_dropped_alone() -> None:
 
 
 def test__parse_signature_slot__anchored_default_placement_needs_the_fallback() -> None:
-    full = _parse_signature_slot(
+    full = parse_signature_slot(
         {
             "id": "supervisor",
             "applies_to": ["report"],
             "default_placement": {"anchor": "supervisor", "page": 1, "x_mm": 110, "y_mm": 130, "width_mm": 40},
         }
     )
-    bare = _parse_signature_slot(
+    bare = parse_signature_slot(
         {"id": "supervisor", "applies_to": ["report"], "default_placement": {"anchor": "supervisor"}}
     )
 

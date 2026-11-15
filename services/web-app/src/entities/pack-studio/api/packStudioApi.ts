@@ -13,6 +13,7 @@ import {
   PackPreviewStartSchema,
   PackProposeResponseSchema,
   PackServiceAccessListSchema,
+  PackSignaturesSchema,
   PackServiceAccessSchema,
   PackStudioAdminSchema,
   PackStudioGrantSchema,
@@ -36,6 +37,8 @@ import {
   type PackProposeRequest,
   type PackProposeResponse,
   type PackServiceAccess,
+  type PackSignatures,
+  type PackSignaturesPatchRequest,
   type PackReadOnlyReason,
   type PackStudioAdmin,
   type PackStudioGrant,
@@ -68,6 +71,8 @@ export type PackVersionRef = {
 
 const versionPreview = (id: string, ref: PackVersionRef) =>
   `${ws(id)}/versions/${enc(ref.pack)}/${enc(ref.template)}/${enc(ref.version)}/preview`;
+const versionSignatures = (id: string, ref: PackVersionRef) =>
+  `${ws(id)}/versions/${enc(ref.pack)}/${enc(ref.template)}/${enc(ref.version)}/signatures`;
 const previewBuild = (id: string, buildId: string) =>
   `${ws(id)}/previews/${enc(buildId)}`;
 
@@ -243,6 +248,31 @@ export const packStudioApi = {
       .then(parseResp(PackGitSchema)),
 
   // Предпросмотр (срез T7): варианты версии, сборка, опрос, отмена, журнал.
+  /** Места подписей версии (срез T9); с `buildId` рамки документа сборки по её якорям. */
+  signatures: (
+    id: string,
+    ref: PackVersionRef,
+    buildId: string | null,
+  ): Promise<PackSignatures> =>
+    apiClient
+      .get(versionSignatures(id, ref), {
+        ...quiet,
+        params: buildId ? { build_id: buildId } : {},
+      })
+      .then(parseResp(PackSignaturesSchema)),
+  /** Правки мест с `If-Match` по ETag `version.yaml`: весь набор или ничего. */
+  patchSignatures: (
+    id: string,
+    ref: PackVersionRef,
+    body: PackSignaturesPatchRequest,
+    ifMatch: string | null,
+  ): Promise<PackSignatures> =>
+    apiClient
+      .patch(versionSignatures(id, ref), body, {
+        ...quiet,
+        headers: ifMatch ? { "If-Match": ifMatch } : {},
+      })
+      .then(parseResp(PackSignaturesSchema)),
   previewOptions: (
     id: string,
     ref: PackVersionRef,

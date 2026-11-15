@@ -42,5 +42,6 @@
   "nothing_to_propose",
   "service_access_missing",
   "service_access_exists",
-  "service_access_not_found"
+  "service_access_not_found",
+  "place_invalid"
 ]

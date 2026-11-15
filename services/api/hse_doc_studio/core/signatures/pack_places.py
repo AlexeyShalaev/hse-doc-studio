@@ -198,7 +198,8 @@ def _mark_json(mark: PackDate) -> dict[str, Any]:
 # --- места на якорях (15.17.8) ---
 
 
-def _aligned(align: DateMarkAlign, line: BuildAnchor, width: float) -> float:
+def aligned_x(align: DateMarkAlign, line: BuildAnchor, width: float) -> float:
+    """Левый край рамки ширины `width` на линии якоря при выравнивании `align`, до сдвига `dx_mm` (15.17.8)."""
     if align is DateMarkAlign.left:
         return line.x_mm
     if align is DateMarkAlign.right:
@@ -213,7 +214,7 @@ def anchor_box(entry: AnchorPlace, line: BuildAnchor) -> SignatureDefaultPlaceme
     `y` линии плюс `dy_mm`. Округление до 0,1 мм, как у отпечатка места.
     """
     width = entry.width_mm if entry.width_mm is not None else max(ANCHOR_MIN_WIDTH_MM, line.width_mm)
-    x = _mm(_aligned(entry.align, line, width) + entry.dx_mm)
+    x = _mm(aligned_x(entry.align, line, width) + entry.dx_mm)
     y = _mm(line.y_mm + entry.dy_mm)
     if x < 0 or x + width > SHEET_WIDTH_MM + 0.01 or not 0 <= y <= PLACE_MAX_Y_MM:
         return None
@@ -225,7 +226,7 @@ def anchor_mark(entry: AnchorDate, line: BuildAnchor) -> SignatureDefaultDate | 
     линии); None, если рамки нет (якорь-точка без ширины) или она за краем листа."""
     width = entry.width_mm if entry.width_mm is not None else line.width_mm
     dy = entry.dy_mm if entry.dy_mm is not None else -entry.height_mm
-    x = _mm(_aligned(entry.align, line, width) + entry.dx_mm)
+    x = _mm(aligned_x(entry.align, line, width) + entry.dx_mm)
     y = _mm(line.y_mm + dy)
     if frame_problem(line.page, x, y, width, entry.height_mm, (SHEET_WIDTH_MM, SHEET_HEIGHT_MM)) is not None:
         return None

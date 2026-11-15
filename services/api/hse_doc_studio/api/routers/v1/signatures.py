@@ -204,12 +204,12 @@ def _map_runtime_slot(item: RuntimeSlotItem) -> RuntimeSlotResponse:
             doc_id: [ProfileRefResponse(id=ref.id, name=ref.name) for ref in refs]
             for doc_id, refs in item.extra_by.items()
         },
-        default_placements={doc_id: _pack_place(p) for doc_id, p in item.default_placements.items()},
-        default_dates={doc_id: [_pack_date(m) for m in marks] for doc_id, marks in item.default_dates.items()},
+        default_placements={doc_id: pack_place_response(p) for doc_id, p in item.default_placements.items()},
+        default_dates={doc_id: [pack_date_response(m) for m in marks] for doc_id, marks in item.default_dates.items()},
     )
 
 
-def _pack_place(entry: PackPlace) -> PackPlaceResponse | PackAnchorPlaceResponse:
+def pack_place_response(entry: PackPlace) -> PackPlaceResponse | PackAnchorPlaceResponse:
     """Место из пака для ответа: в мм или на якоре шаблона с запасным местом (signing-route.md, 15.17.14)."""
     if isinstance(entry, SignatureDefaultPlacement):
         return PackPlaceResponse(page=entry.page, x_mm=entry.x_mm, y_mm=entry.y_mm, width_mm=entry.width_mm)
@@ -228,7 +228,7 @@ def _pack_place(entry: PackPlace) -> PackPlaceResponse | PackAnchorPlaceResponse
     )
 
 
-def _pack_date(mark: PackDate) -> PackDateMarkResponse | PackAnchorDateMarkResponse:
+def pack_date_response(mark: PackDate) -> PackDateMarkResponse | PackAnchorDateMarkResponse:
     if isinstance(mark, SignatureDefaultDate):
         return PackDateMarkResponse(
             page=mark.page,

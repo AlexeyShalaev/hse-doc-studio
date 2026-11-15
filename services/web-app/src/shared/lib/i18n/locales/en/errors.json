@@ -275,6 +275,7 @@
     "nothing_to_propose": "Nothing to propose: the branch does not differ from the base branch.",
     "service_access_missing": "This repository has no service access. The instance administrator sets it up.",
     "service_access_exists": "This repository already has a service access.",
-    "service_access_not_found": "The service access is already removed."
+    "service_access_not_found": "The service access is already removed.",
+    "place_invalid": "The signature place cannot be written: the box is off the page or the slot does not apply to the document."
   }
 }

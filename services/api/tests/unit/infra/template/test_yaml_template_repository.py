@@ -16,9 +16,9 @@ from hse_doc_studio.core.enums import (
 from hse_doc_studio.infra.template.releases import freeze
 from hse_doc_studio.infra.template.yaml_template_repository import (
     YamlTemplateRepository,
-    _parse_signature_slot,
     _parse_submission_profile,
     parse_default_dates,
+    parse_signature_slot,
     parse_signing_route,
     parse_signing_slot,
     parse_slot_placement,
@@ -558,7 +558,7 @@ def test__parse_default_dates__marks_by_document_with_format_and_alignment() -> 
 
 
 def test__parse_signature_slot__wrong_default_dates__dropped_and_the_slot_kept() -> None:
-    slot = _parse_signature_slot(
+    slot = parse_signature_slot(
         {
             "id": "supervisor",
             "applies_to": ["project_proposal"],
@@ -623,7 +623,7 @@ def test__deadline_hint__absent__none(tmp_path: Path) -> None:
 
 
 def test__parse_signature_slot__placements_by_document__broken_entry_dropped_others_kept() -> None:
-    slot = _parse_signature_slot(
+    slot = parse_signature_slot(
         {
             "id": "supervisor",
             "applies_to": ["project_proposal", "topic_application", "report"],
@@ -661,7 +661,7 @@ def test__parse_slot_placement__wrong_place__error_names_the_entry(item: object,
 
 
 def test__parse_signature_slot__placements_not_a_mapping__dropped() -> None:
-    slot = _parse_signature_slot({"id": "author", "applies_to": ["report"], "placements": ["report"]})
+    slot = parse_signature_slot({"id": "author", "applies_to": ["report"], "placements": ["report"]})
 
     assert slot.placements == ()
 

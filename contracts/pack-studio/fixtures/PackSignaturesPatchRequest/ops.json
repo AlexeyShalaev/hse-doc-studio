@@ -1,0 +1,54 @@
+{
+  "build_id": "0d7f5c2a-3b4e-4f61-8a9b-1c2d3e4f5a6b",
+  "ops": [
+    {
+      "op": "set_place",
+      "slot": "supervisor",
+      "doc": "application",
+      "box": {
+        "page": 1,
+        "x_mm": 62.2,
+        "y_mm": 168.7,
+        "width_mm": 40.0
+      },
+      "index": null,
+      "mark": null,
+      "anchor": null
+    },
+    {
+      "op": "set_date",
+      "slot": "author",
+      "doc": "report",
+      "box": null,
+      "index": 1,
+      "mark": {
+        "page": 1,
+        "x_mm": 42.3,
+        "y_mm": 152.0,
+        "width_mm": 25.0,
+        "height_mm": 5.0,
+        "format": "month_word",
+        "align": "center"
+      },
+      "anchor": null
+    },
+    {
+      "op": "add_date",
+      "slot": "author",
+      "doc": "report",
+      "box": null,
+      "index": null,
+      "mark": null,
+      "anchor": "author.day"
+    },
+    {
+      "op": "make_default",
+      "slot": "author",
+      "doc": "application",
+      "box": null,
+      "index": null,
+      "mark": null,
+      "anchor": null
+    }
+  ]
+}

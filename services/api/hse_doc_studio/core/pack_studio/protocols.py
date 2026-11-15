@@ -33,6 +33,7 @@ from hse_doc_studio.core.pack_studio.git_flow import (
     WorkGitStatus,
 )
 from hse_doc_studio.core.pack_studio.paths import VersionRef
+from hse_doc_studio.core.pack_studio.places import PlaceOp, VersionPlaces
 from hse_doc_studio.core.pack_studio.preview import (
     MaterializedDoc,
     MaterializeRequest,
@@ -41,6 +42,7 @@ from hse_doc_studio.core.pack_studio.preview import (
     VersionDescription,
 )
 from hse_doc_studio.core.pack_studio.protection import Protection
+from hse_doc_studio.core.signatures.anchors import BuildAnchors
 from hse_doc_studio.core.vcs.entities import VcsAuthor
 
 
@@ -212,6 +214,20 @@ class IYamlEditor(Protocol):
     def insert_item(self, text: str, path: YamlPath, index: int, value: Any) -> str: ...
     def delete(self, text: str, path: YamlPath) -> str: ...
     def move_item(self, text: str, path: YamlPath, src: int, dst: int) -> str: ...
+
+
+class IPackPlaces(Protocol):
+    """Места подписей и метки даты в `version.yaml` версии (срез T9): модель и правки точечными правками YAML.
+
+    `document` id документа сборки предпросмотра, `anchors` её якоря (None: неизвестны). Невыполнимая правка это
+    `PlaceEditError`, нечитаемый манифест это `ValueError`.
+    """
+
+    def describe(self, text: str, *, document: str | None, anchors: BuildAnchors | None) -> VersionPlaces: ...
+
+    def apply(
+        self, text: str, ops: Sequence[PlaceOp], *, document: str | None, anchors: BuildAnchors | None
+    ) -> str: ...
 
 
 class IPackInspector(Protocol):

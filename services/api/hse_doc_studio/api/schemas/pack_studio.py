@@ -13,6 +13,8 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, StrictInt, StrictStr, model_validator
 
 from hse_doc_studio.api.schemas.common import StrictModel
+from hse_doc_studio.api.schemas.signature import PackDateEntry, PackPlaceEntry, PlaceAnchorResponse
+from hse_doc_studio.core.enums import DateMarkAlign, DateMarkFormat
 
 WorkspaceKindName = Literal["git", "folder"]
 WorkspaceStateName = Literal["cloning", "ready", "failed"]
@@ -522,3 +524,130 @@ class PackPreviewBuildResponse(StrictModel):
 
 class PackPreviewStartResponse(StrictModel):
     builds: list[PackPreviewBuildResponse]
+
+
+# ── Места подписей на PDF предпросмотра (5.6, срез T9) ───────────────────────
+
+PlaceOpName = Literal[
+    "set_place", "remove_place", "make_default", "bind_anchor", "unbind_anchor", "add_date", "set_date", "remove_date"
+]
+FrameKindName = Literal["place", "default"]
+_MM_LIMIT = 1000.0
+
+
+class PackPlaceBox(StrictModel):
+    """Рамка подписи на странице, мм от левого верхнего угла."""
+
+    page: int = Field(ge=1, le=10000)
+    x_mm: float = Field(ge=-_MM_LIMIT, le=_MM_LIMIT)
+    y_mm: float = Field(ge=-_MM_LIMIT, le=_MM_LIMIT)
+    width_mm: float = Field(gt=0, le=_MM_LIMIT)
+
+
+class PackMarkBox(StrictModel):
+    """Рамка метки даты, формат и выравнивание."""
+
+    page: int = Field(ge=1, le=10000)
+    x_mm: float = Field(ge=-_MM_LIMIT, le=_MM_LIMIT)
+    y_mm: float = Field(ge=-_MM_LIMIT, le=_MM_LIMIT)
+    width_mm: float = Field(gt=0, le=_MM_LIMIT)
+    height_mm: float = Field(gt=0, le=_MM_LIMIT)
+    format: DateMarkFormat
+    align: DateMarkAlign = DateMarkAlign.centered
+
+
+class PackIndexedDate(StrictModel):
+    """Метка даты пака с индексом в списке `default_dates` документа (битые метки пропущены, индексы не сдвинуты)."""
+
+    index: int
+    entry: PackDateEntry
+
+
+class PackFrameDate(StrictModel):
+    index: int
+    entry: PackDateEntry
+    # Рамка в этой сборке; null: метки нет (строки даты нет в сборке, у якоря нет запасной метки).
+    box: PackMarkBox | None
+    anchor: PlaceAnchorResponse | None
+
+
+class PackSlotFrame(StrictModel):
+    """Место слота на документе сборки: своя запись документа (`place`) или общее место слота (`default`)."""
+
+    kind: FrameKindName
+    entry: PackPlaceEntry
+    # Рамка по якорям сборки; null: места нет (строки шаблона нет в этой сборке).
+    box: PackPlaceBox | None
+    anchor: PlaceAnchorResponse | None
+    dates: list[PackFrameDate]
+
+
+class PackSignatureSlot(StrictModel):
+    id: str
+    label: dict[str, str]
+    applies_to: list[str]
+    per_author: bool
+    required: bool
+    # Общее место слота, как его читает лоадер; `default_set` ложно, если ключа в YAML нет (место лоадера).
+    default_place: PackPlaceEntry
+    default_set: bool
+    places: dict[str, PackPlaceEntry]
+    dates: dict[str, list[PackIndexedDate]]
+    # Рамки документа сборки; null без сборки или если слот к документу не относится.
+    document: PackSlotFrame | None
+
+
+class PackSignaturesBuild(StrictModel):
+    id: str
+    document: str
+    # У сборки есть якоря: места на якорях стоят по строкам, иначе по запасным местам.
+    anchors_known: bool
+    sign_anchors: list[str]
+    date_anchors: list[str]
+
+
+class PackSignaturesResponse(StrictModel):
+    workspace_id: str
+    pack: str
+    template: str
+    version: str
+    # Манифест версии и его ETag: правка мест идёт с `If-Match` по нему.
+    path: str
+    etag: str
+    read_only: ReadOnlyReason | None
+    documents: list[str]
+    build: PackSignaturesBuild | None
+    slots: list[PackSignatureSlot]
+
+
+class PackPlaceOp(StrictModel):
+    """Правка мест: `doc` пуст у общего места слота (`set_place`, `bind_anchor`, `unbind_anchor`)."""
+
+    op: PlaceOpName
+    slot: str = Field(min_length=1, max_length=64)
+    doc: str | None = Field(default=None, max_length=128)
+    box: PackPlaceBox | None = None
+    index: int | None = Field(default=None, ge=0, le=64)
+    mark: PackMarkBox | None = None
+    anchor: str | None = Field(default=None, max_length=96)
+
+    @model_validator(mode="after")
+    def _fields(self) -> PackPlaceOp:
+        needs_doc = {"remove_place", "make_default", "add_date", "set_date", "remove_date"}
+        if self.op in needs_doc and self.doc is None:
+            raise ValueError(f"{self.op} needs doc")
+        if self.op == "set_place" and self.box is None:
+            raise ValueError("set_place needs box")
+        if self.op in {"set_date", "remove_date"} and self.index is None:
+            raise ValueError(f"{self.op} needs index")
+        if self.op == "set_date" and self.mark is None:
+            raise ValueError("set_date needs mark")
+        if self.op == "add_date" and self.mark is None and self.anchor is None:
+            raise ValueError("add_date needs mark or anchor")
+        return self
+
+
+class PackSignaturesPatchRequest(StrictModel):
+    # Сборка, по якорям которой автор видит рамки: место на якоре двигается относительно её линии.
+    build_id: UUID | None = None
+    ops: list[PackPlaceOp] = Field(min_length=1, max_length=50)

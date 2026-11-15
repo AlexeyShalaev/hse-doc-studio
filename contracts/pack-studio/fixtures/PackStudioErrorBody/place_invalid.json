@@ -1,0 +1,5 @@
+{
+  "detail": "Место подписи нельзя записать: рамка за краем листа или слот не относится к документу.",
+  "code": "place_invalid",
+  "reason": "slot 'consultant' does not apply to document 'report'"
+}

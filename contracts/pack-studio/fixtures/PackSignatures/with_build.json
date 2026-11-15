@@ -1,0 +1,219 @@
+{
+  "workspace_id": "5f0c1c8e-1b7a-4d51-9a43-0a5b2f3c4d10",
+  "pack": "hse-cs-sse",
+  "template": "coursework",
+  "version": "2026.1.7",
+  "path": "hse-cs-sse/templates/coursework/versions/2026.1.7/version.yaml",
+  "etag": "\"3f9a0c1d2e4b5a6c\"",
+  "read_only": null,
+  "documents": [
+    "application",
+    "report",
+    "shared_report"
+  ],
+  "build": {
+    "id": "0d7f5c2a-3b4e-4f61-8a9b-1c2d3e4f5a6b",
+    "document": "application",
+    "anchors_known": true,
+    "sign_anchors": [
+      "author",
+      "supervisor"
+    ],
+    "date_anchors": [
+      "author.month_word",
+      "author.day"
+    ]
+  },
+  "slots": [
+    {
+      "id": "author",
+      "label": {
+        "ru": "Автор",
+        "en": "Author"
+      },
+      "applies_to": [
+        "application",
+        "report"
+      ],
+      "per_author": false,
+      "required": false,
+      "default_place": {
+        "source": "mm",
+        "page": 1,
+        "x_mm": 160.0,
+        "y_mm": 208.0,
+        "width_mm": 30.0
+      },
+      "default_set": true,
+      "places": {
+        "application": {
+          "source": "anchor",
+          "anchor": "author",
+          "align": "right",
+          "dx_mm": 0.0,
+          "dy_mm": -11.0,
+          "width_mm": 30.0,
+          "fallback": {
+            "page": 1,
+            "x_mm": 165.0,
+            "y_mm": 201.0,
+            "width_mm": 30.0
+          }
+        }
+      },
+      "dates": {
+        "report": [
+          {
+            "index": 0,
+            "entry": {
+              "source": "mm",
+              "page": 1,
+              "x_mm": 81.0,
+              "y_mm": 156.0,
+              "width_mm": 7.0,
+              "height_mm": 5.0,
+              "format": "day",
+              "align": "center"
+            }
+          },
+          {
+            "index": 1,
+            "entry": {
+              "source": "anchor",
+              "anchor": "author.month_word",
+              "format": "month_word",
+              "align": "center",
+              "height_mm": 5.0,
+              "width_mm": null,
+              "dx_mm": 0.0,
+              "dy_mm": null,
+              "fallback": null
+            }
+          }
+        ]
+      },
+      "document": {
+        "kind": "place",
+        "entry": {
+          "source": "anchor",
+          "anchor": "author",
+          "align": "right",
+          "dx_mm": 0.0,
+          "dy_mm": -11.0,
+          "width_mm": 30.0,
+          "fallback": {
+            "page": 1,
+            "x_mm": 165.0,
+            "y_mm": 201.0,
+            "width_mm": 30.0
+          }
+        },
+        "box": {
+          "page": 1,
+          "x_mm": 135.0,
+          "y_mm": 201.0,
+          "width_mm": 30.0
+        },
+        "anchor": {
+          "id": "author",
+          "state": "found"
+        },
+        "dates": []
+      }
+    },
+    {
+      "id": "supervisor",
+      "label": {
+        "ru": "Руководитель",
+        "en": "Supervisor"
+      },
+      "applies_to": [
+        "application",
+        "report",
+        "shared_report"
+      ],
+      "per_author": false,
+      "required": false,
+      "default_place": {
+        "source": "mm",
+        "page": 1,
+        "x_mm": 110.0,
+        "y_mm": 130.0,
+        "width_mm": 40.0
+      },
+      "default_set": true,
+      "places": {},
+      "dates": {},
+      "document": {
+        "kind": "default",
+        "entry": {
+          "source": "mm",
+          "page": 1,
+          "x_mm": 110.0,
+          "y_mm": 130.0,
+          "width_mm": 40.0
+        },
+        "box": {
+          "page": 1,
+          "x_mm": 110.0,
+          "y_mm": 130.0,
+          "width_mm": 40.0
+        },
+        "anchor": null,
+        "dates": []
+      }
+    },
+    {
+      "id": "consultant",
+      "label": {
+        "ru": "Консультант",
+        "en": "Consultant"
+      },
+      "applies_to": [
+        "application"
+      ],
+      "per_author": false,
+      "required": false,
+      "default_place": {
+        "source": "anchor",
+        "anchor": "consultant",
+        "align": "right",
+        "dx_mm": 0.0,
+        "dy_mm": -10.0,
+        "width_mm": 28.0,
+        "fallback": {
+          "page": 1,
+          "x_mm": 168.0,
+          "y_mm": 216.0,
+          "width_mm": 28.0
+        }
+      },
+      "default_set": true,
+      "places": {},
+      "dates": {},
+      "document": {
+        "kind": "default",
+        "entry": {
+          "source": "anchor",
+          "anchor": "consultant",
+          "align": "right",
+          "dx_mm": 0.0,
+          "dy_mm": -10.0,
+          "width_mm": 28.0,
+          "fallback": {
+            "page": 1,
+            "x_mm": 168.0,
+            "y_mm": 216.0,
+            "width_mm": 28.0
+          }
+        },
+        "box": null,
+        "anchor": {
+          "id": "consultant",
+          "state": "missing"
+        },
+        "dates": []
+      }
+    }
+  ]
+}

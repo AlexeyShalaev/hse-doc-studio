@@ -25,6 +25,7 @@ import {
 } from "@entities/pack-studio";
 import { PackFileEditor } from "@features/pack-file-editor";
 import { PackGitBar } from "@features/pack-git";
+import { PackPlacesEditor } from "@features/pack-places";
 import { PackPreviewPane } from "@features/pack-preview";
 import { PackTreePanel, versionStatusVariant } from "@features/pack-tree";
 import {
@@ -153,6 +154,8 @@ export const WorkspaceScreen = () => {
   const [problemsFocus, setProblemsFocus] = useState(0);
   // Операция git поменяла файлы на диске: редактор открывает файл заново.
   const [reload, setReload] = useState(0);
+  // Места подписей записаны в манифест версии: проверки заново, PDF при этом не устаревает.
+  const [placesSaves, setPlacesSaves] = useState(0);
   const client = useQueryClient();
   const dirtyRef = useRef(false);
   const tokenRef = useRef(0);
@@ -207,6 +210,16 @@ export const WorkspaceScreen = () => {
       }
     },
     [file, go],
+  );
+
+  // Места подписей записали манифест: открытый он же без правок открывается заново, с правками
+  // его запись упрётся в «файл изменился» и покажет, что делать.
+  const onPlacesSaved = useCallback(
+    (path: string) => {
+      setPlacesSaves((n) => n + 1);
+      if (path === file && !dirtyRef.current) setReload((n) => n + 1);
+    },
+    [file],
   );
 
   const onFilesChanged = useCallback(() => {
@@ -331,12 +344,15 @@ export const WorkspaceScreen = () => {
                   key={`${file}:${String(reload)}`}
                   workspaceId={ws.id}
                   path={file}
-                  lintEpoch={epoch}
+                  lintEpoch={epoch + placesSaves}
                   onSaved={() => {
                     setEpoch((n) => n + 1);
-                    // Правка на диске: «правки после коммита» в панели git.
+                    // Правка на диске: «правки после коммита» в панели git, места подписей версии.
                     void client.invalidateQueries({
                       queryKey: packStudioKeys.git(ws.id),
+                    });
+                    void client.invalidateQueries({
+                      queryKey: packStudioKeys.signaturesAll(ws.id),
                     });
                   }}
                   onOpenFile={open}
@@ -352,6 +368,13 @@ export const WorkspaceScreen = () => {
                       workspaceId={ws.id}
                       path={file}
                       revision={epoch}
+                      places={(slot) => (
+                        <PackPlacesEditor
+                          workspaceId={ws.id}
+                          {...slot}
+                          onSaved={onPlacesSaved}
+                        />
+                      )}
                     />
                   }
                 />

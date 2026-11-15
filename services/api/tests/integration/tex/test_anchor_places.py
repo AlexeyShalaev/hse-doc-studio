@@ -29,7 +29,7 @@ from hse_doc_studio.infra.compile.host_path_resolver import HostPathResolver
 from hse_doc_studio.infra.compile.latexmk import SENTINEL_DONE
 from hse_doc_studio.infra.persistence.signature import JsonSignatureRepository
 from hse_doc_studio.infra.template.pack_lint import lint_version_dir
-from hse_doc_studio.infra.template.yaml_template_repository import _parse_signature_slot
+from hse_doc_studio.infra.template.yaml_template_repository import parse_signature_slot
 from hse_doc_studio.use_cases.signatures.anchor_places import BuildPlaces
 from hse_doc_studio.use_cases.signatures.source_anchors import doc_anchors_sync
 
@@ -124,7 +124,7 @@ def _pack(root: Path) -> Path:
 
 
 def _version() -> TemplateVersion:
-    slots = tuple(_parse_signature_slot(slot) for slot in _MANIFEST["signatures"]["slots"])
+    slots = tuple(parse_signature_slot(slot) for slot in _MANIFEST["signatures"]["slots"])
     return replace(make_template_version(version=VERSION_ID), signatures_config=SignaturesConfig(slots=slots))
 
 
