@@ -54,6 +54,7 @@ Open <http://localhost:17260>. The Template Studio opens right away, and the pac
 2. **Your own packs repository.** Add a token in **Settings, "Git access"**, then **New workspace**, git tab: the repository address and the token. Edits go to a branch, and **Propose changes** opens a PR (GitHub) or an MR (GitLab).
 3. **Official packs.** The **Official packs** card, **Start** button: the packs of the Studio repository; changes go through your fork with your GitHub token. The rules are in "Contributing to the official packs" of [CONTRIBUTING.md](https://github.com/AlexeyShalaev/hse-doc-studio/blob/master/CONTRIBUTING.md#contributing-to-the-official-packs).
 4. **How a pack is built.** Files, versions and what counts as patch, minor and major: [Packs and templates](../reference/pack.md).
+5. **Working in Template Studio.** Editing, previews, signature places, a new version and merge requests: [Template Studio](../pack-studio/index.md).
 
 ## Update and stop
 

@@ -57,6 +57,28 @@ How an update works:
 
 If a project is opened in an older Studio than the one that saved it last (or that Studio's pack lacks the project's template version), the project opens read-only and its data stays untouched.
 
+## For pack authors: what a pack consists of { #pack-layout }
+
+A pack is a folder; in the Studio repository the packs live in `packs/`. The easiest way to edit a pack is [Template Studio](../pack-studio/index.md): an editor with checks, previews, signature places with the mouse, the new version wizard and merge requests.
+
+```text
+<pack>/pack.yaml                                       id, ru and en names, description, maintainer, license, source
+<pack>/templates/<template>/template.yaml              the template outside versions: names, icon, colour, default_version, group hint
+<pack>/templates/<template>/releases.yaml              the release registry: version number, folder digest, class
+<pack>/templates/<template>/examples/<name>.yaml       preview sample data, not part of a version
+<pack>/templates/<template>/versions/<version>/version.yaml   the version manifest
+<pack>/templates/<template>/versions/<version>/files/  documents: doc.yaml, LaTeX sources, Jinja templates, common/
+<pack>/templates/<template>/versions/<version>/checks/ check rules
+```
+
+- The ids of the pack, the template and the version match their folder names: the Studio catalog finds a version by the path built from the ids.
+- `template.yaml` is outside versions: the group hint or the icon can change without a release. `default_version` is the version the project wizard offers to new projects.
+- `version.yaml` declares the documents, fields and field groups, questionnaires, signatures, submission profiles, languages and the engine. Service keys: `status` (`beta`, `stable`, `deprecated`), `released_at`, `release.kind` (the release class), `release.note` (the class explanation, the Studio does not show it), `changes` and `breaking_changes` (release notes, ru and en in pairs), `min_studio` (the lowest Studio version that understands the template version), `manifest_format` (the Studio hides a version with a newer format than its own).
+- `releases.yaml` is written by a release (`pack freeze` or the "New version" wizard), nobody edits it by hand. The folder of a released version is immutable: `pack check` recounts the digest and fails on any edit.
+- How to write the manifests is described by the JSON schemas in [`contracts/pack`](https://github.com/AlexeyShalaev/hse-doc-studio/tree/master/contracts/pack). `pack check` and the Template Studio "Problems" check against them; an unknown key is an error, though the Studio catalog itself skips it.
+
+Where the Studio takes packs from: the packs built into the image of this Studio version and connected catalogs. On a server an administrator connects catalogs ([Pack catalogs](../deploy/pack-catalogs.md)); locally the "Connect to this Studio catalog" button in a Template Studio workspace connects a packs folder. From connected catalogs only released versions reach the project wizard.
+
 ## For pack authors: signing presets
 
 A checkpoint's route preset is set in the template version's `version.yaml`. All keys are optional: a version without them works as before, and a Studio that does not know a key skips it.
@@ -236,16 +258,35 @@ The command works on a packs folder without the Studio and without TeX. A direct
 | Command | What it does |
 |---|---|
 | `pack lint <dir>...` | the linter for every version under the directory, the class of an unreleased version included |
-| `pack check <dir>... [--base REF]` | the linter, immutability of released versions (`releases.yaml`), manifest schemas, the class of unreleased versions. With `--base origin/master` the released versions are those in `releases.yaml` of the base branch, and the entry of a version released there cannot be removed or recomputed |
+| `pack check <dir>... [--base REF]` | the linter, immutability of released versions (`releases.yaml`), manifest schemas, the class of unreleased versions and parsing by the loader of this Studio: a pack, template or version the catalog will not show (a manifest not parsed, `manifest_format` newer than the Studio, an id that differs from the folder name) is an error. With `--base origin/master` the released versions are those in `releases.yaml` of the base branch, and the entry of a version released there cannot be removed or recomputed |
 | `pack classify <template> [<base>] <new>` | the class of a new version with its reasons; without a base it compares with the previous released version |
 | `pack new-version <template> [--from V] [--to V] [--class C]` | a copy of the latest version (or `--from`) under the number `--to` or by the class `--class` (patch, minor, major; patch by default): patch and minor count from the latest version, major is `<year+1>.1`. Only `id`, `status: beta` and `released_at` change in the copy; the `release` block is removed, `changes` and `breaking_changes` are empty, all other bytes stay the same |
 | `pack freeze <template> <version> [--release] [--default] [--kind K] [--replace]` | a release: `--release` sets `status: stable`, `released_at` to today and `release.kind`, `--default` makes the version the template `default_version`, then the linter and schemas run and the version goes into `releases.yaml`. On an error every edit is undone. `--replace` recomputes the entry of the last entered version while the release is not merged (with `--base`, only for a version that is not in the base) |
+| `pack ci init [<repository>] [--provider P]` | puts a CI file into a packs repository (GitHub Actions or GitLab CI), see [below](#pack-ci) |
 
 The usual course: `pack new-version`, edits and `changes` notes, `pack classify` (if the class is above the number, run `pack new-version --class minor` again or set `release.kind` and `release.note`), `pack freeze --release --default`, `pack check`.
 
 The release class in `releases.yaml` is `--kind`, else `release.kind`, else the class of the number. It cannot be softer than the class of the number. A schema error in a released version is a warning: only a new version fixes such a version.
 
 `--json` prints one JSON object to stdout, `--strict` makes `lint` and `check` treat warnings as errors too. Exit codes: 0 all fine; 1 errors found, the number is softer than the class or the command refused; 2 wrong arguments, a directory not found or a git ref not resolved. The old `python -m hse_doc_studio.infra.template.pack_lint` works as `pack lint`.
+
+### CI for a packs repository { #pack-ci }
+
+`hse-doc-studio pack ci init` in the root of your packs repository puts a ready CI file there:
+
+- `--provider github` (default): `.github/workflows/hse-packs.yml`, runs on PRs, pushes to the main branch and by hand;
+- `--provider gitlab`: `.gitlab-ci.yml`, the `hse-packs` job on MRs, the main branch and runs from the web interface.
+
+The job runs `hse-doc-studio pack check <packs folder>` in the published Studio image of the same version as the command (`ghcr.io/alexeyshalaev/hse-doc-studio:<version>`). On a PR or MR the released versions come from the base branch (`--base`). No TeX and no secrets are needed. Options: `--packs-path` (`packs` by default), `--image`, `--branch` (the main branch for GitHub, from `origin/HEAD` by default), `--stdout` (print only), `--force` (replace the file). An existing file is left alone without `--force`: `.gitlab-ci.yml` may hold your own jobs, so print the file with `--stdout` and move the job yourself. After a Studio update run the command again with `--force` to put the new image into CI.
+
+Without a Python install the command is in the same image:
+
+```bash
+docker run --rm -v "$PWD:/repo" -w /repo --user "$(id -u)" ghcr.io/alexeyshalaev/hse-doc-studio:<version> \
+  hse-doc-studio pack ci init
+```
+
+In the Studio repository the `Packs · Check` job of the same CI checks the packs: `pack check` against the base branch on every change to `packs/`, without TeX or a database.
 
 ## For pack authors: one-line texts { #flow-texts }
 

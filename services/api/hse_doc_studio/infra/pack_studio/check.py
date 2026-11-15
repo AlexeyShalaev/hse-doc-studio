@@ -3,7 +3,8 @@
 * `lint`: `pack_lint` каждой версии под каталогом (вместе с правилом класса невыпущенной версии, 7.2);
 * `check`: lint, неизменность выпущенных версий (`releases check`), схемы манифестов (`contracts/pack`), отчёт
   классификатора для версий, которые сверяются с предыдущей выпущенной, и при `--base` сверка реестра выпусков с
-  базовой веткой (4.5).
+  базовой веткой (4.5); в CLI ещё разбор лоадером этой Студии (`load`, срез T18): пак, шаблон или версия, которые
+  каталог не покажет, это ошибка, пропущенные лоадером куски манифеста предупреждения.
 
 Ошибка схемы в выпущенной версии это предупреждение: её каталог неизменен, исправляется новой версией. Выпущенной
 считается версия из `releases.yaml` базовой ветки (с `--base`) или рабочего дерева (без него).
@@ -11,10 +12,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal
 
+import structlog.testing
 import yaml
 
 from hse_doc_studio.core.template_diff import ChangeReport, classify_change
@@ -29,9 +32,14 @@ from hse_doc_studio.infra.pack_studio.layout import (
 )
 from hse_doc_studio.infra.template.pack_lint import class_base, lint_version_dir
 from hse_doc_studio.infra.template.releases import RELEASES_FILE, ReleaseEntry, check_template, load_releases
+from hse_doc_studio.infra.template.yaml_template_repository import (
+    parse_pack_manifest,
+    parse_template_manifest,
+    parse_version_dir,
+)
 
 Severity = Literal["error", "warning"]
-CheckName = Literal["lint", "releases", "schema", "base"]
+CheckName = Literal["lint", "releases", "schema", "base", "load"]
 
 
 @dataclass(frozen=True)
@@ -190,8 +198,93 @@ def _base_errors(template_dir: Path, base: dict[str, ReleaseEntry]) -> list[str]
     return errors
 
 
-def check_tree(tree: PackTree, base: BaseReleases | None = None) -> CheckResult:
-    """Все проверки пака без TeX: lint, `releases check`, схемы, классы невыпущенных, сверка с базой."""
+_LOADER = "лоадер Студии"
+_QUIET_KEYS = frozenset({"event", "log_level", "path"})
+
+
+def _loader_lines(events: Sequence[Mapping[str, Any]]) -> list[str]:
+    """Предупреждения лоадера словами: событие и его поля, кроме пути (путь уже в находке)."""
+    lines: list[str] = []
+    for event in events:
+        if event.get("log_level") not in {"warning", "error"}:
+            continue
+        details = ", ".join(f"{key}={value}" for key, value in event.items() if key not in _QUIET_KEYS)
+        lines.append(f"{_LOADER}: {event.get('event')}" + (f" ({details})" if details else ""))
+    return lines
+
+
+def _load_manifest[T](result: CheckResult, path: Path, parse: Callable[..., T | None], *args: Any) -> T | None:
+    with structlog.testing.capture_logs() as events:
+        parsed = parse(*args)
+    result.add("warning", "load", path, _loader_lines(events))
+    return parsed
+
+
+def _id_errors(kind: str, path: Path, loaded_id: str) -> list[str]:
+    # Каталог Студии ищет версию по пути из id (`<пак>/templates/<шаблон>/versions/<версия>`): имя папки и id одно.
+    if loaded_id == path.name:
+        return []
+    return [f"{_LOADER}: id {kind} {loaded_id!r} не совпадает с именем папки {path.name!r}"]
+
+
+def _pack_id(pack_dir: Path) -> str:
+    """Id пака для разбора его шаблонов; находки о самом `pack.yaml` пишет `_load_packs`, здесь молча."""
+    with structlog.testing.capture_logs():
+        info = parse_pack_manifest(pack_dir / PACK_MANIFEST) if (pack_dir / PACK_MANIFEST).is_file() else None
+    return info.id if info is not None else pack_dir.name
+
+
+def _load_packs(result: CheckResult, tree: PackTree) -> None:
+    for pack_dir in tree.packs:
+        info = _load_manifest(result, pack_dir, parse_pack_manifest, pack_dir / PACK_MANIFEST)
+        if info is None:
+            result.add("error", "load", pack_dir, [f"{_LOADER} не разобрал {PACK_MANIFEST}: пака не будет в каталоге"])
+        else:
+            result.add("error", "load", pack_dir, _id_errors("пака", pack_dir, info.id))
+
+
+def _load_templates(result: CheckResult, tree: PackTree) -> None:
+    for template_dir in tree.templates:
+        pack_id = _pack_id(template_dir.parent.parent)
+        template = _load_manifest(
+            result, template_dir, parse_template_manifest, template_dir / TEMPLATE_MANIFEST, pack_id
+        )
+        if template is None:
+            message = f"{_LOADER} не разобрал {TEMPLATE_MANIFEST}: шаблона и его версий не будет в каталоге"
+            result.add("error", "load", template_dir, [message])
+        else:
+            result.add("error", "load", template_dir, _id_errors("шаблона", template_dir, template.id))
+
+
+def _load_versions(result: CheckResult, tree: PackTree, released: _Released) -> None:
+    for version_dir in tree.versions:
+        template_dir = template_of(version_dir)
+        if template_dir is None:
+            continue
+        pack_id = _pack_id(template_dir.parent.parent)
+        release = released.of(template_dir).get(version_dir.name)
+        version = _load_manifest(
+            result, version_dir, parse_version_dir, version_dir, pack_id, template_dir.name, release
+        )
+        if version is None:
+            message = f"{_LOADER} не разобрал {VERSION_MANIFEST}: версии не будет в каталоге (причина выше)"
+            result.add("error", "load", version_dir, [message])
+        else:
+            result.add("error", "load", version_dir, _id_errors("версии", version_dir, version.version))
+
+
+def _load_check(result: CheckResult, tree: PackTree, released: _Released) -> None:
+    """Разбор лоадером этой Студии: то, что каталог не покажет, ошибка (template-studio.md, 4.4, срез T18)."""
+    _load_packs(result, tree)
+    _load_templates(result, tree)
+    _load_versions(result, tree, released)
+
+
+def check_tree(tree: PackTree, base: BaseReleases | None = None, *, load: bool = False) -> CheckResult:
+    """Все проверки пака без TeX: lint, `releases check`, схемы, классы невыпущенных, сверка с базой.
+
+    `load`: ещё разбор лоадером этой Студии (CLI `pack check`); перед «Предложить изменения» его нет.
+    """
     result = CheckResult(tree)
     released = _Released(base)
     for pack_dir in tree.packs:
@@ -204,4 +297,6 @@ def check_tree(tree: PackTree, base: BaseReleases | None = None) -> CheckResult:
             result.add("error", "base", template_dir, _base_errors(template_dir, released.of(template_dir)))
     for version_dir in tree.versions:
         _check_version(result, version_dir, released)
+    if load:
+        _load_check(result, tree, released)
     return result
