@@ -23,13 +23,14 @@ else
 	DEV_NULL = /dev/null
 endif
 
-.PHONY: dev-help ensure-network run-services stop-all-services clean-volumes dev server-lite-up server-lite-seed server-lite-down server-lite-reset server-lite-credentials e2e-install e2e-m1 e2e-landing e2e-mobile e2e-passkeys e2e-runner-install e2e-model-servers e2e-pack-studio server-lite-runner-up server-lite-runner-down e2e-signing-route e2e-pdf-comments server-stack-build server-stack-up server-stack-down e2e-full
+.PHONY: dev-help ensure-network run-services stop-all-services clean-volumes dev pack-studio server-lite-up server-lite-seed server-lite-down server-lite-reset server-lite-credentials e2e-install e2e-m1 e2e-landing e2e-mobile e2e-passkeys e2e-runner-install e2e-model-servers e2e-pack-studio server-lite-runner-up server-lite-runner-down e2e-signing-route e2e-pdf-comments server-stack-build server-stack-up server-stack-down e2e-full
 
 dev-help:
 	@echo.
 	@echo === Development Environment Commands ===
 	@echo.
 	@echo   make dev               - Start backend + frontend dev servers (local, no Docker)
+	@echo   make pack-studio       - Pack Studio from sources over packs/ of this checkout (http://localhost:3001/pack-studio)
 	@echo   make run-services      - Start the API in Docker
 	@echo   make stop-all-services - Stop all Docker services
 	@echo   make clean-volumes     - Stop services and remove volumes (DESTRUCTIVE)
@@ -112,6 +113,30 @@ ifeq ($(OS),Windows_NT)
 	powershell -NoProfile -Command "$$a=Start-Process -PassThru -NoNewWindow make -ArgumentList '-C','services/api','run-api'; $$w=Start-Process -PassThru -NoNewWindow make -ArgumentList '-C','services/web-app','dev'; Wait-Process -Id $$a.Id,$$w.Id"
 else
 	$(MAKE) -C services/api run-api & $(MAKE) -C services/web-app dev & wait
+endif
+
+# ---- Студия шаблонов из исходников (docs/design/template-studio.md, D3, срез T19) ----
+# Профиль standalone: api из исходников и Vite, рабочее пространство над packs/ этой рабочей копии, каталог паков
+# Студии тот же packs/. Свои порты и каталог данных, чтобы жить рядом с `make dev` и установленной Студией.
+# Предпросмотр собирается в контейнере TeX через локальный Docker (образ как у локальной Студии), PR уходит токеном
+# из Настроек, «Доступы git».
+PACK_STUDIO_DATA ?= $(CURDIR)/.pack-studio
+PACK_STUDIO_API_PORT ?= 17261
+PACK_STUDIO_WEB_PORT ?= 3001
+PACK_STUDIO_TEX_IMAGE ?= texlive/texlive:latest
+
+pack-studio:
+	@echo "Pack Studio: http://localhost:$(PACK_STUDIO_WEB_PORT)/pack-studio (packs: $(CURDIR)/packs, data: $(PACK_STUDIO_DATA))"
+ifeq ($(OS),Windows_NT)
+	powershell -NoProfile -Command "$$env:HSE_STUDIO__DATA_DIR='$(PACK_STUDIO_DATA)'; $$env:HSE_STUDIO__SERVER__PORT='$(PACK_STUDIO_API_PORT)'; $$env:HSE_STUDIO__PACK_STUDIO__STANDALONE='true'; $$env:HSE_STUDIO__PACK_STUDIO__STANDALONE_FOLDER='$(CURDIR)'; $$env:HSE_STUDIO__COMPILE__IMAGE='$(PACK_STUDIO_TEX_IMAGE)'; $$env:VITE_DEV_PROXY_TARGET='http://localhost:$(PACK_STUDIO_API_PORT)'; $$a=Start-Process -PassThru -NoNewWindow make -ArgumentList '-C','services/api','run-api'; $$w=Start-Process -PassThru -NoNewWindow pnpm -ArgumentList '--dir','services/web-app','dev','--port','$(PACK_STUDIO_WEB_PORT)','--strictPort'; Wait-Process -Id $$a.Id,$$w.Id"
+else
+	HSE_STUDIO__DATA_DIR="$(PACK_STUDIO_DATA)" HSE_STUDIO__SERVER__PORT=$(PACK_STUDIO_API_PORT) \
+	  HSE_STUDIO__PACK_STUDIO__STANDALONE=true HSE_STUDIO__PACK_STUDIO__STANDALONE_FOLDER="$(CURDIR)" \
+	  HSE_STUDIO__COMPILE__IMAGE=$(PACK_STUDIO_TEX_IMAGE) \
+	  $(MAKE) -C services/api run-api & \
+	VITE_DEV_PROXY_TARGET=http://localhost:$(PACK_STUDIO_API_PORT) \
+	  pnpm --dir services/web-app dev --port $(PACK_STUDIO_WEB_PORT) --strictPort & \
+	wait
 endif
 
 # ---- Стенд server-lite: api в режиме server (experimental) + Postgres, без раннера и S3 ----
