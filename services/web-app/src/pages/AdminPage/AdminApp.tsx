@@ -80,6 +80,13 @@ const AdminMcpPage = lazy(() =>
   import("@features/mcp-server").then((m) => ({ default: m.AdminMcpPage })),
 );
 
+// Студия шаблонов: включение раздела и право «Автор шаблонов» людям и группам.
+const AdminPackStudioPage = lazy(() =>
+  import("@features/pack-studio-admin").then((m) => ({
+    default: m.PackStudioAdminPage,
+  })),
+);
+
 // Ширина содержимого по разделу: формы настроек узкие, таблицы и сводки широкие.
 const INSTALL_PARTS = [
   ["instance", "narrow"],
@@ -365,6 +372,14 @@ export const AdminApp = () => {
           element={
             <Page width="narrow" ns={["mcp"]}>
               <AdminMcpPage />
+            </Page>
+          }
+        />
+        <Route
+          path="pack-studio"
+          element={
+            <Page width="narrow" ns={["packStudio"]}>
+              <AdminPackStudioPage />
             </Page>
           }
         />

@@ -1,0 +1,146 @@
+{
+  "title": "Template Studio",
+  "lead": "Template packs in workspaces: edit files with linter and schema checks. Released versions are read-only.",
+  "common": {
+    "cancel": "Cancel"
+  },
+  "workspaces": {
+    "state": {
+      "cloning": "Cloning",
+      "failed": "Failed",
+      "fetching": "Updating",
+      "ready": "Ready"
+    },
+    "fetched": "base updated {{when}}",
+    "packsPath": "packs folder: {{path}}",
+    "open": "Open",
+    "retry": "Retry",
+    "actions": "Actions for “{{name}}”",
+    "refresh": "Update base",
+    "refreshHint": "Fetch the latest base branch and recount released versions",
+    "delete": "Delete",
+    "deleteTitle": "Delete “{{name}}”?",
+    "deleteGitHint": "The clone in the Studio is deleted. The repository on the host does not change.",
+    "deleteFolderHint": "Only the Studio record is deleted; the folder on disk stays.",
+    "emptyTitle": "No workspaces yet",
+    "emptyLead": "Open a packs git repository or a folder with packs to edit templates.",
+    "create": "New workspace"
+  },
+  "create": {
+    "title": "New workspace",
+    "lead": "Where the packs come from. The repository is cloned partially: only the packs folder.",
+    "kind": {
+      "folder": "Folder on disk",
+      "git": "Git repository"
+    },
+    "url": "Repository address",
+    "credential": "Access",
+    "noCredential": "No access (public repository)",
+    "credentialHint": "Tokens are added in Settings, “Git access”. The token never goes into the clone.",
+    "insecureHttp": "Allow plain http (no encryption)",
+    "branch": "Base branch",
+    "branchHint": "Empty: the server's default branch.",
+    "folder": "Folder",
+    "folderHint": "The repository root or the packs folder itself.",
+    "pickFolder": "Choose folder",
+    "packsPath": "Packs folder",
+    "packsPathGitHint": "The folder with packs inside the repository; “.” means the root.",
+    "packsPathFolderHint": "Leave “packs”: the Studio finds the packs folder itself.",
+    "label": "Name",
+    "labelHint": "Empty: from the address or the folder name.",
+    "submitGit": "Clone",
+    "submitFolder": "Open folder"
+  },
+  "workspace": {
+    "back": "Back to workspaces",
+    "cloningTitle": "Cloning the repository",
+    "cloningLead": "This takes up to a couple of minutes. The page updates by itself.",
+    "failedTitle": "Clone failed",
+    "failedLead": "Check the address and access, then retry.",
+    "pickTitle": "Pick a file",
+    "pickLead": "Open a file in the tree on the left: a version manifest, a document or a Jinja template."
+  },
+  "tree": {
+    "title": "Files",
+    "reload": "Reload the tree",
+    "empty": "The packs folder is empty so far.",
+    "truncated": "Too many files: not all are shown.",
+    "released": "Released version: read-only",
+    "modified": "modified",
+    "modifiedHint": "The released version folder was edited outside the Studio: it no longer matches the release registry",
+    "binary": "Binary file: does not open in the editor",
+    "readOnly": {
+      "versionReleased": "File of a released version: read-only",
+      "releasesRegistry": "Release registry: changed by the “New version” wizard"
+    }
+  },
+  "crumbs": {
+    "label": "File location"
+  },
+  "editor": {
+    "views": "File view",
+    "source": "Source",
+    "form": "Form",
+    "formSoon": "A form over YAML is coming in future releases",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "unsaved": "Unsaved changes",
+    "revert": "Discard changes",
+    "readOnlyReleased": "This version is released: its files are read-only. Edits go into a new template version.",
+    "readOnlyRegistry": "The “New version” wizard keeps the release registry: it is not edited by hand.",
+    "binaryTitle": "Binary file",
+    "binaryLead": "Images, fonts and office files do not open in the code editor."
+  },
+  "stale": {
+    "title": "The file changed since you opened it.",
+    "deleted": "The file was deleted since you opened it.",
+    "takeDisk": "Take their version",
+    "keepMine": "Keep mine",
+    "compare": "Compare",
+    "diffTitle": "Their version and yours",
+    "diffLegend": "Left: the line number in their version, right: in yours. “−” only theirs, “+” only yours.",
+    "diffEmpty": "The texts match."
+  },
+  "problems": {
+    "title": "Problems",
+    "errors_one": "{{count}} error",
+    "errors_other": "{{count}} errors",
+    "warnings_one": "{{count}} warning",
+    "warnings_other": "{{count}} warnings",
+    "recheck": "Check again",
+    "scopeVersion": "Linter and schemas of version {{version}} over saved files.",
+    "scopeFile": "Manifest schema over the saved file.",
+    "scopeNone": "This file is not checked: checks run for version files and pack manifests.",
+    "released": "The version is released: schema errors in it are warnings only; fixes go into a new version.",
+    "clean": "No problems found.",
+    "thisFile": "This file",
+    "otherFiles": "Other files of the version",
+    "wholeVersion": "Whole version",
+    "line": "line {{line}}",
+    "check": {
+      "lint": "linter",
+      "schema": "schema"
+    }
+  },
+  "preview": {
+    "title": "Preview",
+    "soon": "Building the version's documents on sample data is coming in future releases."
+  },
+  "propose": {
+    "label": "Propose changes",
+    "soon": "Committing to a branch and opening a merge request are coming in future releases"
+  },
+  "leave": {
+    "title": "Unsaved changes",
+    "lead": "If you open another file, the changes to this one are lost.",
+    "stay": "Stay",
+    "discard": "Discard"
+  },
+  "completion": {
+    "context": "template context",
+    "filter": "filter",
+    "macro": "include macro",
+    "prints": "prints: {{keys}}"
+  }
+}

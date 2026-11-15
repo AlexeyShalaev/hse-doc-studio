@@ -1,0 +1,602 @@
+/* Студия шаблонов (/pack-studio): стили едут в её lazy-чанке, в основной бандл не попадают.
+   Раскладка на телефоне: медиазапрос ниже и хук useIsPhoneWidth (docs/design/mobile-layout.md). */
+
+.ps-shell {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  background: var(--bg-0);
+}
+.ps-main {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── список пространств ── */
+.ps-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+  max-width: 60rem;
+  margin: 0 auto;
+  padding: 1.75rem 1.5rem 2rem;
+  overflow-y: auto;
+}
+.ps-page-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.ps-page-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  flex: 1 1 18rem;
+}
+.ps-page-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--fg-0);
+}
+.ps-page-lead {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--fg-2);
+}
+.ps-ws-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ps-ws-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-3, 0.5rem);
+  background: var(--bg-1);
+}
+.ps-ws-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  border-radius: var(--r-2);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.ps-ws-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.ps-ws-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+.ps-ws-meta {
+  font-size: 0.71875rem;
+  color: var(--fg-2);
+  min-width: 0;
+}
+.ps-ws-error {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--c-err);
+}
+.ps-ws-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-shrink: 0;
+}
+.ps-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--fg-0);
+  cursor: pointer;
+  text-align: left;
+  min-width: 0;
+}
+.ps-link:hover:not(:disabled) {
+  color: var(--accent);
+}
+.ps-link:disabled {
+  cursor: default;
+}
+
+/* ── пространство ── */
+.ps-workspace {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.ps-ws-head {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-1);
+}
+.ps-ws-head-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+.ps-ws-name {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--fg-0);
+  min-width: 0;
+}
+.ps-ws-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex-shrink: 0;
+}
+.ps-ws-body-grid {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.ps-ws-tree {
+  width: 18rem;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  background: var(--bg-1);
+}
+.ps-ws-content {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ps-ws-content > .empty-state,
+.ps-ws-content > [data-testid="ws-pick-file"] {
+  margin: 1.5rem;
+}
+.ps-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.875rem;
+  font-size: 0.71875rem;
+  color: var(--fg-2);
+  border-bottom: 1px solid var(--border);
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.ps-crumb-version {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--fg-0);
+}
+
+/* ── дерево ── */
+.ps-tree {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.ps-pane-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.ps-pane-title {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+.ps-pane-empty {
+  margin: 0;
+  padding: 0.875rem;
+  font-size: 0.75rem;
+  color: var(--fg-2);
+}
+.ps-tree-root,
+.ps-tree-group {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ps-tree-root {
+  padding: 0.25rem 0;
+}
+.ps-tree-row {
+  display: flex;
+  align-items: center;
+  gap: 0.3125rem;
+  width: 100%;
+  min-height: 1.75rem;
+  padding: 0.125rem 0.5rem;
+  border: 0;
+  background: transparent;
+  color: var(--fg-1, var(--fg-0));
+  font: inherit;
+  font-size: 0.75rem;
+  text-align: left;
+  cursor: pointer;
+}
+.ps-tree-row:hover:not(:disabled) {
+  background: var(--bg-2, var(--accent-soft));
+}
+.ps-tree-row.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.ps-tree-row:disabled {
+  color: var(--fg-3);
+  cursor: default;
+}
+.ps-tree-chevron {
+  width: 0.75rem;
+  flex-shrink: 0;
+  color: var(--fg-3);
+}
+.ps-tree-icon {
+  flex-shrink: 0;
+  color: var(--fg-2);
+}
+.ps-tree-name {
+  min-width: 0;
+}
+.ps-tree-hint {
+  min-width: 0;
+  flex: 1;
+  color: var(--fg-3);
+  font-size: 0.6875rem;
+}
+.ps-tree-marks {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.ps-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.125rem;
+  padding: 0 0.3125rem;
+  border-radius: 999px;
+  font-size: 0.625rem;
+  line-height: 1rem;
+  border: 1px solid var(--border);
+  color: var(--fg-2);
+  flex-shrink: 0;
+}
+.ps-mark-ok {
+  color: var(--c-ok);
+  border-color: color-mix(in oklch, var(--c-ok) 40%, transparent);
+}
+.ps-mark-info {
+  color: var(--c-info);
+  border-color: color-mix(in oklch, var(--c-info) 40%, transparent);
+}
+.ps-mark-warn {
+  color: var(--c-warn);
+  border-color: color-mix(in oklch, var(--c-warn) 40%, transparent);
+}
+.ps-mark-lock {
+  border: 0;
+  padding: 0;
+  color: var(--fg-3);
+}
+.ps-tree-sheet {
+  max-height: 70vh;
+  overflow-y: auto;
+  margin: 0 -1rem;
+}
+
+/* ── редактор ── */
+.ps-editor {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.ps-editor-center {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ps-editor-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ps-editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  min-width: 0;
+}
+.ps-editor-file {
+  font-size: 0.75rem;
+  color: var(--fg-0);
+  min-width: 0;
+}
+.ps-dirty {
+  margin-left: 0.25rem;
+  color: var(--accent);
+}
+.ps-editor-status {
+  font-size: 0.6875rem;
+  color: var(--fg-2);
+  flex-shrink: 0;
+}
+.ps-editor-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.ps-editor-code {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.ps-editor-code > * {
+  flex: 1;
+  min-height: 0;
+}
+.ps-view-tabs {
+  display: flex;
+  gap: 0.125rem;
+  padding: 0.25rem 0.5rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.ps-view-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+  padding: 0.375rem 0.625rem;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--fg-2);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.ps-view-tab.active {
+  color: var(--fg-0);
+  border-bottom-color: var(--accent);
+}
+.ps-view-tab:disabled {
+  color: var(--fg-3);
+  cursor: not-allowed;
+}
+.ps-count {
+  min-width: 1rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 0.625rem;
+  line-height: 1rem;
+  text-align: center;
+}
+.ps-side {
+  width: 22rem;
+  flex-shrink: 0;
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--bg-1);
+}
+
+/* ── проблемы ── */
+.ps-problems {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem 1rem;
+}
+.ps-problems-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.ps-problems-counts {
+  display: inline-flex;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+}
+.ps-problems-counts > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.ps-problems-scope {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: var(--fg-2);
+}
+.ps-problems-group {
+  margin: 0.5rem 0 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+.ps-problem-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+.ps-problem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4375rem;
+  width: 100%;
+  padding: 0.375rem 0.4375rem;
+  border: 0;
+  border-radius: var(--r-2);
+  background: transparent;
+  color: var(--fg-0);
+  font: inherit;
+  text-align: left;
+}
+button.ps-problem {
+  cursor: pointer;
+}
+button.ps-problem:hover {
+  background: var(--accent-soft);
+}
+.ps-problem-icon {
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+.ps-problem-error {
+  color: var(--c-err);
+}
+.ps-problem-warning {
+  color: var(--c-warn);
+}
+.ps-problem-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+.ps-problem-message {
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+.ps-problem-where {
+  font-size: 0.6875rem;
+  color: var(--fg-2);
+  overflow-wrap: anywhere;
+}
+
+/* ── сравнение версий файла ── */
+.ps-diff {
+  max-height: 60vh;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+}
+.ps-diff-hunk + .ps-diff-hunk {
+  border-top: 1px solid var(--border);
+}
+.ps-diff-line {
+  display: grid;
+  grid-template-columns: 2.25rem 2.25rem 1rem 1fr;
+  gap: 0.25rem;
+  padding: 1px 0.5rem;
+  font-size: 0.6875rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.ps-diff-line[data-kind="add"] {
+  background: var(--c-ok-soft, rgba(46, 160, 67, 0.12));
+}
+.ps-diff-line[data-kind="del"] {
+  background: var(--c-err-soft, rgba(248, 81, 73, 0.12));
+}
+.ps-diff-text {
+  min-width: 0;
+}
+
+/* ── телефон: колонка, дерево в шторке, «Проблемы» под редактором ── */
+.ps-editor-phone {
+  flex-direction: column;
+  overflow-y: auto;
+}
+.ps-editor-phone .ps-editor-center {
+  flex: none;
+  height: 62vh;
+}
+.ps-editor-phone .ps-side {
+  width: auto;
+  border-left: 0;
+  border-top: 1px solid var(--border);
+  overflow: visible;
+}
+/* Планшет: дерево и «Проблемы» уже, редактору остаётся место. */
+@media (max-width: 1023.98px) {
+  .ps-ws-tree {
+    width: 14rem;
+  }
+  .ps-side {
+    width: 16rem;
+  }
+}
+@media (max-width: 767.98px) {
+  .ps-page {
+    padding: 1rem 1rem 1.5rem;
+  }
+  .ps-ws-card {
+    flex-wrap: wrap;
+  }
+  .ps-ws-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .ps-ws-head {
+    padding: 0.5rem 0.75rem;
+    gap: 0.5rem;
+  }
+  .ps-hide-phone {
+    display: none;
+  }
+  .ps-editor-toolbar {
+    flex-wrap: wrap;
+  }
+}

@@ -1,6 +1,13 @@
 import { useLocation, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
-import { Bot, ChevronRight, GraduationCap, Lock, Settings } from "lucide-react";
+import {
+  Bot,
+  ChevronRight,
+  GraduationCap,
+  LayoutTemplate,
+  Lock,
+  Settings,
+} from "lucide-react";
 import { clsx } from "clsx";
 import { AccountMenu } from "@features/account-menu";
 import { GuestBadge, useGuest } from "@features/guest-session";
@@ -81,6 +88,9 @@ export const AppTitlebar = ({
 
   const isOnWelcome = !projectName;
   const settingsActive = location.pathname.startsWith("/settings");
+  // Студия шаблонов: кнопка есть только у того, кому раздел открыт (capabilities.pack_studio).
+  const packStudio = bootstrap?.capabilities.pack_studio === true && !isGuest;
+  const packStudioActive = location.pathname.startsWith("/pack-studio");
   // The one agent adapts to context — its tooltip says so.
   const inProject = location.pathname.startsWith("/projects/");
   const agentTooltip = inProject
@@ -242,6 +252,29 @@ export const AppTitlebar = ({
             </button>
           )}
 
+          {packStudio && (
+            <button
+              type="button"
+              className={clsx(
+                "icon-btn tt",
+                secondary,
+                packStudioActive && "active",
+              )}
+              data-tt={t("titlebar.packStudio")}
+              aria-label={t("titlebar.packStudio")}
+              data-testid="titlebar-pack-studio"
+              onClick={() => {
+                void navigate("/pack-studio");
+              }}
+              style={
+                packStudioActive
+                  ? { width: "2rem", height: "2rem", color: "var(--accent)" }
+                  : { width: "2rem", height: "2rem" }
+              }
+            >
+              <LayoutTemplate size="1rem" />
+            </button>
+          )}
           {!isGuest && (
             <button
               type="button"

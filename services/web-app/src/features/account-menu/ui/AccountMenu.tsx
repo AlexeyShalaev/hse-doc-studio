@@ -28,6 +28,13 @@ export const AccountMenu = () => {
       onOpenLocalStudio={() => {
         void navigate(LOCAL_STUDIO_PATH);
       }}
+      {...(has("pack_studio")
+        ? {
+            onOpenPackStudio: () => {
+              void navigate("/pack-studio");
+            },
+          }
+        : {})}
       {...(has("admin")
         ? {
             onOpenAdmin: () => {

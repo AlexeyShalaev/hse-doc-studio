@@ -114,8 +114,9 @@ describe("SettingsPage: sections by capabilities", () => {
     mount("/settings/appearance", LOCAL_BOOTSTRAP);
     const hrefs = navHrefs();
     for (const href of HIDDEN_HREFS) expect(hrefs).toContain(href);
-    expect(hrefs).toHaveLength(15);
+    expect(hrefs).toHaveLength(16);
     expect(hrefs).toContain("/settings/mcp");
+    expect(hrefs).toContain("/settings/pack-studio");
   });
 
   it("server: Docker, images, fonts, disk, local models and data export are hidden", () => {

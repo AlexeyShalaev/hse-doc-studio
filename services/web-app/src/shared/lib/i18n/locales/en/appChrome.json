@@ -78,7 +78,8 @@
     "agentProject": "Project AI agent",
     "agentAssistant": "AI assistant",
     "projects": "Projects",
-    "settings": "Tool settings"
+    "settings": "Tool settings",
+    "packStudio": "Template Studio"
   },
   "chatDock": {
     "resizeHint": "Resize agent panel"
@@ -127,7 +128,8 @@
       "account": "Account",
       "runners": "My runners",
       "remoteRunner": "Cloud builds",
-      "mcp": "AI clients (MCP)"
+      "mcp": "AI clients (MCP)",
+      "packStudio": "Template Studio"
     },
     "title": "Settings",
     "searchPlaceholder": "Search settings",
@@ -191,6 +193,7 @@
     "agent": "AI assistant",
     "help": "Help",
     "local": "Local version",
-    "commands": "Commands and search"
+    "commands": "Commands and search",
+    "openPackStudio": "Template Studio"
   }
 }

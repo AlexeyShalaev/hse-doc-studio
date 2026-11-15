@@ -151,6 +151,10 @@ export default defineConfig(({ mode }) => {
             if (id.endsWith("/src/pages/AdminPage/index.ts")) {
               return "assets/admin-[hash].js";
             }
+            // Студия шаблонов: свой чанк, его грузит только тот, у кого раздел открыт.
+            if (id.endsWith("/src/pages/PackStudioPage/index.ts")) {
+              return "assets/pack-studio-app-[hash].js";
+            }
             // locale-admin-<имя>-<язык>: по имени словаря бюджеты size-limit
             // (.size-limit.json) держат каждый раздел отдельно.
             const locale =
@@ -169,6 +173,12 @@ export default defineConfig(({ mode }) => {
               /\/locales\/([a-z]{2})\/signing\/signing\.json$/.exec(id);
             if (signing) {
               return `assets/locale-signing-${signing[1] ?? ""}-[hash].js`;
+            }
+            // Словарь Студии шаблонов: грузится вместе с её чанком.
+            const packStudio =
+              /\/locales\/([a-z]{2})\/packStudio\/packStudio\.json$/.exec(id);
+            if (packStudio) {
+              return `assets/locale-packStudio-${packStudio[1] ?? ""}-[hash].js`;
             }
             // Тексты редких окон страницы подписанта: грузятся, когда окно открывают.
             const signingRare =

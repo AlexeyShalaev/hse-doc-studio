@@ -15,6 +15,7 @@ import {
   HardDrive,
   Info,
   KeyRound,
+  LayoutTemplate,
   ListChecks,
   Plug,
   Presentation,
@@ -61,6 +62,7 @@ import { OnboardingRestartCard } from "@features/onboarding";
 import { UsageSection } from "@features/usage";
 import { RemoteRunnerSection } from "@features/remote-runner";
 import { McpSection } from "@features/mcp-server";
+import { PackStudioSettingsSection } from "@features/pack-studio-toggle";
 import {
   LOCAL_BOOTSTRAP,
   useBootstrap,
@@ -204,6 +206,15 @@ const SECTIONS: readonly SectionDef[] = [
     scope: "user",
     labelKey: "settingsPage.sections.signing",
     icon: ShieldCheck,
+  },
+  {
+    // Только локальная Студия: на сервере раздел включает администратор.
+    id: "pack-studio",
+    group: "documents",
+    scope: "installation",
+    account: "without",
+    labelKey: "settingsPage.sections.packStudio",
+    icon: LayoutTemplate,
   },
   {
     id: "providers",
@@ -350,6 +361,8 @@ const renderSection = (id: SettingsSectionId) => {
       );
     case "mcp":
       return <McpSection />;
+    case "pack-studio":
+      return <PackStudioSettingsSection />;
     case "remote-runner":
       return (
         <>

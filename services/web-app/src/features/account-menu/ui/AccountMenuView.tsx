@@ -2,6 +2,7 @@ import {
   BookOpen,
   Bot,
   Command,
+  LayoutTemplate,
   Laptop,
   LogOut,
   Settings,
@@ -29,6 +30,8 @@ export type AccountMenuViewProps = {
   onOpenSettings: () => void;
   /** Есть только при capabilities.admin: ссылка не показывается тому, кому админка ответит 404. */
   onOpenAdmin?: () => void;
+  /** Студия шаблонов: только у того, кому раздел открыт. */
+  onOpenPackStudio?: () => void;
   /** «Локальная версия»: установка Студии на компьютер и подключение к этому серверу. */
   onOpenLocalStudio?: () => void;
   onLogout: () => void;
@@ -76,6 +79,7 @@ export const AccountMenuView = ({
   defaultOpen,
   onOpenSettings,
   onOpenAdmin,
+  onOpenPackStudio,
   onOpenLocalStudio,
   onLogout,
   onOpenAgent,
@@ -249,6 +253,18 @@ export const AccountMenuView = ({
             >
               <Laptop size="0.875rem" />
               {tLocal("menu.label")}
+            </button>
+          )}
+          {onOpenPackStudio && (
+            <button
+              type="button"
+              className="row-btn"
+              style={itemStyle}
+              onClick={onOpenPackStudio}
+              data-testid="account-menu-pack-studio"
+            >
+              <LayoutTemplate size="0.875rem" />
+              {t("accountMenu.openPackStudio")}
             </button>
           )}
           {onOpenAdmin && (
