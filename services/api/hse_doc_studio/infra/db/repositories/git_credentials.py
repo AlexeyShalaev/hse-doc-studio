@@ -18,6 +18,7 @@ from hse_doc_studio.core.access.context import ActorRequired, current_actor, req
 from hse_doc_studio.core.access.entities import Actor, ActorKind, Role
 from hse_doc_studio.core.access.repositories import IProjectAclRepository
 from hse_doc_studio.core.errors import NotFoundError
+from hse_doc_studio.core.git_sync.credential_match import check_credential_matches
 from hse_doc_studio.core.git_sync.entities import (
     CredentialStatus,
     CredentialUsage,
@@ -34,7 +35,6 @@ from hse_doc_studio.core.secrets import column_aad
 from hse_doc_studio.infra.db.orm.git_credentials import GitCredentialRow, GitRemoteBindingRow
 from hse_doc_studio.infra.db.orm.projects import ProjectRow
 from hse_doc_studio.infra.db.session import SessionProvider
-from hse_doc_studio.infra.git_sync.auth_env import check_credential_matches
 
 logger = structlog.get_logger()
 

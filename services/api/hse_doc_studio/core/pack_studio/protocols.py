@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 from uuid import UUID
 
 from hse_doc_studio.core.git_sync.entities import RemoteTarget
@@ -119,3 +119,18 @@ class IPackWorkspaceGit(Protocol):
     ) -> ReleasedVersions:
         """Выпущенные версии по реестрам базовой ветки (D10)."""
         ...
+
+
+YamlPath = tuple[str | int, ...]
+
+
+class IYamlEditor(Protocol):
+    """Точечные правки YAML по позициям узлов (D11): остальной текст, комментарии и выравнивание байт в байт.
+
+    Невыполнимая правка (нет узла, значение не читается обратно) это `ValueError`.
+    """
+
+    def set_value(self, text: str, path: YamlPath, value: Any) -> str: ...
+    def insert_item(self, text: str, path: YamlPath, index: int, value: Any) -> str: ...
+    def delete(self, text: str, path: YamlPath) -> str: ...
+    def move_item(self, text: str, path: YamlPath, src: int, dst: int) -> str: ...

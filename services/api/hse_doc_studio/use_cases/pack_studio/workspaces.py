@@ -26,6 +26,7 @@ from uuid import UUID, uuid4
 import structlog
 
 from hse_doc_studio.core.access.entities import Actor
+from hse_doc_studio.core.git_sync.credential_match import check_credential_matches
 from hse_doc_studio.core.git_sync.entities import RemoteTarget
 from hse_doc_studio.core.git_sync.error_messages import git_error
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
@@ -51,7 +52,6 @@ from hse_doc_studio.core.pack_studio.protocols import (
     WorkspaceLimits,
 )
 from hse_doc_studio.core.paths import PathMapping
-from hse_doc_studio.infra.git_sync.auth_env import check_credential_matches
 from hse_doc_studio.use_cases.git_sync.probe_remote import raise_probe_error, require_http_consent, valid_branch
 
 logger = structlog.get_logger()

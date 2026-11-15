@@ -3,7 +3,8 @@
 - Версия файла это ETag содержимого (`core/file_version.py`, как у файлов проекта): запись с `If-Match` на устаревшую
   версию отвечает `stale_file` с текущим ETag и текстом, без заголовка пишет безусловно.
 - Выпущенные версии и реестр выпусков защищены (`core/pack_studio/protection.py`) при любой записи и удалении.
-- Правка YAML формой идёт только точечными правками по позициям узлов (D11, `infra/pack_studio/yaml_edits.py`):
+- Правка YAML формой идёт только точечными правками по позициям узлов (D11, порт `IYamlEditor`,
+  реализация в `infra/pack_studio/yaml_edits.py`):
   остальной текст, комментарии и выравнивание остаются байт в байт. Набор правок применяется целиком или никак.
 - Внутри процесса запись одного пространства идёт под замком: проверка версии и запись не разрываются.
 """
@@ -23,8 +24,7 @@ from hse_doc_studio.core.file_version import etag_matches, file_etag
 from hse_doc_studio.core.pack_studio.entities import PackTree, PackWorkspace
 from hse_doc_studio.core.pack_studio.errors import PackStudioError, PackStudioErrorCode
 from hse_doc_studio.core.pack_studio.paths import is_yaml, validate_rel_path
-from hse_doc_studio.core.pack_studio.protocols import IPackWorkspaceFiles
-from hse_doc_studio.infra.pack_studio import yaml_edits
+from hse_doc_studio.core.pack_studio.protocols import IPackWorkspaceFiles, IYamlEditor
 from hse_doc_studio.use_cases.pack_studio.workspaces import PackWorkspaceService
 
 MAX_YAML_OPS = 200
@@ -66,9 +66,10 @@ class TreeView:
 
 
 class PackFilesService:
-    def __init__(self, workspaces: PackWorkspaceService, files: IPackWorkspaceFiles) -> None:
+    def __init__(self, workspaces: PackWorkspaceService, files: IPackWorkspaceFiles, yaml_editor: IYamlEditor) -> None:
         self._workspaces = workspaces
         self._files = files
+        self._yaml = yaml_editor
         self._locks: WeakValueDictionary[UUID, asyncio.Lock] = WeakValueDictionary()
 
     @property
@@ -118,7 +119,7 @@ class PackFilesService:
                 text = current.decode("utf-8")
             except UnicodeDecodeError:
                 raise PackStudioError(PackStudioErrorCode.not_yaml) from None
-            edited = _apply(text, ops)
+            edited = _apply(self._yaml, text, ops)
             data = edited.encode("utf-8")
             self._check_size(len(data))
             if data != current:
@@ -173,24 +174,24 @@ class PackFilesService:
         return lock
 
 
-def _apply(text: str, ops: Sequence[YamlOp]) -> str:
+def _apply(editor: IYamlEditor, text: str, ops: Sequence[YamlOp]) -> str:
     if len(ops) > MAX_YAML_OPS:
         raise PackStudioError(PackStudioErrorCode.yaml_patch_conflict, op=MAX_YAML_OPS, reason="too many operations")
     for index, op in enumerate(ops):
         try:
-            text = _apply_one(text, op)
-        except (yaml_edits.YamlEditError, ValueError) as exc:
+            text = _apply_one(editor, text, op)
+        except ValueError as exc:  # YamlEditError тоже ValueError
             raise PackStudioError(PackStudioErrorCode.yaml_patch_conflict, op=index, reason=str(exc)[:300]) from None
     return text
 
 
-def _apply_one(text: str, op: YamlOp) -> str:
+def _apply_one(editor: IYamlEditor, text: str, op: YamlOp) -> str:
     if op.op == "set":
-        return yaml_edits.set_value(text, op.path, op.value)
+        return editor.set_value(text, op.path, op.value)
     if op.op == "delete":
-        return yaml_edits.delete(text, op.path)
+        return editor.delete(text, op.path)
     if op.op == "insert" and op.index is not None:
-        return yaml_edits.insert_item(text, op.path, op.index, op.value)
+        return editor.insert_item(text, op.path, op.index, op.value)
     if op.op == "move" and op.index is not None and op.to is not None:
-        return yaml_edits.move_item(text, op.path, op.index, op.to)
+        return editor.move_item(text, op.path, op.index, op.to)
     raise ValueError(f"unsupported operation {op.op!r}")
