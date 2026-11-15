@@ -62,6 +62,7 @@ export const PACK_STUDIO_ERROR_CODES = [
   "name_required",
   "template_id_taken",
   "pack_not_found",
+  "workspace_git_failed",
 ] as const;
 
 export type PackStudioErrorCode = (typeof PACK_STUDIO_ERROR_CODES)[number];
