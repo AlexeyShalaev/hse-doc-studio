@@ -1,0 +1,54 @@
+---
+title: 'Where a pack in the project wizard comes from'
+description: 'How to tell a pack connected from the instance catalog from one built into Studio, and what a hidden template version means.'
+sidebar:
+  order: 15
+access: user
+help:
+  routes: ['/wizard']
+  summary: 'Packs in the wizard are either built in (they ship with Studio) or connected from the pack catalog of the instance. A connected pack has a “Connected” line under its name.'
+  steps:
+    - text: 'On the **Projects** screen click **New project** and look under the pack name on the **Pack** step.'
+      hint: 'No line: the pack is built into this Studio version and updates with it.'
+    - text: 'The **Connected: …** line means the pack came from the pack catalog of the instance. Hover over it to see the repository address and the branch or tag.'
+      hint: 'Without a source name the line reads **Connected from the instance catalog**.'
+    - text: 'The **replaces built-in** mark means a connected pack with the same id replaced the built-in one: new projects are created on its versions.'
+    - text: 'The **Version** step lists only the versions the catalog offers now. Hidden versions are not in the list.'
+verified:
+  at: 2026-11-15
+  app_version: '0.31.0'
+  sources:
+    - services/web-app/src/features/project-create
+    - services/api/hse_doc_studio/api/routers/v1/catalog.py
+---
+
+import Steps from '~/components/Steps.astro'
+
+Template packs reach Studio in two ways. **Built-in** packs ship inside Studio itself: a new version
+of such a pack arrives with a Studio update. **Connected** packs come from the pack catalog of the
+instance: on a server an administrator connects them (for example, the packs of your department or
+university from a git repository), and in a local Studio a pack author connects a folder with the
+**Connect to this Studio catalog** button in Template Studio. A new released version of a connected
+pack appears without a Studio update.
+
+<Steps />
+
+## What a hidden version means
+
+A hidden version is in Studio, but the new project wizard does not offer it. This happens when:
+
+- an administrator turned off or removed the pack source: the whole pack leaves the wizard;
+- the source no longer carries this version (for example, a newer one replaced it);
+- a connected pack replaced the built-in one: the built-in versions are hidden and the wizard offers
+  the source versions.
+
+Projects already created on a hidden version open and build as before: the version is never removed
+or changed. A new project on it cannot be created.
+
+## If something went wrong
+
+- **The pack your classmates use is missing.** Its source may be turned off. Ask the server
+  administrator: projects on that pack keep working.
+- **The wizard shows a different version than the supervisor’s instructions.** The version may be
+  hidden, and the catalog offers a newer one. The project version is in the project settings, the
+  “Template version” section.
