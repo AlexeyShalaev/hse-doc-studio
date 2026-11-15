@@ -68,6 +68,14 @@ export const DocumentResponseSchema = z.object({
   status: z.enum(["draft", "building", "ok", "warn", "err", "locked"]),
   // Статус `err`: почему упала последняя сборка (список документов); у остальных документов null.
   last_compile_error: CompileErrorSchema.nullish(),
+  // Итог последней сборки. `err` при `success` значит «PDF собран, проверки
+  // нашли ошибки», а не «сборка упала». null: сборок не было.
+  last_compile_status: z
+    .enum(["pending", "running", "success", "failure", "cancelled"])
+    .nullish(),
+  // Выпущенный файл документа лежит в проекте: превью показывает его при
+  // любом статусе, в том числе после упавшей сборки (PDF прошлой удачной).
+  output_available: z.boolean().optional(),
   chosen_variant: z.string().nullable().optional(),
   last_compile_id: z.string().nullable().optional(),
   last_compile_at: z.string().nullable().optional(),

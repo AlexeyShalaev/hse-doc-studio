@@ -23,6 +23,8 @@ export type DocStateLineProps = {
   projectId: string;
   docId: string;
   status: DocStatus;
+  /** Итог последней сборки: `err` при удачной сборке значит ошибки проверок, а не упавшую сборку. */
+  lastCompileStatus?: string | null;
 };
 
 /**
@@ -33,6 +35,7 @@ export const DocStateLine = ({
   projectId,
   docId,
   status,
+  lastCompileStatus = null,
 }: DocStateLineProps) => {
   const { t } = useTranslation("workbench");
   const slot = useCompileSlot(projectId, docId);
@@ -86,7 +89,10 @@ export const DocStateLine = ({
       break;
     case "idle":
       if (status === "err") {
-        text = t("documents.state.failed");
+        text =
+          lastCompileStatus === "success"
+            ? t("documents.state.checksFailed")
+            : t("documents.state.failed");
         tone = "err";
       } else if (status === "ok" || status === "warn") {
         text = t("documents.state.built");

@@ -9,6 +9,7 @@ import { Link, useSearchParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
+  AlertTriangle,
   Download,
   ExternalLink,
   File as FileIcon,
@@ -25,6 +26,7 @@ import { useAppSettings } from "@entities/app-settings";
 import {
   documentKeys,
   getDocMeta,
+  hasCheckErrorsOnly,
   isOfficeEditablePath,
   useCompiles,
 } from "@entities/document";
@@ -201,8 +203,66 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
     (compileId: string) => archivedPdfUrl(project.id, doc.id, compileId),
     [project.id, doc.id],
   );
+  // Есть что показать: сервер видит выпущенный файл в проекте. Статус сюда не
+  // годится: `err` ставят и упавшая сборка, и ошибки проверок при готовом PDF,
+  // а упавшая сборка не стирает PDF прошлой удачной. Удачный статус, как и
+  // раньше, тоже значит «есть сборка» (старый сервер поля не шлёт).
   const hasBuild =
-    doc.status === "ok" || doc.status === "warn" || doc.status === "locked";
+    doc.output_available === true ||
+    doc.status === "ok" ||
+    doc.status === "warn" ||
+    doc.status === "locked";
+  // Пометка над PDF: он не от последней сборки или проверки нашли ошибки.
+  const lastBuildFailed =
+    doc.last_compile_status === "failure" ||
+    doc.last_compile_status === "cancelled";
+  const buildNotice = lastBuildFailed
+    ? t("preview.staleNotice")
+    : hasCheckErrorsOnly(doc)
+      ? t("preview.checkErrorsNotice")
+      : null;
+  const withNotice = (viewer: ReactNode) =>
+    buildNotice === null ? (
+      viewer
+    ) : (
+      <div className="flex flex-col" style={{ flex: 1, minHeight: 0 }}>
+        <div
+          role="status"
+          data-testid="preview-build-notice"
+          className="flex items-center gap-2"
+          style={{
+            padding: "0.375rem 0.625rem",
+            borderBottom: "1px solid var(--border)",
+            background: lastBuildFailed
+              ? "var(--c-warn-soft)"
+              : "var(--c-err-soft)",
+            color: "var(--fg-1)",
+            fontSize: "0.71875rem",
+            lineHeight: 1.4,
+            flexShrink: 0,
+          }}
+        >
+          <AlertTriangle
+            size="0.75rem"
+            style={{
+              flexShrink: 0,
+              color: lastBuildFailed ? "var(--c-warn)" : "var(--c-err)",
+            }}
+          />
+          <span style={{ minWidth: 0, overflowWrap: "anywhere" }}>
+            {buildNotice}
+          </span>
+        </div>
+        {viewer}
+      </div>
+    );
+  // Почему PDF нет: сборок не было, идёт первая или все упали.
+  const isBuilding =
+    doc.status === "building" ||
+    doc.last_compile_status === "pending" ||
+    doc.last_compile_status === "running";
+  const hadCompiles =
+    doc.last_compile_id != null || (compiles?.length ?? 0) > 0;
   // Prefer the API-declared output path (authoritative in team layouts); the
   // .tex→.pdf derivation stays as the legacy fallback. The artifact is not
   // necessarily a PDF: copy-only presentation variants publish .pptx / .html.
@@ -299,7 +359,7 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
               className="mono"
               style={{ fontSize: "0.625rem", textTransform: "uppercase" }}
             >
-              {t("preview.notBuilt")}
+              {hadCompiles ? t("preview.noPdf") : t("preview.notBuilt")}
             </span>
           </div>
         </div>
@@ -312,7 +372,11 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
             fontSize: "0.78125rem",
           }}
         >
-          {doc.engine === null ? (
+          {isBuilding ? (
+            t("preview.buildingHint")
+          ) : hadCompiles ? (
+            t("preview.noPdfHint")
+          ) : doc.engine === null ? (
             // Copy-only variant (pptx/reveal): no latexmk involved — the build
             // just runs the checks and publishes the file.
             t("preview.notBuiltCopyHint")
@@ -438,48 +502,50 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
     // into the URL) reloads the PDF after saves, which never touch
     // last_compile_id.
     if (doc.preview_file) {
-      return withReview(
-        <PdfViewer
-          url={fileUrl(project.id, doc.preview_file)}
-          refreshKey={
-            doc.preview_updated_at ?? doc.last_compile_id ?? doc.preview_file
-          }
-          ariaLabel={`${meta.code} preview`}
-          storageKey={`${project.id}:${doc.id}`}
-          {...review.viewer}
-          toolbarExtras={
-            <>
-              {review.toolbar}
-              {doc.custom_file != null && (
+      return withNotice(
+        withReview(
+          <PdfViewer
+            url={fileUrl(project.id, doc.preview_file)}
+            refreshKey={
+              doc.preview_updated_at ?? doc.last_compile_id ?? doc.preview_file
+            }
+            ariaLabel={`${meta.code} preview`}
+            storageKey={`${project.id}:${doc.id}`}
+            {...review.viewer}
+            toolbarExtras={
+              <>
+                {review.toolbar}
+                {doc.custom_file != null && (
+                  <span
+                    className="chip"
+                    style={{
+                      background: "var(--bg-3)",
+                      color: "var(--fg-1)",
+                      fontSize: "0.65625rem",
+                    }}
+                  >
+                    {t("preview.customFileBadge")}
+                  </span>
+                )}
                 <span
-                  className="chip"
-                  style={{
-                    background: "var(--bg-3)",
-                    color: "var(--fg-1)",
-                    fontSize: "0.65625rem",
-                  }}
+                  className="mono dim tt shrink-0"
+                  data-tt={t("preview.convertedTooltip", { ext: `.${ext}` })}
+                  style={{ whiteSpace: "nowrap" }}
                 >
-                  {t("preview.customFileBadge")}
+                  {t("preview.convertedBadge")}
                 </span>
-              )}
-              <span
-                className="mono dim tt shrink-0"
-                data-tt={t("preview.convertedTooltip", { ext: `.${ext}` })}
-                style={{ whiteSpace: "nowrap" }}
-              >
-                {t("preview.convertedBadge")}
-              </span>
-              <a
-                href={artifactHref}
-                className="btn shrink-0"
-                download={artifactName}
-              >
-                <Download size="0.75rem" />
-                {t("preview.downloadOriginal", { ext: `.${ext}` })}
-              </a>
-            </>
-          }
-        />,
+                <a
+                  href={artifactHref}
+                  className="btn shrink-0"
+                  download={artifactName}
+                >
+                  <Download size="0.75rem" />
+                  {t("preview.downloadOriginal", { ext: `.${ext}` })}
+                </a>
+              </>
+            }
+          />,
+        ),
       );
     }
     const isOfficeEditableExt = isOfficeEditablePath(artifactRelPath);
@@ -603,79 +669,81 @@ export const PreviewPane = ({ project, doc }: PreviewPaneProps) => {
     );
   }
 
-  return withReview(
-    <PdfViewer
-      url={artifactHref}
-      refreshKey={doc.last_compile_id ?? artifactRelPath}
-      ariaLabel={`${meta.code} preview`}
-      stamps={stamps}
-      marginGuideMm={GOST_MARGINS}
-      storageKey={`${project.id}:${doc.id}`}
-      onInverseSync={onInverseSync}
-      jump={pdfJump}
-      onAskAgent={onAskAgent}
-      onFindInSource={onFindInSource}
-      {...review.viewer}
-      toolbarExtras={
-        <>
-          {review.toolbar}
-          <span className="mono dim truncate" style={{ maxWidth: "12.5rem" }}>
-            {meta.out}
-          </span>
-          {lastCompile?.words != null && (
-            <span
-              className="mono dim tt shrink-0"
-              data-tt={t("preview.wordCountTooltip")}
-              style={{ whiteSpace: "nowrap" }}
-            >
-              {lastCompile.chars != null
-                ? t("preview.wordsChars", {
-                    count: lastCompile.words,
-                    chars: lastCompile.chars.toLocaleString(localeTag()),
-                  })
-                : t("preview.words", { count: lastCompile.words })}
+  return withNotice(
+    withReview(
+      <PdfViewer
+        url={artifactHref}
+        refreshKey={doc.last_compile_id ?? artifactRelPath}
+        ariaLabel={`${meta.code} preview`}
+        stamps={stamps}
+        marginGuideMm={GOST_MARGINS}
+        storageKey={`${project.id}:${doc.id}`}
+        onInverseSync={onInverseSync}
+        jump={pdfJump}
+        onAskAgent={onAskAgent}
+        onFindInSource={onFindInSource}
+        {...review.viewer}
+        toolbarExtras={
+          <>
+            {review.toolbar}
+            <span className="mono dim truncate" style={{ maxWidth: "12.5rem" }}>
+              {meta.out}
             </span>
-          )}
-          {diffBases.length > 0 && (
-            <button
-              type="button"
-              className="btn xs shrink-0"
-              title={t("preview.compareWithPrevious")}
-              onClick={() => {
-                setDiffOpen(true);
-              }}
-            >
-              <GitCompare size="0.6875rem" />
-              {t("preview.compare")}
-            </button>
-          )}
-          <a
-            href={artifactHref}
-            className="btn xs shrink-0"
-            download={meta.out}
-            target="_blank"
-            rel="noreferrer"
-          >
-            <Download size="0.6875rem" />
-            PDF
-          </a>
-          {(hasEnabledSignature || hasFinalPdf) && (
+            {lastCompile?.words != null && (
+              <span
+                className="mono dim tt shrink-0"
+                data-tt={t("preview.wordCountTooltip")}
+                style={{ whiteSpace: "nowrap" }}
+              >
+                {lastCompile.chars != null
+                  ? t("preview.wordsChars", {
+                      count: lastCompile.words,
+                      chars: lastCompile.chars.toLocaleString(localeTag()),
+                    })
+                  : t("preview.words", { count: lastCompile.words })}
+              </span>
+            )}
+            {diffBases.length > 0 && (
+              <button
+                type="button"
+                className="btn xs shrink-0"
+                title={t("preview.compareWithPrevious")}
+                onClick={() => {
+                  setDiffOpen(true);
+                }}
+              >
+                <GitCompare size="0.6875rem" />
+                {t("preview.compare")}
+              </button>
+            )}
             <a
-              href={signedHref}
+              href={artifactHref}
               className="btn xs shrink-0"
-              download
-              title={
-                hasFinalPdf
-                  ? t("preview.downloadFinalTitle")
-                  : t("preview.downloadSignedTitle")
-              }
+              download={meta.out}
+              target="_blank"
+              rel="noreferrer"
             >
-              <PenTool size="0.6875rem" />
-              {t("preview.withSignatures")}
+              <Download size="0.6875rem" />
+              PDF
             </a>
-          )}
-        </>
-      }
-    />,
+            {(hasEnabledSignature || hasFinalPdf) && (
+              <a
+                href={signedHref}
+                className="btn xs shrink-0"
+                download
+                title={
+                  hasFinalPdf
+                    ? t("preview.downloadFinalTitle")
+                    : t("preview.downloadSignedTitle")
+                }
+              >
+                <PenTool size="0.6875rem" />
+                {t("preview.withSignatures")}
+              </a>
+            )}
+          </>
+        }
+      />,
+    ),
   );
 };

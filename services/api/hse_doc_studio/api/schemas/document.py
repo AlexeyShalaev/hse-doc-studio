@@ -42,6 +42,11 @@ class DocumentListItemResponse(BaseModel):
     build_tags: list[str] = []
     # Почему упала последняя сборка (документ в статусе err): код, деталь и текст «что делать».
     last_compile_error: CompileErrorOut | None = None
+    # Итог последней сборки (pending/running/success/failure/cancelled; None: сборок не было). Статус err при
+    # `success` значит «PDF собран, проверки нашли ошибки», а не «сборка упала».
+    last_compile_status: str | None = None
+    # Выпущенный файл документа есть в проекте: превью показывает его при любом статусе.
+    output_available: bool = False
 
 
 class CustomFileOverrideResponse(BaseModel):
@@ -60,6 +65,9 @@ class DocumentDetailResponse(BaseModel):
     status: str
     chosen_variant: str | None
     last_compile_id: str | None
+    # Как в списке: итог последней сборки и наличие выпущенного файла.
+    last_compile_status: str | None = None
+    output_available: bool = False
     checks_override: dict[str, Any]
     # Резолв определения/инстанса — те же поля, что в списке: фронтенд
     # обязан использовать их вместо захардкоженных путей по doc_id.

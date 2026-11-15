@@ -46,7 +46,10 @@ export const useResumeProjectStreams = (projectId: string): void => {
           projectId,
           doc.id,
           doc.last_compile_id,
-          doc.status === "err" ? "failure" : "success",
+          // `err` при удачной сборке: ошибки нашли проверки, сама сборка прошла.
+          doc.status === "err" && doc.last_compile_status !== "success"
+            ? "failure"
+            : "success",
         );
         continue;
       }
@@ -82,6 +85,11 @@ export const useResumeProjectStreams = (projectId: string): void => {
       if (anyFinished) {
         void queryClient.invalidateQueries({
           queryKey: documentKeys.lists(projectId),
+        });
+        // Карточка документа несёт статус, итог сборки и наличие PDF для
+        // превью и шапки: без перечитывания превью ждало бы фонового обновления.
+        void queryClient.invalidateQueries({
+          queryKey: [...documentKeys.all, "detail", projectId],
         });
         void queryClient.invalidateQueries({
           queryKey: signatureKeys.state(projectId),

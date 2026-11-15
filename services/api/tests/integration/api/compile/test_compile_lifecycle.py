@@ -30,6 +30,7 @@ from hse_doc_studio.core.value_objects import CheckResult
 from hse_doc_studio.infra.checks.runner import CheckRunner
 from hse_doc_studio.infra.compile.docker_compile_executor import DockerCompileExecutor
 from hse_doc_studio.infra.compile.docker_image_manager import DockerImageManager, DockerStatus, ImageInfo
+from hse_doc_studio.infra.jobs.compile_body import CHECKS_FAILED_RULE
 from hse_doc_studio.infra.languagetool.container_manager import LanguageToolContainerManager
 from hse_doc_studio.infra.office.convert_manager import OfficeConvertManager
 from httpx import AsyncClient, Response
@@ -802,13 +803,12 @@ async def _assert_refusal_recorded(client: AsyncClient, project: dict[str, Any],
     assert thesis["last_compile_error"]["code"] == code
 
 
-# --- 12. зафиксированный изъян: сбой в фазе проверок --------------------------
+# --- 12. сбой в фазе проверок --------------------------------------------------
 #
 # Проверки идут ПОСЛЕ защитного блока сборки (`except CancelledError/Exception`
-# охватывает только docker-фазу). Поэтому отмена или исключение именно в проверках
-# не доходят до записи итогового состояния: запись остаётся `running`, документ
-# `building`, а поток логов закрывается в `finally`. Это неправильно, но это
-# сегодняшнее поведение; рефакторинг конвейера не вправе его менять молча.
+# охватывает только docker-фазу). Отмена именно в проверках не доходит до записи
+# итогового состояния: запись остаётся `running`, документ `building` (зафиксированный
+# изъян). Исключение в проверках ловит сама фаза проверок: сборка успешна, PDF цел.
 
 
 async def _break_checks_phase(
@@ -858,17 +858,81 @@ async def test__compile__cancel_during_checks__record_stays_running(
     assert await _doc_status(test_app, project) == "building"
 
 
-async def test__compile__exception_during_checks__record_stays_running(
+async def test__compile__exception_during_checks__build_stays_success_with_pdf_and_warning(
     test_app: AsyncClient, project: dict[str, Any], mocker: MockerFixture
 ) -> None:
+    # Раньше исключение в проверках обрывало задачу: запись «идёт», документ «собирается», а в облаке готовый PDF
+    # не публиковался. Сбой проверок вторичен: сборка успешна, PDF на месте, вместо результатов одно предупреждение.
     compile_id, release = await _break_checks_phase(test_app, project, mocker, cancel=False)
     try:
-        _lines, done = await _stream(test_app, project, compile_id)
+        record = await _wait_terminal(test_app, project, compile_id)
     finally:
         release.set()
 
-    assert done["status"] == "running"
-    record = await _record(test_app, project, compile_id)
-    assert record["status"] == "running"
-    assert "[error] compile task crashed" not in record["log"]
-    assert await _doc_status(test_app, project) == "building"
+    assert record["status"] == "success"
+    assert record["error"] is None
+    (finding,) = record["check_results"]
+    assert (finding["rule_id"], finding["severity"]) == (CHECKS_FAILED_RULE, "warn")
+    assert "[checks] проверки упали (RuntimeError: checks exploded); PDF сохранён" in record["log"]
+    assert _file(project, "thesis/thesis.pdf").is_file()
+    assert await _doc_status(test_app, project) == "warn"
+
+
+# --- 13. превью и панель: статус err от проверок не равен упавшей сборке -------
+
+
+async def _doc(client: AsyncClient, project: dict[str, Any], doc_id: str = "thesis") -> tuple[dict, dict]:
+    """(карточка документа, строка списка документов)."""
+    detail = await client.get(f"/api/v1/projects/{project['id']}/documents/{doc_id}")
+    assert detail.status_code == 200, detail.text
+    listing = await client.get(f"/api/v1/projects/{project['id']}/documents")
+    assert listing.status_code == 200, listing.text
+    return detail.json(), next(d for d in listing.json() if d["id"] == doc_id)
+
+
+async def test__documents__never_built__no_compile_status_and_no_output(
+    test_app: AsyncClient, project: dict[str, Any]
+) -> None:
+    for view in await _doc(test_app, project):
+        assert (view["last_compile_status"], view["output_available"]) == (None, False)
+
+
+async def test__documents__built_with_error_findings__err_status_but_built_pdf_is_reported(
+    test_app: AsyncClient, project: dict[str, Any], mocker: MockerFixture
+) -> None:
+    # Прод 0.31.0: сборка в облаке прошла (4 стр.), правило проверки уровня err нашло замечание, документ стал `err`.
+    # Превью смотрело только на статус и показывало «Документ ещё не компилировался», хотя PDF лежал в проекте.
+    mocker.patch.object(
+        CheckRunner,
+        "run_all",
+        return_value=[CheckResult(rule_id="x/err", severity=CheckSeverity.err, message="boom")],
+    )
+
+    record = await _compile(test_app, project)
+
+    assert record["status"] == "success"
+    assert _file(project, "thesis/thesis.pdf").is_file()
+    detail, item = await _doc(test_app, project)
+    for view in (detail, item):
+        assert view["status"] == "err"
+        assert view["last_compile_id"] == record["id"]
+        assert view["last_compile_status"] == "success"
+        assert view["output_available"] is True
+    assert item["last_compile_error"] is None
+
+
+async def test__documents__failed_after_success__pdf_of_earlier_build_still_available(
+    test_app: AsyncClient, project: dict[str, Any], monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    await _compile(test_app, project)
+    install_fake_docker(monkeypatch, tmp_path, exit_code=12)
+
+    record = await _compile(test_app, project)
+
+    assert record["status"] == "failure"
+    detail, item = await _doc(test_app, project)
+    for view in (detail, item):
+        assert view["status"] == "err"
+        assert view["last_compile_status"] == "failure"
+        assert view["output_available"] is True
+    assert item["last_compile_error"]["code"] == "build_failed"

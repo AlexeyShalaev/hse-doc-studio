@@ -7,7 +7,7 @@ from uuid import UUID
 import structlog
 
 from hse_doc_studio.core.compile.failure import CompileFailure
-from hse_doc_studio.core.entities import Document, Project
+from hse_doc_studio.core.entities import CompileRecord, Document, Project
 from hse_doc_studio.core.enums import CompileStatus, DocumentStatus
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.jobs.entities import compile_job_tags
@@ -20,6 +20,7 @@ from hse_doc_studio.core.repositories import (
 from hse_doc_studio.core.services import ProjectTemplateService
 from hse_doc_studio.core.team import author_by_slug, is_doc_active
 from hse_doc_studio.use_cases.compile.last_compile import with_effective_last_compile
+from hse_doc_studio.use_cases.documents.build_view import DocumentBuildView, build_view_of, last_compile_record
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
 logger = structlog.get_logger()
@@ -61,6 +62,8 @@ class DocumentListEntry:
     build_tags: frozenset[str] = frozenset()
     # Причина последней неудачной сборки документа в статусе err; None, если сборка не падала или записи нет.
     failure: CompileFailure | None = None
+    # Итог последней сборки и наличие выпущенного файла: `err` от проверок при готовом PDF не равен упавшей сборке.
+    build: DocumentBuildView = DocumentBuildView()
 
 
 @dataclass
@@ -127,6 +130,7 @@ class ListDocumentsUC:
                 output_file = doc.custom_file.stored_path
             owner = author_by_slug(project, doc.owner)
             engine = self._template_service.resolve_document_engine(doc_def, doc.chosen_variant, project.lock.engine)
+            record = await last_compile_record(self._compile_repo, project.folder, doc)
             needs_compile = doc.custom_file is None and engine is not None
             build_tags = (
                 compile_job_tags(needs_compile, PurePosixPath(source_file).suffix)
@@ -144,7 +148,8 @@ class ListDocumentsUC:
                     engine=str(engine) if engine is not None else None,
                     group=doc_def.group if doc_def is not None else None,
                     build_tags=build_tags,
-                    failure=await self._failure_of(project.folder, doc),
+                    failure=_failure_of(doc, record),
+                    build=build_view_of(record, project.folder, output_file),
                 )
             )
         return ListDocumentsOutput(documents=visible_docs, entries=entries)
@@ -182,14 +187,8 @@ class ListDocumentsUC:
             return None
         return DocumentStatus.err
 
-    async def _failure_of(self, folder: Path, doc: Document) -> CompileFailure | None:
-        if self._compile_repo is None or doc.status is not DocumentStatus.err or doc.last_compile_id is None:
-            return None
-        try:
-            record = await self._compile_repo.get_for_project(folder, doc.last_compile_id)
-        except Exception:  # noqa: BLE001 — причина вторична: список документов важнее её чтения
-            logger.warning("list_documents: compile record unreadable", doc_id=doc.id, exc_info=True)
-            return None
-        if record is None or record.error_code is None:
-            return None
-        return CompileFailure(record.error_code, record.error_detail)
+
+def _failure_of(doc: Document, record: CompileRecord | None) -> CompileFailure | None:
+    if doc.status is not DocumentStatus.err or record is None or record.error_code is None:
+        return None
+    return CompileFailure(record.error_code, record.error_detail)

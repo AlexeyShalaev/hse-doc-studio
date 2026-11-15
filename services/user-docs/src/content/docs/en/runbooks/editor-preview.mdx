@@ -48,6 +48,12 @@ the preview: margins, numbering and formatting look exactly as the reviewer will
   Click **Rebuild** and Ctrl/⌘+click again.
 - **The preview says “not built”**: the document has not been compiled yet. Click **Build** in
   the document header.
+- **The preview says “no PDF”**: there were builds, but none succeeded. See the reason on the
+  **Build** tab, fix it and click **Build**.
+- **A bar above the PDF says it is from the previous successful build**: the last build failed or
+  was cancelled, so the preview keeps the earlier PDF. The reason is on the **Build** tab.
+- **A bar above the PDF says the checks found errors**: the PDF is fresh, the checks found errors.
+  See the **Issues** tab; the document status is “Check errors”.
 - **“The file changed outside the app while you have unsaved edits”**: the file was changed in
   another editor. Click **Compare**, then **Take from disk** or **Keep mine**.
 - **“Failed to load the PDF. Rebuild the document.”**: click **Rebuild**. If the build fails, open

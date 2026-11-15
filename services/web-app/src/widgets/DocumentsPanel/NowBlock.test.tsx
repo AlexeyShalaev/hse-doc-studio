@@ -51,4 +51,23 @@ describe("NowBlock: failed builds", () => {
     expect(screen.queryByTestId("now-reason")).toBeNull();
     expect(screen.getByTestId("now-doc:report")).toBeTruthy();
   });
+
+  it("calls a built PDF with error findings check errors, not a failed build", () => {
+    mount([doc({ last_compile_status: "success", last_compile_error: null })]);
+
+    expect(screen.getByTestId("now-doc:report").textContent).toContain(
+      "ошибки проверок",
+    );
+    expect(screen.getByTestId("now-doc:report").textContent).not.toContain(
+      "ошибка сборки",
+    );
+  });
+
+  it("keeps the failed build line when the last build failed", () => {
+    mount([doc({ last_compile_status: "failure", last_compile_error: null })]);
+
+    expect(screen.getByTestId("now-doc:report").textContent).toContain(
+      "ошибка сборки",
+    );
+  });
 });

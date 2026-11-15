@@ -261,7 +261,7 @@ export const DocumentTabs = ({ projectId, docId }: DocumentTabsProps) => {
   // Pass the whole doc: its API source_file/output_file are the real paths
   // (team layouts prefix the author base) and owner_name feeds the title.
   const meta = getDocMeta(doc.id, doc, project.lang ?? "ru");
-  const stMeta = getStatusMeta(doc.status);
+  const stMeta = getStatusMeta(doc.status, doc.last_compile_status);
 
   const fullPath = `${project.folder}/${meta.file}`;
 

@@ -87,6 +87,7 @@
       "running": "собирается {{time}}",
       "silent": "не отвечает {{count}} мин",
       "failed": "ошибка",
+      "checksFailed": "ошибки проверок",
       "built": "собран"
     }
   },
@@ -157,6 +158,7 @@
   "now": {
     "title": "Сейчас",
     "buildError": "{{doc}} — ошибка сборки",
+    "checkErrors": "{{doc}}: ошибки проверок",
     "notBuilt": "{{doc}} — не собран",
     "formIncomplete": "{{form}} — не заполнена",
     "missingSignature": "{{doc}} — нет подписи",

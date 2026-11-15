@@ -27,7 +27,12 @@ from hse_doc_studio.core.system_capacity import (
 )
 from hse_doc_studio.core.value_objects import CheckResult
 from hse_doc_studio.infra.compile.concurrency import CompileConcurrencyLimiter
-from hse_doc_studio.infra.jobs.compile_body import CHECKS_TIMEOUT_RULE, parse_words_sentinel, resolve_compile_limit
+from hse_doc_studio.infra.jobs.compile_body import (
+    CHECKS_FAILED_RULE,
+    CHECKS_TIMEOUT_RULE,
+    parse_words_sentinel,
+    resolve_compile_limit,
+)
 from hse_doc_studio.infra.jobs.embedded_runner import EmbeddedCompileRunner
 from hse_doc_studio.infra.jobs.outputs import LocalJobOutputs
 from pypdf import PdfWriter
@@ -801,3 +806,47 @@ async def test__run_post__runs_checks_in_worker_thread(tmp_path: Path) -> None:
 
     assert threads
     assert threads[0] != threading.get_ident()
+
+
+@pytest.mark.parametrize("where", ["languagetool", "rules"])
+async def test__run_post__checks_raise__build_stays_success_with_failed_checks_warning(
+    tmp_path: Path, where: str
+) -> None:
+    # Сбой проверок не делает готовый PDF «ошибкой сборки»: на раннере исключение роняло задачу и PDF не выгружался.
+    h = Harness(tmp_path)
+    if where == "languagetool":
+        h.lt_manager.ensure_running = AsyncMock(side_effect=RuntimeError("lt down"))
+    else:
+        h.check_runner.run_all.side_effect = RuntimeError("engine exploded")
+
+    result = await h.runner.run_post(h.spec(), h.ctx, _outcome())
+
+    data = result.data_as(CompileResult)
+    assert result.status is JobStatus.succeeded
+    assert result.error is None
+    assert data.build_ok
+    assert data.pages == 7
+    (finding,) = data.check_results
+    assert (finding.rule_id, finding.severity) == (CHECKS_FAILED_RULE, CheckSeverity.warn)
+    assert "PDF собран и сохранён" in finding.message
+    assert any(line.startswith("[checks] проверки упали (RuntimeError: ") for line in h.log.lines)
+
+
+async def test__run_post__checks_raise__english_texts(tmp_path: Path) -> None:
+    set_interface_language("en")
+    h = Harness(tmp_path)
+    h.check_runner.run_all.side_effect = ValueError("bad rule")
+
+    result = await h.runner.run_post(h.spec(), h.ctx, _outcome())
+
+    (finding,) = result.data_as(CompileResult).check_results
+    assert "The PDF was built and kept" in finding.message
+    assert "[checks] checks failed (ValueError: bad rule); the PDF is kept" in h.log.lines
+
+
+async def test__run_post__cancelled_during_checks__cancellation_not_swallowed(tmp_path: Path) -> None:
+    h = Harness(tmp_path)
+    h.lt_manager.ensure_running = AsyncMock(side_effect=asyncio.CancelledError())
+
+    with pytest.raises(asyncio.CancelledError):
+        await h.runner.run_post(h.spec(), h.ctx, _outcome())

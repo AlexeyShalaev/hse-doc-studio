@@ -180,6 +180,7 @@ export const DocRow = ({
             projectId={projectId}
             docId={doc.id}
             status={doc.status}
+            lastCompileStatus={doc.last_compile_status ?? null}
           />
           {!hasLiveSlot && (
             <DocBuildSubline projectId={projectId} docId={doc.id} now={now} />
