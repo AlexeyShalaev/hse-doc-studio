@@ -642,18 +642,35 @@ async def test__sync__incoming_file_over_untracked_local_one__local_copy_is_kept
     stack: Stack, project: dict[str, Any], remote: BareRemote
 ) -> None:
     peer = await _connect_in_sync(stack, project, remote)
-    # PDF по умолчанию вне истории: у меня он неотслеживаемый, а коллега с track_pdf его закоммитил.
-    _file(project, "figures").mkdir(exist_ok=True)
-    _file(project, "figures/scheme.pdf").write_bytes(b"%PDF-mine")
-    peer.write("figures/scheme.pdf", b"%PDF-theirs")
+    # Собранный PDF по умолчанию вне истории: у меня он неотслеживаемый, а коллега с track_pdf его закоммитил.
+    _file(project, "thesis/thesis.pdf").write_bytes(b"%PDF-mine")
+    peer.write("thesis/thesis.pdf", b"%PDF-theirs")
     peer.commit_push("tracked pdf")
 
     result = await _sync_ok(stack, project)
 
     assert result.outcome == "fast_forwarded"
-    assert _file(project, "figures/scheme.pdf").read_bytes() == b"%PDF-theirs"
-    assert _file(project, "figures/scheme.local.pdf").read_bytes() == b"%PDF-mine"
-    assert "scheme.local.pdf" not in _git(project, "ls-files")
+    assert _file(project, "thesis/thesis.pdf").read_bytes() == b"%PDF-theirs"
+    assert _file(project, "thesis/thesis.local.pdf").read_bytes() == b"%PDF-mine"
+    assert "thesis.local.pdf" not in _git(project, "ls-files")
+
+
+async def test__sync__uploaded_pdf_and_image_are_pushed_byte_for_byte(
+    stack: Stack, project: dict[str, Any], remote: BareRemote
+) -> None:
+    # Рисунок в PDF без одноимённого исходника рядом загрузил пользователь: это работа, она уходит в git.
+    await _connect_in_sync(stack, project, remote)
+    _file(project, "figures").mkdir(exist_ok=True)
+    png = b"\x89PNG\r\n\x1a\n" + bytes(range(256))
+    _file(project, "figures/scheme.pdf").write_bytes(b"%PDF-1.7\n\xff\xfe")
+    _file(project, "figures/logo.png").write_bytes(png)
+
+    result = await _sync_ok(stack, project)
+
+    assert result.outcome == "pushed"
+    tree = remote.git("ls-tree", "-r", "--name-only", "main")
+    assert "figures/scheme.pdf" in tree
+    assert "figures/logo.png" in tree
 
 
 async def test__sync__remote_project_is_newer_studio__refused_before_anything_starts(

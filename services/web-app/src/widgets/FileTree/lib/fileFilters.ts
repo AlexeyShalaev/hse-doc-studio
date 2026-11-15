@@ -63,7 +63,10 @@ export const isBuildOutputPdf = (
   isFile: (path: string) => boolean,
 ): boolean => {
   if (!path.endsWith(".pdf")) return false;
-  const stem = path.slice(0, -".pdf".length);
+  // Копия «<имя>.local.pdf», которую синхронизация откладывает рядом, тоже собранная.
+  const stem = path
+    .slice(0, -".pdf".length)
+    .replace(/\.local(\d+|-[0-9a-f]{6})?$/, "");
   return BUILD_PDF_SOURCE_EXTENSIONS.some((ext) => isFile(`${stem}${ext}`));
 };
 

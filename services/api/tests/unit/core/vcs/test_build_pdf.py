@@ -20,6 +20,9 @@ def _is_file(path: str) -> bool:
         ("vkr/images/figure.pdf", False),
         ("appendix/scan.pdf", False),
         ("vkr/vkr.tex", False),
+        ("vkr/vkr.local.pdf", True),
+        ("vkr/vkr.local2.pdf", True),
+        ("vkr/images/figure.local.pdf", False),
     ],
 )
 def test__is_build_output_pdf__only_pdf_next_to_a_same_named_source(path: str, built: bool) -> None:

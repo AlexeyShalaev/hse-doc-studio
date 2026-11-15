@@ -11,6 +11,7 @@ PDF под `.hse-studio/` (замороженные копии подписей 
 
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 
 # Исходники, рядом с которыми сборка оставляет одноимённый PDF.
@@ -29,13 +30,19 @@ BUILD_PDF_SOURCE_SUFFIXES = (
 )
 _PDF = ".pdf"
 _SERVICE_DIR = ".hse-studio/"
+# Метка локальной копии из use_cases/git_sync/sync_apply.py (`_local_copy_name`).
+_LOCAL_COPY = re.compile(r"\.local(\d+|-[0-9a-f]{6})?$")
 
 
 def is_build_output_pdf(path: str, is_file: Callable[[str], bool]) -> bool:
-    """`path` (POSIX от корня проекта) это PDF, рядом с которым лежит одноимённый исходник."""
+    """`path` (POSIX от корня проекта) это PDF, рядом с которым лежит одноимённый исходник.
+
+    Копия `<имя>.local.pdf` (`.local2.pdf`), которую синхронизация откладывает рядом, когда входящий
+    файл занимает место неотслеживаемого, остаётся собранным PDF того же исходника.
+    """
     if not path.endswith(_PDF):
         return False
-    stem = path[: -len(_PDF)]
+    stem = _LOCAL_COPY.sub("", path[: -len(_PDF)])
     return any(is_file(stem + suffix) for suffix in BUILD_PDF_SOURCE_SUFFIXES)
 
 
