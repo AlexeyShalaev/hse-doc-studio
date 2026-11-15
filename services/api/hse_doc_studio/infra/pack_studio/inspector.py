@@ -170,10 +170,14 @@ class _LintLocator:
         return f"{self._version_dir}/{VERSION_MANIFEST}"
 
     def _file_line(self, message: str) -> Site | None:
-        """`report/main.tex:3: Jinja ...`: файл в `files/` и строка."""
+        """`report/main.tex:3: Jinja ...` (файл в `files/`) или `version.yaml:284: ...` (от каталога версии)."""
         found = _FILE_LINE.match(message)
-        if found and (self._files / found["rel"]).is_file():
+        if not found:
+            return None
+        if (self._files / found["rel"]).is_file():
             return self._rel(FILES_DIR, found["rel"]), int(found["line"])
+        if (self._vdir / found["rel"]).is_file():
+            return f"{self._version_dir}/{found['rel']}", int(found["line"])
         return None
 
     def _known_file(self, message: str) -> Site | None:

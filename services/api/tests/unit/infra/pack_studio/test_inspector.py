@@ -80,3 +80,16 @@ def test__inside__symlink_out_of_the_packs_folder__is_refused(tmp_path: Path) ->
         PackInspector().lint_version(root, "p/templates/t/versions/1.0.0", released=False)
 
     assert caught.value.code.value == "path_not_allowed"
+
+
+def test__lint_version__file_and_line_prefix_of_the_version_root_is_kept(tmp_path: Path) -> None:
+    vdir = tmp_path / "p/templates/t/versions/1.0.0"
+    (vdir / "files").mkdir(parents=True)
+    (vdir / "version.yaml").write_text('id: "1.0.0"\nlangs: [ru]\n', encoding="utf-8")
+    locator_input = "version.yaml:2: ru «текст» со скобкой без пары"
+
+    from hse_doc_studio.infra.pack_studio.inspector import _LintLocator  # noqa: PLC0415
+
+    path, line = _LintLocator(vdir, "p/templates/t/versions/1.0.0").locate(locator_input)
+
+    assert (path, line) == ("p/templates/t/versions/1.0.0/version.yaml", 2)
