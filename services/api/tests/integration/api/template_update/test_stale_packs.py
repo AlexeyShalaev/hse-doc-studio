@@ -98,5 +98,12 @@ async def test__system_packs__shows_the_mounted_dir_and_what_it_lacks(stale_app:
     assert body["path"] == str(tmp_path / "mounted-packs")
     assert body["lagging"] is True
     assert body["templates"] == [
-        {"pack_id": PACK_ID, "template_id": TEMPLATE_ID, "versions": [V1], "builtin": [V1, V2], "missing": [V2]}
+        {
+            "pack_id": PACK_ID,
+            "template_id": TEMPLATE_ID,
+            "versions": [V1],
+            "builtin": [V1, V2],
+            "missing": [V2],
+            "subscribed": [],
+        }
     ]
