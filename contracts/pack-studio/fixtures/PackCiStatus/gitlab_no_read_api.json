@@ -1,0 +1,8 @@
+{
+  "state": "unknown",
+  "sha": "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c",
+  "checks": [],
+  "available": false,
+  "reason": "ci_status_unavailable",
+  "web_url": "https://gitlab.hse.ru/fcs/packs/-/pipelines?ref=pack-studio%2Fpetrova%2Fhse-cs-se-vkr-2026.1.2"
+}

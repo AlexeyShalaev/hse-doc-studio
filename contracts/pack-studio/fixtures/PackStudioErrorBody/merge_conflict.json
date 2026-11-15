@@ -1,0 +1,7 @@
+{
+  "detail": "Базовая ветка правит те же места, что и ваша. Слияние отменено, рабочая ветка не изменилась.",
+  "code": "merge_conflict",
+  "files": [
+    "hse-cs-sse/templates/coursework/versions/2026.1.7/version.yaml"
+  ]
+}

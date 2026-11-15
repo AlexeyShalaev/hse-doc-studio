@@ -57,6 +57,8 @@ def _to_record(ws: PackWorkspace) -> dict[str, Any]:
         "pr_url": ws.pr_url,
         "pr_number": ws.pr_number,
         "ci_status": ws.ci_status,
+        "fork_url": ws.fork_url,
+        "pushed_sha": ws.pushed_sha,
         "folder": ws.folder,
         "error": None if ws.error is None else {"code": ws.error.code, "detail": ws.error.detail},
         "created_at": _iso(ws.created_at),
@@ -87,6 +89,8 @@ def _from_record(raw: dict[str, Any]) -> PackWorkspace:
         pr_url=raw.get("pr_url"),
         pr_number=raw.get("pr_number") if isinstance(raw.get("pr_number"), int) else None,
         ci_status=raw.get("ci_status"),
+        fork_url=raw.get("fork_url") if isinstance(raw.get("fork_url"), str) else None,
+        pushed_sha=raw.get("pushed_sha") if isinstance(raw.get("pushed_sha"), str) else None,
         folder=raw.get("folder"),
         error=WorkspaceError(str(error["code"]), str(error.get("detail", "")))
         if isinstance(error, dict) and error.get("code")

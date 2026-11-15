@@ -745,6 +745,71 @@
         "primary": null,
         "fallback": null
       }
+    },
+    {
+      "name": "github.com, профиль packs: права на PR и статусы",
+      "provider": "github",
+      "web_base": "https://github.com",
+      "token_name": "HSE Studio · паки",
+      "description": "Access for HSE Doc Studio, 2026-11-15",
+      "owner": "AlexeyShalaev",
+      "repo": "hse-doc-studio",
+      "expires_in_days": 90,
+      "profile": "packs",
+      "expect": {
+        "primary": {
+          "kind": "prefilled",
+          "url": "https://github.com/settings/personal-access-tokens/new?name=HSE%20Studio%20%C2%B7%20%D0%BF%D0%B0%D0%BA%D0%B8&description=Access%20for%20HSE%20Doc%20Studio%2C%202026-11-15&target_name=AlexeyShalaev&expires_in=90&contents=write&pull_requests=write&statuses=read&metadata=read",
+          "broad": false
+        },
+        "fallback": {
+          "kind": "prefilled",
+          "url": "https://github.com/settings/tokens/new?scopes=repo&description=Access%20for%20HSE%20Doc%20Studio%2C%202026-11-15",
+          "broad": true
+        }
+      }
+    },
+    {
+      "name": "gitlab.com, профиль packs: read_api для статуса конвейера",
+      "provider": "gitlab",
+      "web_base": "https://gitlab.com",
+      "token_name": "HSE Studio · паки",
+      "description": "d",
+      "owner": "hse/fcs",
+      "repo": "packs",
+      "expires_in_days": null,
+      "profile": "packs",
+      "expect": {
+        "primary": {
+          "kind": "prefilled",
+          "url": "https://gitlab.com/-/user_settings/personal_access_tokens?name=HSE%20Studio%20%C2%B7%20%D0%BF%D0%B0%D0%BA%D0%B8&description=d&scopes=read_repository,write_repository,read_api",
+          "broad": false
+        },
+        "fallback": {
+          "kind": "prefilled",
+          "url": "https://gitlab.com/-/profile/personal_access_tokens?name=HSE%20Studio%20%C2%B7%20%D0%BF%D0%B0%D0%BA%D0%B8&description=d&scopes=read_repository,write_repository,read_api",
+          "broad": false
+        }
+      }
+    },
+    {
+      "name": "bitbucket.org, профиля packs нет: основные ссылки",
+      "provider": "bitbucket",
+      "web_base": "https://bitbucket.org",
+      "token_name": "HSE Studio",
+      "description": "d",
+      "owner": "anna",
+      "repo": "packs",
+      "expires_in_days": null,
+      "profile": "packs",
+      "expect": {
+        "primary": {
+          "kind": "plain",
+          "url": "https://bitbucket.org/anna/packs/admin/access-tokens",
+          "broad": false
+        },
+        "fallback": null
+      }
     }
   ],
   "ssh_link_cases": [
@@ -1068,6 +1133,107 @@
         "missing": [
           "git:write"
         ]
+      }
+    },
+    {
+      "provider": "gitlab",
+      "profile": "packs",
+      "scopes": [
+        "write_repository"
+      ],
+      "expect": {
+        "sufficiency": "sufficient",
+        "missing": []
+      }
+    },
+    {
+      "provider": "gitlab",
+      "profile": "packs",
+      "scopes": [
+        "read_repository",
+        "write_repository",
+        "read_api"
+      ],
+      "expect": {
+        "sufficiency": "sufficient",
+        "missing": []
+      }
+    },
+    {
+      "provider": "gitlab",
+      "profile": "packs",
+      "scopes": [
+        "read_repository"
+      ],
+      "expect": {
+        "sufficiency": "too_narrow",
+        "missing": [
+          "write_repository"
+        ]
+      }
+    },
+    {
+      "provider": "gitlab",
+      "profile": "packs",
+      "scopes": [
+        "api"
+      ],
+      "expect": {
+        "sufficiency": "too_broad",
+        "missing": []
+      }
+    },
+    {
+      "provider": "github",
+      "profile": "packs",
+      "scopes": [
+        "repo"
+      ],
+      "expect": {
+        "sufficiency": "sufficient",
+        "missing": []
+      }
+    },
+    {
+      "provider": "github",
+      "profile": "packs",
+      "scopes": [
+        "public_repo"
+      ],
+      "expect": {
+        "sufficiency": "too_narrow",
+        "missing": [
+          "repo"
+        ]
+      }
+    },
+    {
+      "provider": "github",
+      "profile": "packs",
+      "scopes": null,
+      "expect": {
+        "sufficiency": "unknown",
+        "missing": []
+      }
+    },
+    {
+      "provider": "gitea",
+      "profile": "packs",
+      "scopes": [
+        "write:repository"
+      ],
+      "expect": {
+        "sufficiency": "sufficient",
+        "missing": []
+      }
+    },
+    {
+      "provider": "other",
+      "profile": "packs",
+      "scopes": [],
+      "expect": {
+        "sufficiency": "sufficient",
+        "missing": []
       }
     }
   ]

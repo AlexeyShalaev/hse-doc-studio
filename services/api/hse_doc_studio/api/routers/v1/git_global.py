@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Literal
 from uuid import UUID
 
 from dishka.integrations.fastapi import FromDishka
@@ -153,11 +154,15 @@ async def update_git_credential(
 
 @router.post("/git/credentials/{credential_id}/check", response_model=GitCredentialCheckResponse)
 async def check_git_credential(
-    credential_id: UUID, uc: FromDishka[CheckCredentialUC], policy: FromDishka[GitSyncPolicy]
+    credential_id: UUID,
+    uc: FromDishka[CheckCredentialUC],
+    policy: FromDishka[GitSyncPolicy],
+    profile: Literal["packs"] | None = None,
 ) -> GitCredentialCheckResponse:
+    """`profile=packs`: права оцениваются под репозиторий паков Студии шаблонов (ветка, PR, статус проверок)."""
     policy.require_enabled()
     try:
-        view = await uc.execute(credential_id)
+        view = await uc.execute(credential_id, profile)
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     return GitCredentialCheckResponse(

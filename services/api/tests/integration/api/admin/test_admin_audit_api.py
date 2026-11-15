@@ -326,6 +326,8 @@ _AUDITED_ELSEWHERE: dict[tuple[str, str], str] = {
     ("PUT", "/api/admin/pack-studio"): "pack_studio.section_update",
     ("POST", "/api/admin/pack-studio/grants"): "pack_studio.grant_add",
     ("DELETE", "/api/admin/pack-studio/grants/{id}"): "pack_studio.grant_remove",
+    ("POST", "/api/admin/pack-studio/service-access"): "pack_studio.service_access_add",
+    ("DELETE", "/api/admin/pack-studio/service-access/{id}"): "pack_studio.service_access_remove",
 }
 
 # Изменяющие ручки без записи в журнале осознанно: только проверка соединения, состояние не меняется.

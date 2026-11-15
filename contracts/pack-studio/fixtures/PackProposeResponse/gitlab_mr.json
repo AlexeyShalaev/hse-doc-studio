@@ -1,0 +1,59 @@
+{
+  "git": {
+    "workspace": {
+      "id": "5f0c1c8e-1b7a-4d51-9a43-0a5b2f3c4d10",
+      "kind": "git",
+      "label": "fcs/packs",
+      "state": "ready",
+      "busy": false,
+      "packs_path": "packs",
+      "url": "https://gitlab.hse.ru/fcs/packs.git",
+      "credential_id": null,
+      "service_access": true,
+      "insecure_http": false,
+      "folder": null,
+      "base_branch": "main",
+      "base_sha": "4f2a9c0d8e7b6a5f4e3d2c1b0a9f8e7d6c5b4a39",
+      "fetched_at": "2026-11-14T09:30:00Z",
+      "work_branch": "pack-studio/petrova/hse-cs-se-vkr-2026.1.2",
+      "pr_url": "https://gitlab.hse.ru/fcs/packs/-/merge_requests/7",
+      "pr_number": 7,
+      "ci_status": "pending",
+      "fork_url": null,
+      "pushed_sha": "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c",
+      "error": null,
+      "created_at": "2026-11-14T09:28:41Z",
+      "updated_at": "2026-11-14T09:30:00Z"
+    },
+    "provider": "gitlab",
+    "head_sha": "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c",
+    "branch": "pack-studio/petrova/hse-cs-se-vkr-2026.1.2",
+    "base_branch": "main",
+    "uncommitted": [],
+    "dirty": false,
+    "changed": [
+      {
+        "path": "hse-cs-se/templates/vkr/versions/2026.1.2/version.yaml",
+        "status": "modified"
+      }
+    ],
+    "ahead": 1,
+    "behind": 0,
+    "compare_url": null
+  },
+  "pushed_sha": "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c",
+  "pushed_to": "https://gitlab.hse.ru/fcs/packs.git",
+  "pull_request": {
+    "number": 7,
+    "url": "https://gitlab.hse.ru/fcs/packs/-/merge_requests/7",
+    "created": true
+  },
+  "compare_url": null,
+  "pr_error": null,
+  "checks": {
+    "errors": 0,
+    "warnings": 0,
+    "findings": [],
+    "classes": []
+  }
+}

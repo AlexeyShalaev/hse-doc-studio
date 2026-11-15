@@ -8,6 +8,8 @@ from uuid import UUID
 from sqlalchemy import delete, exists, func, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
 
+from hse_doc_studio.core.git_sync.protocols import ISecretCipher
+from hse_doc_studio.core.git_sync.secret import Secret
 from hse_doc_studio.core.identity.protocols import IInstanceSettingsRepository
 from hse_doc_studio.core.pack_studio.entities import (
     GrantSubjectKind,
@@ -17,10 +19,16 @@ from hse_doc_studio.core.pack_studio.entities import (
     WorkspaceKind,
     WorkspaceState,
 )
+from hse_doc_studio.core.pack_studio.protocols import ServiceAccess
+from hse_doc_studio.core.secrets import column_aad
 from hse_doc_studio.core.settings_scope import SOURCE_ADMIN
 from hse_doc_studio.infra.db.orm.identity import UserRow
 from hse_doc_studio.infra.db.orm.orgs import GroupMemberRow, GroupRow, OrgRow
-from hse_doc_studio.infra.db.orm.pack_studio import PackStudioGrantRow, PackWorkspaceRow
+from hse_doc_studio.infra.db.orm.pack_studio import (
+    PackStudioGrantRow,
+    PackStudioServiceAccessRow,
+    PackWorkspaceRow,
+)
 from hse_doc_studio.infra.db.session import SessionProvider
 
 SECTION_KEY = "pack_studio.enabled"
@@ -38,6 +46,7 @@ def _entity(row: PackWorkspaceRow) -> PackWorkspace:
         state=WorkspaceState(row.state),
         remote_url=row.remote_url,
         credential_id=row.credential_id,
+        service_access_id=row.service_access_id,
         insecure_http=row.insecure_http,
         base_branch=row.base_branch,
         base_sha=row.base_sha,
@@ -46,6 +55,8 @@ def _entity(row: PackWorkspaceRow) -> PackWorkspace:
         pr_url=row.pr_url,
         pr_number=row.pr_number,
         ci_status=row.ci_status,
+        fork_url=row.fork_url,
+        pushed_sha=row.pushed_sha,
         folder=row.folder,
         error=WorkspaceError(row.error_code, row.error_detail or "") if row.error_code else None,
     )
@@ -59,6 +70,7 @@ def _values(ws: PackWorkspace) -> dict[str, Any]:
         "state": ws.state.value,
         "remote_url": ws.remote_url,
         "credential_id": ws.credential_id,
+        "service_access_id": ws.service_access_id,
         "insecure_http": ws.insecure_http,
         "base_branch": ws.base_branch,
         "base_sha": ws.base_sha,
@@ -67,6 +79,8 @@ def _values(ws: PackWorkspace) -> dict[str, Any]:
         "pr_url": ws.pr_url,
         "pr_number": ws.pr_number,
         "ci_status": ws.ci_status,
+        "fork_url": ws.fork_url,
+        "pushed_sha": ws.pushed_sha,
         "folder": ws.folder,
         "error_code": ws.error.code if ws.error else None,
         "error_detail": ws.error.detail if ws.error else None,
@@ -226,3 +240,90 @@ class InstanceSectionStore:
 
     async def set(self, enabled: bool) -> None:
         await self._settings.set(SECTION_KEY, enabled, source=SOURCE_ADMIN)
+
+
+_SA_TABLE = "pack_studio_service_access"
+_SA_COLUMN = "secret_enc"
+
+
+def _service_access(row: PackStudioServiceAccessRow, creator: str | None) -> ServiceAccess:
+    return ServiceAccess(
+        id=row.id,
+        url=row.url,
+        host=row.host,
+        port=row.port,
+        repo_key=row.repo_key,
+        label=row.label,
+        created_at=row.created_at,
+        token_family=row.token_family,
+        created_by=row.created_by,
+        created_by_name=creator,
+    )
+
+
+class PostgresServiceAccessRepository:
+    """Служебные доступы репозиториев паков; секрет расшифровывается только в `secret`."""
+
+    def __init__(self, sessions: SessionProvider, cipher: ISecretCipher) -> None:
+        self._sessions = sessions
+        self._cipher = cipher
+
+    def _select(self) -> Any:
+        return select(PackStudioServiceAccessRow, UserRow.name).outerjoin(
+            UserRow, UserRow.id == PackStudioServiceAccessRow.created_by
+        )
+
+    async def list(self) -> list[ServiceAccess]:
+        stmt = self._select().order_by(PackStudioServiceAccessRow.created_at, PackStudioServiceAccessRow.id)
+        async with self._sessions.use() as db:
+            return [_service_access(row, name) for row, name in (await db.execute(stmt)).all()]
+
+    async def get(self, access_id: UUID) -> ServiceAccess | None:
+        stmt = self._select().where(PackStudioServiceAccessRow.id == access_id)
+        async with self._sessions.use() as db:
+            found = (await db.execute(stmt)).first()
+        return None if found is None else _service_access(found[0], found[1])
+
+    async def find(self, repo_key: str) -> ServiceAccess | None:
+        stmt = self._select().where(PackStudioServiceAccessRow.repo_key == repo_key)
+        async with self._sessions.use() as db:
+            found = (await db.execute(stmt)).first()
+        return None if found is None else _service_access(found[0], found[1])
+
+    async def add(self, access: ServiceAccess, secret: Secret) -> bool:
+        sealed = self._cipher.encrypt(secret, aad=column_aad(_SA_TABLE, _SA_COLUMN, access.id))
+        stmt = (
+            insert(PackStudioServiceAccessRow)
+            .values(
+                id=access.id,
+                url=access.url,
+                host=access.host,
+                port=access.port,
+                repo_key=access.repo_key,
+                label=access.label,
+                token_family=access.token_family,
+                secret_enc=sealed,
+                created_by=access.created_by,
+                created_at=access.created_at,
+            )
+            .on_conflict_do_nothing()
+            .returning(PackStudioServiceAccessRow.id)
+        )
+        async with self._sessions.use() as db:
+            return (await db.execute(stmt)).scalar_one_or_none() is not None
+
+    async def delete(self, access_id: UUID) -> ServiceAccess | None:
+        found = await self.get(access_id)
+        if found is None:
+            return None
+        async with self._sessions.use() as db:
+            await db.execute(delete(PackStudioServiceAccessRow).where(PackStudioServiceAccessRow.id == access_id))
+        return found
+
+    async def secret(self, access_id: UUID) -> Secret | None:
+        stmt = select(PackStudioServiceAccessRow.secret_enc).where(PackStudioServiceAccessRow.id == access_id)
+        async with self._sessions.use() as db:
+            sealed = (await db.execute(stmt)).scalar_one_or_none()
+        if sealed is None:
+            return None
+        return self._cipher.decrypt(sealed, aad=column_aad(_SA_TABLE, _SA_COLUMN, access_id))

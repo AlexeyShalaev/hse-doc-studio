@@ -41,8 +41,13 @@ class TokenChecker:
             and resolved.api_base is not None
         )
 
-    async def check(self, credential: GitCredential, resolved: ResolvedProvider) -> TokenCheck | None:
-        """None, если у провайдера нет способа проверить токен. Ошибки связи и сертификата идут исключением."""
+    async def check(
+        self, credential: GitCredential, resolved: ResolvedProvider, profile: str | None = None
+    ) -> TokenCheck | None:
+        """None, если у провайдера нет способа проверить токен. Ошибки связи и сертификата идут исключением.
+
+        `profile` (`packs`) оценивает права под задачу профиля каталога: ветка, PR и статус проверок.
+        """
         if not self.supported(credential, resolved) or resolved.api_base is None:
             return None
         result = await self._introspector.introspect(
@@ -56,7 +61,7 @@ class TokenChecker:
         await self._remember(credential, result.state, result.expires_at)
         if result.state is TokenState.rejected:
             return TokenCheck(result.state, None)
-        assessment = assess_scopes(resolved.info.id, result.scopes)
+        assessment = assess_scopes(resolved.info.id, result.scopes, profile)
         info = TokenInfo(
             login=result.login,
             scopes=result.scopes or (),

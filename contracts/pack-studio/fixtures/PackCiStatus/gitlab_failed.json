@@ -1,0 +1,15 @@
+{
+  "state": "failure",
+  "sha": "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c",
+  "checks": [
+    {
+      "name": "pack-check",
+      "state": "failure",
+      "url": "https://gitlab.hse.ru/fcs/packs/-/jobs/31",
+      "summary": "test"
+    }
+  ],
+  "available": true,
+  "reason": null,
+  "web_url": "https://gitlab.hse.ru/fcs/packs/-/pipelines/12"
+}
