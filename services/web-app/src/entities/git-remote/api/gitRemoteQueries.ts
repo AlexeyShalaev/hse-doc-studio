@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { gitSyncKeys } from "@entities/git-sync";
 import type { CiRequest, CiWriteRequest } from "@entities/git-sync";
+import type { PermissionProfile } from "../model/providerCatalog";
 import { gitRemoteApi, type CloneFromBundleParams } from "./gitRemoteApi";
 import type {
   CloneRequest,
@@ -89,10 +90,13 @@ export const useDeleteCredential = () => {
 
 // Проверка токена: права и срок могли обновиться (в том числе при отказе: токен
 // стал «не принят»), поэтому список доступов перечитывается в любом случае.
-export const useCheckCredential = () => {
+export const useCheckCredential = (profile?: PermissionProfile | null) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => gitRemoteApi.checkCredential(id),
+    mutationFn: (id: string) =>
+      profile
+        ? gitRemoteApi.checkCredential(id, profile)
+        : gitRemoteApi.checkCredential(id),
     onSettled: () => {
       void queryClient.invalidateQueries({
         queryKey: gitRemoteKeys.credentials(),

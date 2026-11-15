@@ -153,7 +153,7 @@
     "name": "Словарь админки: packStudio",
     "path": "dist/assets/locale-admin-packStudio-*.js",
     "gzip": true,
-    "limit": "1.7 kB"
+    "limit": "2.6 kB"
   },
   {
     "name": "Онбординг: песочница демо-проекта (lazy)",
@@ -225,18 +225,18 @@
     "name": "Студия шаблонов (lazy, pages/PackStudioPage и фичи pack-*)",
     "path": "dist/assets/pack-studio-app-*.js",
     "gzip": true,
-    "limit": "11.5 kB"
+    "limit": "20 kB"
   },
   {
     "name": "Админка, «Студия шаблонов» (lazy, features/pack-studio-admin)",
     "path": "dist/assets/pack-studio-admin-*.js",
     "gzip": true,
-    "limit": "2 kB"
+    "limit": "2.8 kB"
   },
   {
     "name": "Словарь Студии шаблонов (ru и en)",
     "path": "dist/assets/locale-packStudio-*.js",
     "gzip": true,
-    "limit": "5.6 kB"
+    "limit": "13 kB"
   }
 ]

@@ -1,7 +1,7 @@
 import { useId } from "react";
 import { Eye, EyeOff, Lock, ScanSearch } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { GitCredential } from "@entities/git-remote";
+import type { GitCredential, PermissionProfile } from "@entities/git-remote";
 import { Notice } from "@shared/ui/ConflictKit";
 import type { ParsedRemoteUrl } from "../lib/parseRemoteUrl";
 import { CredentialStatusChip } from "./CredentialStatusChip";
@@ -33,6 +33,8 @@ export type PatPanelProps = {
   onPasteToken?: (token: string) => void;
   /** «Проверить токен»: проверка по кнопке для набранного вручную токена. */
   onCheckToken?: () => void;
+  /** Профиль прав каталога для памятки о токене (packs). */
+  profile?: PermissionProfile | null;
 };
 
 // Форма токена. Сам токен живёт только в состоянии шага и очищается сразу, как
@@ -51,6 +53,7 @@ export const PatPanel = ({
   serverVersion = null,
   onPasteToken,
   onCheckToken,
+  profile = null,
 }: PatPanelProps) => {
   const { t } = useTranslation("gitAccess");
   const uid = useId();
@@ -71,6 +74,7 @@ export const PatPanel = ({
           projectName={projectName}
           serverVersion={serverVersion}
           defaultOpen={helpOpen}
+          profile={profile}
         />
       )}
 
@@ -170,6 +174,7 @@ export const PatPanel = ({
           projectName={projectName}
           serverVersion={serverVersion}
           defaultOpen={helpOpen}
+          profile={profile}
         />
       )}
 

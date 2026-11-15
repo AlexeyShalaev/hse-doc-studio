@@ -1,7 +1,11 @@
 import type { QueryClient } from "@tanstack/react-query";
 import {
   packStudioKeys,
+  type PackCiStatus,
   type PackEditorHints,
+  type PackGit,
+  type PackPreviewOptions,
+  type PackServiceAccess,
   type PackFile,
   type PackLint,
   type PackStudioAdmin,
@@ -9,6 +13,8 @@ import {
   type PackWorkspace,
 } from "@entities/pack-studio";
 import { PackFileEditor } from "@features/pack-file-editor";
+import { PackGitBar } from "@features/pack-git";
+import { PackPreviewPane } from "@features/pack-preview";
 import { PackStudioAdminPage } from "@features/pack-studio-admin";
 import { PackTreePanel } from "@features/pack-tree";
 import { WorkspaceList } from "@features/pack-workspaces";
@@ -34,6 +40,7 @@ const workspace = (patch: Partial<PackWorkspace>): PackWorkspace => ({
   packs_path: "packs",
   url: "https://github.com/AlexeyShalaev/hse-doc-studio.git",
   credential_id: null,
+  service_access: false,
   insecure_http: false,
   folder: null,
   base_branch: "master",
@@ -43,6 +50,8 @@ const workspace = (patch: Partial<PackWorkspace>): PackWorkspace => ({
   pr_url: null,
   pr_number: null,
   ci_status: null,
+  fork_url: null,
+  pushed_sha: null,
   error: null,
   created_at: NOW,
   updated_at: NOW,
@@ -246,6 +255,140 @@ const ADMIN: PackStudioAdmin = {
   ],
 };
 
+const noop = () => undefined;
+
+const BRANCH = "pack-studio/anna/hse-cs-sse-coursework-2026.1.6";
+
+const GIT_DIRTY: PackGit = {
+  workspace: workspace({}),
+  provider: "github",
+  head_sha: "4f2a9c0d8e7b6a5f4e3d2c1b0a9f8e7d6c5b4a39",
+  branch: null,
+  base_branch: "master",
+  uncommitted: [
+    { path: `${DRAFT}/version.yaml`, status: "modified" },
+    { path: `${DRAFT}/files/common/meta.tex.j2`, status: "modified" },
+  ],
+  dirty: true,
+  changed: [
+    { path: `${DRAFT}/version.yaml`, status: "modified" },
+    { path: `${DRAFT}/files/common/meta.tex.j2`, status: "modified" },
+  ],
+  ahead: 0,
+  behind: 0,
+  compare_url: null,
+};
+
+const PUSHED_SHA = "9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b";
+
+const GIT_PROPOSED: PackGit = {
+  ...GIT_DIRTY,
+  workspace: workspace({
+    work_branch: BRANCH,
+    pr_url: "https://github.com/AlexeyShalaev/hse-doc-studio/pull/412",
+    pr_number: 412,
+    ci_status: "pending",
+    pushed_sha: PUSHED_SHA,
+  }),
+  head_sha: PUSHED_SHA,
+  branch: BRANCH,
+  uncommitted: [],
+  dirty: false,
+  ahead: 2,
+  behind: 1,
+};
+
+const CI_RUNNING: PackCiStatus = {
+  state: "pending",
+  sha: PUSHED_SHA,
+  checks: [
+    { name: "packs", state: "running", url: null, summary: null },
+    { name: "ci/lint", state: "success", url: null, summary: "Lint passed" },
+  ],
+  available: true,
+  reason: null,
+  web_url: null,
+};
+
+const GIT_SERVICE: PackGit = {
+  ...GIT_DIRTY,
+  workspace: workspace({
+    service_access: true,
+    url: "https://gitlab.hse.ru/fcs/packs.git",
+    label: "fcs/packs",
+  }),
+  provider: "gitlab",
+  branch: BRANCH,
+};
+
+const PREVIEW_OPTIONS: PackPreviewOptions = {
+  workspace_id: WS,
+  pack: "hse-cs-sse",
+  template: "coursework",
+  version: "2026.1.6",
+  pack_id: "hse-cs-sse",
+  template_id: "coursework",
+  version_id: "2026.1.6",
+  documents: [
+    {
+      id: "report",
+      name: { ru: "Отчёт", en: "Report" },
+      kinds: [],
+      staffing: [],
+    },
+  ],
+  switches: [
+    { id: "lang", values: ["ru", "en"], default: "ru", label: null },
+    {
+      id: "staffing",
+      values: ["solo", "team2"],
+      default: "solo",
+      label: null,
+    },
+    {
+      id: "supervisor",
+      values: ["university", "company", "none"],
+      default: "university",
+      label: null,
+    },
+  ],
+  examples: [
+    {
+      id: "auto:normal",
+      source: "auto",
+      label: { ru: "Обычный", en: "Typical" },
+      error: null,
+      defaults: {},
+    },
+  ],
+  default_example: "auto:normal",
+  combination: { lang: "ru", staffing: "solo", supervisor: "university" },
+};
+
+const SERVICE_ACCESS: PackServiceAccess[] = [
+  {
+    id: "sa1",
+    url: "https://gitlab.hse.ru/fcs/packs.git",
+    label: "fcs/packs",
+    token_family: "glpat",
+    created_by: "admin",
+    created_by_name: "Администратор",
+    created_at: NOW,
+  },
+];
+
+const GitBarScreen = ({ git }: { git: PackGit }) => (
+  <div className="ps-shell">
+    <PackGitBar
+      workspace={git.workspace}
+      editorDirty={false}
+      onOpenFile={noop}
+      onLintFailed={noop}
+      onFilesChanged={noop}
+    />
+  </div>
+);
+
 const seedEditor = (client: QueryClient, opened: PackFile) => {
   client.setQueryData(packStudioKeys.tree(WS), TREE);
   client.setQueryData(packStudioKeys.file(WS, opened.path), opened);
@@ -264,8 +407,6 @@ const seedEditor = (client: QueryClient, opened: PackFile) => {
     version: RELEASED,
   });
 };
-
-const noop = () => undefined;
 
 const EditorScreen = ({ path }: { path: string }) => (
   <div className="ps-shell" style={{ height: "100%" }}>
@@ -365,6 +506,75 @@ export const getPackStudioGallery = (): GalleryGroup[] => [
     ],
   },
   {
+    id: "pack-studio-git",
+    title: "Панель git и предпросмотр",
+    description:
+      "Ветка, правки после версии, PR и статус проверок; вкладка предпросмотра версии.",
+    entries: [
+      {
+        id: "ps_git_dirty",
+        title: "Без ветки, правки после версии",
+        frame: "page",
+        width: 980,
+        seed: (client) => {
+          client.setQueryData(packStudioKeys.git(WS), GIT_DIRTY);
+        },
+        render: () => <GitBarScreen git={GIT_DIRTY} />,
+      },
+      {
+        id: "ps_git_proposed",
+        title: "PR открыт, проверки идут",
+        note: "Впереди и позади основной ветки, ссылка на PR, статус CI открывает список проверок.",
+        frame: "page",
+        width: 980,
+        seed: (client) => {
+          client.setQueryData(packStudioKeys.git(WS), GIT_PROPOSED);
+          client.setQueryData(
+            packStudioKeys.checks(WS, PUSHED_SHA),
+            CI_RUNNING,
+          );
+        },
+        render: () => <GitBarScreen git={GIT_PROPOSED} />,
+      },
+      {
+        id: "ps_git_service",
+        title: "Служебный доступ, GitLab",
+        frame: "page",
+        width: 980,
+        seed: (client) => {
+          client.setQueryData(packStudioKeys.git(WS), GIT_SERVICE);
+        },
+        render: () => <GitBarScreen git={GIT_SERVICE} />,
+      },
+      {
+        id: "ps_preview_failed",
+        title: "Предпросмотр: документ, данные и комбинация",
+        note: "Автонабор, переключатели состава и руководителя, кнопка «Собрать».",
+        frame: "page",
+        width: 380,
+        seed: (client) => {
+          client.setQueryData(
+            packStudioKeys.previewOptions(WS, {
+              pack: "hse-cs-sse",
+              template: "coursework",
+              version: "2026.1.6",
+            }),
+            PREVIEW_OPTIONS,
+          );
+        },
+        render: () => (
+          <div className="ps-side" style={{ width: "100%" }}>
+            <PackPreviewPane
+              workspaceId={WS}
+              path={`${DRAFT}/version.yaml`}
+              revision={0}
+            />
+          </div>
+        ),
+      },
+    ],
+  },
+  {
     id: "pack-studio-admin",
     title: "Админка: Студия шаблонов",
     entries: [
@@ -375,6 +585,7 @@ export const getPackStudioGallery = (): GalleryGroup[] => [
         width: 720,
         seed: (client) => {
           client.setQueryData(packStudioKeys.admin(), ADMIN);
+          client.setQueryData(packStudioKeys.serviceAccess(), SERVICE_ACCESS);
         },
         render: () => (
           <div style={{ padding: "1.25rem" }}>

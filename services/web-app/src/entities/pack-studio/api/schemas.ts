@@ -32,16 +32,22 @@ export const PackWorkspaceSchema = z.strictObject({
   packs_path: z.string(),
   url: z.string().nullable(),
   credential_id: z.string().nullable(),
+  // Пространство ходит служебным доступом установки (срез T6): токена человека нет.
+  service_access: z.boolean(),
   insecure_http: z.boolean(),
   folder: z.string().nullable(),
   base_branch: z.string().nullable(),
   base_sha: z.string().nullable(),
   fetched_at: z.string().nullable(),
-  // Ветка, PR и статус CI появятся со срезом T6.
+  // Рабочая ветка, PR и последний статус CI (срез T6).
   work_branch: z.string().nullable(),
   pr_url: z.string().nullable(),
   pr_number: z.number().nullable(),
   ci_status: z.string().nullable(),
+  // Форк, куда уходит ветка, если в сам репозиторий писать нельзя.
+  fork_url: z.string().nullable(),
+  // Отправленная вершина: по ней спрашивается статус проверок хостинга.
+  pushed_sha: z.string().nullable(),
   error: PackWorkspaceErrorSchema.nullable(),
   created_at: z.string(),
   updated_at: z.string(),
@@ -54,6 +60,8 @@ export const CreatePackWorkspaceRequestSchema = z.strictObject({
   label: z.string().max(120).nullish(),
   url: z.string().max(2048).nullish(),
   credential_id: z.string().nullish(),
+  // Служебный доступ установки к этому репозиторию (только сервер).
+  service_access: z.boolean().optional(),
   insecure_http: z.boolean().optional(),
   base_branch: z.string().max(255).nullish(),
   folder: z.string().max(4096).nullish(),
@@ -207,8 +215,162 @@ export const CreatePackStudioGrantRequestSchema = z.union([
   z.strictObject({ group_id: z.string().min(1).max(64) }),
 ]);
 
-// Предпросмотр (срез T7, бэкенд в PR #392): только контракт. Панель предпросмотра
-// подключит следующий срез на месте заглушки во вкладке «Предпросмотр».
+// Git рабочего пространства (срез T6): ветка, коммит, PR или MR, статус CI.
+const ChangeStatusSchema = z.enum(["added", "modified", "deleted"]);
+
+export const PackFileChangeSchema = z.strictObject({
+  // Путь от папки паков пространства.
+  path: z.string(),
+  status: ChangeStatusSchema,
+});
+
+export const PackGitSchema = z.strictObject({
+  workspace: PackWorkspaceSchema,
+  provider: z.enum([
+    "github",
+    "gitlab",
+    "gitea",
+    "bitbucket",
+    "hse_studio",
+    "other",
+  ]),
+  head_sha: z.string(),
+  // null: дерево на вершине базы без ветки.
+  branch: z.string().nullable(),
+  base_branch: z.string().nullable(),
+  // Правки на диске после последнего коммита; dirty это непустой список.
+  uncommitted: z.array(PackFileChangeSchema),
+  dirty: z.boolean(),
+  // Всё, чем пространство отличается от базы (коммиты и правки).
+  changed: z.array(PackFileChangeSchema),
+  ahead: z.number().int(),
+  behind: z.number().int(),
+  // Ветка отправлена, PR нет: ссылка «Открыть PR в браузере».
+  compare_url: z.string().nullable(),
+});
+
+export const PackBranchRequestSchema = z.strictObject({
+  name: z.string().min(1).max(200).nullish(),
+});
+
+export const PackCommitRequestSchema = z.strictObject({
+  message: z.string().max(2000).nullish(),
+});
+
+export const PackCommitResponseSchema = z.strictObject({
+  git: PackGitSchema,
+  sha: z.string().nullable(),
+  committed: z.boolean(),
+});
+
+export const PackForkChoiceSchema = z.union([
+  z.strictObject({ url: z.string().min(1).max(2048) }),
+  z.strictObject({ create: z.literal(true) }),
+]);
+
+export const PackProposeRequestSchema = z.strictObject({
+  title: z.string().max(200).nullish(),
+  description: z.string().max(20000).nullish(),
+  message: z.string().max(2000).nullish(),
+  fork: PackForkChoiceSchema.nullish(),
+});
+
+export const PackPullRequestSchema = z.strictObject({
+  number: z.number().int(),
+  url: z.string(),
+  // false: PR из этой ветки уже был открыт.
+  created: z.boolean(),
+});
+
+// Находка проверки перед отправкой (pack check): файла или каталога, без строки.
+export const PackCheckFindingSchema = z.strictObject({
+  severity: z.enum(["error", "warning"]),
+  check: z.string(),
+  path: z.string(),
+  message: z.string(),
+});
+
+export const PackVersionClassSchema = z.strictObject({
+  path: z.string(),
+  base: z.string(),
+  minimum: z.string(),
+  suggested: z.string(),
+  by_number: z.string().nullable(),
+  headline: LocalizedSchema,
+});
+
+export const PackCheckSummarySchema = z.strictObject({
+  errors: z.number().int(),
+  warnings: z.number().int(),
+  findings: z.array(PackCheckFindingSchema),
+  classes: z.array(PackVersionClassSchema),
+});
+
+export const PackProposeResponseSchema = z.strictObject({
+  git: PackGitSchema,
+  pushed_sha: z.string(),
+  // Куда ушла ветка: сам репозиторий или форк.
+  pushed_to: z.string(),
+  pull_request: PackPullRequestSchema.nullable(),
+  compare_url: z.string().nullable(),
+  // Ветка отправлена, а PR открыть не дали (pr_permission_missing).
+  pr_error: PackWorkspaceErrorSchema.nullable(),
+  checks: PackCheckSummarySchema,
+});
+
+export const PackCiCheckSchema = z.strictObject({
+  name: z.string(),
+  state: z.enum([
+    "queued",
+    "running",
+    "success",
+    "failure",
+    "neutral",
+    "skipped",
+    "cancelled",
+  ]),
+  url: z.string().nullable(),
+  summary: z.string().nullable(),
+});
+
+export const PackCiStatusSchema = z.strictObject({
+  state: z.enum(["none", "pending", "success", "failure", "unknown"]),
+  sha: z.string().nullable(),
+  checks: z.array(PackCiCheckSchema),
+  // false: хостинг не отдаёт статус этому токену (reason ci_status_unavailable).
+  available: z.boolean(),
+  reason: z.string().nullable(),
+  web_url: z.string().nullable(),
+});
+
+export const PackStartOverRequestSchema = z.strictObject({
+  discard: z.boolean().optional(),
+});
+
+export const PackDiffSchema = z.strictObject({
+  diff: z.string(),
+  truncated: z.boolean(),
+});
+
+export const PackServiceAccessSchema = z.strictObject({
+  id: z.string(),
+  url: z.string(),
+  label: z.string(),
+  token_family: z.string().nullable(),
+  created_by: z.string().nullable(),
+  created_by_name: z.string().nullable(),
+  created_at: z.string(),
+});
+
+export const PackServiceAccessListSchema = z.array(PackServiceAccessSchema);
+
+export const CreatePackServiceAccessRequestSchema = z.strictObject({
+  url: z.string().min(1).max(2048),
+  token: z.string().min(1).max(4096),
+  label: z.string().max(120).nullish(),
+});
+
+// Предпросмотр (срез T7): документы версии, переключатели, наборы данных и сборки.
 export const PackPreviewDocumentSchema = z.strictObject({
   id: z.string(),
   name: LocalizedSchema,
@@ -307,4 +469,22 @@ export type PackPreviewOptions = z.infer<typeof PackPreviewOptionsSchema>;
 export type PackPreviewBuild = z.infer<typeof PackPreviewBuildSchema>;
 export type StartPackPreviewRequest = z.infer<
   typeof StartPackPreviewRequestSchema
+>;
+export type PackPreviewSwitch = z.infer<typeof PackPreviewSwitchSchema>;
+export type PackPreviewExample = z.infer<typeof PackPreviewExampleSchema>;
+export type PackPreviewDocument = z.infer<typeof PackPreviewDocumentSchema>;
+export type PackFileChange = z.infer<typeof PackFileChangeSchema>;
+export type PackGit = z.infer<typeof PackGitSchema>;
+export type PackCommitResponse = z.infer<typeof PackCommitResponseSchema>;
+export type PackForkChoice = z.infer<typeof PackForkChoiceSchema>;
+export type PackProposeRequest = z.infer<typeof PackProposeRequestSchema>;
+export type PackProposeResponse = z.infer<typeof PackProposeResponseSchema>;
+export type PackCheckFinding = z.infer<typeof PackCheckFindingSchema>;
+export type PackVersionClass = z.infer<typeof PackVersionClassSchema>;
+export type PackCiCheck = z.infer<typeof PackCiCheckSchema>;
+export type PackCiStatus = z.infer<typeof PackCiStatusSchema>;
+export type PackDiff = z.infer<typeof PackDiffSchema>;
+export type PackServiceAccess = z.infer<typeof PackServiceAccessSchema>;
+export type CreatePackServiceAccessRequest = z.infer<
+  typeof CreatePackServiceAccessRequestSchema
 >;

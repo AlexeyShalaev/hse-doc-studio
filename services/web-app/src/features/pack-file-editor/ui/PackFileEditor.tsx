@@ -23,6 +23,7 @@ import {
   usePackHints,
   usePackLint,
   versionDirOf,
+  type LintFailure,
   type PackEditorHints,
   type PackFile,
 } from "@entities/pack-studio";
@@ -38,6 +39,7 @@ import {
 import { Notice } from "@shared/ui/ConflictKit";
 import { findingsToDiagnostics } from "../lib/findings";
 import { packCompletionExtension } from "../lib/packCompletion";
+import { GateFindings } from "./GateFindings";
 import { ProblemsPanel } from "./ProblemsPanel";
 import { StaleFileBanner } from "./StaleFileBanner";
 
@@ -51,13 +53,15 @@ export type PackFileEditorProps = {
   /** Перейти к строке открытого файла (из «Проблем» или по ссылке). */
   reveal?: RevealRequest | undefined;
   onDirtyChange?: ((dirty: boolean) => void) | undefined;
-  /**
-   * Место для «Предложить изменения» (срез T6: ветка, коммит, PR). Пока среза
-   * нет, страница кладёт сюда выключенную кнопку с пояснением.
-   */
+  /** Дополнительные кнопки в строке редактора (git рабочего пространства живёт в своей панели). */
   actions?: ReactNode;
   /** Вкладка предпросмотра (срез T7: сборка на тестовых данных); без неё стоит заглушка. */
   preview?: ReactNode;
+  /** Находки проверки пака перед отправкой (lint_failed): сверху «Проблем». */
+  gate?: LintFailure | null | undefined;
+  onDismissGate?: (() => void) | undefined;
+  /** Меняется, когда «Проблемы» нужно показать (пришли находки перед отправкой). */
+  problemsFocus?: number | undefined;
 };
 
 type SidePane = "problems" | "preview";
@@ -293,7 +297,7 @@ const LoadedEditor = ({
   );
 };
 
-/** Заглушка вкладки предпросмотра до среза T7. */
+/** Вкладка предпросмотра без содержимого: страница его не передала. */
 const PreviewPlaceholder = () => {
   const { t } = useTranslation("packStudio");
   return (
@@ -323,6 +327,9 @@ export const PackFileEditor = ({
   onDirtyChange,
   actions,
   preview,
+  gate,
+  onDismissGate,
+  problemsFocus,
 }: PackFileEditorProps) => {
   const { t } = useTranslation("packStudio");
   const phone = useIsPhoneWidth();
@@ -334,6 +341,12 @@ export const PackFileEditor = ({
   // Подсказки автодополнения: редактор читает их из кэша запросов.
   usePackHints(workspaceId, versionDir);
   const [pane, setPane] = useState<SidePane>("problems");
+  // Пришли находки перед отправкой: «Проблемы» выходят вперёд (состояние от пропа без эффекта).
+  const [seenFocus, setSeenFocus] = useState(problemsFocus);
+  if (problemsFocus !== seenFocus) {
+    setSeenFocus(problemsFocus);
+    if (pane !== "problems") setPane("problems");
+  }
   const findings = lint.data?.findings;
   const diagnostics = useMemo(
     () => findingsToDiagnostics(findings ?? [], path),
@@ -428,8 +441,10 @@ export const PackFileEditor = ({
           >
             <ListChecks size="0.75rem" aria-hidden="true" />
             {t("problems.title")}
-            {problemCount > 0 && (
-              <span className="ps-count">{problemCount}</span>
+            {problemCount + (gate?.findings.length ?? 0) > 0 && (
+              <span className="ps-count">
+                {problemCount + (gate?.findings.length ?? 0)}
+              </span>
             )}
           </button>
           <button
@@ -446,6 +461,15 @@ export const PackFileEditor = ({
             {t("preview.title")}
           </button>
         </div>
+        {pane === "problems" && gate && (
+          <GateFindings
+            failure={gate}
+            onOpen={onOpenFile}
+            onDismiss={() => {
+              onDismissGate?.();
+            }}
+          />
+        )}
         {pane === "problems" ? (
           target === null ? (
             <p className="ps-pane-empty" data-testid="problems-none">

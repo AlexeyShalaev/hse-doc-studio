@@ -46,7 +46,7 @@ describe("галерея Студии шаблонов", () => {
       expect(container.textContent?.length ?? 0, entry.id).toBeGreaterThan(0);
       // Ни одного ключа словаря вместо текста.
       expect(container.textContent, entry.id).not.toMatch(
-        /(workspaces|problems|editor|grants)\.[a-z]/,
+        /(workspaces|problems|editor|grants|preview|service)\.[a-z]|git\.(ci|commit|branch|propose|access|fork|merge|diff|startOver)\b/,
       );
       unmount();
     }

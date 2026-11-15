@@ -1,9 +1,9 @@
 import { useCallback, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   FileSearch,
   FolderTree,
-  GitPullRequestArrow,
   Lock,
   RefreshCw,
 } from "lucide-react";
@@ -12,15 +12,20 @@ import { useTranslation } from "react-i18next";
 import {
   PACK_STUDIO_PATH,
   findVersion,
+  findingTarget,
   packErrorText,
+  packStudioKeys,
   usePackTree,
   usePackWorkspace,
   useRefreshPackWorkspace,
   versionDirOf,
   workspaceErrorText,
+  type LintFailure,
   type PackWorkspace,
 } from "@entities/pack-studio";
 import { PackFileEditor } from "@features/pack-file-editor";
+import { PackGitBar } from "@features/pack-git";
+import { PackPreviewPane } from "@features/pack-preview";
 import { PackTreePanel, versionStatusVariant } from "@features/pack-tree";
 import {
   WorkspaceStateBadge,
@@ -33,34 +38,9 @@ import {
   ErrorState,
   Modal,
   Spinner,
-  Tooltip,
   type RevealRequest,
 } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
-
-/**
- * «Предложить изменения» (template-studio.md, 4.3): коммит, push и PR делает
- * срез T6. Пока его нет, кнопка стоит на своём месте выключенной и объясняет почему.
- */
-const ProposeChangesSlot = ({ workspace }: { workspace: PackWorkspace }) => {
-  const { t } = useTranslation("packStudio");
-  if (workspace.kind !== "git") return null;
-  return (
-    <Tooltip content={t("propose.soon")}>
-      <span>
-        <Button
-          size="xs"
-          variant="secondary"
-          disabled
-          data-testid="propose-changes"
-        >
-          <GitPullRequestArrow size="0.6875rem" />
-          <span className="ps-hide-phone">{t("propose.label")}</span>
-        </Button>
-      </span>
-    </Tooltip>
-  );
-};
 
 /** Крошки открытого файла: пак, шаблон, версия со статусом и замком, путь в версии. */
 const FileCrumbs = ({
@@ -167,6 +147,13 @@ export const WorkspaceScreen = () => {
     (RevealRequest & { path: string }) | null
   >(null);
   const [pending, setPending] = useState<PendingOpen | null>(null);
+  const [editorDirty, setEditorDirty] = useState(false);
+  // Находки проверки перед «Предложить изменения» и запрос показать «Проблемы».
+  const [gate, setGate] = useState<LintFailure | null>(null);
+  const [problemsFocus, setProblemsFocus] = useState(0);
+  // Операция git поменяла файлы на диске: редактор открывает файл заново.
+  const [reload, setReload] = useState(0);
+  const client = useQueryClient();
   const dirtyRef = useRef(false);
   const tokenRef = useRef(0);
 
@@ -204,6 +191,29 @@ export const WorkspaceScreen = () => {
 
   const onDirtyChange = useCallback((dirty: boolean) => {
     dirtyRef.current = dirty;
+    setEditorDirty(dirty);
+  }, []);
+
+  const onLintFailed = useCallback(
+    (failure: LintFailure) => {
+      setGate(failure);
+      setProblemsFocus((n) => n + 1);
+      // Файл не открыт: открыть первую находку, «Проблемы» видны рядом с ней.
+      if (file === null) {
+        const first = failure.findings
+          .map((f) => findingTarget(f.path, f.message))
+          .find((target) => target !== null);
+        if (first) go(first.path, first.line);
+      }
+    },
+    [file, go],
+  );
+
+  const onFilesChanged = useCallback(() => {
+    dirtyRef.current = false;
+    setEditorDirty(false);
+    setReload((n) => n + 1);
+    setEpoch((n) => n + 1);
   }, []);
 
   if (workspace.isPending) {
@@ -295,6 +305,17 @@ export const WorkspaceScreen = () => {
       {ws.error && ready && (
         <Notice tone="warn" role="status" text={workspaceErrorText(ws.error)} />
       )}
+      {ws.kind === "git" && ready && (
+        <PackGitBar
+          workspace={ws}
+          editorDirty={editorDirty}
+          onOpenFile={(path) => {
+            open(path);
+          }}
+          onLintFailed={onLintFailed}
+          onFilesChanged={onFilesChanged}
+        />
+      )}
       {!ready ? (
         <div className="ps-page">
           <NotReady workspace={ws} />
@@ -307,17 +328,32 @@ export const WorkspaceScreen = () => {
               <>
                 <FileCrumbs workspaceId={ws.id} path={file} />
                 <PackFileEditor
-                  key={file}
+                  key={`${file}:${String(reload)}`}
                   workspaceId={ws.id}
                   path={file}
                   lintEpoch={epoch}
                   onSaved={() => {
                     setEpoch((n) => n + 1);
+                    // Правка на диске: «правки после коммита» в панели git.
+                    void client.invalidateQueries({
+                      queryKey: packStudioKeys.git(ws.id),
+                    });
                   }}
                   onOpenFile={open}
                   reveal={reveal?.path === file ? reveal : undefined}
                   onDirtyChange={onDirtyChange}
-                  actions={<ProposeChangesSlot workspace={ws} />}
+                  gate={gate}
+                  onDismissGate={() => {
+                    setGate(null);
+                  }}
+                  problemsFocus={problemsFocus}
+                  preview={
+                    <PackPreviewPane
+                      workspaceId={ws.id}
+                      path={file}
+                      revision={epoch}
+                    />
+                  }
                 />
               </>
             ) : (

@@ -268,6 +268,13 @@
     "preview_not_found": "The preview build was not found: it may have been removed. Start it again.",
     "preview_invalid": "The document, sample data or combination does not fit this template version.",
     "preview_not_ready": "The preview build is not ready yet.",
-    "version_unreadable": "The template version could not be read: check version.yaml under “Problems”."
+    "version_unreadable": "The template version could not be read: check version.yaml under “Problems”.",
+    "workspace_dirty": "There are unsaved edits. Save a version first.",
+    "branch_name_invalid": "This branch name does not fit: git rejects it or it is the base branch.",
+    "merge_conflict": "The base branch changes the same lines as yours. The merge was cancelled, your branch is unchanged.",
+    "nothing_to_propose": "Nothing to propose: the branch does not differ from the base branch.",
+    "service_access_missing": "This repository has no service access. The instance administrator sets it up.",
+    "service_access_exists": "This repository already has a service access.",
+    "service_access_not_found": "The service access is already removed."
   }
 }

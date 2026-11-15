@@ -152,4 +152,62 @@ describe("рабочие пространства", () => {
       "В папке нет паков",
     );
   });
+
+  it("служебный доступ на сервере: без токена человека, флаг service_access", async () => {
+    vi.spyOn(gitRemoteApi, "listCredentials").mockResolvedValue([]);
+    const created = fixture("git_service_access");
+    const create = vi
+      .spyOn(packStudioApi, "createWorkspace")
+      .mockResolvedValue(created);
+    wrap(
+      <CreateWorkspaceDialog
+        isOpen
+        onClose={vi.fn()}
+        onCreated={vi.fn()}
+        allowFolder={false}
+      />,
+    );
+    await userEvent.type(
+      screen.getByTestId("ws-create-url"),
+      "https://gitlab.hse.ru/fcs/packs.git",
+    );
+    // Памятка о токене под профиль прав «packs» для личного доступа.
+    expect(
+      screen.getByText("Какой токен нужен для веток и запросов на слияние"),
+    ).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Служебный доступ" }),
+    );
+    expect(screen.getByTestId("ws-create-service-hint")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Доступ")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByTestId("ws-create-submit"));
+    await waitFor(() => {
+      expect(create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kind: "git",
+          url: "https://gitlab.hse.ru/fcs/packs.git",
+          credential_id: null,
+          service_access: true,
+        }),
+      );
+    });
+  });
+
+  it("в локальной Студии служебного доступа нет", async () => {
+    vi.spyOn(gitRemoteApi, "listCredentials").mockResolvedValue([]);
+    wrap(
+      <CreateWorkspaceDialog
+        isOpen
+        onClose={vi.fn()}
+        onCreated={vi.fn()}
+        allowFolder
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Репозиторий git" }),
+    );
+    expect(
+      screen.queryByRole("button", { name: "Служебный доступ" }),
+    ).not.toBeInTheDocument();
+  });
 });

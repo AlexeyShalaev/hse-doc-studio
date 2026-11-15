@@ -196,3 +196,50 @@ export const ancestorsOf = (path: string): string[] => {
   const parts = path.split("/");
   return parts.slice(0, -1).map((_, i) => parts.slice(0, i + 1).join("/"));
 };
+
+/** Версия шаблона в адресе предпросмотра (`{pack}/{template}/{version}`) по каталогу версии. */
+export const versionRefOf = (
+  path: string,
+): { pack: string; template: string; version: string } | null => {
+  const dir = versionDirOf(path);
+  if (dir === null) return null;
+  const [pack = "", , template = "", , version = ""] = dir.split("/");
+  return { pack, template, version };
+};
+
+const FILE_LINE = /^(?<rel>[^\s:[\]]+\.[A-Za-z0-9]+):(?<line>\d+):/;
+
+/**
+ * Куда вести находку проверки перед отправкой (pack check): у неё путь файла или
+ * каталога и нет строки. Каталог версии с «файл:строка:» в начале сообщения ведёт
+ * в этот файл и строку (как в линтере редактора), иначе в манифест версии;
+ * каталог шаблона или пака в его манифест; null, если вести некуда.
+ */
+export const findingTarget = (
+  path: string,
+  message: string,
+): { path: string; line: number | null } | null => {
+  const clean = path.replace(/\/+$/, "");
+  // «.»: сбой всей проверки (база не прочиталась), вести некуда.
+  if (clean === "" || clean === ".") return null;
+  if (versionDirOf(clean) === clean) {
+    const match = FILE_LINE.exec(message);
+    const rel = match?.groups?.rel;
+    if (rel) {
+      const inVersion = rel === "version.yaml" || rel.startsWith("checks/");
+      return {
+        path: `${clean}/${inVersion ? rel : `files/${rel}`}`,
+        line: Number(match.groups?.line ?? 0) || null,
+      };
+    }
+    return { path: `${clean}/version.yaml`, line: null };
+  }
+  const last = clean.split("/").pop() ?? "";
+  if (/\.[A-Za-z0-9]+$/.test(last)) return { path: clean, line: null };
+  const parts = clean.split("/");
+  if (parts.length === 1) return { path: `${clean}/pack.yaml`, line: null };
+  if (parts.length === 3 && same(parts[1], TEMPLATES_DIR)) {
+    return { path: `${clean}/template.yaml`, line: null };
+  }
+  return { path: clean, line: null };
+};

@@ -31,5 +31,25 @@
     "groupPlaceholder": "Choose a group",
     "submit": "Grant",
     "cancel": "Cancel"
+  },
+  "service": {
+    "title": "Service access",
+    "lead": "An instance-level token for a pack repository: workspaces of people with the Template author right push branches with it, commits are signed by the person. One access per repository.",
+    "add": "Add",
+    "emptyTitle": "No service access",
+    "emptyLead": "Without it, template authors use their own tokens.",
+    "since": "added {{when}}, {{who}}",
+    "remove": "Remove access “{{name}}”",
+    "removeTitle": "Remove service access “{{name}}”?",
+    "removeLead": "Workspaces that use it lose access to the repository.",
+    "removeSubmit": "Remove",
+    "addTitle": "Service access to a pack repository",
+    "addLead": "The token is stored encrypted and never shown again. Every use is written to the audit log.",
+    "url": "Repository address",
+    "label": "Label",
+    "labelHint": "Empty: the repository path.",
+    "token": "Token",
+    "tokenHint": "https only. Rights as in the pack repository profile: write, pull requests, checks status.",
+    "submit": "Add"
   }
 }

@@ -1,10 +1,11 @@
 import { ExternalLink, ShieldCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
-  PROVIDER_CATALOG,
   credentialExpiry,
+  permissionsFor,
   providerSpec,
   type GitProvider,
+  type PermissionProfile,
   type GitTokenInfo,
 } from "@entities/git-remote";
 import { Spinner } from "@shared/ui/Spinner";
@@ -24,6 +25,8 @@ export type TokenCheckCardProps = {
   onReviewCertificate?: () => void;
   /** Проверка идёт для токена, которого человек ещё не сохранил: «Проверить ещё раз» не нужна. */
   canRetry?: boolean;
+  /** Профиль прав каталога, под который шла проверка (packs). */
+  profile?: PermissionProfile | null;
 };
 
 const TONE: Record<TokenVerdict["kind"], FrameTone> = {
@@ -127,6 +130,7 @@ export const TokenCheckCard = ({
   onRetry,
   onReviewCertificate,
   canRetry = true,
+  profile = null,
 }: TokenCheckCardProps) => {
   const { t, i18n } = useTranslation("gitAccess");
   const spec = providerSpec(provider);
@@ -164,10 +168,10 @@ export const TokenCheckCard = ({
 
   const info = verdict.info;
   const missing = (info?.missing ?? []).join(", ");
-  const extra = extraScopes(info, spec.permissions.too_broad).join(", ");
+  const permissions = permissionsFor(spec, profile);
+  const extra = extraScopes(info, permissions.too_broad).join(", ");
   const lang = i18n.language.startsWith("en") ? "en" : "ru";
-  const needs = PROVIDER_CATALOG.providers.find((p) => p.id === provider)
-    ?.permissions.human[lang];
+  const needs = permissions.human[lang];
 
   let title: string;
   let text: string;

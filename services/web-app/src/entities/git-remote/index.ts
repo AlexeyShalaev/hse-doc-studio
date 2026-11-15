@@ -5,12 +5,14 @@ export {
   assessScopes,
   detectProvider,
   instancePrefixCandidates,
+  permissionsFor,
   providerForHost,
   providerSpec,
   webBase,
 } from "./model/providerCatalog";
 export type {
   DetectProviderOptions,
+  PermissionProfile,
   ProviderAuthVariant,
   ProviderCatalog,
   ProviderDetection,

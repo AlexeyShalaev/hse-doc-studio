@@ -8,11 +8,14 @@ import {
   type CreatePackWorkspaceRequest,
   type PackWorkspace,
 } from "@entities/pack-studio";
+import { RepoTokenHelp } from "@features/git-remote";
 import { Button, Input, Modal, Select, ViewTabs } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import { hostOfUrl } from "../lib/hostOfUrl";
 
 type Kind = PackWorkspace["kind"];
+/** Чем ходить в репозиторий: личный доступ git или служебный доступ установки. */
+type Access = "personal" | "service";
 
 /** Окно выбора папки на диске: его даёт страница (фича выбора папки), сюда приходит только вызов. */
 export type FolderPickerRender = (props: {
@@ -61,6 +64,7 @@ export const CreateWorkspaceDialog = ({
   const [folder, setFolder] = useState("");
   const [label, setLabel] = useState("");
   const [insecure, setInsecure] = useState(false);
+  const [access, setAccess] = useState<Access>("personal");
   const [picking, setPicking] = useState(false);
   const insecureId = useId();
   const credentialFieldId = useId();
@@ -76,6 +80,9 @@ export const CreateWorkspaceDialog = ({
     ];
   }, [credentials.data, host, t]);
   const plainHttp = url.trim().toLowerCase().startsWith("http://");
+  // Служебный доступ задаёт админ сервера: в локальной Студии (есть папки) его нет.
+  const serviceAllowed = !allowFolder;
+  const service = serviceAllowed && access === "service";
 
   const canSubmit =
     !create.isPending &&
@@ -87,7 +94,9 @@ export const CreateWorkspaceDialog = ({
         ? {
             kind,
             url: url.trim(),
-            credential_id: credentialId === NO_CREDENTIAL ? null : credentialId,
+            credential_id:
+              service || credentialId === NO_CREDENTIAL ? null : credentialId,
+            ...(service ? { service_access: true } : {}),
             base_branch: trimmed(branch),
             packs_path: trimmed(packsPath),
             label: trimmed(label),
@@ -154,19 +163,43 @@ export const CreateWorkspaceDialog = ({
               autoFocus
               data-testid="ws-create-url"
             />
-            <div className="field">
-              <label htmlFor={credentialFieldId}>
-                {t("create.credential")}
-              </label>
-              <Select
-                id={credentialFieldId}
-                value={credentialId}
-                onValueChange={setCredentialId}
-                options={credentialOptions}
-                ariaLabel={t("create.credential")}
+            {serviceAllowed && (
+              <ViewTabs<Access>
+                views={[
+                  { value: "personal", label: t("create.access.personal") },
+                  { value: "service", label: t("create.access.service") },
+                ]}
+                value={access}
+                onChange={setAccess}
               />
-              <p className="hint">{t("create.credentialHint")}</p>
-            </div>
+            )}
+            {service ? (
+              <p className="hint" data-testid="ws-create-service-hint">
+                {t("create.access.serviceHint")}
+              </p>
+            ) : (
+              <div className="field">
+                <label htmlFor={credentialFieldId}>
+                  {t("create.credential")}
+                </label>
+                <Select
+                  id={credentialFieldId}
+                  value={credentialId}
+                  onValueChange={setCredentialId}
+                  options={credentialOptions}
+                  ariaLabel={t("create.credential")}
+                />
+                <p className="hint">{t("create.credentialHint")}</p>
+                {host !== null && (
+                  <details className="sync-details">
+                    <summary>{t("create.tokenHelp")}</summary>
+                    <div style={{ marginTop: "0.5rem" }}>
+                      <RepoTokenHelp url={url} profile="packs" />
+                    </div>
+                  </details>
+                )}
+              </div>
+            )}
             {plainHttp && (
               <label
                 htmlFor={insecureId}

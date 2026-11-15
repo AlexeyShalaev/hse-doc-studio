@@ -40,6 +40,13 @@ export const PACK_STUDIO_ERROR_CODES = [
   "preview_invalid",
   "preview_not_ready",
   "version_unreadable",
+  "workspace_dirty",
+  "branch_name_invalid",
+  "merge_conflict",
+  "nothing_to_propose",
+  "service_access_missing",
+  "service_access_exists",
+  "service_access_not_found",
 ] as const;
 
 export type PackStudioErrorCode = (typeof PACK_STUDIO_ERROR_CODES)[number];

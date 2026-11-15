@@ -6,6 +6,7 @@ import {
   tokenLinks,
   webBase,
   type GitProvider,
+  type PermissionProfile,
   type SshLinks,
   type TokenLinks,
 } from "@entities/git-remote";
@@ -58,6 +59,8 @@ export type LinkContext = {
   projectName?: string | null;
   /** Язык описания токена. */
   lang?: string;
+  /** Профиль прав каталога (packs: репозиторий паков Студии шаблонов). */
+  profile?: PermissionProfile | null;
   /** Сегодняшняя дата YYYY-MM-DD для описания токена. */
   today?: string;
 };
@@ -107,6 +110,7 @@ export const tokenLinksFor = (
       owner: url.owner,
       repo: url.repo,
       expiresInDays: PROVIDER_CATALOG.defaults.expires_in_days,
+      profile: context.profile ?? null,
     });
   } catch {
     return null;

@@ -229,4 +229,42 @@ describe("редактор файла пака", () => {
     await userEvent.click(screen.getByTestId("side-tab-preview"));
     expect(screen.getByTestId("preview-placeholder")).toBeInTheDocument();
   });
+
+  it("находки проверки перед отправкой сверху «Проблем»: переход к файлу и строке, скрытие", async () => {
+    stub();
+    const onDismissGate = vi.fn();
+    const { onOpenFile } = mount({
+      gate: {
+        errors: 2,
+        warnings: 0,
+        findings: [
+          {
+            severity: "error",
+            check: "lint",
+            path: V,
+            message: "report/main.tex:7: Jinja TemplateSyntaxError",
+          },
+          {
+            severity: "error",
+            check: "releases",
+            path: V,
+            message: "версия уже выпущена в базе",
+          },
+        ],
+      },
+      onDismissGate,
+      problemsFocus: 1,
+    });
+    const gate = await screen.findByTestId("problems-gate");
+    expect(gate).toHaveTextContent("Проверка перед отправкой");
+    expect(gate).toHaveTextContent("2 ошибки в паке");
+    await userEvent.click(
+      within(gate).getByText("report/main.tex:7: Jinja TemplateSyntaxError"),
+    );
+    expect(onOpenFile).toHaveBeenCalledWith(`${V}/files/report/main.tex`, 7);
+    await userEvent.click(within(gate).getByText("версия уже выпущена в базе"));
+    expect(onOpenFile).toHaveBeenLastCalledWith(`${V}/version.yaml`, null);
+    await userEvent.click(screen.getByTestId("problems-gate-dismiss"));
+    expect(onDismissGate).toHaveBeenCalled();
+  });
 });

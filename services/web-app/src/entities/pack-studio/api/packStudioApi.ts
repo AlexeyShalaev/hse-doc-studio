@@ -1,8 +1,19 @@
 import { adminClient, apiClient, ApiError, parseResp } from "@shared/api";
+import { env } from "@shared/config";
 import {
+  PackCiStatusSchema,
+  PackCommitResponseSchema,
+  PackDiffSchema,
   PackEditorHintsSchema,
   PackFileVersionSchema,
+  PackGitSchema,
   PackLintSchema,
+  PackPreviewBuildSchema,
+  PackPreviewOptionsSchema,
+  PackPreviewStartSchema,
+  PackProposeResponseSchema,
+  PackServiceAccessListSchema,
+  PackServiceAccessSchema,
   PackStudioAdminSchema,
   PackStudioGrantSchema,
   PackStudioSectionSchema,
@@ -10,11 +21,21 @@ import {
   PackWorkspaceListSchema,
   PackWorkspaceSchema,
   PackYamlPatchResponseSchema,
+  type CreatePackServiceAccessRequest,
   type CreatePackStudioGrantRequest,
   type CreatePackWorkspaceRequest,
+  type PackCiStatus,
+  type PackCommitResponse,
+  type PackDiff,
   type PackEditorHints,
   type PackFileVersion,
+  type PackGit,
   type PackLint,
+  type PackPreviewBuild,
+  type PackPreviewOptions,
+  type PackProposeRequest,
+  type PackProposeResponse,
+  type PackServiceAccess,
   type PackReadOnlyReason,
   type PackStudioAdmin,
   type PackStudioGrant,
@@ -23,6 +44,7 @@ import {
   type PackWorkspace,
   type PackYamlOp,
   type PackYamlPatchResponse,
+  type StartPackPreviewRequest,
 } from "./schemas";
 
 // API Студии шаблонов: /api/v1/pack-studio/* (раздел и рабочие пространства) и
@@ -36,6 +58,22 @@ const BASE = "/pack-studio";
 const ws = (id: string) => `${BASE}/workspaces/${enc(id)}`;
 const filePath = (id: string, path: string) =>
   `${ws(id)}/files/${path.split("/").map(enc).join("/")}`;
+
+/** Версия шаблона в адресе предпросмотра: имена папок, как в дереве. */
+export type PackVersionRef = {
+  pack: string;
+  template: string;
+  version: string;
+};
+
+const versionPreview = (id: string, ref: PackVersionRef) =>
+  `${ws(id)}/versions/${enc(ref.pack)}/${enc(ref.template)}/${enc(ref.version)}/preview`;
+const previewBuild = (id: string, buildId: string) =>
+  `${ws(id)}/previews/${enc(buildId)}`;
+
+/** Адрес PDF собранного предпросмотра (для просмотрщика PDF: он грузит файл сам). */
+export const packPreviewPdfUrl = (id: string, buildId: string): string =>
+  `${env.VITE_API_BASE_URL}/api/v1${previewBuild(id, buildId)}/pdf`;
 
 /** Файл как текст: содержимое, версия (ETag) и почему его нельзя менять. */
 export type PackFile = {
@@ -160,6 +198,83 @@ export const packStudioApi = {
       .get(`${ws(id)}/hints`, { ...quiet, params: { path } })
       .then(parseResp(PackEditorHintsSchema)),
 
+  // Git рабочего пространства (срез T6). Операции синхронные, под замком
+  // пространства: вторая одновременная отвечает workspace_busy.
+  git: (id: string): Promise<PackGit> =>
+    apiClient.get(`${ws(id)}/git`, quiet).then(parseResp(PackGitSchema)),
+  diff: (id: string): Promise<PackDiff> =>
+    apiClient.get(`${ws(id)}/git/diff`, quiet).then(parseResp(PackDiffSchema)),
+  /** Без имени Студия называет ветку сама; своя прежняя или серверная только при чистом дереве. */
+  switchBranch: (id: string, name: string | null): Promise<PackGit> =>
+    apiClient
+      .post(`${ws(id)}/git/branch`, name ? { name } : {}, quiet)
+      .then(parseResp(PackGitSchema)),
+  /** «Сохранить версию»: без сообщения его составляет сервер (conventional commits). */
+  commit: (id: string, message: string | null): Promise<PackCommitResponse> =>
+    apiClient
+      .post(`${ws(id)}/git/commit`, message ? { message } : {}, {
+        ...quiet,
+        timeout: 120_000,
+      })
+      .then(parseResp(PackCommitResponseSchema)),
+  /** Проверки пака, push, PR или MR: секунды, иногда дольше (свежий форк). */
+  propose: (
+    id: string,
+    body: PackProposeRequest,
+  ): Promise<PackProposeResponse> =>
+    apiClient
+      .post(`${ws(id)}/git/propose`, body, { ...quiet, timeout: 300_000 })
+      .then(parseResp(PackProposeResponseSchema)),
+  checks: (id: string): Promise<PackCiStatus> =>
+    apiClient
+      .get(`${ws(id)}/git/checks`, quiet)
+      .then(parseResp(PackCiStatusSchema)),
+  mergeBase: (id: string): Promise<PackGit> =>
+    apiClient
+      .post(`${ws(id)}/git/merge-base`, {}, { ...quiet, timeout: 120_000 })
+      .then(parseResp(PackGitSchema)),
+  /** Дерево на свежую базу без ветки; правки теряются только с `discard`. */
+  startOver: (id: string, discard: boolean): Promise<PackGit> =>
+    apiClient
+      .post(`${ws(id)}/git/start-over`, discard ? { discard } : {}, {
+        ...quiet,
+        timeout: 120_000,
+      })
+      .then(parseResp(PackGitSchema)),
+
+  // Предпросмотр (срез T7): варианты версии, сборка, опрос, отмена, журнал.
+  previewOptions: (
+    id: string,
+    ref: PackVersionRef,
+  ): Promise<PackPreviewOptions> =>
+    apiClient
+      .get(versionPreview(id, ref), quiet)
+      .then(parseResp(PackPreviewOptionsSchema)),
+  startPreview: (
+    id: string,
+    ref: PackVersionRef,
+    body: StartPackPreviewRequest,
+  ): Promise<PackPreviewBuild[]> =>
+    apiClient
+      .post(versionPreview(id, ref), body, { ...quiet, timeout: 60_000 })
+      .then(parseResp(PackPreviewStartSchema))
+      .then((start) => start.builds),
+  previewBuild: (id: string, buildId: string): Promise<PackPreviewBuild> =>
+    apiClient
+      .get(previewBuild(id, buildId), quiet)
+      .then(parseResp(PackPreviewBuildSchema)),
+  cancelPreview: (id: string, buildId: string): Promise<PackPreviewBuild> =>
+    apiClient
+      .delete(previewBuild(id, buildId), quiet)
+      .then(parseResp(PackPreviewBuildSchema)),
+  previewLog: async (id: string, buildId: string): Promise<string> => {
+    const response = await apiClient.get<string>(
+      `${previewBuild(id, buildId)}/log`,
+      { ...quiet, responseType: "text", transformResponse: (d: unknown) => d },
+    );
+    return typeof response.data === "string" ? response.data : "";
+  },
+
   admin: (): Promise<PackStudioAdmin> =>
     adminClient.get(BASE, quiet).then(parseResp(PackStudioAdminSchema)),
   setAdmin: (enabled: boolean): Promise<PackStudioAdmin> =>
@@ -170,5 +285,19 @@ export const packStudioApi = {
       .then(parseResp(PackStudioGrantSchema)),
   removeGrant: async (grantId: string): Promise<void> => {
     await adminClient.delete(`${BASE}/grants/${enc(grantId)}`);
+  },
+  // Служебные доступы репозиториев паков: секрет сервер не отдаёт.
+  serviceAccess: (): Promise<PackServiceAccess[]> =>
+    adminClient
+      .get(`${BASE}/service-access`, quiet)
+      .then(parseResp(PackServiceAccessListSchema)),
+  addServiceAccess: (
+    body: CreatePackServiceAccessRequest,
+  ): Promise<PackServiceAccess> =>
+    adminClient
+      .post(`${BASE}/service-access`, body, quiet)
+      .then(parseResp(PackServiceAccessSchema)),
+  removeServiceAccess: async (accessId: string): Promise<void> => {
+    await adminClient.delete(`${BASE}/service-access/${enc(accessId)}`, quiet);
   },
 };

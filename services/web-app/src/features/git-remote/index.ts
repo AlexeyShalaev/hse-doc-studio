@@ -18,6 +18,13 @@ export {
 } from "./ui/RemoteSettingsCards";
 export type { RemoteSettingsCardProps } from "./ui/RemoteSettingsCards";
 export { DisconnectDialog } from "./ui/DisconnectDialog";
+export { ReplaceTokenDialog } from "./ui/ReplaceTokenDialog";
+export type { ReplaceTokenDialogProps } from "./ui/ReplaceTokenDialog";
+export { CredentialCheckCard, RepoTokenHelp } from "./ui/RepoAccessKit";
+export type {
+  CredentialCheckCardProps,
+  RepoTokenHelpProps,
+} from "./ui/RepoAccessKit";
 export type { DisconnectDialogProps } from "./ui/DisconnectDialog";
 export { SharedFolderWarning } from "./ui/SharedFolderWarning";
 export type { SharedFolderWarningProps } from "./ui/SharedFolderWarning";
