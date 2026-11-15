@@ -387,12 +387,21 @@ def _head_value(head: ProfileHead) -> dict[str, Any]:
     return value
 
 
-def _set_keys(text: str, path: Path, value: Mapping[str, Any], known: Sequence[str]) -> str:
-    """Известные ключи записи по `value` (нет в `value`: ключ уходит), незнакомые остаются как были."""
+def _set_keys(
+    text: str, path: Path, value: Mapping[str, Any], known: Sequence[str], seen: Mapping[str, Any] | None = None
+) -> str:
+    """Известные ключи записи по `value` (нет в `value`: ключ уходит), незнакомые остаются как были.
+
+    `seen` запись так, как её видит форма: ключ, который для формы не изменился, остаётся байт в байт, даже если
+    записан иначе (выпущенные паки бывают с текстом через запятую без кавычек).
+    """
     current = _node(text, path)
     if not isinstance(current, dict):
         return set_value(text, path, dict(value))
-    merged = {k: (value[k] if k in known else v) for k, v in current.items() if k in value or k not in known}
+    kept = {k for k in value if k in current and (seen or {}).get(k) == value[k]}
+    merged = {
+        k: (v if k in kept or k not in known else value[k]) for k, v in current.items() if k in value or k not in known
+    }
     merged.update({k: v for k, v in value.items() if k not in merged})
     return set_value(text, path, merged)
 
@@ -418,16 +427,64 @@ def _set_profile(text: str, op: SubmissionOp) -> str:
     if any(p.get("id") == value["id"] for p in others):
         raise SubmissionEditError(f"profile {value['id']!r} already exists")
     for key in _HEAD_KEYS:
-        if key in value:
-            text = set_value(text, (*path, key), value[key], after={"name": "id", "description": "name"}.get(key))
-        elif _node(text, (*path, key)) is not _MISSING:
-            text = delete(text, (*path, key))
+        text = _write_head_key(text, (*path, key), key, value.get(key))
     hint = _localized_value(head.deadline_hint) if head.deadline_hint is not None else None
-    if hint:
-        return set_value(text, (*path, "deadline_hint"), hint)
-    if _node(text, (*path, "deadline_hint")) is not _MISSING:
-        return delete(text, (*path, "deadline_hint"))
-    return text
+    return _write_hint(text, (*path, "deadline_hint"), hint or None)
+
+
+def _write_head_key(text: str, path: Path, key: str, value: Any) -> str:
+    """Поле шапки; без изменений для формы запись остаётся как есть, None убирает ключ."""
+    current = _node(text, path)
+    if value is None:
+        return delete(text, path) if current is not _MISSING else text
+    if current is not _MISSING and _seen_head(key, current) == value:
+        return text
+    return set_value(text, path, value, after={"name": "id", "description": "name"}.get(key))
+
+
+def _write_hint(text: str, path: Path, hint: dict[str, str] | None) -> str:
+    current = _node(text, path)
+    if hint is None:
+        return delete(text, path) if current is not _MISSING else text
+    if current is not _MISSING and _localized_value(_hint(current) or {}) == hint:
+        return text
+    return set_value(text, path, hint)
+
+
+def _seen_head(key: str, raw: Any) -> Any:
+    """Поле шапки так, как его видит форма."""
+    return str(raw).strip() if key == "id" else _localized_value(_localized(raw))
+
+
+def _seen_entry(kind: SubmissionList, raw: Any, index: int) -> dict[str, Any]:
+    """Запись списка так, как её пишет форма; битая запись пуста."""
+    try:
+        if kind is SubmissionList.items:
+            item = _item(raw)
+            return _item_value(
+                {
+                    "doc_id": item.doc_id,
+                    "signatures": list(item.signatures),
+                    "methods": {slot: list(methods) for slot, methods in item.methods},
+                    "skip_if_nda": item.skip_if_nda,
+                    "supported_kinds": list(item.supported_kinds),
+                }
+            )
+        if kind is SubmissionList.extra_items:
+            extra = _extra(raw)
+            return _extra_value(
+                {
+                    "source": extra.source,
+                    "output_name": extra.output_name,
+                    "format": extra.format,
+                    "supported_kinds": list(extra.supported_kinds),
+                }
+            )
+        slot = _slot_entry(raw, index)
+        when = {"person": slot.when.person, "role": slot.when.role} if slot.when is not None else None
+        return _slot_value({"doc_id": slot.doc_id, "slot_id": slot.slot_id, "when": when, "optional": slot.optional})
+    except (*_PARSE_ERRORS, SubmissionEditError):
+        return {}
 
 
 def _remove_profile(text: str, op: SubmissionOp) -> str:
@@ -589,7 +646,7 @@ def _set_entry(text: str, op: SubmissionOp) -> str:
     value, known = _entry_value(op)
     path, entries = _entries(text, op)
     index = _entry_index(entries, op)
-    return _set_keys(text, (*path, index), value, known)
+    return _set_keys(text, (*path, index), value, known, _seen_entry(_list_key(op), entries[index], index))
 
 
 def _remove_entry(text: str, op: SubmissionOp) -> str:

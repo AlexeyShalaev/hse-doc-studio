@@ -35,7 +35,7 @@ def _route(version: TemplateVersion, profile_id: str, **combo: str) -> ProfileRo
     full = resolve_combination(switches_for(version), combo)
     synthetic = synthetic_project(version, example, full, _TODAY)
     project = synthetic_core_project("pack", "template", version, synthetic)
-    profile = next(p for p in version.pack_submission.profiles if p.id == profile_id)  # type: ignore[union-attr]
+    profile = next(p for p in version.pack_submission.profiles if p.id == profile_id)
     return profile_route(project, version, profile)
 
 
@@ -82,7 +82,7 @@ def test__checkpoint_without_signatures_has_no_steps() -> None:
 
 def test__version_without_preset_uses_default_route() -> None:
     version = _version("hse-cs-sse", "coursework", "2026.1")
-    profile = version.pack_submission.profiles[0]  # type: ignore[union-attr]
+    profile = version.pack_submission.profiles[0]
 
     route = _route(version, profile.id)
 

@@ -265,7 +265,9 @@ def test__set_profile_route__written_after_items_and_removed_with_none() -> None
 
     text = _EDITOR.apply(_TEXT, [op])
 
-    assert "          signatures: [author]\n      signing_route: [[author], [supervisor, academic_supervisor]]\n" in text
+    assert (
+        "          signatures: [author]\n      signing_route: [[author], [supervisor, academic_supervisor]]\n" in text
+    )
     back = _EDITOR.apply(text, [_op(SubmissionOpKind.set_profile_route, profile=1, steps=None)])
     assert back == _TEXT
 
@@ -315,7 +317,9 @@ def test__move_entry__keeps_the_comment_with_its_entry() -> None:
     )
     text = _EDITOR.apply(_TEXT, [add])
 
-    text = _EDITOR.apply(text, [_op(SubmissionOpKind.move_entry, profile=0, entries=SubmissionList.items, index=0, to=1)])
+    text = _EDITOR.apply(
+        text, [_op(SubmissionOpKind.move_entry, profile=0, entries=SubmissionList.items, index=0, to=1)]
+    )
 
     items = _profiles(text)[0]["items"]
     assert [i["doc_id"] for i in items] == ["report", "proposal"]
@@ -323,7 +327,9 @@ def test__move_entry__keeps_the_comment_with_its_entry() -> None:
 
 
 def test__apply__existing_problem_does_not_block_other_edits() -> None:
-    broken = _TEXT.replace("          signatures: [author]\n", "          signatures: [author]\n          methods: wrong\n")
+    broken = _TEXT.replace(
+        "          signatures: [author]\n", "          signatures: [author]\n          methods: wrong\n"
+    )
     head = ProfileHead("topic", {"ru": "Заявка КП", "en": "Application"}, {"ru": "Заявка на тему", "en": "Topic"})
 
     text = _EDITOR.apply(broken, [_op(SubmissionOpKind.set_profile, profile=0, head=head)])
@@ -348,3 +354,16 @@ def test__apply__bad_when_is_refused() -> None:
 
     with pytest.raises(SubmissionEditError, match="when.person"):
         _EDITOR.apply(_TEXT, [op])
+
+
+def test__set_profile__unquoted_comma_text_stays_when_not_edited() -> None:
+    text = _TEXT.replace(
+        '      name:        { ru: "Защита", en: "Defence" }\n',
+        "      name:        { ru: Защита (КП, ВКР), en: Defence }\n",
+    )
+    head = ProfileHead("final", {"ru": "Защита (КП", "en": "Defence"}, {}, {"ru": "Обычно в июне", "en": "In June"})
+
+    changed = _EDITOR.apply(text, [_op(SubmissionOpKind.set_profile, profile=1, head=head)])
+
+    assert "      name:        { ru: Защита (КП, ВКР), en: Defence }\n" in changed
+    assert _profiles(changed)[1]["deadline_hint"] == {"ru": "Обычно в июне", "en": "In June"}
