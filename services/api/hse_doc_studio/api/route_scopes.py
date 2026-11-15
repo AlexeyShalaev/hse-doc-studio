@@ -299,6 +299,10 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/submission"): _A,
     ("PATCH", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/submission"): _A,
     ("POST", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/submission/routes"): _A,
+    # Срез T14: файлы правил проверок и `checks_version` формой
+    ("GET", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/checks"): _A,
+    ("PATCH", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/checks/files/{name}"): _A,
+    ("PUT", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/checks/config"): _A,
     ("GET", "/pack-studio/workspaces/{workspace_id}/previews/{build_id}"): _A,
     ("DELETE", "/pack-studio/workspaces/{workspace_id}/previews/{build_id}"): _A,
     ("GET", "/pack-studio/workspaces/{workspace_id}/previews/{build_id}/pdf"): _A,

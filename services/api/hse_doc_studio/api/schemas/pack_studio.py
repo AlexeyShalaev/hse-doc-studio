@@ -546,6 +546,8 @@ class StartPackPreviewRequest(StrictModel):
     example: str | None = Field(default=None, max_length=255)
     # Недостающие переключатели берутся из набора, затем по умолчанию.
     combination: dict[str, str] = Field(default_factory=dict, max_length=32)
+    # Прогнать правила проверок версии на собранном документе (срез T14): находки в `checks` сборки.
+    checks: bool = False
 
 
 class PackPreviewErrorBody(StrictModel):
@@ -553,6 +555,16 @@ class PackPreviewErrorBody(StrictModel):
     # `image_missing`, `docker_unavailable`, `no_runners`, `quota_exceeded`, ...).
     code: str
     detail: str | None
+
+
+class PackPreviewCheck(StrictModel):
+    """Находка проверки на сборке предпросмотра: правило, важность, текст и место в синтетическом проекте."""
+
+    rule_id: str
+    severity: str
+    message: str
+    file: str | None
+    line: int | None
 
 
 class PackPreviewBuildResponse(StrictModel):
@@ -578,6 +590,9 @@ class PackPreviewBuildResponse(StrictModel):
     source_file: str | None
     # Есть якоря мест подписей (`GET .../anchors`).
     has_anchors: bool
+    # Сборка с проверками правил версии (срез T14); `checks` находки удачной сборки, null: проверок не было.
+    with_checks: bool = False
+    checks: list[PackPreviewCheck] | None = None
 
 
 class PackPreviewStartResponse(StrictModel):

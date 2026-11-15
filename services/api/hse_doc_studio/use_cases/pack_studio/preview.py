@@ -27,10 +27,10 @@ from uuid import UUID, uuid4
 import structlog
 
 from hse_doc_studio.core.access.entities import Actor
-from hse_doc_studio.core.catalog import DocumentDefinition
+from hse_doc_studio.core.catalog import DocumentDefinition, TemplateVersion
 from hse_doc_studio.core.compile.errors import CompileSetupError
 from hse_doc_studio.core.compile.failure import PDF_MISSING, CompileFailure, failure_log_block
-from hse_doc_studio.core.enums import CompileStatus, EngineType
+from hse_doc_studio.core.enums import CheckEngine, CompileStatus, EngineType
 from hse_doc_studio.core.i18n import current_interface_language
 from hse_doc_studio.core.jobs.entities import CheckPlan, CompileJobPayload, CompileResult, JobResult, JobSpec, job_tags
 from hse_doc_studio.core.jobs.enums import JobKind, JobStatus
@@ -51,6 +51,7 @@ from hse_doc_studio.core.pack_studio.preview import (
     MaterializedDoc,
     MaterializeRequest,
     PreviewBuild,
+    PreviewCheck,
     PreviewError,
     PreviewExample,
     PreviewInputError,
@@ -70,9 +71,11 @@ from hse_doc_studio.core.pack_studio.preview import (
     synthetic_project,
 )
 from hse_doc_studio.core.pack_studio.protocols import IPackPreviewRenderer, IPreviewDispatcher, IPreviewStore
+from hse_doc_studio.core.services import CheckResolutionService
 from hse_doc_studio.core.signatures.anchors import BuildAnchors, decode_anchors
 from hse_doc_studio.core.signatures.dates import DISPLAY_ZONE
 from hse_doc_studio.core.uow import spawn_detached
+from hse_doc_studio.core.value_objects import CheckResult, ChecksOverride
 from hse_doc_studio.use_cases.compile.compile_job_hooks import compile_failure
 from hse_doc_studio.use_cases.pack_studio.workspaces import PackWorkspaceService, owner_of
 
@@ -109,6 +112,8 @@ class StartPreviewInput:
     documents: Sequence[str]
     example: str | None = None
     combination: Mapping[str, str] | None = None
+    # Прогнать правила проверок версии на собранном документе (срез T14, «Проверить на предпросмотре»).
+    checks: bool = False
 
 
 @dataclass(frozen=True)
@@ -165,6 +170,8 @@ class PackPreviewService:
         self._warnings: dict[UUID, tuple[str, ...]] = {}
         # Id инстанса документа сборки: у личного документа команды это `<def>--<slug>`.
         self._doc_ids: dict[UUID, str] = {}
+        # Правила проверок сборки «с проверками» (срез T14): решаются при постановке, как у сборки проекта.
+        self._check_plans: dict[UUID, CheckPlan] = {}
         self._descriptions: OrderedDict[str, VersionDescription] = OrderedDict()
         self._pruned_at = 0.0
         # Рендер и постановка идут в фоне: запрос отвечает сразу, ход виден опросом.
@@ -217,6 +224,7 @@ class PackPreviewService:
                 def_id=doc_def.id,
                 project=project,
                 engine=desc.version.engine_config.default.value,
+                checks=inp.checks,
             )
             draft = PreviewBuild(
                 id=uuid4(),
@@ -232,12 +240,15 @@ class PackPreviewService:
                 status=PreviewStatus.queued,
                 cached=False,
                 created_at=self._clock(),
+                with_checks=inp.checks,
             )
             planned = await self._plan(
                 draft,
                 MaterializeRequest(desc.pack_id, desc.template_id, desc.version.version, doc_def.id, project, draft.id),
             )
             if planned.request is not None:
+                if inp.checks:
+                    self._check_plans[planned.build.id] = check_plan(desc.version, doc_def)
                 self._spawn(actor, root, ref, planned.build, planned.request)
             builds.append(self._active.get(planned.build.id) or await self._stored(planned.build))
         return builds
@@ -362,6 +373,7 @@ class PackPreviewService:
                     pages=cached.pages,
                     source_file=cached.source_file or None,
                     has_anchors=cached.has_anchors,
+                    checks=cached.checks if draft.with_checks else None,
                 )
                 await asyncio.to_thread(self._store.save, done)
                 return _Planned(done, None)
@@ -411,7 +423,7 @@ class PackPreviewService:
         self._active[build.id] = replace(self._active[build.id], source_file=doc.source_file)
         self._warnings[build.id] = doc.warnings
         self._doc_ids[build.id] = doc.doc_id
-        spec = _spec(actor, build, doc, work)
+        spec = _spec(actor, build, doc, work, self._check_plans.get(build.id, _NO_CHECKS))
         try:
             await self._dispatcher.preflight(spec)
         except (CompileSetupError, NoRunnerAvailableError) as exc:
@@ -435,6 +447,7 @@ class PackPreviewService:
         log: str,
         *,
         pages: int | None = None,
+        checks: tuple[PreviewCheck, ...] | None = None,
     ) -> None:
         # Сборка остаётся в `_active`, пока итог не записан на диск: иначе `get()` в этом окне не находит её ни в
         # памяти, ни завершённой в хранилище и отвечает «прервана».
@@ -443,10 +456,11 @@ class PackPreviewService:
             return
         self._finishing.add(build_id)
         try:
-            await self._finish_active(build, status, error, log, pages=pages)
+            await self._finish_active(build, status, error, log, pages=pages, checks=checks)
         finally:
             self._active.pop(build_id, None)
             self._finishing.discard(build_id)
+            self._check_plans.pop(build_id, None)
 
     async def _finish_active(
         self,
@@ -456,6 +470,7 @@ class PackPreviewService:
         log: str,
         *,
         pages: int | None,
+        checks: tuple[PreviewCheck, ...] | None = None,
     ) -> None:
         build_id = build.id
         self._submitted.discard(build_id)
@@ -465,8 +480,9 @@ class PackPreviewService:
         text = "\n".join([*(f"[render] {w}" for w in warnings), log]).strip("\n") + "\n"
         has_anchors = False
         if status is PreviewStatus.succeeded:
+            found = (checks or ()) if build.with_checks else None
             kept = await asyncio.to_thread(
-                self._store.keep, build.key, build.id, build.source_file or "", doc_id, text, pages
+                self._store.keep, build.key, build.id, build.source_file or "", doc_id, text, pages, found
             )
             if kept is None:
                 status, error = PreviewStatus.failed, PreviewError(PDF_MISSING)
@@ -478,6 +494,7 @@ class PackPreviewService:
             error=error,
             pages=pages,
             has_anchors=has_anchors,
+            checks=((checks or ()) if build.with_checks else None) if status is PreviewStatus.succeeded else None,
             finished_at=self._clock(),
             started_at=build.started_at or self._clock(),
         )
@@ -512,7 +529,10 @@ class PackPreviewService:
     async def on_finished(self, build_id: UUID, result: JobResult, log: str) -> None:
         data = result.data if isinstance(result.data, CompileResult) else None
         if result.status is JobStatus.succeeded:
-            await self._finish(build_id, PreviewStatus.succeeded, None, log, pages=data.pages if data else None)
+            checks = tuple(_check_of(c) for c in data.check_results) if data is not None else ()
+            await self._finish(
+                build_id, PreviewStatus.succeeded, None, log, pages=data.pages if data else None, checks=checks
+            )
             return
         final = CompileStatus.cancelled if result.status is JobStatus.cancelled else CompileStatus.failure
         failure: CompileFailure = compile_failure(final, result, data)
@@ -534,7 +554,36 @@ class _PreviewHooks:
         await self._service.on_finished(spec.id, result, log)
 
 
-def _spec(actor: Actor, build: PreviewBuild, doc: MaterializedDoc, work: Path) -> JobSpec:
+def check_plan(version: TemplateVersion, doc_def: DocumentDefinition) -> CheckPlan:
+    """Правила версии для документа, как у сборки проекта без настроек проекта и человека (5.7): `applies_to`,
+    `checks_version` и переопределения документа пака. LanguageTool не нужен: внешний движок на предпросмотре
+    не гоняется, его правила пропускаются."""
+    resolved = CheckResolutionService().resolve(
+        rules=list(version.rules),
+        doc_id=doc_def.id,
+        version_cfg=version.checks_config,
+        doc_definition_checks=doc_def.checks,
+        project_override=ChecksOverride(),
+        doc_override=ChecksOverride(),
+        user_override=ChecksOverride(),
+    )
+    rules = tuple((rule, severity) for rule, severity in resolved if rule.engine is not CheckEngine.external)
+    ignored = frozenset(version.checks_config.disabled) | frozenset(doc_def.checks.disabled)
+    return CheckPlan(rules_with_severity=rules, ignored_rule_ids=ignored, needs_languagetool=False)
+
+
+def _check_of(result: CheckResult) -> PreviewCheck:
+    location = result.location
+    return PreviewCheck(
+        rule_id=result.rule_id,
+        severity=result.severity.value,
+        message=result.message,
+        file=location.file if location is not None else None,
+        line=location.line if location is not None else None,
+    )
+
+
+def _spec(actor: Actor, build: PreviewBuild, doc: MaterializedDoc, work: Path, plan: CheckPlan = _NO_CHECKS) -> JobSpec:
     payload = CompileJobPayload(
         doc_id=doc.doc_id,
         def_id=doc.def_id,
@@ -544,7 +593,7 @@ def _spec(actor: Actor, build: PreviewBuild, doc: MaterializedDoc, work: Path) -
         needs_compile=doc.needs_compile,
         custom_mode=False,
         default_passes=doc.default_passes,
-        check_plan=_NO_CHECKS,
+        check_plan=plan,
     )
     # Id задачи и «проекта» это id сборки: папка синтетического проекта называется так же (том предпросмотра).
     return JobSpec(

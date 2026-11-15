@@ -50,6 +50,7 @@ from hse_doc_studio.infra.pack_catalog.inspect import IsolatedRevisionInspector
 from hse_doc_studio.infra.pack_catalog.sources import JsonCatalogSourceRepository
 from hse_doc_studio.infra.pack_catalog.stage import RevisionStager
 from hse_doc_studio.infra.pack_catalog.store import PacksStore
+from hse_doc_studio.infra.pack_studio.checks_form import PackChecksFormEditor
 from hse_doc_studio.infra.pack_studio.hosting import HttpPackHosting
 from hse_doc_studio.infra.pack_studio.inspector import PackInspector
 from hse_doc_studio.infra.pack_studio.local_store import JsonPackWorkspaceRepository, LocalSectionStore
@@ -68,6 +69,7 @@ from hse_doc_studio.infra.pack_studio.yaml_edits import PackYamlEditor
 from hse_doc_studio.use_cases.git_sync.provider_resolver import ProviderResolver
 from hse_doc_studio.use_cases.pack_catalog.service import PackCatalogService
 from hse_doc_studio.use_cases.pack_studio.access import PackStudioAccess
+from hse_doc_studio.use_cases.pack_studio.checks_form import PackChecksFormService
 from hse_doc_studio.use_cases.pack_studio.files import PackFilesService
 from hse_doc_studio.use_cases.pack_studio.git import PackGitService
 from hse_doc_studio.use_cases.pack_studio.insight import PackInsightService
@@ -285,6 +287,10 @@ class PackStudioProvider(Provider):
     @provide
     def get_submission_service(self, files: PackFilesService, previews: PackPreviewService) -> PackSubmissionService:
         return PackSubmissionService(files, previews, PackSubmissionEditor())
+
+    @provide
+    def get_checks_form_service(self, files: PackFilesService) -> PackChecksFormService:
+        return PackChecksFormService(files, PackChecksFormEditor())
 
     @provide
     def get_catalog_service(

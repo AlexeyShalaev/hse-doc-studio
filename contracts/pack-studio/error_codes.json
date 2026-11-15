@@ -51,5 +51,6 @@
   "license_consent_required",
   "paths_outside_packs",
   "place_invalid",
-  "submission_invalid"
+  "submission_invalid",
+  "checks_invalid"
 ]

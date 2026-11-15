@@ -55,6 +55,7 @@ from hse_doc_studio.api.schemas.pack_studio import (
     PackOfficialRepo,
     PackOfficialResponse,
     PackPreviewBuildResponse,
+    PackPreviewCheck,
     PackPreviewDocument,
     PackPreviewErrorBody,
     PackPreviewExample,
@@ -675,6 +676,13 @@ def preview_build_response(build: PreviewBuild) -> PackPreviewBuildResponse:
         error=None if build.error is None else PackPreviewErrorBody(code=build.error.code, detail=build.error.detail),
         source_file=build.source_file,
         has_anchors=build.has_anchors,
+        with_checks=build.with_checks,
+        checks=None
+        if build.checks is None
+        else [
+            PackPreviewCheck(rule_id=c.rule_id, severity=c.severity, message=c.message, file=c.file, line=c.line)
+            for c in build.checks
+        ],
     )
 
 
@@ -710,7 +718,9 @@ async def start_preview(  # noqa: PLR0913 — путь версии и тело
         pack,
         template,
         version,
-        StartPreviewInput(documents=body.documents, example=body.example, combination=body.combination),
+        StartPreviewInput(
+            documents=body.documents, example=body.example, combination=body.combination, checks=body.checks
+        ),
     )
     if all(build.status.is_terminal for build in builds):
         response.status_code = 200
