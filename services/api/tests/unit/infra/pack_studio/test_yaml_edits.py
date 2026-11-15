@@ -6,7 +6,14 @@ from datetime import date
 
 import pytest
 import yaml
-from hse_doc_studio.infra.pack_studio.yaml_edits import YamlEditError, delete, insert_item, move_item, set_value
+from hse_doc_studio.infra.pack_studio.yaml_edits import (
+    YamlEditError,
+    delete,
+    insert_item,
+    move_item,
+    rename_key,
+    set_value,
+)
 
 DOC = """\
 # Шапка файла
@@ -233,3 +240,29 @@ def test_bad_edits_raise(call: object) -> None:
 
 def test_empty_document_gets_a_key() -> None:
     assert set_value("", ("id",), "x") == "id: x\n"
+
+
+def test__rename_key__in_place_with_value_and_comments() -> None:
+    out = rename_key(DOC, ("fields", "city"), "town")
+
+    assert out == DOC.replace("  city:\n", "  town:\n")
+    assert list(yaml.safe_load(out)["fields"]) == ["year", "town"]
+
+
+def test__rename_key__in_a_flow_mapping() -> None:
+    out = rename_key(DOC, ("fields", "year", "label", "en"), "de")
+
+    assert "label:       { ru: Учебный год, de: Year }" in out
+
+
+def test__rename_key__taken_or_missing_key_refused() -> None:
+    with pytest.raises(YamlEditError):
+        rename_key(DOC, ("fields", "city"), "year")
+    with pytest.raises(YamlEditError):
+        rename_key(DOC, ("fields", "village"), "town")
+    with pytest.raises(YamlEditError):
+        rename_key(DOC, ("items", 0), "x")  # type: ignore[arg-type]
+
+
+def test__rename_key__same_name_changes_nothing() -> None:
+    assert rename_key(DOC, ("fields", "city"), "city") == DOC

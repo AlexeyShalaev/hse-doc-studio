@@ -295,6 +295,11 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     # Срез T9: места подписей и метки даты версии на PDF предпросмотра
     ("GET", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/signatures"): _A,
     ("PATCH", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/signatures"): _A,
+    # Срезы T11 и T12: формы версии (модель, правки манифестов, операции), заготовки документов
+    ("GET", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/model"): _A,
+    ("PATCH", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/model"): _A,
+    ("POST", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/model/actions"): _A,
+    ("GET", "/pack-studio/workspaces/{workspace_id}/doc-library"): _A,
     # Срез T13: профили сдачи, пункты и порядок маршрута формой, «Маршрут в этой комбинации»
     ("GET", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/submission"): _A,
     ("PATCH", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/submission"): _A,

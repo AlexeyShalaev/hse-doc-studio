@@ -21,7 +21,6 @@ from hse_doc_studio.core.meta_usage import (
     IncludeFields,
     input_targets,
     parse_include,
-    printed_keys,
     referenced_keys,
     used_macros,
 )
@@ -89,28 +88,63 @@ def list_project_fields(project: Project, version: TemplateVersion, files_dir: P
     return fields
 
 
-def _printed_by_document(
+@dataclass(frozen=True)
+class DocumentPrints:
+    """Как документ печатает поля: макросами инклудов, строками инклуда на весь документ и прямо из исходника."""
+
+    # Ключ поля в макросы подключённых инклудов, которые его печатают и которые документ использует.
+    macros: dict[str, frozenset[str]]
+    # Поля строк инклуда вне макросов: действуют на весь документ (шрифты).
+    whole: frozenset[str]
+    # Поля, на которые исходник документа ссылается сам (Jinja при создании проекта).
+    direct: frozenset[str]
+
+    @property
+    def keys(self) -> set[str]:
+        return set(self.macros) | set(self.whole) | set(self.direct)
+
+
+def field_prints_by_document(
     version: TemplateVersion, documents: Iterable[DocumentDefinition], files_dir: Path
-) -> dict[str, set[str]]:
+) -> dict[str, DocumentPrints]:
+    """Где печатается каждое поле: по документам, с макросами `\\hse...`, через которые оно туда попадает."""
     includes: dict[str, IncludeFields] = {}
     for include in version.dynamic_includes:
         path = files_dir / include.template
         if path.is_file():
             includes[_stem(include.output)] = parse_include(path.read_text(encoding="utf-8", errors="replace"))
-    result: dict[str, set[str]] = {}
-    for doc in documents:
-        sources = [s for s in (doc.source_file, *(v.source_file for v in doc.variants)) if s]
-        macros: set[str] = set()
-        inputs: set[str] = set()
-        text_keys: set[str] = set()
-        for rel, text in _document_sources(files_dir, sources, set(includes)):
-            macros |= used_macros(text)
-            for target in input_targets(text):
-                inputs.add(_stem(posixpath.normpath(posixpath.join(posixpath.dirname(rel), target))))
-            # Исходник с Jinja (рендерится при создании проекта) ссылается на поле напрямую.
-            text_keys |= referenced_keys(text)
-        result[doc.id] = printed_keys(includes, macros, inputs, text_keys)
-    return result
+    return {doc.id: _document_prints(doc, files_dir, includes) for doc in documents}
+
+
+def _document_prints(doc: DocumentDefinition, files_dir: Path, includes: dict[str, IncludeFields]) -> DocumentPrints:
+    sources = [s for s in (doc.source_file, *(v.source_file for v in doc.variants)) if s]
+    macros: set[str] = set()
+    inputs: set[str] = set()
+    text_keys: set[str] = set()
+    for rel, text in _document_sources(files_dir, sources, set(includes)):
+        macros |= used_macros(text)
+        for target in input_targets(text):
+            inputs.add(_stem(posixpath.normpath(posixpath.join(posixpath.dirname(rel), target))))
+        # Исходник с Jinja (рендерится при создании проекта) ссылается на поле напрямую.
+        text_keys |= referenced_keys(text)
+    by_key: dict[str, set[str]] = {}
+    whole: set[str] = set()
+    for parsed in (parsed for output, parsed in includes.items() if output in inputs):
+        whole |= parsed.whole
+        for key, names in parsed.macros.items():
+            if names & macros:
+                by_key.setdefault(key, set()).update(names & macros)
+    return DocumentPrints(
+        macros={key: frozenset(names) for key, names in by_key.items()},
+        whole=frozenset(whole),
+        direct=frozenset(text_keys),
+    )
+
+
+def _printed_by_document(
+    version: TemplateVersion, documents: Iterable[DocumentDefinition], files_dir: Path
+) -> dict[str, set[str]]:
+    return {doc_id: prints.keys for doc_id, prints in field_prints_by_document(version, documents, files_dir).items()}
 
 
 def _document_sources(files_dir: Path, sources: list[str], include_outputs: set[str]) -> list[tuple[str, str]]:

@@ -68,16 +68,33 @@ export type PackFileEditorProps = {
    */
   contentRevision?: number | undefined;
   /**
-   * Форма поверх манифеста (template-studio.md, 5.0; срезы T11-T14): вкладка «Форма» рядом с
-   * «Исходником». Без неё вкладка выключена. Форма пишет файл сама, редактор кода остаётся
-   * открытым под ней со своими несохранёнными правками.
+   * Вкладка «Форма» поверх YAML (срезы T11 и дальше): правка структуры пака
+   * мышкой. Без неё у манифеста стоит выключенная вкладка.
    */
   form?: ReactNode;
 };
 
+type SidePane = "problems" | "preview";
 type MainView = "source" | "form";
 
-type SidePane = "problems" | "preview";
+// Последний выбранный вид манифеста: форма или исходник (на вкладку браузера).
+const VIEW_KEY = "pack-studio:manifest-view";
+
+const readView = (): MainView => {
+  try {
+    return sessionStorage.getItem(VIEW_KEY) === "form" ? "form" : "source";
+  } catch {
+    return "source";
+  }
+};
+
+const rememberView = (view: MainView) => {
+  try {
+    sessionStorage.setItem(VIEW_KEY, view);
+  } catch {
+    // Хранилище недоступно: вид просто не запомнится.
+  }
+};
 
 /** Манифесты, у которых будет форма поверх YAML (5.0): пока открыт только «Исходник». */
 const hasForm = (path: string): boolean =>
@@ -356,8 +373,17 @@ export const PackFileEditor = ({
   // Подсказки автодополнения: редактор читает их из кэша запросов.
   usePackHints(workspaceId, versionDir);
   const [pane, setPane] = useState<SidePane>("problems");
-  const [view, setView] = useState<MainView>("source");
-  const showForm = view === "form" && form !== undefined && form !== null;
+  const [view, setView] = useState<MainView>(readView);
+  // Несохранённая правка исходника: форма писала бы мимо неё, поэтому вкладка формы закрыта.
+  const [sourceDirty, setSourceDirty] = useState(false);
+  const trackDirty = useCallback(
+    (dirty: boolean) => {
+      setSourceDirty(dirty);
+      onDirtyChange?.(dirty);
+    },
+    [onDirtyChange],
+  );
+  const showForm = form !== undefined && view === "form";
   // Пришли находки перед отправкой: «Проблемы» выходят вперёд (состояние от пропа без эффекта).
   const [seenFocus, setSeenFocus] = useState(problemsFocus);
   if (problemsFocus !== seenFocus) {
@@ -401,7 +427,7 @@ export const PackFileEditor = ({
         diagnostics={diagnostics}
         reveal={reveal}
         onSaved={onSaved}
-        onDirtyChange={onDirtyChange}
+        onDirtyChange={trackDirty}
         actions={actions}
       />
     );
@@ -415,7 +441,7 @@ export const PackFileEditor = ({
       data-testid="pack-file-editor"
     >
       <div className="ps-editor-center">
-        {hasForm(path) && (
+        {(hasForm(path) || form !== undefined) && (
           <div
             className="ps-view-tabs"
             role="tablist"
@@ -426,42 +452,39 @@ export const PackFileEditor = ({
               role="tab"
               aria-selected={!showForm}
               className={clsx("ps-view-tab", !showForm && "active")}
+              data-testid="view-tab-source"
               onClick={() => {
                 setView("source");
+                rememberView("source");
               }}
-              data-testid="view-tab-source"
             >
               {t("editor.source")}
             </button>
-            {/* Формы поверх YAML: срезы T11-T14; манифест без своей формы её не получает. */}
+            {/* Формы поверх YAML: манифест версии (T11, T12), остальное в T13 и T14. */}
             <button
               type="button"
               role="tab"
               aria-selected={showForm}
               className={clsx("ps-view-tab", showForm && "active")}
-              disabled={form === undefined || form === null}
+              disabled={form === undefined || (sourceDirty && !showForm)}
               title={
-                form === undefined || form === null
+                form === undefined
                   ? t("editor.formSoon")
-                  : undefined
+                  : sourceDirty && !showForm
+                    ? t("editor.formDirty")
+                    : undefined
               }
+              data-testid="view-tab-form"
               onClick={() => {
                 setView("form");
+                rememberView("form");
               }}
-              data-testid="view-tab-form"
             >
               {t("editor.form")}
             </button>
           </div>
         )}
-        {showForm && <div className="ps-editor-form">{form}</div>}
-        <div
-          className="ps-editor-source"
-          hidden={showForm}
-          data-testid="view-source"
-        >
-          {main}
-        </div>
+        {showForm ? form : main}
       </div>
       <aside className="ps-side" aria-label={t("problems.title")}>
         <div className="ps-view-tabs" role="tablist">

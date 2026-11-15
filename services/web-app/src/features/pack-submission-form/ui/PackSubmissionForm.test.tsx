@@ -64,7 +64,7 @@ const mount = (data: PackSubmission = DATA) => {
       <PackSubmissionForm
         workspaceId={WS}
         path={PATH}
-        lintEpoch={0}
+        revision={DATA.etag}
         onSaved={onSaved}
       />
     </QueryClientProvider>,

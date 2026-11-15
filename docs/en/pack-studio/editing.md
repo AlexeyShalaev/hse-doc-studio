@@ -22,17 +22,17 @@ tags:
 - **Save** writes the file. **Discard changes** brings back the saved text. The Studio will not let you leave a file with unsaved edits silently.
 - If the file changed since you opened it (another tab, an edit in the folder), the Studio offers **Take their version**, **Keep mine** or **Compare**.
 - Completion: in Jinja templates (`{{ }}`, `((* *))`) the context variables, the form fields `project.meta.<key>` and the pack filters; in the version's LaTeX the `\hse...` macros and the fields they print.
-- Manifests (`version.yaml`, `doc.yaml`) have the **Source** and **Form** tabs. For now `version.yaml` has a form (checkpoints and the signing order, below); other manifests have only "Source".
+- Manifests (`version.yaml`, `doc.yaml`) have the **Source** and **Form** tabs. `version.yaml` has a form; other manifests have only "Source" for now.
 
-<!-- T11, T12, T14 (forms): add fields and groups, questionnaires, documents, checks to the "Forms" section below. -->
+<!-- T11, T12, T14 (forms): add fields and groups, questionnaires, documents, checks to the "Forms" section below, next to "Submission and signing". -->
 
 ## Forms { #forms }
 
-A form edits the same file as "Source" and the same way: every change goes to the YAML right away as a targeted edit (comments, alignment and keys the form does not know stay), then the checks and the version class are recalculated as after saving in the editor. A value the template would not understand is not written, and the form shows why. Unsaved edits in "Source" are not lost when you switch to the form.
+A form edits the same file as "Source" and the same way: every change goes to the YAML right away as a targeted edit (comments, alignment and keys the form does not know stay), then the checks and the version class are recalculated as after saving in the editor. A value the template would not understand is not written, and the form shows why. While "Source" has unsaved edits, the Form tab is closed: save or discard them first.
 
-### Checkpoints and the signing order { #submission }
+### Submission and signing { #submission }
 
-The `version.yaml` form:
+The **Submission and signing** section of the `version.yaml` form:
 
 - **Version signing order** (`signatures.route`): steps, within a step people sign in parallel. Signatures are dragged between steps, the same is available with the **With previous** and **Separate** buttons. Without an own order the built-in one applies: the authors, then the supervisor and the consultant, then the academic supervisor.
 - **Checkpoints** as cards: identifier, name, description and the **deadline hint** (`deadline_hint`, both languages, up to 200 characters, no concrete dates: the form warns right away). A checkpoint can be added, moved and deleted.

@@ -184,6 +184,12 @@ export default defineConfig(({ mode }) => {
             if (packStudio) {
               return `assets/locale-packStudio-${packStudio[1] ?? ""}-[hash].js`;
             }
+            // Словарь форм Студии шаблонов: грузится вместе с чанком форм.
+            const packForms =
+              /\/locales\/([a-z]{2})\/packForms\/packForms\.json$/.exec(id);
+            if (packForms) {
+              return `assets/locale-packForms-${packForms[1] ?? ""}-[hash].js`;
+            }
             // Тексты редких окон страницы подписанта: грузятся, когда окно открывают.
             const signingRare =
               /\/locales\/([a-z]{2})\/signing\/rare\.json$/.exec(id);

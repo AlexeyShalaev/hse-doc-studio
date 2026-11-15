@@ -35,6 +35,7 @@ from hse_doc_studio.core.pack_studio.git_flow import (
     RepoPermissions,
     WorkGitStatus,
 )
+from hse_doc_studio.core.pack_studio.model import FileChange, LibraryDocument, ModelAction, VersionModel
 from hse_doc_studio.core.pack_studio.paths import VersionRef
 from hse_doc_studio.core.pack_studio.places import PlaceOp, VersionPlaces
 from hse_doc_studio.core.pack_studio.preview import (
@@ -256,6 +257,29 @@ class IPackPlaces(Protocol):
     def apply(
         self, text: str, ops: Sequence[PlaceOp], *, document: str | None, anchors: BuildAnchors | None
     ) -> str: ...
+
+
+class IPackVersionModel(Protocol):
+    """Модель версии для форм (срезы T11 и T12): манифесты как данные, файлы документов, где печатается поле.
+
+    Пути от папки паков `root` уже прошли проверку; `version_dir` это каталог версии. Невыполнимая правка или
+    операция это `ModelEditError`, нечитаемый манифест версии `ValueError`.
+    """
+
+    def describe(self, root: Path, version_dir: str) -> VersionModel: ...
+
+    def check_edit(self, root: Path, version_dir: str, file: str, before: str, after: str) -> None:
+        """Правка `file` (от каталога версии: `version.yaml`, `files/<id>/doc.yaml`) не добавила находок лоадера
+        и схемы; иначе `ModelEditError` с первой новой находкой."""
+        ...
+
+    def plan(self, root: Path, version_dir: str, action: ModelAction) -> tuple[FileChange, ...]:
+        """Записи и удаления файлов операции; сами файлы не трогает."""
+        ...
+
+    def library(self, root: Path) -> tuple[LibraryDocument, ...]:
+        """Документы-заготовки: последняя версия каждого шаблона пространства."""
+        ...
 
 
 class IPackSubmission(Protocol):

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, SlidersHorizontal } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
@@ -35,8 +35,13 @@ export type PackSubmissionFormProps = {
   workspaceId: string;
   /** `version.yaml` версии. */
   path: string;
-  /** Меняется после каждой записи в пространстве: проверки и маршрут считаются заново. */
-  lintEpoch: number;
+  /**
+   * Версия манифеста, которую видит общая форма версии (ETag модели T11): другой раздел формы записал
+   * файл, и точки перечитываются. Ключ проверок и маршрута.
+   */
+  revision: string;
+  /** Название документа из модели версии; без него id. */
+  docName?: ((doc: string) => string | null) | undefined;
   /** Правка записана в манифест (`path`). */
   onSaved: (path: string) => void;
 };
@@ -185,7 +190,8 @@ const NewProfile = ({
 export const PackSubmissionForm = ({
   workspaceId,
   path,
-  lintEpoch,
+  revision,
+  docName: modelDocName,
   onSaved,
 }: PackSubmissionFormProps) => {
   const { t, i18n } = useTranslation("packStudio");
@@ -193,7 +199,7 @@ export const PackSubmissionForm = ({
   const ref = versionRef ?? { pack: "", template: "", version: "" };
   const query = usePackSubmission(workspaceId, versionRef);
   const patch = usePatchPackSubmission(workspaceId, ref);
-  const lint = usePackLint(workspaceId, lintTargetOf(path), String(lintEpoch));
+  const lint = usePackLint(workspaceId, lintTargetOf(path), revision);
   const options = usePackPreviewOptions(workspaceId, ref);
   const { selection } = usePreviewSelection(selectionKey(workspaceId, ref));
   const [error, setError] = useState<unknown>(null);
@@ -214,10 +220,18 @@ export const PackSubmissionForm = ({
   const routes = usePackSubmissionRoutes(
     workspaceId,
     versionRef,
-    `${String(lintEpoch)}:${data?.etag ?? ""}`,
+    data?.etag ?? revision,
     { example: exampleId, combination },
     data !== undefined && options.data !== undefined,
   );
+
+  // Другой раздел формы записал манифест: точки перечитываются (ETag модели больше не совпадает).
+  const behind =
+    data !== undefined && data.etag !== revision && !patch.isPending;
+  const { refetch } = query;
+  useEffect(() => {
+    if (behind) void refetch();
+  }, [behind, revision, refetch]);
 
   const apply = useCallback(
     (ops: PackSubmissionOp[]) => {
@@ -277,6 +291,8 @@ export const PackSubmissionForm = ({
     return found ? pickLocalized(found.label, i18n.language, slot) : slot;
   };
   const docName = (doc: string) => {
+    const fromModel = modelDocName?.(doc);
+    if (fromModel) return fromModel;
     const found = options.data?.documents.find((d) => d.id === doc);
     return found ? pickLocalized(found.name, i18n.language, doc) : doc;
   };

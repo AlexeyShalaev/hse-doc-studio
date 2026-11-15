@@ -282,6 +282,8 @@ export const usePackSubmission = (id: string, ref: PackVersionRef | null) =>
 export const usePatchPackSubmission = (id: string, ref: PackVersionRef) => {
   const client = useQueryClient();
   return useMutation({
+    // Та же очередь, что у правок формы версии (T11): записи манифеста идут по одной.
+    scope: { id: `pack-model:${id}` },
     mutationFn: ({
       body,
       etag,
@@ -291,6 +293,10 @@ export const usePatchPackSubmission = (id: string, ref: PackVersionRef) => {
     }) => packSubmissionApi.patch(id, ref, body, etag),
     onSuccess: (data) => {
       client.setQueryData(packSubmissionKeys.of(id, ref), data);
+      // Модель общей формы версии берёт новый ETag манифеста: её следующая правка не упрётся в «файл изменился».
+      void client.invalidateQueries({
+        queryKey: packStudioKeys.model(id, ref),
+      });
       void client.invalidateQueries({
         queryKey: packStudioKeys.file(id, data.path),
       });
