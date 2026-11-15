@@ -67,6 +67,9 @@ _SCHEMAS: dict[str, Any] = {
     "PackServiceAccessCheck": s.PackServiceAccessCheckResponse,
     "PackStudioOfficialAdmin": s.PackStudioOfficialAdminResponse,
     "UpdatePackStudioOfficialRequest": s.UpdatePackStudioOfficialRequest,
+    # Срез T9: места подписей и метки даты на PDF предпросмотра
+    "PackSignatures": s.PackSignaturesResponse,
+    "PackSignaturesPatchRequest": s.PackSignaturesPatchRequest,
 }
 
 

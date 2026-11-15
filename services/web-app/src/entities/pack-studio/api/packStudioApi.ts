@@ -21,6 +21,7 @@ import {
   PackVersionOptionsSchema,
   PackVersionStateSchema,
   PackServiceAccessListSchema,
+  PackSignaturesSchema,
   PackServiceAccessSchema,
   PackStudioAdminSchema,
   PackStudioGrantSchema,
@@ -57,6 +58,8 @@ import {
   type PackVersionOptions,
   type PackVersionState,
   type PackServiceAccess,
+  type PackSignatures,
+  type PackSignaturesPatchRequest,
   type PackReadOnlyReason,
   type PackStudioAdmin,
   type PackStudioGrant,
@@ -93,6 +96,8 @@ const versionPath = (id: string, ref: PackVersionRef) =>
   `${ws(id)}/versions/${enc(ref.pack)}/${enc(ref.template)}/${enc(ref.version)}`;
 const templateVersions = (id: string, pack: string, template: string) =>
   `${ws(id)}/templates/${enc(pack)}/${enc(template)}/versions`;
+const versionSignatures = (id: string, ref: PackVersionRef) =>
+  `${ws(id)}/versions/${enc(ref.pack)}/${enc(ref.template)}/${enc(ref.version)}/signatures`;
 const previewBuild = (id: string, buildId: string) =>
   `${ws(id)}/previews/${enc(buildId)}`;
 
@@ -342,6 +347,31 @@ export const packStudioApi = {
       .then(parseResp(PackReleaseSchema)),
 
   // Предпросмотр (срез T7): варианты версии, сборка, опрос, отмена, журнал.
+  /** Места подписей версии (срез T9); с `buildId` рамки документа сборки по её якорям. */
+  signatures: (
+    id: string,
+    ref: PackVersionRef,
+    buildId: string | null,
+  ): Promise<PackSignatures> =>
+    apiClient
+      .get(versionSignatures(id, ref), {
+        ...quiet,
+        params: buildId ? { build_id: buildId } : {},
+      })
+      .then(parseResp(PackSignaturesSchema)),
+  /** Правки мест с `If-Match` по ETag `version.yaml`: весь набор или ничего. */
+  patchSignatures: (
+    id: string,
+    ref: PackVersionRef,
+    body: PackSignaturesPatchRequest,
+    ifMatch: string | null,
+  ): Promise<PackSignatures> =>
+    apiClient
+      .patch(versionSignatures(id, ref), body, {
+        ...quiet,
+        headers: ifMatch ? { "If-Match": ifMatch } : {},
+      })
+      .then(parseResp(PackSignaturesSchema)),
   previewOptions: (
     id: string,
     ref: PackVersionRef,

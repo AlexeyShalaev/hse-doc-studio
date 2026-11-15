@@ -533,5 +533,52 @@
       "done": "Edits moved to {{version}}",
       "notRestored": "The released version folder still has the edits: return it to the release by hand."
     }
+  },
+  "places": {
+    "title": "Signature places",
+    "modes": "Build view",
+    "modePdf": "PDF",
+    "wide": "Full screen",
+    "defaultFrame": "default",
+    "readOnly": "This version is released: places are read only. Edit them in a draft version.",
+    "hintAnchors": "Drag a box to set a place. The build has template lines: a new place snaps to the slot line, a place on a line moves relative to it.",
+    "hintNoAnchors": "Drag a box to set a place. This build has no template lines: places on lines stand at their fallback places, and you move those.",
+    "aspect": "The box is shown at 3:1. In a project the box height follows the signature picture.",
+    "stale": "The version manifest changed, places are reloaded. Repeat the edit.",
+    "noSlots": "No catalog slot applies to this document.",
+    "others_one": "{{count}} more slot of the version does not apply to the document",
+    "others_other": "{{count}} more slots of the version do not apply to the document",
+    "appliesTo": "documents: {{docs}}",
+    "kind": {
+      "place": "Own place of the document",
+      "default": "Default place"
+    },
+    "binding": {
+      "line": "On line {{anchor}}",
+      "fallback": "Fallback of line {{anchor}}",
+      "missing": "Line {{anchor}} is not in this build",
+      "mm": "In millimetres"
+    },
+    "perAuthor": "Per author",
+    "required": "Required",
+    "where": "Page {{page}}, x {{x}} mm, y {{y}} mm, width {{width}} mm",
+    "noBox": "No place in this build.",
+    "jump": "Go to page",
+    "placeHere": "Place on page {{page}}",
+    "makeDefault": "Make it the default place",
+    "makeDefaultHint": "The place of the document becomes the slot place for every document without its own place.",
+    "remove": "Remove the document place",
+    "removeHint": "The document gets the default place of the slot.",
+    "bind": "Snap to line",
+    "bindHint": "The place stands relative to the template line and survives another layout.",
+    "unbind": "Unsnap from line",
+    "unbindHint": "The place stays where it is now, in millimetres.",
+    "defaultPlace": "Default: {{place}}.",
+    "defaultLoader": "The version has no default place of its own.",
+    "entryMm": "page {{page}}, x {{x}} mm, y {{y}} mm, width {{width}} mm",
+    "entryAnchor": "on line {{anchor}}",
+    "dateMissing": "Mark on line {{anchor}}: the line is not in this build.",
+    "dateRemove": "Remove the mark",
+    "dateLines": "Mark on a date line:"
   }
 }

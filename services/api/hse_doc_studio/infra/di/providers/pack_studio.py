@@ -46,6 +46,7 @@ from hse_doc_studio.core.vcs.protocols import ICommitAuthorProvider
 from hse_doc_studio.infra.pack_studio.hosting import HttpPackHosting
 from hse_doc_studio.infra.pack_studio.inspector import PackInspector
 from hse_doc_studio.infra.pack_studio.local_store import JsonPackWorkspaceRepository, LocalSectionStore
+from hse_doc_studio.infra.pack_studio.places import PackPlacesEditor
 from hse_doc_studio.infra.pack_studio.plumbing import PackGitPlumbing
 from hse_doc_studio.infra.pack_studio.preview_dispatch import PreviewJobDispatcher
 from hse_doc_studio.infra.pack_studio.preview_renderer import PackPreviewRenderer, PreviewRenderLimits
@@ -62,6 +63,7 @@ from hse_doc_studio.use_cases.pack_studio.files import PackFilesService
 from hse_doc_studio.use_cases.pack_studio.git import PackGitService
 from hse_doc_studio.use_cases.pack_studio.insight import PackInsightService
 from hse_doc_studio.use_cases.pack_studio.official import OfficialPacks
+from hse_doc_studio.use_cases.pack_studio.places import PackPlacesService
 from hse_doc_studio.use_cases.pack_studio.preview import PackPreviewService, PreviewLimits
 from hse_doc_studio.use_cases.pack_studio.versions import PackVersionService
 from hse_doc_studio.use_cases.pack_studio.workspaces import PackWorkspaceService, WorkspaceTasks
@@ -275,6 +277,10 @@ class PackStudioProvider(Provider):
     ) -> PackPreviewService:
         limits = PreviewLimits(max_concurrent=settings.pack_studio.preview_max_concurrent)
         return PackPreviewService(workspaces, renderer, store, dispatcher, limits=limits)
+
+    @provide
+    def get_places_service(self, files: PackFilesService, previews: PackPreviewService) -> PackPlacesService:
+        return PackPlacesService(files, previews, PackPlacesEditor())
 
     @staticmethod
     def build_service(  # noqa: PLR0913 — те же порты, что у провайдера

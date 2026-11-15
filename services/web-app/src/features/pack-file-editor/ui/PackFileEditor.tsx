@@ -62,6 +62,11 @@ export type PackFileEditorProps = {
   onDismissGate?: (() => void) | undefined;
   /** Меняется, когда «Проблемы» нужно показать (пришли находки перед отправкой). */
   problemsFocus?: number | undefined;
+  /**
+   * Меняется, когда файл на диске переписали мимо редактора (места подписей): редактор открывает его
+   * заново, а вкладка предпросмотра рядом остаётся как была.
+   */
+  contentRevision?: number | undefined;
 };
 
 type SidePane = "problems" | "preview";
@@ -330,6 +335,7 @@ export const PackFileEditor = ({
   gate,
   onDismissGate,
   problemsFocus,
+  contentRevision = 0,
 }: PackFileEditorProps) => {
   const { t } = useTranslation("packStudio");
   const phone = useIsPhoneWidth();
@@ -378,7 +384,7 @@ export const PackFileEditor = ({
   } else {
     main = (
       <LoadedEditor
-        key={path}
+        key={`${path}:${String(contentRevision)}`}
         workspaceId={workspaceId}
         file={file.data}
         diagnostics={diagnostics}

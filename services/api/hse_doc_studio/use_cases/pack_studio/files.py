@@ -12,7 +12,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -106,6 +106,16 @@ class PackFilesService:
     async def patch_yaml(
         self, actor: Actor, workspace_id: UUID, raw_path: str, ops: Sequence[YamlOp], if_match: str | None
     ) -> WrittenFile:
+        return await self.edit_yaml(actor, workspace_id, raw_path, lambda text: _apply(self._yaml, text, ops), if_match)
+
+    async def edit_yaml(
+        self, actor: Actor, workspace_id: UUID, raw_path: str, edit: Callable[[str], str], if_match: str | None
+    ) -> WrittenFile:
+        """Правка текста YAML под замком пространства: проверка версии, защита выпущенных, запись, если текст другой.
+
+        `edit` получает текущий текст и отдаёт новый (точечные правки, места подписей); его `PackStudioError` уходит
+        как есть, файл не меняется.
+        """
         path = validate_rel_path(raw_path)
         if not is_yaml(path):
             raise PackStudioError(PackStudioErrorCode.not_yaml)
@@ -119,7 +129,7 @@ class PackFilesService:
                 text = current.decode("utf-8")
             except UnicodeDecodeError:
                 raise PackStudioError(PackStudioErrorCode.not_yaml) from None
-            edited = _apply(self._yaml, text, ops)
+            edited = edit(text)
             data = edited.encode("utf-8")
             self._check_size(len(data))
             if data != current:

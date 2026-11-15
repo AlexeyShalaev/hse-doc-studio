@@ -34,6 +34,8 @@ import {
   PackRenumberRequestSchema,
   PackServiceAccessListSchema,
   PackServiceAccessSchema,
+  PackSignaturesPatchRequestSchema,
+  PackSignaturesSchema,
   PackStartOverRequestSchema,
   PackStudioAdminSchema,
   PackStudioErrorBodySchema,
@@ -121,6 +123,8 @@ const SCHEMAS: Record<string, ZodType> = {
   PackServiceAccessCheck: PackServiceAccessCheckSchema,
   PackStudioOfficialAdmin: PackStudioOfficialAdminSchema,
   UpdatePackStudioOfficialRequest: UpdatePackStudioOfficialRequestSchema,
+  PackSignatures: PackSignaturesSchema,
+  PackSignaturesPatchRequest: PackSignaturesPatchRequestSchema,
 };
 
 const readJson = (path: string): unknown =>

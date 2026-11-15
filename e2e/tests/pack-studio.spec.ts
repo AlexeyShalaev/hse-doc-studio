@@ -416,6 +416,98 @@ const mockWorkspaces = async (page: Page): Promise<Fake> => {
   return fake;
 };
 
+/** Одностраничный A4 для просмотрщика: pdf.js читает его без сервера, строка руководителя на 110 x 145 мм. */
+const onePagePdf = (): string => {
+  const mm = 72 / 25.4;
+  const text = (x: number, y: number, size: number, body: string) =>
+    `BT /F1 ${String(size)} Tf ${(x * mm).toFixed(1)} ${(842 - y * mm).toFixed(1)} Td (${body}) Tj ET`;
+  const content = [text(70, 30, 14, "REPORT"), text(25, 132, 10, "Supervisor"), text(110, 145, 8, "____________")].join("\n");
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [4 0 R] /Count 1 >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>",
+    `<< /Length ${String(content.length)} >>\nstream\n${content}\nendstream`,
+  ];
+  let body = "%PDF-1.4\n";
+  const offsets: number[] = [];
+  objects.forEach((object, index) => {
+    offsets.push(body.length);
+    body += `${String(index + 1)} 0 obj\n${object}\nendobj\n`;
+  });
+  const xref = body.length;
+  body += `xref\n0 ${String(objects.length + 1)}\n0000000000 65535 f \n`;
+  for (const offset of offsets) body += `${String(offset).padStart(10, "0")} 00000 n \n`;
+  body += `trailer\n<< /Size ${String(objects.length + 1)} /Root 1 0 R >>\nstartxref\n${String(xref)}\n%%EOF\n`;
+  return body;
+};
+
+const PREVIEW_DONE = {
+  ...PREVIEW_FAILED,
+  id: "b2",
+  key: "k2",
+  status: "succeeded",
+  pages: 1,
+  error: null,
+  source_file: "report/report.tex",
+};
+
+/** Места подписей версии (срез T9): руководитель на месте по умолчанию, отчёт собран без якорей. */
+const signatures = (etag: string, place: Record<string, unknown> | null) => ({
+  workspace_id: WS,
+  pack: "hse-cs-sse",
+  template: "coursework",
+  version: "2026.1.6",
+  path: MANIFEST,
+  etag,
+  read_only: null,
+  documents: ["report"],
+  build: { id: "b2", document: "report", anchors_known: false, sign_anchors: [], date_anchors: [] },
+  slots: [
+    {
+      id: "supervisor",
+      label: { ru: "Научный руководитель", en: "Supervisor" },
+      applies_to: ["report"],
+      per_author: false,
+      required: false,
+      default_place: { source: "mm", page: 1, x_mm: 110, y_mm: 130, width_mm: 40 },
+      default_set: true,
+      places: place ? { report: { source: "mm", ...place } } : {},
+      dates: {},
+      document: {
+        kind: place ? "place" : "default",
+        entry: { source: "mm", page: 1, x_mm: 110, y_mm: 130, width_mm: 40, ...(place ?? {}) },
+        box: { page: 1, x_mm: 110, y_mm: 130, width_mm: 40, ...(place ?? {}) },
+        anchor: null,
+        dates: [],
+      },
+    },
+  ],
+});
+
+/** Подмена предпросмотра с готовым PDF и мест подписей поверх `mockWorkspaces` (поздний маршрут главнее). */
+const mockPlaces = async (page: Page): Promise<{ patches: { body: unknown; ifMatch: string | null }[] }> => {
+  const record = { patches: [] as { body: unknown; ifMatch: string | null }[] };
+  const json = (route: Route, body: unknown, status = 200) =>
+    route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
+  let current = signatures('"s1"', null);
+  await page.route("**/api/v1/pack-studio/workspaces/*/versions/hse-cs-sse/coursework/2026.1.6/preview", (route) =>
+    route.request().method() === "GET" ? json(route, PREVIEW_OPTIONS) : json(route, { builds: [PREVIEW_DONE] }),
+  );
+  await page.route("**/api/v1/pack-studio/workspaces/*/previews/b2", (route) => json(route, PREVIEW_DONE));
+  await page.route("**/api/v1/pack-studio/workspaces/*/previews/b2/pdf", (route) =>
+    route.fulfill({ status: 200, contentType: "application/pdf", body: onePagePdf() }),
+  );
+  await page.route("**/api/v1/pack-studio/workspaces/*/versions/hse-cs-sse/coursework/2026.1.6/signatures**", (route) => {
+    const req = route.request();
+    if (req.method() === "GET") return json(route, current);
+    record.patches.push({ body: req.postDataJSON(), ifMatch: req.headers()["if-match"] ?? null });
+    current = signatures(`"s${String(record.patches.length + 1)}"`, { page: 1, x_mm: 130, y_mm: 140, width_mm: 40 });
+    return json(route, current);
+  });
+  return record;
+};
+
 /** Дерево раскрывает только паки: открыть путь до черновой версии (шаблон, версии, сама версия). */
 const expandToDraft = async (page: Page): Promise<void> => {
   for (const dir of ["hse-cs-sse/templates", TPL, `${TPL}/versions`, DRAFT]) {
@@ -582,6 +674,46 @@ for (const lang of LANGS) {
       await page.getByTestId("new-version-submit").click();
       await expect(page).toHaveURL(/2026\.2\.0%2Fversion\.yaml|2026\.2\.0\/version\.yaml/);
       expect(fake.created[0]).toEqual({ base: "2026.1.5", update_class: "minor" });
+    });
+
+    test("места подписей на собранном PDF: рамка по умолчанию становится местом документа", async ({ page }) => {
+      await mockWorkspaces(page);
+      const places = await mockPlaces(page);
+      await login(page);
+      await setSection(page, true);
+      await page.goto("/pack-studio");
+      await page.getByTestId("ws-create-empty").click();
+      await page.getByTestId("ws-create-url").fill("https://github.com/e2e/packs");
+      await page.getByTestId("ws-create-submit").click();
+      await expect(page.getByTestId("pack-tree")).toBeVisible({ timeout: 15_000 });
+      await expandToDraft(page);
+      await page.getByTestId(`tree-file-${MANIFEST}`).click();
+
+      await page.getByTestId("side-tab-preview").click();
+      await page.getByTestId("preview-build").click();
+      await page.getByTestId("preview-mode-places").click();
+      await expect(page.getByTestId("places-kind-supervisor")).toContainText(text("по умолчанию", "Default place"));
+      // Во весь экран: страница и каталог слотов рядом, рамку удобно тянуть.
+      await page.getByTestId("places-wide").click();
+      const dialog = page.getByRole("dialog");
+      const frame = dialog.locator(`[title="${lang === "ru" ? "Научный руководитель (по умолчанию)" : "Supervisor (default)"}"]`);
+      await expect(frame).toBeVisible({ timeout: 15_000 });
+      await shot(page, L, "ps-70-places");
+      const box = await frame.boundingBox();
+      if (!box) throw new Error("рамки нет");
+      await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(box.x + box.width / 2 + 40, box.y + box.height / 2 + 20, { steps: 5 });
+      await page.mouse.up();
+
+      await expect.poll(() => places.patches.length).toBe(1);
+      expect(places.patches[0]?.ifMatch).toBe('"s1"');
+      expect(places.patches[0]?.body).toMatchObject({
+        build_id: "b2",
+        ops: [{ op: "set_place", slot: "supervisor", doc: "report" }],
+      });
+      await expect(dialog.getByTestId("places-kind-supervisor")).toContainText(text("Своё место", "Own place"));
+      await shot(page, L, "ps-75-places-moved");
     });
 
     test.describe("телефон 360", () => {

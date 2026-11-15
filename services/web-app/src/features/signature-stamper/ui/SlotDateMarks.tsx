@@ -67,6 +67,11 @@ export type SlotDateMarksProps = {
   onJumpToPage: (page: number) => void;
   /** Отступ под аватар слота, как у строк панели «Подписи» документа. */
   indent?: boolean;
+  /**
+   * Строки о дне подписи («Дата подписи», «Дата появится, когда...»). У заготовки пака в Студии шаблонов
+   * дня подписи нет: там они скрыты.
+   */
+  showSignedAt?: boolean;
 };
 
 const ALIGNS: { value: DateMarkAlign; icon: typeof TextAlignStart }[] = [
@@ -120,6 +125,7 @@ export const SlotDateMarks = ({
   onSave,
   onJumpToPage,
   indent = true,
+  showSignedAt = true,
 }: SlotDateMarksProps) => {
   const { t } = useTranslation("signatureStamper");
   const dates = placement?.dates ?? [];
@@ -362,7 +368,7 @@ export const SlotDateMarks = ({
         </div>
       )}
 
-      {dates.length > 0 && route === null && (
+      {showSignedAt && dates.length > 0 && route === null && (
         <div className="flex flex-col" style={{ gap: "0.1875rem" }}>
           <label
             className="flex items-center"
@@ -395,7 +401,7 @@ export const SlotDateMarks = ({
         </div>
       )}
 
-      {dates.length > 0 && route !== null && (
+      {showSignedAt && dates.length > 0 && route !== null && (
         <div className="flex flex-col" style={{ gap: "0.1875rem" }}>
           <span style={hintStyle}>
             {signedAt === null

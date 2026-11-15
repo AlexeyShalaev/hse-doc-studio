@@ -59,6 +59,8 @@ export type PdfStampEditorProps = {
   isCompileRunning?: boolean;
   /** Сборка сейчас невозможна (на сервере нет раннера): кнопка гаснет. */
   isCompileBlocked?: boolean;
+  /** Слоты, чьи рамки бледные: место стоит не своей записью (место по умолчанию в Студии шаблонов). */
+  mutedSlots?: ReadonlySet<string>;
 };
 
 // The horizontal padding (px, each side) of the scrollable preview area. We
@@ -96,6 +98,7 @@ export const PdfStampEditor = ({
   onCompileRequest,
   isCompileRunning,
   isCompileBlocked = false,
+  mutedSlots,
 }: PdfStampEditorProps) => {
   const { t, i18n } = useTranslation("signatureStamper");
   const pdfUrl = pdfAvailable
@@ -431,6 +434,7 @@ export const PdfStampEditor = ({
                     pageHeightMm={pageHeightMm}
                     pxPerMm={pxPerMm}
                     isInvisible={isInvisible}
+                    muted={mutedSlots?.has(slot.id) ?? false}
                     caption={caption}
                     captionRows={
                       caption

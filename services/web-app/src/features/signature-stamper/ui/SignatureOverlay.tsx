@@ -28,6 +28,8 @@ export type SignatureOverlayProps = {
   caption?: string | null;
   // Plate rows under the caption («Сертификат: …»); with rows the frame is rounded.
   captionRows?: readonly string[];
+  // Бледная рамка: место, которое стоит не своей записью (место слота по умолчанию в Студии шаблонов).
+  muted?: boolean;
   // Called when the user finishes a drag or resize gesture. We deliberately
   // wait for pointer-up rather than firing on every move — the parent uses
   // this to PATCH the backend, and firing per-frame would melt the network.
@@ -64,6 +66,7 @@ export const SignatureOverlay = ({
   isInvisible = false,
   caption = null,
   captionRows = [],
+  muted = false,
   onCommit,
 }: SignatureOverlayProps) => {
   const { t } = useTranslation("signatureStamper");
@@ -176,12 +179,14 @@ export const SignatureOverlay = ({
         width: localWidth * pxPerMm,
         height: caption ? undefined : heightMm * pxPerMm,
         cursor: isDragging ? "grabbing" : "grab",
-        border: isInvisible
-          ? "1.5px dashed var(--fg-3)"
-          : "1.5px dashed var(--accent)",
-        background: isInvisible
-          ? "color-mix(in oklch, var(--fg-3) 10%, transparent)"
-          : "color-mix(in oklch, var(--accent) 8%, transparent)",
+        border:
+          isInvisible || muted
+            ? "1.5px dashed var(--fg-3)"
+            : "1.5px dashed var(--accent)",
+        background:
+          isInvisible || muted
+            ? "color-mix(in oklch, var(--fg-3) 10%, transparent)"
+            : "color-mix(in oklch, var(--accent) 8%, transparent)",
         boxSizing: "border-box",
         touchAction: "none",
         borderRadius: captionRows.length > 0 ? 7 * 0.3528 * pxPerMm : undefined,

@@ -662,6 +662,175 @@ export const PackReleaseSchema = z.strictObject({
   warnings: z.array(z.string()),
 });
 
+// ── Места подписей на PDF предпросмотра (template-studio.md, 5.6, срез T9) ──
+
+const AlignSchema = z.enum(["left", "center", "right"]);
+const DateFormatSchema = z.enum([
+  "day",
+  "month_word",
+  "month_number",
+  "year",
+  "year_short",
+  "date_numeric",
+  "date_long",
+]);
+
+export const PackPlaceBoxSchema = z.strictObject({
+  page: z.number().int().min(1),
+  x_mm: z.number(),
+  y_mm: z.number(),
+  width_mm: z.number(),
+});
+
+export const PackMarkBoxSchema = z.strictObject({
+  page: z.number().int().min(1),
+  x_mm: z.number(),
+  y_mm: z.number(),
+  width_mm: z.number(),
+  height_mm: z.number(),
+  format: DateFormatSchema,
+  align: AlignSchema,
+});
+
+// Запись места пака: в мм или на якоре шаблона (та же форма, что у мест пака в состоянии подписей).
+export const PackPlaceEntrySchema = z.discriminatedUnion("source", [
+  z.strictObject({
+    source: z.literal("mm"),
+    page: z.number().int(),
+    x_mm: z.number(),
+    y_mm: z.number(),
+    width_mm: z.number(),
+  }),
+  z.strictObject({
+    source: z.literal("anchor"),
+    anchor: z.string(),
+    align: AlignSchema,
+    dx_mm: z.number(),
+    dy_mm: z.number(),
+    width_mm: z.number().nullable(),
+    fallback: PackPlaceBoxSchema.nullable(),
+  }),
+]);
+
+export const PackDateEntrySchema = z.discriminatedUnion("source", [
+  z.strictObject({
+    source: z.literal("mm"),
+    page: z.number().int(),
+    x_mm: z.number(),
+    y_mm: z.number(),
+    width_mm: z.number(),
+    height_mm: z.number(),
+    format: DateFormatSchema,
+    align: AlignSchema,
+  }),
+  z.strictObject({
+    source: z.literal("anchor"),
+    anchor: z.string(),
+    format: DateFormatSchema,
+    align: AlignSchema,
+    height_mm: z.number(),
+    width_mm: z.number().nullable(),
+    dx_mm: z.number(),
+    dy_mm: z.number().nullable(),
+    fallback: z
+      .strictObject({
+        page: z.number().int(),
+        x_mm: z.number(),
+        y_mm: z.number(),
+        width_mm: z.number(),
+        height_mm: z.number(),
+      })
+      .nullable(),
+  }),
+]);
+
+const PlaceAnchorSchema = z.strictObject({
+  id: z.string(),
+  state: z.enum(["found", "missing", "unknown"]),
+});
+
+export const PackFrameDateSchema = z.strictObject({
+  index: z.number().int(),
+  entry: PackDateEntrySchema,
+  // Рамка в этой сборке; null: метки нет (строки даты в сборке нет).
+  box: PackMarkBoxSchema.nullable(),
+  anchor: PlaceAnchorSchema.nullable(),
+});
+
+export const PackSlotFrameSchema = z.strictObject({
+  kind: z.enum(["place", "default"]),
+  entry: PackPlaceEntrySchema,
+  // Рамка по якорям сборки; null: места в этой сборке нет.
+  box: PackPlaceBoxSchema.nullable(),
+  anchor: PlaceAnchorSchema.nullable(),
+  dates: z.array(PackFrameDateSchema),
+});
+
+export const PackSignatureSlotSchema = z.strictObject({
+  id: z.string(),
+  label: LocalizedSchema,
+  applies_to: z.array(z.string()),
+  per_author: z.boolean(),
+  required: z.boolean(),
+  default_place: PackPlaceEntrySchema,
+  // Ключа `default_placement` в YAML нет: место по умолчанию лоадера.
+  default_set: z.boolean(),
+  places: z.record(z.string(), PackPlaceEntrySchema),
+  dates: z.record(
+    z.string(),
+    z.array(
+      z.strictObject({ index: z.number().int(), entry: PackDateEntrySchema }),
+    ),
+  ),
+  // Рамки документа сборки; null без сборки или если слот к документу не относится.
+  document: PackSlotFrameSchema.nullable(),
+});
+
+export const PackSignaturesSchema = z.strictObject({
+  workspace_id: z.string(),
+  pack: z.string(),
+  template: z.string(),
+  version: z.string(),
+  path: z.string(),
+  etag: z.string(),
+  read_only: ReadOnlyReasonSchema.nullable(),
+  documents: z.array(z.string()),
+  build: z
+    .strictObject({
+      id: z.string(),
+      document: z.string(),
+      anchors_known: z.boolean(),
+      sign_anchors: z.array(z.string()),
+      date_anchors: z.array(z.string()),
+    })
+    .nullable(),
+  slots: z.array(PackSignatureSlotSchema),
+});
+
+export const PackPlaceOpSchema = z.strictObject({
+  op: z.enum([
+    "set_place",
+    "remove_place",
+    "make_default",
+    "bind_anchor",
+    "unbind_anchor",
+    "add_date",
+    "set_date",
+    "remove_date",
+  ]),
+  slot: z.string().min(1).max(64),
+  doc: z.string().max(128).nullish(),
+  box: PackPlaceBoxSchema.nullish(),
+  index: z.number().int().min(0).max(64).nullish(),
+  mark: PackMarkBoxSchema.nullish(),
+  anchor: z.string().max(96).nullish(),
+});
+
+export const PackSignaturesPatchRequestSchema = z.strictObject({
+  build_id: z.string().nullish(),
+  ops: z.array(PackPlaceOpSchema).min(1).max(50),
+});
+
 export type PackStudioSection = z.infer<typeof PackStudioSectionSchema>;
 export type PackWorkspace = z.infer<typeof PackWorkspaceSchema>;
 export type CreatePackWorkspaceRequest = z.infer<
@@ -742,4 +911,16 @@ export type PackStudioOfficialAdmin = z.infer<
 >;
 export type UpdatePackStudioOfficialRequest = z.infer<
   typeof UpdatePackStudioOfficialRequestSchema
+>;
+export type PackPlaceBox = z.infer<typeof PackPlaceBoxSchema>;
+export type PackMarkBox = z.infer<typeof PackMarkBoxSchema>;
+export type PackPlaceEntry = z.infer<typeof PackPlaceEntrySchema>;
+export type PackDateEntry = z.infer<typeof PackDateEntrySchema>;
+export type PackFrameDate = z.infer<typeof PackFrameDateSchema>;
+export type PackSlotFrame = z.infer<typeof PackSlotFrameSchema>;
+export type PackSignatureSlot = z.infer<typeof PackSignatureSlotSchema>;
+export type PackSignatures = z.infer<typeof PackSignaturesSchema>;
+export type PackPlaceOp = z.infer<typeof PackPlaceOpSchema>;
+export type PackSignaturesPatchRequest = z.infer<
+  typeof PackSignaturesPatchRequestSchema
 >;

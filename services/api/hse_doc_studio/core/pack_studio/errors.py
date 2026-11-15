@@ -75,6 +75,8 @@ class PackStudioErrorCode(StrEnum):
     license_consent_required = "license_consent_required"
     proposal_limit = "proposal_limit"
     paths_outside_packs = "paths_outside_packs"
+    # Срез T9: места подписей и метки даты на PDF предпросмотра
+    place_invalid = "place_invalid"
 
 
 _C = PackStudioErrorCode
@@ -292,6 +294,11 @@ _TABLE: dict[PackStudioErrorCode, tuple[int, str, str]] = {
         409,
         "Ветка меняет файлы вне папки паков. Через служебный доступ можно предлагать только паки.",
         "The branch changes files outside the packs folder. The service access only proposes packs.",
+    ),
+    _C.place_invalid: (
+        400,
+        "Место подписи нельзя записать: рамка за краем листа или слот не относится к документу.",
+        "The signature place cannot be written: the box is off the page or the slot does not apply to the document.",
     ),
 }
 

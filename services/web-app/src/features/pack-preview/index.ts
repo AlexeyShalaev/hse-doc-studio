@@ -1,5 +1,8 @@
 export { PackPreviewPane } from "./ui/PackPreviewPane";
-export type { PackPreviewPaneProps } from "./ui/PackPreviewPane";
+export type {
+  PackPlacesSlot,
+  PackPreviewPaneProps,
+} from "./ui/PackPreviewPane";
 export {
   documentFits,
   effectiveCombination,

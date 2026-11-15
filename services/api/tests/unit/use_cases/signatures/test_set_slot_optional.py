@@ -20,7 +20,7 @@ from hse_doc_studio.core.services import SignatureSlotService
 from hse_doc_studio.core.signing_route.entities import DocSlot, RouteConflictError, RouteInputError
 from hse_doc_studio.core.signing_route.ports import HeldRoute
 from hse_doc_studio.core.value_objects import SignaturesState, SkippedSlot
-from hse_doc_studio.infra.template.yaml_template_repository import _parse_signature_slot
+from hse_doc_studio.infra.template.yaml_template_repository import parse_signature_slot
 from hse_doc_studio.use_cases.signatures.set_slot_optional import SetSlotOptionalInput, SetSlotOptionalUC
 
 from tests.factories import make_document, make_project, make_template_version
@@ -101,8 +101,8 @@ def test__check_slot__recorded_skip_or_flag__can_be_removed_without_the_route() 
 def test__pack_slot__required_key__read_and_given_to_runtime_slots() -> None:
     raw = {"id": "author", "label": {"ru": "Автор"}, "applies_to": ["tz"], "required": True}
 
-    parsed = _parse_signature_slot(raw)
-    legacy = _parse_signature_slot({"id": "supervisor", "applies_to": ["tz"]})
+    parsed = parse_signature_slot(raw)
+    legacy = parse_signature_slot({"id": "supervisor", "applies_to": ["tz"]})
 
     assert (parsed.required, legacy.required) == (True, False)
     version = replace(make_template_version(), signatures_config=SignaturesConfig(slots=(parsed, legacy)))

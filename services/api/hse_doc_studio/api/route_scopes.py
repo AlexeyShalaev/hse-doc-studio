@@ -292,6 +292,9 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("POST", "/pack-studio/workspaces/{workspace_id}/git/start-over"): _A,
     ("GET", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/preview"): _A,
     ("POST", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/preview"): _A,
+    # Срез T9: места подписей и метки даты версии на PDF предпросмотра
+    ("GET", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/signatures"): _A,
+    ("PATCH", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/signatures"): _A,
     ("GET", "/pack-studio/workspaces/{workspace_id}/previews/{build_id}"): _A,
     ("DELETE", "/pack-studio/workspaces/{workspace_id}/previews/{build_id}"): _A,
     ("GET", "/pack-studio/workspaces/{workspace_id}/previews/{build_id}/pdf"): _A,

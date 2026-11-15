@@ -18,6 +18,7 @@ import type {
   PackProposeRequest,
   PackReleaseRequest,
   PackVersionNotesRequest,
+  PackSignaturesPatchRequest,
   PackWorkspace,
   StartPackPreviewRequest,
   UpdatePackStudioOfficialRequest,
@@ -64,6 +65,18 @@ export const packStudioKeys = {
     ] as const,
   previewBuild: (id: string, buildId: string) =>
     [...packStudioKeys.workspace(id), "build", buildId] as const,
+  // Места подписей версии: все сборки версии под одним префиксом (сброс после правки файла).
+  signaturesAll: (id: string) =>
+    [...packStudioKeys.workspace(id), "signatures"] as const,
+  signaturesOf: (id: string, ref: PackVersionRef) =>
+    [
+      ...packStudioKeys.signaturesAll(id),
+      ref.pack,
+      ref.template,
+      ref.version,
+    ] as const,
+  signatures: (id: string, ref: PackVersionRef, buildId: string | null) =>
+    [...packStudioKeys.signaturesOf(id, ref), buildId ?? ""] as const,
   previewLog: (id: string, buildId: string) =>
     [...packStudioKeys.previewBuild(id, buildId), "log"] as const,
   admin: () => [...packStudioKeys.all, "admin"] as const,
@@ -625,6 +638,61 @@ export const useRemovePackServiceAccess = () => {
       void client.invalidateQueries({
         queryKey: packStudioKeys.serviceAccess(),
       });
+    },
+  });
+};
+
+/** Места подписей версии (срез T9): каталог слотов и рамки документа сборки `buildId`. */
+export const usePackSignatures = (
+  id: string,
+  ref: PackVersionRef | null,
+  buildId: string | null,
+) =>
+  useQuery({
+    queryKey: packStudioKeys.signatures(
+      id,
+      ref ?? { pack: "", template: "", version: "" },
+      buildId,
+    ),
+    queryFn: () =>
+      packStudioApi.signatures(
+        id,
+        ref ?? { pack: "", template: "", version: "" },
+        buildId,
+      ),
+    enabled: ref !== null,
+  });
+
+/**
+ * Правка мест: ответ сразу ложится в кэш (тот же запрос со сборкой), а запросы мест этой версии с другими
+ * сборками помечаются устаревшими. `If-Match` берётся из последнего ответа.
+ */
+export const usePatchPackSignatures = (
+  id: string,
+  ref: PackVersionRef,
+  buildId: string | null,
+) => {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      body,
+      etag,
+    }: {
+      body: PackSignaturesPatchRequest;
+      etag: string | null;
+    }) => packStudioApi.patchSignatures(id, ref, body, etag),
+    onSuccess: (data) => {
+      const key = packStudioKeys.signatures(id, ref, buildId);
+      void client.invalidateQueries({
+        queryKey: packStudioKeys.signaturesOf(id, ref),
+        predicate: (query) =>
+          JSON.stringify(query.queryKey) !== JSON.stringify(key),
+      });
+      client.setQueryData(key, data);
+      void client.invalidateQueries({
+        queryKey: packStudioKeys.file(id, data.path),
+      });
+      void client.invalidateQueries({ queryKey: packStudioKeys.git(id) });
     },
   });
 };

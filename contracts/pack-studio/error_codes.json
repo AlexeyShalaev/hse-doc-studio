@@ -51,5 +51,6 @@
   "official_bot_unavailable",
   "license_consent_required",
   "proposal_limit",
-  "paths_outside_packs"
+  "paths_outside_packs",
+  "place_invalid"
 ]

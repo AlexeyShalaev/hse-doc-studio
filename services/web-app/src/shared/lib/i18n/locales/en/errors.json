@@ -284,6 +284,7 @@
     "official_bot_unavailable": "Contributing without your own GitHub account is unavailable here: the administrator has not set it up or has turned it off.",
     "license_consent_required": "Before the first proposal, confirm that the contribution is public and goes under the repository license.",
     "proposal_limit": "Too many proposals through the service account in the last 24 hours. Try again later.",
-    "paths_outside_packs": "The branch changes files outside the packs folder. The service access only proposes packs."
+    "paths_outside_packs": "The branch changes files outside the packs folder. The service access only proposes packs.",
+    "place_invalid": "The signature place cannot be written: the box is off the page or the slot does not apply to the document."
   }
 }

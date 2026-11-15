@@ -25,6 +25,7 @@ import {
 } from "@entities/pack-studio";
 import { PackFileEditor } from "@features/pack-file-editor";
 import { PackGitBar } from "@features/pack-git";
+import { PackPlacesEditor } from "@features/pack-places";
 import { PackPreviewPane } from "@features/pack-preview";
 import { PackTreePanel, versionStatusVariant } from "@features/pack-tree";
 import {
@@ -160,6 +161,8 @@ export const WorkspaceScreen = () => {
   const [reload, setReload] = useState(0);
   // Мастер «Новая версия»: шаблон, для которого открыт шаг 1.
   const [newVersion, setNewVersion] = useState<NewVersionTarget | null>(null);
+  // Места подписей записаны в манифест версии: проверки заново, PDF при этом не устаревает.
+  const [placesSaves, setPlacesSaves] = useState(0);
   const client = useQueryClient();
   const dirtyRef = useRef(false);
   const tokenRef = useRef(0);
@@ -214,6 +217,23 @@ export const WorkspaceScreen = () => {
       }
     },
     [file, go],
+  );
+
+  // Места подписей записали манифест: открытый он же без правок открывается заново (после свежего
+  // чтения файла), с правками его запись упрётся в «файл изменился» и покажет, что делать. Сам
+  // редактор с предпросмотром не пересоздаётся: окно мест остаётся открытым.
+  const [contentRevision, setContentRevision] = useState(0);
+  const onPlacesSaved = useCallback(
+    (path: string) => {
+      setPlacesSaves((n) => n + 1);
+      if (path !== file || dirtyRef.current) return;
+      void client
+        .refetchQueries({ queryKey: packStudioKeys.file(workspaceId, path) })
+        .then(() => {
+          if (!dirtyRef.current) setContentRevision((n) => n + 1);
+        });
+    },
+    [client, file, workspaceId],
   );
 
   const onFilesChanged = useCallback(() => {
@@ -342,7 +362,7 @@ export const WorkspaceScreen = () => {
                   workspaceId={ws.id}
                   git={ws.kind === "git"}
                   path={file}
-                  revision={epoch}
+                  revision={epoch + placesSaves}
                   onOpenFile={(path) => {
                     open(path);
                   }}
@@ -354,12 +374,15 @@ export const WorkspaceScreen = () => {
                   key={`${file}:${String(reload)}`}
                   workspaceId={ws.id}
                   path={file}
-                  lintEpoch={epoch}
+                  lintEpoch={epoch + placesSaves}
                   onSaved={() => {
                     setEpoch((n) => n + 1);
-                    // Правка на диске: «правки после коммита» в панели git.
+                    // Правка на диске: «правки после коммита» в панели git, места подписей версии.
                     void client.invalidateQueries({
                       queryKey: packStudioKeys.git(ws.id),
+                    });
+                    void client.invalidateQueries({
+                      queryKey: packStudioKeys.signaturesAll(ws.id),
                     });
                   }}
                   onOpenFile={open}
@@ -370,11 +393,19 @@ export const WorkspaceScreen = () => {
                     setGate(null);
                   }}
                   problemsFocus={problemsFocus}
+                  contentRevision={contentRevision}
                   preview={
                     <PackPreviewPane
                       workspaceId={ws.id}
                       path={file}
                       revision={epoch}
+                      places={(slot) => (
+                        <PackPlacesEditor
+                          workspaceId={ws.id}
+                          {...slot}
+                          onSaved={onPlacesSaved}
+                        />
+                      )}
                     />
                   }
                 />

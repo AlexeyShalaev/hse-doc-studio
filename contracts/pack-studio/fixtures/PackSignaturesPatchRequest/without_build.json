@@ -1,0 +1,14 @@
+{
+  "build_id": null,
+  "ops": [
+    {
+      "op": "remove_date",
+      "slot": "author",
+      "doc": "report",
+      "box": null,
+      "index": 0,
+      "mark": null,
+      "anchor": null
+    }
+  ]
+}
