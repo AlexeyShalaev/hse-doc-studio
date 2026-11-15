@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { useTranslation } from "react-i18next";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, FolderUp, Upload } from "lucide-react";
 import { FileTree } from "@widgets/FileTree";
-import type { FileNode } from "@widgets/FileTree";
+import type { FileNode, FileTreeUpload } from "@widgets/FileTree";
+import {
+  FileUploadDialog,
+  useProjectFileUpload,
+} from "@features/project-file-upload";
 
 export type FilesPanelProps = {
   projectId: string;
@@ -22,11 +26,19 @@ export type FilesPanelProps = {
 export const FilesPanel = ({ projectId }: FilesPanelProps) => {
   const { t } = useTranslation("workbench");
   const { t: tChrome } = useTranslation("appChrome");
+  const { t: tUpload } = useTranslation("fileUpload");
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [isShowingHidden, setIsShowingHidden] = useState(false);
 
   const selectedPath = searchParams.get("file") ?? undefined;
+  // Загрузка с компьютера живёт здесь: кнопки шапки и дерево (меню, перетаскивание) делят одну.
+  const upload = useProjectFileUpload(projectId);
+  const { canUpload, pick, dropFiles } = upload;
+  const treeUpload: FileTreeUpload = useMemo(
+    () => ({ enabled: canUpload, pick, drop: dropFiles }),
+    [canUpload, pick, dropFiles],
+  );
 
   // Выбор файла — это адрес, а не состояние компонента: по ?file=<путь>&line=<n>
   // в дерево ссылаются находки проверок, и эта ссылка обязана продолжать
@@ -44,6 +56,32 @@ export const FilesPanel = ({ projectId }: FilesPanelProps) => {
       <div className="panel-head">
         <span className="panel-head-title">{t("files.title")}</span>
         <div className="panel-head-actions">
+          {canUpload && (
+            <>
+              <button
+                type="button"
+                className="icon-btn sm tt"
+                data-tt={tUpload("actions.uploadFiles")}
+                aria-label={tUpload("actions.uploadFiles")}
+                onClick={() => {
+                  pick("", "files");
+                }}
+              >
+                <Upload size="0.75rem" />
+              </button>
+              <button
+                type="button"
+                className="icon-btn sm tt"
+                data-tt={tUpload("actions.uploadFolder")}
+                aria-label={tUpload("actions.uploadFolder")}
+                onClick={() => {
+                  pick("", "folder");
+                }}
+              >
+                <FolderUp size="0.75rem" />
+              </button>
+            </>
+          )}
           <button
             type="button"
             className="icon-btn sm tt"
@@ -74,8 +112,10 @@ export const FilesPanel = ({ projectId }: FilesPanelProps) => {
           selectedPath={selectedPath}
           onSelect={handleSelect}
           showHidden={isShowingHidden}
+          upload={treeUpload}
         />
       </div>
+      <FileUploadDialog upload={upload} />
     </div>
   );
 };

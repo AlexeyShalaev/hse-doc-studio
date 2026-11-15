@@ -80,9 +80,13 @@ export const buildFileTree = (
   includeHidden = false,
 ): FileNode[] => {
   const root = makeFolder("", "");
+  const files = new Set(
+    items.filter((item) => !item.is_dir).map((item) => item.path),
+  );
+  const isFile = (path: string): boolean => files.has(path);
 
   for (const item of items) {
-    const hidden = isHiddenPath(item.path);
+    const hidden = isHiddenPath(item.path, isFile);
     if (hidden && !includeHidden) continue;
 
     const segments = item.path.split("/").filter(Boolean);

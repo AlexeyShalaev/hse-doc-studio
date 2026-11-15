@@ -22,6 +22,7 @@ import {
 } from "react";
 import { useTranslation } from "react-i18next";
 import type { FileNode } from "./lib/buildFileTree";
+import { isExternalDrag } from "./lib/dragTypes";
 
 const DRAG_MIME = "application/x-hse-path";
 
@@ -152,6 +153,10 @@ export type TreeNodeContext = {
   ) => void;
   /** Move `src` (file/folder path) into `destFolder` ("" = root). */
   onMove: (src: string, destFolder: string) => void;
+  /** Файлы с компьютера можно бросать в дерево (есть право записи). */
+  canDropFiles: boolean;
+  /** Файлы и папки с компьютера, брошенные в `destFolder` ("" значит корень). */
+  onDropFiles: (dataTransfer: DataTransfer, destFolder: string) => void;
 };
 
 export type TreeNodeProps = {
@@ -210,8 +215,14 @@ export const TreeNode = ({ node, depth, ctx }: TreeNodeProps) => {
             }}
             onDragOver={(e) => {
               e.preventDefault();
-              e.dataTransfer.dropEffect = "move";
-              setDragOver(true);
+              const external = isExternalDrag(e.dataTransfer);
+              const accepts = !external || ctx.canDropFiles;
+              e.dataTransfer.dropEffect = !accepts
+                ? "none"
+                : external
+                  ? "copy"
+                  : "move";
+              setDragOver(accepts);
             }}
             onDragLeave={() => {
               setDragOver(false);
@@ -222,6 +233,8 @@ export const TreeNode = ({ node, depth, ctx }: TreeNodeProps) => {
               setDragOver(false);
               const src = e.dataTransfer.getData(DRAG_MIME);
               if (src) ctx.onMove(src, node.path);
+              else if (isExternalDrag(e.dataTransfer))
+                ctx.onDropFiles(e.dataTransfer, node.path);
             }}
           >
             {open ? (
@@ -322,8 +335,14 @@ export const TreeNode = ({ node, depth, ctx }: TreeNodeProps) => {
       }}
       onDragOver={(e) => {
         e.preventDefault();
-        e.dataTransfer.dropEffect = "move";
-        setDragOver(true);
+        const external = isExternalDrag(e.dataTransfer);
+        const accepts = !external || ctx.canDropFiles;
+        e.dataTransfer.dropEffect = !accepts
+          ? "none"
+          : external
+            ? "copy"
+            : "move";
+        setDragOver(accepts);
       }}
       onDragLeave={() => {
         setDragOver(false);
@@ -331,12 +350,15 @@ export const TreeNode = ({ node, depth, ctx }: TreeNodeProps) => {
       onDrop={(e) => {
         // Dropping onto a file moves the dragged item into that file's folder,
         // not the project root. stopPropagation keeps the root-drop handler
-        // (on the scroll container) from also firing.
+        // (on the scroll container) from also firing. Files from the computer
+        // land in the same folder.
         e.preventDefault();
         e.stopPropagation();
         setDragOver(false);
         const src = e.dataTransfer.getData(DRAG_MIME);
         if (src) ctx.onMove(src, parentOf(node.path));
+        else if (isExternalDrag(e.dataTransfer))
+          ctx.onDropFiles(e.dataTransfer, parentOf(node.path));
       }}
       title={node.path}
     >

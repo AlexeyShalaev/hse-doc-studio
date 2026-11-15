@@ -26,6 +26,9 @@ export {
 } from "./api/documentSchemas";
 export type { CompileError } from "./api/documentSchemas";
 export {
+  encodeFilePath,
+  fetchFileTree,
+  fileContentUrl,
   fileKeys,
   useCreateDir,
   useDeleteFile,

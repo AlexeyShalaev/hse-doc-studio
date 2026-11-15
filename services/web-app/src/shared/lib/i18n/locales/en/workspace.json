@@ -267,9 +267,11 @@
   "files": {
     "editorTitle": "File editor",
     "editorHint": "Select a file in the tree on the left to open it in the editor. Check findings are shown directly in the code for any project file.",
-    "binaryHint": "This is a binary file or one unsupported for text editing. Open it in an external editor or preview.",
+    "binaryHint": "This is not a text file, so the editor cannot open it. Download it or open it in another program.",
     "treeResizeHint": "Resize file tree",
-    "generatedReadOnly": "This file is generated automatically from the project settings before every build"
+    "generatedReadOnly": "This file is generated automatically from the project settings before every build",
+    "download": "Download",
+    "imagePreview": "Preview of {{name}}"
   },
   "versions": {
     "title": "Change history",

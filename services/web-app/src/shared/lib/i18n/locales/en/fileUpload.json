@@ -1,0 +1,53 @@
+{
+  "actions": {
+    "uploadFiles": "Upload files",
+    "uploadFolder": "Upload folder",
+    "uploadHere": "Upload files here",
+    "uploadFolderHere": "Upload folder here",
+    "dropHere": "Drop to upload to the project root",
+    "dropHint": "You can drag files and folders here from your computer."
+  },
+  "preparing": "Preparing the upload…",
+  "busy": "Wait until the current upload finishes.",
+  "readFailed": "Could not read the dropped files. Try the Upload files button.",
+  "doneToast_one": "Uploaded {{count}} file",
+  "doneToast_other": "Uploaded {{count}} files",
+  "conflict": {
+    "title": "File already exists",
+    "text": "The project already has a file with this name:",
+    "replace": "Replace",
+    "keepBoth": "Keep both",
+    "skip": "Skip",
+    "cancel": "Cancel upload",
+    "applyToAll": "For all matches ({{count}})"
+  },
+  "progress": {
+    "title": "Uploading files",
+    "counter": "File {{index}} of {{total}}",
+    "stop": "Stop"
+  },
+  "summary": {
+    "title": "Upload result",
+    "uploaded": "Uploaded {{count}} of {{total}}.",
+    "skipped": "Skipped: {{count}}.",
+    "failedTitle": "Not uploaded: {{count}}",
+    "close": "Done"
+  },
+  "reason": {
+    "too_large": "The file is too large.",
+    "too_largeWithSize": "The file is larger than {{size}}: the server will not accept it.",
+    "reserved": "The service folders .hse-studio, .git and .build cannot be uploaded.",
+    "bad_name": "Invalid name: '..', a backslash or control characters.",
+    "too_long": "The file name or path is too long.",
+    "quota": "Not enough space in the project.",
+    "quotaWithSize": "Not enough space in the project: {{size}} free.",
+    "folder_conflict": "A folder or file with this name is already in this place.",
+    "quota_server": "The project ran out of space.",
+    "read_only": "The project is open read-only.",
+    "forbidden": "No write access to this folder.",
+    "network": "No connection to the server.",
+    "canceled": "Upload stopped.",
+    "stopped": "Not uploaded: the upload stopped after the error above.",
+    "server": "The server did not accept the file."
+  }
+}
