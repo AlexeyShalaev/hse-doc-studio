@@ -207,7 +207,7 @@ describe("TlsTrustDialog", () => {
     await user.click(screen.getByTestId("tls-pin-confirm"));
     expect(screen.getByTestId("tls-submit")).toBeDisabled();
     await user.type(
-      screen.getByLabelText(/введи имя сервера/),
+      screen.getByLabelText(/введите имя сервера/),
       "gitlab.hse.local",
     );
     expect(screen.getByTestId("tls-submit")).toBeEnabled();
@@ -245,7 +245,7 @@ describe("TlsTrustDialog", () => {
     expect(screen.queryByText(/Сервер не прислал сертификат/)).toBeNull();
     await user.click(screen.getByTestId("tls-pin-confirm"));
     await user.type(
-      screen.getByLabelText(/введи имя сервера/),
+      screen.getByLabelText(/введите имя сервера/),
       "gitlab.hse.local",
     );
     await user.click(screen.getByTestId("tls-submit"));

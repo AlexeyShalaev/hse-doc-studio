@@ -1,17 +1,18 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { gitRemoteApi } from "@entities/git-remote";
+import { gitRemoteApi, type GitCredential } from "@entities/git-remote";
 import {
   PackOfficialSchema,
   PackWorkspaceSchema,
   packStudioApi,
   type PackOfficial,
 } from "@entities/pack-studio";
+import { ApiError } from "@shared/api";
 import { i18n } from "@shared/lib";
 import { loadPackStudioNamespace } from "@shared/lib/i18n/packStudioNamespace";
 import { OfficialPacksCard } from "./OfficialPacks";
@@ -28,7 +29,7 @@ const WORKSPACE = PackWorkspaceSchema.parse(
   read("PackWorkspace", "git_official"),
 );
 
-const credential = (id: string, host: string) => ({
+const credential = (id: string, host: string): GitCredential => ({
   id,
   kind: "pat",
   label: `Токен ${id}`,
@@ -37,6 +38,40 @@ const credential = (id: string, host: string) => ({
   created_at: "2026-11-15T09:00:00Z",
   used_by: [],
 });
+
+const GITLAB = credential("gl", "gitlab.example.org");
+const FRESH = credential("fresh", "github.com");
+
+const checked = (
+  sufficiency: string,
+  scopes: string[],
+  missing: string[] = [],
+) => ({
+  credential: FRESH,
+  provider_info: { id: "github", detected_by: "host", version: null },
+  token_info: { login: "anna", scopes, expires_at: null, sufficiency, missing },
+});
+
+// Окружение окна без токена GitHub: список доступов, настройки серверов, хранилище.
+const noGithubToken = () => {
+  vi.spyOn(packStudioApi, "official").mockResolvedValue(official("available"));
+  vi.spyOn(gitRemoteApi, "listHostSettings").mockResolvedValue([]);
+  vi.spyOn(gitRemoteApi, "getSecretsStatus").mockResolvedValue({
+    ok: true,
+    source: "file",
+    permissions_enforced: true,
+    credentials_total: 1,
+    credentials_unreadable: 0,
+    data_dir_shared_folder: null,
+  });
+  return vi.spyOn(gitRemoteApi, "listCredentials");
+};
+
+const tokenField = (): HTMLInputElement => {
+  const field = screen.getByLabelText("Токен");
+  if (!(field instanceof HTMLInputElement)) throw new Error("нет поля");
+  return field;
+};
 
 const mount = (onOpen = vi.fn()) => {
   const client = new QueryClient({
@@ -108,21 +143,124 @@ describe("официальные паки", () => {
     expect(onOpen).toHaveBeenCalledWith(WORKSPACE.id);
   });
 
-  it("нет токена GitHub: объяснение, что нужен токен, отправить нечем", async () => {
-    vi.spyOn(packStudioApi, "official").mockResolvedValue(
-      official("available"),
-    );
-    vi.spyOn(gitRemoteApi, "listCredentials").mockResolvedValue([
-      credential("gl", "gitlab.example.org"),
-    ]);
+  it("нет токена GitHub: поле токена в окне, подсказка про классический public_repo", async () => {
+    noGithubToken().mockResolvedValue([GITLAB]);
     mount();
     await userEvent.click(await screen.findByTestId("official-open"));
     expect(await screen.findByTestId("official-nothing")).toHaveTextContent(
-      "нужен токен GitHub",
+      "нужен ваш токен GitHub",
     );
-    expect(screen.getByTestId("official-dialog")).toHaveTextContent(
-      "public_repo",
+    const dialog = screen.getByTestId("official-dialog");
+    // Поле есть прямо в окне, токен не виден на экране.
+    expect(tokenField()).toHaveAttribute("type", "password");
+    expect(screen.getByTestId("add-token-submit")).toBeDisabled();
+    expect(screen.getByTestId("official-submit")).toBeDisabled();
+    // Классический токен с public_repo и описанием, без «Only select repositories».
+    const link = await screen.findByTestId("token-create-link");
+    expect(link.getAttribute("href")).toMatch(
+      /^https:\/\/github\.com\/settings\/tokens\/new\?scopes=public_repo&description=/,
     );
+    expect(dialog).toHaveTextContent("public_repo");
+    expect(screen.getByTestId("github-fork-note")).toHaveTextContent("форк");
+    expect(screen.queryByTestId("github-repo-note")).not.toBeInTheDocument();
+    expect(dialog).not.toHaveTextContent("Only select repositories");
+    expect(dialog).not.toHaveTextContent("check-runs");
+    // Точный токен остаётся вариантом для владельца репозитория.
+    expect(screen.getByTestId("token-fallback")).toHaveTextContent(
+      "владелец или сопровождающий",
+    );
+    expect(screen.queryByTestId("token-broad-warning")).not.toBeInTheDocument();
+    // Вторичная ссылка на «Доступы git» осталась.
+    expect(
+      screen.getByRole("link", { name: "Открыть «Доступы git»" }),
+    ).toHaveAttribute("href", "/settings/git-access");
+  });
+
+  it("токен из окна: проверка под packs_fork, доступ выбран, кнопка включена", async () => {
+    noGithubToken()
+      .mockResolvedValueOnce([GITLAB])
+      .mockResolvedValue([GITLAB, FRESH]);
+    const create = vi
+      .spyOn(gitRemoteApi, "createCredential")
+      .mockResolvedValue(FRESH);
+    const check = vi
+      .spyOn(gitRemoteApi, "checkCredential")
+      .mockResolvedValue(checked("sufficient", ["public_repo"]));
+    const open = vi
+      .spyOn(packStudioApi, "openOfficial")
+      .mockResolvedValue(WORKSPACE);
+    const onOpen = mount();
+    await userEvent.click(await screen.findByTestId("official-open"));
+    await screen.findByTestId("official-nothing");
+    await userEvent.type(tokenField(), "ghp_secret");
+    await userEvent.click(screen.getByTestId("add-token-submit"));
+    await waitFor(() => {
+      expect(create).toHaveBeenCalledWith({
+        kind: "pat",
+        label: "GitHub, github.com",
+        host: "github.com",
+        token: "ghp_secret",
+      });
+    });
+    expect(check).toHaveBeenCalledWith(FRESH.id, "packs_fork");
+    expect(
+      await screen.findByTestId("official-token-added"),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("official-nothing")).not.toBeInTheDocument();
+    const submit = screen.getByTestId("official-submit");
+    expect(submit).toBeEnabled();
+    await userEvent.click(submit);
+    await waitFor(() => {
+      expect(open).toHaveBeenCalledWith({ credential_id: FRESH.id });
+    });
+    expect(onOpen).toHaveBeenCalledWith(WORKSPACE.id);
+  });
+
+  it("токен не принят: понятная ошибка у поля, доступ удалён, открыть нельзя", async () => {
+    noGithubToken().mockResolvedValue([GITLAB]);
+    vi.spyOn(gitRemoteApi, "createCredential").mockResolvedValue(FRESH);
+    vi.spyOn(gitRemoteApi, "checkCredential").mockRejectedValue(
+      new ApiError("Bad credentials", "auth_failed", 401),
+    );
+    const remove = vi
+      .spyOn(gitRemoteApi, "deleteCredential")
+      .mockResolvedValue(undefined);
+    mount();
+    await userEvent.click(await screen.findByTestId("official-open"));
+    await screen.findByTestId("official-nothing");
+    await userEvent.type(tokenField(), "ghp_wrong");
+    await userEvent.click(screen.getByTestId("add-token-submit"));
+    const form = screen.getByTestId("add-token-form");
+    expect(
+      await within(form).findByTestId("token-check-auth_failed"),
+    ).toHaveTextContent("Сервер не принял токен");
+    expect(remove).toHaveBeenCalledWith(FRESH.id);
+    // Токен не остаётся в поле после запроса.
+    expect(tokenField()).toHaveValue("");
+    expect(screen.getByTestId("official-submit")).toBeDisabled();
+    expect(
+      screen.queryByTestId("official-token-added"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("мало прав (нет public_repo): ошибка с недостающим правом, доступ не сохранён", async () => {
+    noGithubToken().mockResolvedValue([GITLAB]);
+    vi.spyOn(gitRemoteApi, "createCredential").mockResolvedValue(FRESH);
+    vi.spyOn(gitRemoteApi, "checkCredential").mockResolvedValue(
+      checked("too_narrow", ["read:user"], ["public_repo"]),
+    );
+    const remove = vi
+      .spyOn(gitRemoteApi, "deleteCredential")
+      .mockResolvedValue(undefined);
+    mount();
+    await userEvent.click(await screen.findByTestId("official-open"));
+    await screen.findByTestId("official-nothing");
+    await userEvent.type(tokenField(), "ghp_narrow");
+    await userEvent.click(screen.getByTestId("add-token-submit"));
+    expect(
+      await screen.findByTestId("token-check-too_narrow"),
+    ).toHaveTextContent("public_repo");
+    expect(remove).toHaveBeenCalledWith(FRESH.id);
     expect(screen.getByTestId("official-submit")).toBeDisabled();
   });
 });

@@ -107,8 +107,12 @@ const CatalogSchema = z.object({
 });
 
 export type ProviderSpec = z.infer<typeof ProviderSpecSchema>;
-/** Профиль прав каталога: `packs` это репозиторий паков Студии шаблонов. */
-export type PermissionProfile = "packs";
+/**
+ * Профиль прав каталога: `packs` это репозиторий паков Студии шаблонов,
+ * `packs_fork` это вклад в чужой открытый репозиторий паков через свой форк
+ * (официальные паки).
+ */
+export type PermissionProfile = "packs" | "packs_fork";
 export type ProviderCatalog = z.infer<typeof CatalogSchema>;
 export type ProviderAuthVariant = ProviderSpec["auth_variants"][number];
 export type TokenSufficiency =

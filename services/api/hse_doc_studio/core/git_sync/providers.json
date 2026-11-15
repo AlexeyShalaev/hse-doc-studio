@@ -1,5 +1,5 @@
 {
-  "_comment": "Каталог git-провайдеров: единственный источник правды для бэкенда и фронтенда. Копии лежат в services/api/hse_doc_studio/core/git_sync/providers.json и services/web-app/src/entities/git-remote/model/providers.json, тесты требуют побайтного совпадения. Векторы: provider_cases.json. Параметры ссылок проверены по официальной документации 26.10.2026: всё непроверенное остаётся простой ссылкой (kind plain) и шагами в интерфейсе. Плейсхолдеры: {web_base} {path} в путях и {name} {description} {scopes} {expires_in} {target_name} в значениях параметров; значение без данных отбрасывается вместе с ключом, остальное кодируется строго, запятая между {scopes} остаётся запятой; {scopes} это required и затем optional. Профили прав (profiles) задают права и ссылки на токен под задачу: packs это репозиторий паков Студии шаблонов (ветка, PR, статус проверок); у профиля без token_links ссылки основные, но {scopes} из профиля; провайдер без профиля даёт основной набор прав.",
+  "_comment": "Каталог git-провайдеров: единственный источник правды для бэкенда и фронтенда. Копии лежат в services/api/hse_doc_studio/core/git_sync/providers.json и services/web-app/src/entities/git-remote/model/providers.json, тесты требуют побайтного совпадения. Векторы: provider_cases.json. Параметры ссылок проверены по официальной документации 26.10.2026: всё непроверенное остаётся простой ссылкой (kind plain) и шагами в интерфейсе. Плейсхолдеры: {web_base} {path} в путях и {name} {description} {scopes} {expires_in} {target_name} в значениях параметров; значение без данных отбрасывается вместе с ключом, остальное кодируется строго, запятая между {scopes} остаётся запятой; {scopes} это required и затем optional. Профили прав (profiles) задают права и ссылки на токен под задачу: packs это репозиторий паков Студии шаблонов (ветка, PR, статус проверок), packs_fork это вклад в чужой открытый репозиторий паков через свой форк (официальные паки); у профиля без token_links ссылки основные, но {scopes} из профиля; провайдер без профиля даёт основной набор прав.",
   "version": 1,
   "detected_by": ["override", "host", "api", "unknown"],
   "auth_variants": ["token", "ssh_user_key", "deploy_key", "device"],
@@ -87,8 +87,8 @@
             ],
             "implies": {},
             "human": {
-              "ru": "Contents: Read and write, Pull requests: Read and write, Commit statuses: Read, Metadata: Read (точный токен) или repo (классический, нужен для PR из форка и статуса check-runs)",
-              "en": "Contents: Read and write, Pull requests: Read and write, Commit statuses: Read, Metadata: Read (fine-grained) or repo (classic, needed for a pull request from a fork and check-runs status)"
+              "ru": "Contents: Read and write, Pull requests: Read and write, Commit statuses: Read, Metadata: Read (точный токен) или repo (классический)",
+              "en": "Contents: Read and write, Pull requests: Read and write, Commit statuses: Read, Metadata: Read (fine-grained) or repo (classic)"
             }
           },
           "token_links": {
@@ -114,6 +114,50 @@
               "query": [
                 { "key": "scopes", "value": "repo" },
                 { "key": "description", "value": "{description}" }
+              ]
+            }
+          }
+        },
+        "packs_fork": {
+          "permissions": {
+            "required": ["public_repo"],
+            "optional": [],
+            "too_broad": [
+              "admin:org",
+              "admin:repo_hook",
+              "admin:public_key",
+              "admin:gpg_key",
+              "delete_repo"
+            ],
+            "implies": { "repo": ["public_repo"] },
+            "human": {
+              "ru": "public_repo (классический токен): форк, ветка в вашем форке и PR в открытый репозиторий. Статус проверок открытого репозитория читается без отдельного права",
+              "en": "public_repo (classic token): a fork, a branch in your fork and a pull request into the public repository. Checks of a public repository are read without a separate scope"
+            }
+          },
+          "token_links": {
+            "primary": {
+              "kind": "prefilled",
+              "broad": false,
+              "path": "/settings/tokens/new",
+              "query": [
+                { "key": "scopes", "value": "{scopes}" },
+                { "key": "description", "value": "{description}" }
+              ]
+            },
+            "fallback": {
+              "kind": "prefilled",
+              "broad": false,
+              "path": "/settings/personal-access-tokens/new",
+              "query": [
+                { "key": "name", "value": "{name}" },
+                { "key": "description", "value": "{description}" },
+                { "key": "target_name", "value": "{target_name}" },
+                { "key": "expires_in", "value": "{expires_in}" },
+                { "key": "contents", "value": "write" },
+                { "key": "pull_requests", "value": "write" },
+                { "key": "statuses", "value": "read" },
+                { "key": "metadata", "value": "read" }
               ]
             }
           }

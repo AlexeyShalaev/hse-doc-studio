@@ -36,7 +36,7 @@
     "url": "Repository address",
     "credential": "Access",
     "noCredential": "No access (public repository)",
-    "credentialHint": "Tokens are added in Settings, “Git access”. The token never goes into the clone.",
+    "credentialHint": "The token never goes into the clone. You can add a new token right here, “New token” item.",
     "insecureHttp": "Allow plain http (no encryption)",
     "branch": "Base branch",
     "branchHint": "Empty: the server's default branch.",
@@ -55,7 +55,10 @@
       "service": "Service access",
       "serviceHint": "The branch is pushed with the instance token the administrator set up for this repository. Commits are signed by you. Forks are not available with service access."
     },
-    "tokenHelp": "Which token branches and pull requests need"
+    "tokenHelp": "Which token branches and pull requests need",
+    "newToken": "New token…",
+    "newTokenHint": "Without a token a public repository is read-only. To push branches and open pull requests, paste a token below: Studio checks it and selects it right away.",
+    "pasteHint": "Choose “New token” in the list above and paste it into the field."
   },
   "workspace": {
     "back": "Back to workspaces",
@@ -383,12 +386,14 @@
       "close": "Close",
       "serviceTitle": "Instance service access is in use",
       "serviceLead": "Branches are pushed with the token the administrator set up for this repository. Commits are signed by you, forks are not available.",
-      "noneLead": "The workspace has no token: a public repository can be read, but a branch cannot be pushed and no pull request can be opened. Add a token in Settings, “Git access”, and create the workspace with it.",
-      "missing": "The workspace access was removed from “Git access”. Add the token again and create the workspace with it.",
+      "noneLead": "The workspace has no token: a public repository can be read, but a branch cannot be pushed and no pull request can be opened. Create a new workspace with this repository and paste the token right in the creation window.",
+      "missing": "The workspace access was removed from Git access. Create the workspace again and paste the token right in the creation window.",
       "replace": "Replace token",
       "checkLead": "The template studio needs write access to the repository, pull requests and reading checks status.",
       "check": "Check rights for the template studio",
-      "newToken": "Issue a token with the right permissions"
+      "newToken": "Issue a token with the right permissions",
+      "pasteNew": "Paste it in the new workspace window, “New token” item.",
+      "pasteReplace": "Click “Replace token” above and paste it into the field."
     },
     "official": {
       "consent": "I agree that the contribution is public and goes under the repository license ({{license}})",
@@ -411,13 +416,14 @@
     "dialogLead": "The Studio downloads only the packs folder and opens a workspace. Changes are sent only with your own GitHub account.",
     "submit": "Open official packs",
     "token": {
-      "hint": "The branch goes to your fork on GitHub, the PR is opened from your account."
+      "hint": "The branch goes to your fork on GitHub, the PR is opened from your account.",
+      "added": "The token is checked and selected: you can open the official packs now.",
+      "another": "Add another GitHub token"
     },
     "none": {
-      "lead": "To propose changes you need a GitHub token. Create one, add it under Git access, then come back here.",
-      "token": "How to create a token",
-      "steps": "The token needs the packs permission profile: branch, PR and checks status. For a PR from a fork into someone else's public repository a classic token with the public_repo scope works.",
-      "settings": "Open Git access"
+      "lead": "To propose changes you need your own GitHub token. Create it with the link below and paste it into the field: Studio checks the token, saves it under Git access and selects it right away.",
+      "settings": "Open Git access",
+      "settingsLead": "Saved tokens are listed in Settings."
     }
   },
   "version": {

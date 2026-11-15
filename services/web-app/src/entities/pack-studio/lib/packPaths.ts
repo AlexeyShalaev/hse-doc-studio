@@ -244,11 +244,13 @@ export const findingTarget = (
   return { path: clean, line: null };
 };
 
-/** Какая форма поверх YAML есть у файла (template-studio.md, 5.0): манифест версии. */
-export type PackFormKind = "version";
+/** Какая форма поверх YAML есть у файла (template-studio.md, 5.0): манифест версии или документа. */
+export type PackFormKind = "version" | "doc";
 
 export const packFormKind = (path: string): PackFormKind | null => {
   const dir = versionDirOf(path);
   if (dir === null) return null;
-  return path.slice(dir.length + 1) === "version.yaml" ? "version" : null;
+  const rest = path.slice(dir.length + 1);
+  if (rest === "version.yaml") return "version";
+  return /^files\/[^/]+\/doc\.yaml$/.test(rest) ? "doc" : null;
 };

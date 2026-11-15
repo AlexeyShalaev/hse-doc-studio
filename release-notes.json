@@ -1,6 +1,28 @@
 {
   "releases": [
     {
+      "version": "0.32.0",
+      "date": "2026-11-15",
+      "notes": [
+        {
+          "ru": "Токен GitHub теперь можно вставить прямо там, где он нужен: в окне «Официальные паки», в «Новом пространстве» Студии шаблонов и в «Доступах git» (кнопка «Добавить токен»). Студия проверяет токен и сразу выбирает его. Подсказка для официальных паков советует классический токен с правом public_repo.",
+          "en": "A GitHub token can now be pasted right where it is needed: in the Official packs dialog, in New workspace of the Template Studio and in Git access (the Add token button). The Studio checks the token and selects it right away. The hint for official packs suggests a classic token with the public_repo scope."
+        },
+        {
+          "ru": "Паки: быстрая проверка паков в CI и команда hse-doc-studio pack ci init, которая кладёт готовый CI (GitHub Actions или GitLab CI) в свой репозиторий паков.",
+          "en": "Packs: a fast packs check in CI and the hse-doc-studio pack ci init command, which adds a ready CI (GitHub Actions or GitLab CI) to your own packs repository."
+        },
+        {
+          "ru": "Справка: новый раздел «Студия шаблонов» для авторов паков и статья о том, откуда пак в мастере проекта.",
+          "en": "Docs: a new Template Studio section for pack authors and an article on where a pack in the project wizard comes from."
+        },
+        {
+          "ru": "Исправлено: в локальном режиме с образом texlive TL2024-historic первая сборка xelatex падала без формата. Теперь недостающий формат строится сам и сохраняется в кэше.",
+          "en": "Fixed: in local mode with the texlive TL2024-historic image the first xelatex build failed without a format. The missing format is now built automatically and kept in the cache."
+        }
+      ]
+    },
+    {
       "version": "0.31.0",
       "date": "2026-11-15",
       "notes": [

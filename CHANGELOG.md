@@ -6,6 +6,13 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.32.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.31.0...v0.32.0) - 2026-11-15
+
+- A GitHub token can now be pasted right where it is needed: in the Official packs dialog, in New workspace of the Template Studio and in Git access (the Add token button). The Studio checks the token and selects it right away. The hint for official packs suggests a classic token with the public_repo scope.
+- Packs: a fast packs check in CI and the hse-doc-studio pack ci init command, which adds a ready CI (GitHub Actions or GitLab CI) to your own packs repository.
+- Docs: a new Template Studio section for pack authors and an article on where a pack in the project wizard comes from.
+- Fixed: in local mode with the texlive TL2024-historic image the first xelatex build failed without a format. The missing format is now built automatically and kept in the cache.
+
 ## [0.31.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.30.0...v0.31.0) - 2026-11-15
 
 - Pack catalogs: an administrator connects packs from a git repository or an archive in the new admin section "Pack catalogs". The Studio checks the packs and shows a plan (new, changed and incompatible versions); after "Apply" they appear in the project wizard without a restart. Once a day the Studio picks up newly released versions on its own.

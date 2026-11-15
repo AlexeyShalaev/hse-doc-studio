@@ -20,6 +20,9 @@ export type { RemoteSettingsCardProps } from "./ui/RemoteSettingsCards";
 export { DisconnectDialog } from "./ui/DisconnectDialog";
 export { ReplaceTokenDialog } from "./ui/ReplaceTokenDialog";
 export type { ReplaceTokenDialogProps } from "./ui/ReplaceTokenDialog";
+export { AddTokenForm } from "./ui/AddTokenForm";
+export type { AddTokenFormProps } from "./ui/AddTokenForm";
+export type { TokenVerdict } from "./model/tokenVerdict";
 export { CredentialCheckCard, RepoTokenHelp } from "./ui/RepoAccessKit";
 export type {
   CredentialCheckCardProps,

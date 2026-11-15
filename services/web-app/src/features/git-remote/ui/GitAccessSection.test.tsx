@@ -163,15 +163,106 @@ describe("раздел «Доступ к репозиториям»", () => {
       expect(within(pat).getByText("Отклонён сервером")).toBeInTheDocument();
       expect(
         within(pat).getByText(
-          "Сервер не принял этот доступ. Замени токен или ключ.",
+          "Сервер не принял этот доступ. Замените токен или ключ.",
         ),
       ).toBeInTheDocument();
     });
 
-    it("без доступов говорит, откуда они берутся", async () => {
+    it("без доступов говорит, как добавить токен", async () => {
       setup({ credentials: [] });
       renderSettings(<GitAccessSection />);
-      expect(await screen.findByText(/Доступов пока нет/)).toBeInTheDocument();
+      expect(await screen.findByText(/Доступов пока нет/)).toHaveTextContent(
+        "Добавить токен",
+      );
+      expect(screen.getByTestId("credential-add")).toBeInTheDocument();
+    });
+
+    it("«Добавить токен»: github.com по умолчанию, проверка и сохранение", async () => {
+      setup({ credentials: [] });
+      const user = userEvent.setup();
+      const fresh: GitCredential = {
+        ...PAT,
+        id: "fresh",
+        label: "GitHub, github.com",
+        host: "github.com",
+      };
+      const create = vi
+        .spyOn(gitRemoteApi, "createCredential")
+        .mockResolvedValue(fresh);
+      renderSettings(<GitAccessSection />);
+      await user.click(await screen.findByTestId("credential-add"));
+      const dialog = await screen.findByRole("dialog");
+      expect(within(dialog).getByTestId("add-token-server")).toHaveValue(
+        "github.com",
+      );
+      const token = within(dialog).getByLabelText("Токен");
+      expect(token).toHaveAttribute("type", "password");
+      await user.type(token, "ghp_secret");
+      await user.click(within(dialog).getByTestId("add-token-submit"));
+      await waitFor(() => {
+        expect(create).toHaveBeenCalledWith({
+          kind: "pat",
+          label: "GitHub, github.com",
+          host: "github.com",
+          token: "ghp_secret",
+        });
+      });
+      // Без профиля: основной набор прав провайдера.
+      expect(gitRemoteApi.checkCredential).toHaveBeenCalledWith("fresh");
+      await waitFor(() => {
+        expect(screen.queryByRole("dialog")).toBeNull();
+      });
+      expect(
+        useToastStore
+          .getState()
+          .toasts.some((toast) => toast.message.includes("GitHub, github.com")),
+      ).toBe(true);
+    });
+
+    it("«Добавить токен»: свой сервер и отказ проверки рядом с полем", async () => {
+      setup({ credentials: [] });
+      const user = userEvent.setup();
+      const fresh: GitCredential = { ...PAT, id: "fresh", host: "git.hse.ru" };
+      const create = vi
+        .spyOn(gitRemoteApi, "createCredential")
+        .mockResolvedValue(fresh);
+      vi.spyOn(gitRemoteApi, "checkCredential").mockRejectedValue(
+        new ApiError("401", "auth_failed", 401),
+      );
+      const remove = vi
+        .spyOn(gitRemoteApi, "deleteCredential")
+        .mockResolvedValue(undefined);
+      renderSettings(<GitAccessSection />);
+      await user.click(await screen.findByTestId("credential-add"));
+      const dialog = await screen.findByRole("dialog");
+      const server = within(dialog).getByTestId("add-token-server");
+      await user.clear(server);
+      await user.type(server, "https://git.hse.ru/fcs/paper");
+      await user.type(within(dialog).getByLabelText("Токен"), "glpat-wrong");
+      await user.click(within(dialog).getByTestId("add-token-submit"));
+      await waitFor(() => {
+        expect(create).toHaveBeenCalledWith(
+          expect.objectContaining({ host: "git.hse.ru", token: "glpat-wrong" }),
+        );
+      });
+      expect(
+        await within(dialog).findByTestId("token-check-auth_failed"),
+      ).toBeInTheDocument();
+      expect(remove).toHaveBeenCalledWith("fresh");
+      expect(screen.getByRole("dialog")).toBeInTheDocument();
+    });
+
+    it("«Добавить токен»: нечитаемый адрес сервера не сохраняется", async () => {
+      setup({ credentials: [] });
+      const user = userEvent.setup();
+      renderSettings(<GitAccessSection />);
+      await user.click(await screen.findByTestId("credential-add"));
+      const dialog = await screen.findByRole("dialog");
+      const server = within(dialog).getByTestId("add-token-server");
+      await user.clear(server);
+      await user.type(server, "не адрес");
+      expect(within(dialog).getByText(/Нужно имя сервера/)).toBeInTheDocument();
+      expect(within(dialog).queryByLabelText("Токен")).toBeNull();
     });
 
     it("список проектов открывается во всплывающем окне со ссылками на их настройки", async () => {
