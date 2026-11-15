@@ -42,7 +42,7 @@ Ready CI for your packs repository: [Command line and CI](ci.md#ci).
 
 The Studio's own packs live in its repository (`packs/`). Anyone with a GitHub account can propose a fix:
 
-1. The **Official packs** card, the **Start** button. You need your GitHub token in **Settings**, the "Repository access" section, with the `packs` rights profile; without it the dialog explains which token to issue. The Studio downloads only the packs folder.
+1. The **Official packs** card, the **Start** button. You need your GitHub token: a classic one with the `public_repo` scope (a fork, a branch in the fork and a PR into the public repository). Without a token the dialog gives a link to create one and a field to paste it into: the Studio checks the token, saves it under "Repository access" and selects it right away. The Studio downloads only the packs folder.
 2. Edits and a new version as usual.
 3. **Propose changes**: the branch goes to your fork and the PR is opened from your account. There is no other way: there is no installation bot for the official packs, this is safer. Commits may touch only the packs folder.
 4. Before the first push tick the consent: the contribution is public and licensed under the repository licence. Contribution rules: "Contributing to the official packs" in [CONTRIBUTING.md](https://github.com/AlexeyShalaev/hse-doc-studio/blob/master/CONTRIBUTING.md#contributing-to-the-official-packs).

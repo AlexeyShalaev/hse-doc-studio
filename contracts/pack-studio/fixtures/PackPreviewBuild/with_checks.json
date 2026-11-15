@@ -1,0 +1,45 @@
+{
+  "id": "0c5e8a1d-7f3b-4a62-9e14-6b2d8c0f3a57",
+  "workspace_id": "4f0c2a8e-1b7d-4c55-9a51-3b8d6f0e2c11",
+  "pack": "hse-cs-sse",
+  "template": "coursework",
+  "version": "2026.1.7",
+  "document": "report",
+  "example": "approval-gate",
+  "combination": {
+    "academic_supervisor": "yes",
+    "co_supervisor": "no",
+    "kind": "project",
+    "lang": "ru",
+    "meta.proposal_stage": "Предварительная",
+    "staffing": "solo",
+    "supervisor": "university"
+  },
+  "key": "7d1e7d1e7d1e7d1e7d1e7d1e7d1e7d1e7d1e7d1e7d1e7d1e7d1e7d1e7d1e7d1e",
+  "status": "succeeded",
+  "cached": false,
+  "created_at": "2026-11-15T09:30:00Z",
+  "started_at": "2026-11-15T09:30:02Z",
+  "finished_at": "2026-11-15T09:30:21Z",
+  "pages": 14,
+  "error": null,
+  "source_file": "report/report.tex",
+  "has_anchors": true,
+  "with_checks": true,
+  "checks": [
+    {
+      "rule_id": "gost-7.32-2017/page-margins",
+      "severity": "warn",
+      "message": "Левое поле 25 мм, ожидается 30 мм",
+      "file": "report/report.tex",
+      "line": null
+    },
+    {
+      "rule_id": "hse-sse-report-2026/introduction",
+      "severity": "err",
+      "message": "Нет раздела «Введение».",
+      "file": "report/report.tex",
+      "line": 12
+    }
+  ]
+}

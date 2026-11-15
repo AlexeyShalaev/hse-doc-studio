@@ -14,6 +14,7 @@ from hse_doc_studio.core.git_sync.entities import RemoteTarget
 from hse_doc_studio.core.git_sync.secret import Secret
 from hse_doc_studio.core.jobs.entities import JobSpec
 from hse_doc_studio.core.jobs.protocols import IJobHooks
+from hse_doc_studio.core.pack_studio.checks_form import ChecksConfig, ChecksFileView, ChecksOp
 from hse_doc_studio.core.pack_studio.entities import (
     GrantSubjectKind,
     PackDiagnostic,
@@ -42,6 +43,7 @@ from hse_doc_studio.core.pack_studio.preview import (
     MaterializedDoc,
     MaterializeRequest,
     PreviewBuild,
+    PreviewCheck,
     PreviewInputs,
     VersionDescription,
 )
@@ -54,6 +56,7 @@ from hse_doc_studio.core.pack_studio.scaffold import (
     ScaffoldSource,
     SourcePack,
 )
+from hse_doc_studio.core.pack_studio.submission import SubmissionOp, VersionSubmission
 from hse_doc_studio.core.pack_studio.versions import (
     BaseRegistry,
     CreatedVersion,
@@ -289,6 +292,34 @@ class IPackVersionModel(Protocol):
         ...
 
 
+class IPackSubmission(Protocol):
+    """Профили сдачи и порядок маршрута в `version.yaml` (срез T13): модель и правки точечными правками YAML.
+
+    Невыполнимая правка или правка, после которой лоадер или схема не поймут профиль, это `SubmissionEditError`;
+    нечитаемый манифест это `ValueError`.
+    """
+
+    def describe(self, text: str) -> VersionSubmission: ...
+
+    def apply(self, text: str, ops: Sequence[SubmissionOp]) -> str: ...
+
+
+class IPackChecksForm(Protocol):
+    """Файлы правил `checks/*.yaml` и `checks_version` версии (срез T14): модель и правки точечными правками YAML.
+
+    `prefix` это имя файла без `.yaml` (префикс id правил). Невыполнимая правка или правка, после которой лоадер
+    выбросит правило, это `ChecksEditError`; нечитаемый файл это `ValueError`.
+    """
+
+    def describe_file(self, text: str, prefix: str) -> ChecksFileView: ...
+
+    def apply_file(self, text: str, ops: Sequence[ChecksOp]) -> str: ...
+
+    def describe_config(self, text: str) -> ChecksConfig: ...
+
+    def apply_config(self, text: str, config: ChecksConfig) -> str: ...
+
+
 class IPackInspector(Protocol):
     """Проверки и подсказки редактора поверх файлов рабочего пространства, в процессе и без TeX (срез T8).
 
@@ -458,6 +489,8 @@ class CachedPreview:
     pages: int | None
     source_file: str
     has_anchors: bool
+    # Находки проверок, если сборка шла с ними (срез T14).
+    checks: tuple[PreviewCheck, ...] | None = None
 
 
 class IPreviewStore(Protocol):
@@ -475,7 +508,14 @@ class IPreviewStore(Protocol):
     def cached(self, key: str) -> CachedPreview | None: ...
 
     def keep(  # noqa: PLR0913 — что положить в кэш
-        self, key: str, build_id: UUID, source_file: str, doc_id: str, log: str, pages: int | None
+        self,
+        key: str,
+        build_id: UUID,
+        source_file: str,
+        doc_id: str,
+        log: str,
+        pages: int | None,
+        checks: tuple[PreviewCheck, ...] | None = None,
     ) -> CachedPreview | None:
         """Кладёт PDF (и якоря) из папки сборки в кэш; None, если PDF в папке нет."""
         ...

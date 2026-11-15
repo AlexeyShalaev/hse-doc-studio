@@ -9,3 +9,10 @@ export {
   exampleOf,
 } from "./lib/combination";
 export type { Combination } from "./lib/combination";
+export {
+  resetPreviewSelections,
+  selectionKey,
+  usePreviewSelection,
+} from "./lib/selection";
+export type { PreviewSelection, PreviewSelectionApi } from "./lib/selection";
+export { useSwitchText } from "./lib/switchText";

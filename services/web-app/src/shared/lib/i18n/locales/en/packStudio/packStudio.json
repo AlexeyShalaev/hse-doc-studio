@@ -602,6 +602,265 @@
     "close": "Close",
     "done": "Done"
   },
+  "submission": {
+    "lead": "Checkpoints and signing order of this version. Every change is written to version.yaml right away as a targeted edit: comments and key order stay, checks and the version class are recalculated as after an edit in Source.",
+    "missingTranslation": "Translation missing",
+    "stale": "The file changed outside the form. The form shows the fresh version; repeat the change.",
+    "profiles": "Checkpoints",
+    "noProfiles": "No checkpoints yet.",
+    "unnamed": "Untitled",
+    "problems_one": "{{count}} problem",
+    "problems_other": "{{count}} problems",
+    "up": "Up: {{what}}",
+    "down": "Down: {{what}}",
+    "remove": "Remove: {{what}}",
+    "brokenEntry": "The template does not read this entry: {{error}}. Fix it in Source.",
+    "route": {
+      "step": "Step {{n}}",
+      "parallel": "in parallel",
+      "stepUp": "Step up",
+      "stepDown": "Step down",
+      "joinPrevious": "Signs together with the previous step",
+      "joinPreviousShort": "With previous",
+      "separate": "A separate step right after this one",
+      "separateShort": "Separate",
+      "removeSlot": "Remove from the order: {{slot}}",
+      "addPlaceholder": "A signature not in the order",
+      "addStep": "As a separate step",
+      "dropHere": "Drop a signature here to make it a separate last step",
+      "own": "Set an own order",
+      "inherit": "Drop the own order ({{what}})",
+      "inherited": "In effect: {{what}}: {{steps}}.",
+      "missing": "Not in the order, they go as the last steps: {{slots}}.",
+      "unknown": "The order names slots outside the catalog; the route skips them: {{slots}}.",
+      "profileTitle": "Checkpoint signing order",
+      "profileHint": "Who signs first. Within a step people sign in parallel. Without an own order the version order applies.",
+      "versionTitle": "Version signing order",
+      "versionHint": "The common order for every checkpoint without its own. Without it the built-in Studio order applies.",
+      "builtinName": "the built-in order",
+      "versionName": "the version order"
+    },
+    "preview": {
+      "title": "Route in this combination",
+      "unreadable": "The template does not read this checkpoint, it has no route.",
+      "none": "The route is not calculated yet.",
+      "noSignatures": "This checkpoint needs no signatures: there is no route.",
+      "pair": "{{slot}} on “{{doc}}”",
+      "added": "Added by the template: {{pair}} ({{when}}).",
+      "optional": "Optional: {{pair}}.",
+      "skipped": "Not in this combination: {{pair}} ({{when}}).",
+      "mayAdd": "The project author may add: {{pairs}}.",
+      "itemsOff": "Not submitted in this combination: {{docs}}.",
+      "order": {
+        "profile": "Order: the checkpoint's own order.",
+        "version": "Order: the version order.",
+        "builtin": "Order: the built-in Studio order."
+      },
+      "failed": "The route was not calculated: {{reason}}"
+    },
+    "when": {
+      "always": "always",
+      "any": "if the {{person}} is set",
+      "university": "if the {{person}} is set and from HSE",
+      "company": "if the {{person}} is set and from a company"
+    },
+    "person": {
+      "supervisor": "supervisor",
+      "co_supervisor": "consultant",
+      "academic_supervisor": "academic supervisor"
+    },
+    "role": {
+      "author": "Author",
+      "supervisor": "Supervisor",
+      "co_supervisor": "Consultant",
+      "academic_supervisor": "Academic supervisor"
+    },
+    "kinds": {
+      "label": "Kind of work",
+      "both": "Both kinds",
+      "research": "Research only",
+      "project": "Project only"
+    },
+    "items": {
+      "title": "Items",
+      "hint": "The checkpoint's documents and their signatures. No signing method ticked means any method.",
+      "document": "Item document",
+      "noSlots": "No signature slot applies to this document.",
+      "unknownSlots": "Signatures outside the catalog or not for this document: {{slots}}.",
+      "skipIfNda": "Not submitted under NDA",
+      "addPlaceholder": "Document of the new item",
+      "add": "Add item"
+    },
+    "method": {
+      "image": "image",
+      "detached": "detached e-signature",
+      "pades": "PAdES",
+      "any": "any method"
+    },
+    "extras": {
+      "title": "Files besides documents",
+      "hint": "Form answers and other files that go into the checkpoint package.",
+      "form": "Form “{{title}}”",
+      "source": "File in the project",
+      "outputName": "Name in the package",
+      "format": "Format",
+      "notRequired": "Form {{form}} goes into the package but is not marked as needed for it (required_for_pack): the Studio will not warn that it is empty.",
+      "addPlaceholder": "What to add",
+      "other": "Another project file",
+      "add": "Add file"
+    },
+    "preset": {
+      "title": "Extra and optional signatures",
+      "hint": "The route preset: which signatures the template adds by itself and on what condition, which signatures are optional.",
+      "document": "Document",
+      "slot": "Signature",
+      "when": "Condition",
+      "optional": "Optional",
+      "requiredSlot": "The slot is required in the catalog (required): it cannot be optional",
+      "ofPoint": "A checkpoint item requires this signature: no condition, it can only be marked optional.",
+      "extra": "A signature beyond the checkpoint: the template adds it {{when}}.",
+      "noItems": "Add items first: the preset refers to their documents.",
+      "add": "Add entry"
+    },
+    "head": {
+      "id": "Identifier",
+      "idHint": "Latin letters, digits and single hyphens. Projects keep deadlines and routes by it: renaming is a change of the version.",
+      "name": "Name",
+      "description": "Description",
+      "hint": "Deadline hint",
+      "hintHint": "No concrete dates: deadlines change every year and a released version cannot be fixed. For example, “Usually mid-November; the date is announced in the LMS”.",
+      "reset": "Cancel",
+      "save": "Save"
+    },
+    "hintIssue": {
+      "missing": "Both languages are needed",
+      "long": "Longer than 200 characters",
+      "date": "Looks like a concrete date"
+    },
+    "profile": {
+      "up": "Up",
+      "down": "Down",
+      "remove": "Delete checkpoint",
+      "removeConfirm": "Delete the checkpoint from the version?",
+      "removeYes": "Delete",
+      "removeNo": "Keep",
+      "error": "The template does not fully understand the checkpoint: {{error}}",
+      "add": "New checkpoint",
+      "idTaken": "This checkpoint already exists",
+      "cancel": "Cancel",
+      "create": "Create checkpoint"
+    },
+    "combo": {
+      "title": "Combination for the route",
+      "hint": "The same switches as in the preview: the route below is calculated for these project people."
+    }
+  },
+  "checksForm": {
+    "lead": "The group header and the rules of this file. Every change goes to the file as a targeted edit: comments and keys the form does not know stay, checks and the version class are recalculated.",
+    "notFound": "This rules file is not in the version.",
+    "fileError": "The template does not fully understand the file: {{error}}",
+    "rules_one": "{{count}} rule",
+    "rules_other": "{{count}} rules",
+    "findings_one": "{{count}} finding",
+    "findings_other": "{{count}} findings",
+    "passed": "No findings",
+    "header": {
+      "title": "Rule group",
+      "hint": "How projects name the group and where the requirements come from.",
+      "label": "Group name",
+      "ref": "Document reference",
+      "source": "Source",
+      "url": "Source address"
+    },
+    "run": {
+      "title": "Check on the preview",
+      "document": "Document to check",
+      "noDocuments": "No documents of these rules in this combination",
+      "start": "Build and check",
+      "hint": "The document is built with the preview data set and switches, then the version rules run with the same engine as in a project. LanguageTool rules do not run on the preview.",
+      "running": "Building…",
+      "failed": "The build failed ({{code}}): see the log on the Preview tab.",
+      "clean": "The build passed with no findings.",
+      "found_one": "The build passed: {{count}} finding, shown at its rule.",
+      "found_other": "The build passed: {{count}} findings, shown at their rules."
+    },
+    "rule": {
+      "id": "Identifier",
+      "prefixHint": "An id usually starts with the file name: {{prefix}}/…",
+      "title": "Title",
+      "description": "Description",
+      "category": "Category",
+      "severity": "Severity",
+      "engine": "Engine",
+      "appliesTo": "Which documents",
+      "allDocuments": "All documents",
+      "unknownDocument": "Document {{doc}} is not in the version",
+      "check": "Check",
+      "paramsYaml": "Parameters (YAML)",
+      "paramsYamlHint": "The engine parameters as a mapping, as in the rules file.",
+      "up": "Up",
+      "down": "Down",
+      "remove": "Delete rule",
+      "reset": "Cancel",
+      "save": "Save"
+    },
+    "newRule": {
+      "title": "New rule",
+      "taken": "This rule already exists",
+      "add": "Add rule"
+    },
+    "param": {
+      "notNumber": "A number is needed",
+      "none": "This check has no parameters.",
+      "unknownCheck": "The form does not know this check: edit its parameters in Source.",
+      "expected.left_mm": "Left margin, mm",
+      "expected.right_mm": "Right margin, mm",
+      "expected.top_mm": "Top margin, mm",
+      "expected.bottom_mm": "Bottom margin, mm",
+      "tolerance_mm": "Tolerance, mm",
+      "expected": "Expected",
+      "tolerance": "Tolerance",
+      "allowed": "Allowed values",
+      "min": "At least",
+      "max": "At most"
+    },
+    "structural": {
+      "page_geometry": "Page margins",
+      "line_spacing": "Line spacing",
+      "font_size": "Font size",
+      "paragraph_indent": "Paragraph indent",
+      "page_count": "Page count",
+      "figure_numbering": "Figure numbering",
+      "float_orphans": "Orphan figures and tables"
+    },
+    "severity": {
+      "info": "Hint",
+      "warn": "Warning",
+      "err": "Error",
+      "skipped": "Do not check"
+    },
+    "engine": {
+      "regex": "Pattern in text (regex)",
+      "structural": "Layout (structural)",
+      "log_parse": "Build log (log_parse)",
+      "external": "LanguageTool (external)",
+      "file_exists": "File exists (file_exists)",
+      "tex_command_count": "Command count (tex_command_count)",
+      "python": "Python (python)",
+      "reference_check": "References (reference_check)",
+      "typography": "Typography (typography)"
+    },
+    "config": {
+      "lead": "Which version rules are on and with what severity. Written to checks_version in version.yaml.",
+      "categories": "Categories",
+      "categoriesHint": "A ticked category is off entirely.",
+      "noCategories": "The version rules have no categories.",
+      "off": "Off",
+      "severity": "Severity in this version",
+      "asRule": "As in the rule: {{severity}}",
+      "orphans": "checks_version names rules that are not in the rules files: {{ids}}."
+    }
+  },
   "scaffold": {
     "packTitle": "New pack",
     "packLead": "A pack with its first template and a beta draft version.",

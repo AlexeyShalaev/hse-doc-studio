@@ -13,6 +13,7 @@ import {
 import { ApiError } from "@shared/api";
 import { i18n } from "@shared/lib";
 import { loadPackStudioNamespace } from "@shared/lib/i18n/packStudioNamespace";
+import { resetPreviewSelections } from "../lib/selection";
 import { PackPreviewPane } from "./PackPreviewPane";
 
 // pdf.js в jsdom не поднимается: просмотрщик подменён адресом файла.
@@ -70,6 +71,7 @@ describe("предпросмотр версии шаблона", () => {
   });
   afterEach(() => {
     vi.restoreAllMocks();
+    resetPreviewSelections();
   });
 
   it("файл вне версии: пояснение без запросов", () => {

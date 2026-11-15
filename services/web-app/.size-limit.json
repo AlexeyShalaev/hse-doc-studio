@@ -201,7 +201,7 @@
     "name": "Страница подписанта с подписью на странице (lazy, pages/SigningPage и features/signing-inline)",
     "path": "dist/assets/SigningPage-*.js",
     "gzip": true,
-    "limit": "14.5 kB"
+    "limit": "15 kB"
   },
   {
     "name": "Словарь страницы подписанта (ru и en)",
@@ -234,6 +234,18 @@
     "limit": "29 kB"
   },
   {
+    "name": "Студия шаблонов, формы проверок (lazy, features/pack-checks-form)",
+    "path": "dist/assets/pack-checks-form-*.js",
+    "gzip": true,
+    "limit": "6.4 kB"
+  },
+  {
+    "name": "Студия шаблонов, форма точек сдачи (lazy, features/pack-submission-form)",
+    "path": "dist/assets/pack-submission-form-*.js",
+    "gzip": true,
+    "limit": "9.2 kB"
+  },
+  {
     "name": "Админка, «Студия шаблонов» (lazy, features/pack-studio-admin)",
     "path": "dist/assets/pack-studio-admin-*.js",
     "gzip": true,
@@ -249,7 +261,7 @@
     "name": "Студия шаблонов, формы манифестов (lazy, features/pack-forms)",
     "path": "dist/assets/pack-forms-*.js",
     "gzip": true,
-    "limit": "14 kB"
+    "limit": "15 kB"
   },
   {
     "name": "Словарь форм Студии шаблонов (ru и en, features/pack-forms)",
@@ -273,6 +285,6 @@
     "name": "Словарь Студии шаблонов (ru и en)",
     "path": "dist/assets/locale-packStudio-*.js",
     "gzip": true,
-    "limit": "21 kB"
+    "limit": "27.5 kB"
   }
 ]

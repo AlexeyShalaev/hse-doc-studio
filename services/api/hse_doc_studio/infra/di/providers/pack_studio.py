@@ -53,6 +53,7 @@ from hse_doc_studio.infra.pack_catalog.inspect import IsolatedRevisionInspector
 from hse_doc_studio.infra.pack_catalog.sources import JsonCatalogSourceRepository
 from hse_doc_studio.infra.pack_catalog.stage import RevisionStager
 from hse_doc_studio.infra.pack_catalog.store import PacksStore
+from hse_doc_studio.infra.pack_studio.checks_form import PackChecksFormEditor
 from hse_doc_studio.infra.pack_studio.hosting import HttpPackHosting
 from hse_doc_studio.infra.pack_studio.inspector import PackInspector
 from hse_doc_studio.infra.pack_studio.local_store import JsonPackWorkspaceRepository, LocalSectionStore
@@ -63,6 +64,7 @@ from hse_doc_studio.infra.pack_studio.preview_renderer import PackPreviewRendere
 from hse_doc_studio.infra.pack_studio.preview_store import FsPreviewStore
 from hse_doc_studio.infra.pack_studio.preview_worker import StageLimits
 from hse_doc_studio.infra.pack_studio.scaffold import PackScaffolder
+from hse_doc_studio.infra.pack_studio.submission import PackSubmissionEditor
 from hse_doc_studio.infra.pack_studio.version_model import PackVersionModel
 from hse_doc_studio.infra.pack_studio.version_wizard import PackVersionWizard
 from hse_doc_studio.infra.pack_studio.workspace_check import WorkspacePackChecker
@@ -73,6 +75,7 @@ from hse_doc_studio.infra.pdf.extract import PypdfTextReader
 from hse_doc_studio.use_cases.git_sync.provider_resolver import ProviderResolver
 from hse_doc_studio.use_cases.pack_catalog.service import PackCatalogService
 from hse_doc_studio.use_cases.pack_studio.access import PackStudioAccess
+from hse_doc_studio.use_cases.pack_studio.checks_form import PackChecksFormService
 from hse_doc_studio.use_cases.pack_studio.files import PackFilesService
 from hse_doc_studio.use_cases.pack_studio.git import PackGitService
 from hse_doc_studio.use_cases.pack_studio.insight import PackInsightService
@@ -81,6 +84,7 @@ from hse_doc_studio.use_cases.pack_studio.official import OfficialPacks
 from hse_doc_studio.use_cases.pack_studio.places import PackPlacesService
 from hse_doc_studio.use_cases.pack_studio.preview import PackPreviewService, PreviewLimits
 from hse_doc_studio.use_cases.pack_studio.scaffold import PackScaffoldService
+from hse_doc_studio.use_cases.pack_studio.submission import PackSubmissionService
 from hse_doc_studio.use_cases.pack_studio.versions import PackVersionService
 from hse_doc_studio.use_cases.pack_studio.workspaces import PackWorkspaceService, WorkspaceTasks
 
@@ -318,6 +322,14 @@ class PackStudioProvider(Provider):
     @provide
     def get_model_service(self, workspaces: PackWorkspaceService, files: PackFilesService) -> PackModelService:
         return PackModelService(workspaces, files, PackVersionModel(), PackYamlEditor())
+
+    @provide
+    def get_submission_service(self, files: PackFilesService, previews: PackPreviewService) -> PackSubmissionService:
+        return PackSubmissionService(files, previews, PackSubmissionEditor())
+
+    @provide
+    def get_checks_form_service(self, files: PackFilesService) -> PackChecksFormService:
+        return PackChecksFormService(files, PackChecksFormEditor())
 
     @provide
     def get_catalog_service(

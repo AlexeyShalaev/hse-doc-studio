@@ -77,6 +77,10 @@ class PackStudioErrorCode(StrEnum):
     place_invalid = "place_invalid"
     # Срезы T11 и T12: формы версии (поля, анкеты, документы, языки)
     model_invalid = "model_invalid"
+    # Срез T13: формы профилей сдачи и порядка маршрута
+    submission_invalid = "submission_invalid"
+    # Срез T14: формы проверок и правил
+    checks_invalid = "checks_invalid"
     # Срез T15: пак и шаблон с нуля
     id_invalid = "id_invalid"
     name_required = "name_required"
@@ -300,6 +304,16 @@ _TABLE: dict[PackStudioErrorCode, tuple[int, str, str]] = {
         400,
         "Правку формы нельзя записать: пак после неё не прочитается так, как задумано.",
         "The form edit cannot be written: the pack would not read as intended after it.",
+    ),
+    _C.submission_invalid: (
+        400,
+        "Правку точки сдачи нельзя записать: шаблон её не поймёт. Причина ниже.",
+        "The checkpoint change cannot be written: the template would not understand it. The reason is below.",
+    ),
+    _C.checks_invalid: (
+        400,
+        "Правку проверок нельзя записать: шаблон её не поймёт. Причина ниже.",
+        "The checks change cannot be written: the template would not understand it. The reason is below.",
     ),
     _C.id_invalid: (
         400,

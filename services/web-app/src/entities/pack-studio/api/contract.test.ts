@@ -62,6 +62,17 @@ import {
   UpdatePackStudioAdminRequestSchema,
   UpdatePackStudioSectionRequestSchema,
 } from "./schemas";
+import {
+  PackChecksConfigRequestSchema,
+  PackChecksPatchRequestSchema,
+  PackChecksSchema,
+} from "./checks";
+import {
+  PackSubmissionPatchRequestSchema,
+  PackSubmissionRoutesRequestSchema,
+  PackSubmissionRoutesSchema,
+  PackSubmissionSchema,
+} from "./submission";
 
 // Контракт Студии шаблонов: те же эталоны из contracts/pack-studio разбирает и
 // бэкенд-тест (tests/unit/contract/test_pack_studio_contract.py).
@@ -136,6 +147,15 @@ const SCHEMAS: Record<string, ZodType> = {
   PackModelPatchRequest: PackModelPatchRequestSchema,
   PackModelActionRequest: PackModelActionRequestSchema,
   PackDocLibrary: PackDocLibrarySchema,
+  // Срез T13: профили сдачи, пункты и порядок маршрута формой
+  PackSubmission: PackSubmissionSchema,
+  PackSubmissionPatchRequest: PackSubmissionPatchRequestSchema,
+  PackSubmissionRoutesRequest: PackSubmissionRoutesRequestSchema,
+  PackSubmissionRoutes: PackSubmissionRoutesSchema,
+  // Срез T14: файлы правил проверок и checks_version формой
+  PackChecks: PackChecksSchema,
+  PackChecksPatchRequest: PackChecksPatchRequestSchema,
+  PackChecksConfigRequest: PackChecksConfigRequestSchema,
   // Срез T15: пак и шаблон с нуля
   PackScaffoldOptions: PackScaffoldOptionsSchema,
   CreatePackRequest: CreatePackRequestSchema,

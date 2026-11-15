@@ -1,0 +1,43 @@
+{
+  "ops": [
+    {
+      "op": "set_entry",
+      "profile": 0,
+      "entries": "items",
+      "index": 0,
+      "item": {
+        "doc_id": "topic_application",
+        "signatures": ["author", "supervisor"],
+        "methods": { "author": ["image", "detached"], "supervisor": ["image"] },
+        "skip_if_nda": false,
+        "supported_kinds": []
+      }
+    },
+    {
+      "op": "add_entry",
+      "profile": 0,
+      "entries": "signing_slots",
+      "slot": {
+        "doc_id": "topic_application",
+        "slot_id": "academic_supervisor",
+        "when": { "person": "supervisor", "role": "company" },
+        "optional": false
+      }
+    },
+    {
+      "op": "add_entry",
+      "profile": 1,
+      "entries": "extra_items",
+      "extra": {
+        "source": ".hse-studio/forms/code_link.json",
+        "output_name": "Ссылка на репозиторий.txt",
+        "format": "markdown",
+        "supported_kinds": ["research"]
+      }
+    },
+    { "op": "move_entry", "profile": 0, "entries": "items", "index": 1, "to": 0 },
+    { "op": "remove_entry", "profile": 1, "entries": "signing_slots", "index": 0 },
+    { "op": "set_profile_route", "profile": 0, "steps": [["author"], ["supervisor", "co_supervisor"], ["academic_supervisor"]] },
+    { "op": "set_route", "steps": null }
+  ]
+}

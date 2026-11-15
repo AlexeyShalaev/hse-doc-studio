@@ -1,0 +1,78 @@
+{
+  "ops": [
+    {
+      "op": "set_header",
+      "header": {
+        "label": {
+          "ru": "ГОСТ 7.32-2017",
+          "en": "GOST 7.32-2017"
+        },
+        "ref": {
+          "ru": "ГОСТ 7.32-2017 §6",
+          "en": "GOST 7.32-2017 §6"
+        },
+        "source": {
+          "ru": "Отчёт о НИР"
+        },
+        "url": "https://docs.cntd.ru/document/1200157208"
+      }
+    },
+    {
+      "op": "set_rule",
+      "index": 0,
+      "rule": {
+        "id": "gost-7.32-2017/page-margins",
+        "title": {
+          "ru": "Поля страницы",
+          "en": "Page margins"
+        },
+        "description": {
+          "ru": "Левое поле 30 мм.",
+          "en": "Left margin 30 mm."
+        },
+        "category": "formatting",
+        "applies_to": [
+          "report"
+        ],
+        "default_severity": "warn",
+        "engine": "structural",
+        "params": {
+          "check": "page_geometry",
+          "expected": {
+            "left_mm": 30,
+            "right_mm": 15,
+            "top_mm": 20,
+            "bottom_mm": 20
+          },
+          "tolerance_mm": 1
+        }
+      }
+    },
+    {
+      "op": "add_rule",
+      "rule": {
+        "id": "gost-7.32-2017/intro",
+        "title": {
+          "ru": "Введение",
+          "en": "Introduction"
+        },
+        "description": {},
+        "category": "structure",
+        "applies_to": null,
+        "default_severity": "err",
+        "engine": "regex",
+        "params": {}
+      },
+      "params_yaml": "file_glob: report/report.tex\npattern: '(?i)\\\\section\\{Введение'\n"
+    },
+    {
+      "op": "move_rule",
+      "index": 2,
+      "to": 0
+    },
+    {
+      "op": "remove_rule",
+      "index": 1
+    }
+  ]
+}

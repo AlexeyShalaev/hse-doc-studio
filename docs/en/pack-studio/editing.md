@@ -22,9 +22,33 @@ tags:
 - **Save** writes the file. **Discard changes** brings back the saved text. The Studio will not let you leave a file with unsaved edits silently.
 - If the file changed since you opened it (another tab, an edit in the folder), the Studio offers **Take their version**, **Keep mine** or **Compare**.
 - Completion: in Jinja templates (`{{ }}`, `((* *))`) the context variables, the form fields `project.meta.<key>` and the pack filters; in the version's LaTeX the `\hse...` macros and the fields they print.
-- Manifests (`version.yaml`, `doc.yaml`) have the **Source** and **Form** tabs. For now "Source" works: forms over YAML come in later releases.
+- Version and document manifests (`version.yaml`, `doc.yaml`) and rules files `checks/*.yaml` have the **Source** and **Form** tabs.
 
-<!-- T11–T14 (forms): a "Forms" section here, after "The editor": fields and groups, questionnaires, documents, submission profiles and the route, checks. Drop the sentence about "Form" above. -->
+<!-- T11, T12 (forms): add fields and groups, questionnaires, documents to the "Forms" section below, next to "Submission and signing". -->
+
+## Forms { #forms }
+
+A form edits the same file as "Source" and the same way: every change goes to the YAML right away as a targeted edit (comments, alignment and keys the form does not know stay), then the checks and the version class are recalculated as after saving in the editor. A value the template would not understand is not written, and the form shows why. While "Source" has unsaved edits, the Form tab is closed: save or discard them first.
+
+### Submission and signing { #submission }
+
+The **Submission and signing** section of the `version.yaml` form:
+
+- **Version signing order** (`signatures.route`): steps, within a step people sign in parallel. Signatures are dragged between steps, the same is available with the **With previous** and **Separate** buttons. Without an own order the built-in one applies: the authors, then the supervisor and the consultant, then the academic supervisor.
+- **Checkpoints** as cards: identifier, name, description and the **deadline hint** (`deadline_hint`, both languages, up to 200 characters, no concrete dates: the form warns right away). A checkpoint can be added, moved and deleted.
+- **Items**: the document, its signatures as checkboxes (only the slots that apply to the document) and the signing methods per slot (image, detached e-signature, PAdES; none ticked means any method), "Not submitted under NDA", the kind of work.
+- **Files besides documents** (`extra_items`): a form from the list (the file name and format are filled in) or another project file. The form warns if a questionnaire goes into the package but is not marked as needed for it.
+- **Checkpoint signing order** (`signing_route`): the checkpoint's own order instead of the version order.
+- **Extra and optional signatures** (`signing_slots`): a document from the items, a signature, a condition from the list ("always", "if the supervisor is set", "set and from HSE", "set and from a company", the same for the consultant and the academic supervisor) and the **Optional** mark. A signature an item requires has no condition; a slot required in the catalog cannot be optional.
+- **Route in this combination** under each checkpoint: see [Preview](preview.md#route).
+
+Check findings about a checkpoint are shown right in its card. What the keys mean: [Packs and templates, signing presets](../reference/pack.md).
+
+### Checks and rules { #checks }
+
+- The **Checks** section of the `version.yaml` form (`checks_version`): turn a whole category off, turn a rule off, give a rule another severity in this version ("Do not check" too).
+- The form of a rules file `checks/*.yaml`: the group name and the document reference (both languages; without them a project shows the group as a raw id), the source; rules as cards. A rule has an identifier (usually starting with the file name), a title and description, a category, documents ("All documents" or chosen ones), a severity and an engine. Structural checks have parameter fields (page margins, line spacing, font size, paragraph indent, page count), other engines take YAML text. Parameter keys the form does not know (for example `message`) stay.
+- **Check on the preview**: pick a document and press **Build and check**. The document is built with the preview data set and switches, the version rules run with the same engine as in a project; findings show at their rules, rules that passed are marked "No findings". LanguageTool rules do not run on the preview.
 
 ## Problems
 

@@ -473,6 +473,16 @@ export const StartPackPreviewRequestSchema = z.strictObject({
   documents: z.array(z.string()).min(1).max(8),
   example: z.string().max(255).nullish(),
   combination: z.record(z.string(), z.string()).optional(),
+  // Прогнать правила проверок версии на собранном документе (срез T14).
+  checks: z.boolean().optional(),
+});
+
+export const PackPreviewCheckSchema = z.strictObject({
+  rule_id: z.string(),
+  severity: z.string(),
+  message: z.string(),
+  file: z.string().nullable(),
+  line: z.number().int().nullable(),
 });
 
 export const PackPreviewBuildSchema = z.strictObject({
@@ -496,6 +506,9 @@ export const PackPreviewBuildSchema = z.strictObject({
     .nullable(),
   source_file: z.string().nullable(),
   has_anchors: z.boolean(),
+  // Сборка с проверками (срез T14); `checks` находки удачной сборки, null: проверок не было.
+  with_checks: z.boolean().optional(),
+  checks: z.array(PackPreviewCheckSchema).nullish(),
 });
 
 export const PackPreviewStartSchema = z.strictObject({
@@ -969,6 +982,7 @@ export type PackFrameDate = z.infer<typeof PackFrameDateSchema>;
 export type PackSlotFrame = z.infer<typeof PackSlotFrameSchema>;
 export type PackSignatureSlot = z.infer<typeof PackSignatureSlotSchema>;
 export type PackSignatures = z.infer<typeof PackSignaturesSchema>;
+export type PackPreviewCheck = z.infer<typeof PackPreviewCheckSchema>;
 export type PackPlaceOp = z.infer<typeof PackPlaceOpSchema>;
 export type PackSignaturesPatchRequest = z.infer<
   typeof PackSignaturesPatchRequestSchema

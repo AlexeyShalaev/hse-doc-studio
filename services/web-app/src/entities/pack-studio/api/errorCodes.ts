@@ -56,6 +56,8 @@ export const PACK_STUDIO_ERROR_CODES = [
   "paths_outside_packs",
   "place_invalid",
   "model_invalid",
+  "submission_invalid",
+  "checks_invalid",
   "id_invalid",
   "name_required",
   "template_id_taken",

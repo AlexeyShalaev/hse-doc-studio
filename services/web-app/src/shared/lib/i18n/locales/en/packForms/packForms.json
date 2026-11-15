@@ -4,7 +4,9 @@
     "fields": "Fields",
     "forms": "Forms",
     "documents": "Documents",
-    "languages": "Languages"
+    "languages": "Languages",
+    "submission": "Submission and signing",
+    "checks": "Checks"
   },
   "stale": "The file changed outside the form. The form reread it: repeat the edit.",
   "dismiss": "Dismiss",

@@ -285,6 +285,8 @@
     "paths_outside_packs": "The branch changes files outside the packs folder. Official packs and service access take only packs.",
     "place_invalid": "The signature place cannot be written: the box is off the page or the slot does not apply to the document.",
     "model_invalid": "The form edit cannot be written: the pack would not read as intended after it.",
+    "submission_invalid": "The checkpoint change cannot be written: the template would not understand it. The reason is below.",
+    "checks_invalid": "The checks change cannot be written: the template would not understand it. The reason is below.",
     "id_invalid": "Invalid id: lowercase Latin letters and digits, a hyphen in a pack, a hyphen or underscore in a template.",
     "name_required": "Enter a name in Russian or English.",
     "template_id_taken": "This pack already has a template with this id.",
