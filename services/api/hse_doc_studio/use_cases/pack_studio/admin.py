@@ -23,6 +23,7 @@ from hse_doc_studio.core.identity.protocols import IAuditLog
 from hse_doc_studio.core.pack_studio.entities import GrantSubjectKind, PackStudioGrant, SectionState
 from hse_doc_studio.core.pack_studio.errors import PackStudioError, PackStudioErrorCode
 from hse_doc_studio.core.pack_studio.git_flow import HostingRepo, repo_key, repo_path_of
+from hse_doc_studio.core.pack_studio.official import OfficialRepo
 from hse_doc_studio.core.pack_studio.protocols import (
     IPackHosting,
     IPackStudioGrantRepository,
@@ -35,7 +36,6 @@ from hse_doc_studio.use_cases.admin.users import require_admin
 from hse_doc_studio.use_cases.git_sync.provider_resolver import ProviderResolver
 from hse_doc_studio.use_cases.pack_studio.access import PackStudioAccess
 from hse_doc_studio.use_cases.pack_studio.git import hosting_repo_for
-from hse_doc_studio.use_cases.pack_studio.official import OfficialAdminView, OfficialPacks
 
 AUDIT_SECTION = "pack_studio.section_update"
 AUDIT_GRANT = "pack_studio.grant_add"
@@ -43,8 +43,6 @@ AUDIT_REVOKE = "pack_studio.grant_remove"
 AUDIT_SERVICE_ADD = "pack_studio.service_access_add"
 AUDIT_SERVICE_REMOVE = "pack_studio.service_access_remove"
 AUDIT_SERVICE_CHECK = "pack_studio.service_access_check"
-# Области классического токена GitHub, которых хватает боту: форк, push в свой форк, PR в чужой открытый репозиторий.
-_BOT_SCOPES = frozenset({"public_repo", "repo"})
 _LABEL_MAX = 120
 _TOKEN_MAX = 4096
 
@@ -56,13 +54,11 @@ class PackStudioAdminView:
 
 
 class AccessProblem(StrEnum):
-    """Что не так со служебным доступом по проверке (срез T22); интерфейс объясняет каждый код словами."""
+    """Что не так со служебным доступом по проверке; интерфейс объясняет каждый код словами."""
 
     token_rejected = "token_rejected"  # noqa: S105 — код проблемы, не секрет
-    fine_grained_token = "fine_grained_token"  # noqa: S105 — код проблемы, не секрет
-    scope_missing = "scope_missing"
-    fork_unavailable = "fork_unavailable"
-    bot_can_push = "bot_can_push"
+    # Служебный доступ отправляет ветку в сам репозиторий (4.2): без права записи push не пройдёт.
+    cannot_push = "cannot_push"
     provider_unsupported = "provider_unsupported"
 
 
@@ -76,7 +72,7 @@ class ServiceAccessCheck:
 
     @property
     def ok(self) -> bool:
-        return not any(p is not AccessProblem.bot_can_push for p in self.problems)
+        return not self.problems
 
 
 class PackStudioAdminUC:
@@ -90,7 +86,7 @@ class PackStudioAdminUC:
         service_access: IServiceAccessRepository | None = None,
         *,
         allow_insecure_http: bool = False,
-        official: OfficialPacks | None = None,
+        official: OfficialRepo | None = None,
         hosting: IPackHosting | None = None,
         resolver: ProviderResolver | None = None,
     ) -> None:
@@ -151,13 +147,8 @@ class PackStudioAdminUC:
         require_admin(actor)
         return await self._services().list()
 
-    async def add_service_access(
-        self, actor: Actor, *, url: str, token: str, label: str | None, fork_mode: bool = False
-    ) -> ServiceAccess:
-        """Токен репозитория паков уровня установки: только https (токен идёт заголовком), один на репозиторий.
-
-        `fork_mode` (срез T22): доступ бота, ветка уходит только в форк аккаунта токена, PR из форка.
-        """
+    async def add_service_access(self, actor: Actor, *, url: str, token: str, label: str | None) -> ServiceAccess:
+        """Токен репозитория паков уровня установки: только https (токен идёт заголовком), один на репозиторий."""
         admin_id = require_admin(actor)
         parsed = parse_remote_url(url, allow_http=self._allow_insecure_http, allow_local=False)
         if parsed.kind not in {RemoteKind.https, RemoteKind.http} or parsed.host is None:
@@ -176,16 +167,12 @@ class PackStudioAdminUC:
             created_at=datetime.now(UTC),
             token_family=token_family(secret),
             created_by=admin_id,
-            fork_mode=fork_mode,
         )
         async with self._uow.begin():
             if not await self._services().add(access, Secret(secret)):
                 raise PackStudioError(PackStudioErrorCode.service_access_exists)
             await self._audit.record(
-                AUDIT_SERVICE_ADD,
-                actor_id=admin_id,
-                target=str(access.id),
-                details={"url": access.url, "fork_mode": access.fork_mode},
+                AUDIT_SERVICE_ADD, actor_id=admin_id, target=str(access.id), details={"url": access.url}
             )
         return await self._services().get(access.id) or access
 
@@ -200,8 +187,8 @@ class PackStudioAdminUC:
             )
 
     async def check_service_access(self, actor: Actor, access_id: UUID) -> ServiceAccessCheck:
-        """Проверка доступа у хостинга (срез T22): чей токен, его области, право push; у бота ещё и форк, который
-        находится или создаётся его токеном и запоминается."""
+        """Проверка доступа у хостинга: чей токен, его области и есть ли право push, без которого служебный доступ
+        ветку не отправит. Только чтение у хостинга, в доступе ничего не меняется."""
         admin_id = require_admin(actor)
         services = self._services()
         access = await services.get(access_id)
@@ -215,8 +202,7 @@ class PackStudioAdminUC:
         if repo.provider is not GitProvider.github:
             login, scopes, can_push, problems = None, None, None, [AccessProblem.provider_unsupported]
         else:
-            login, scopes, can_push, problems = await self._probe_github(services, access, repo, target)
-        checked = await services.get(access.id) or access
+            login, scopes, can_push, problems = await self._probe_github(repo, target)
         await self._audit.record(
             AUDIT_SERVICE_CHECK,
             actor_id=admin_id,
@@ -224,11 +210,11 @@ class PackStudioAdminUC:
             details={"url": access.url, "login": login, "problems": [p.value for p in problems]},
         )
         return ServiceAccessCheck(
-            access=checked, login=login, scopes=scopes, can_push=can_push, problems=tuple(problems)
+            access=access, login=login, scopes=scopes, can_push=can_push, problems=tuple(problems)
         )
 
     async def _probe_github(
-        self, services: IServiceAccessRepository, access: ServiceAccess, repo: HostingRepo, target: RemoteTarget
+        self, repo: HostingRepo, target: RemoteTarget
     ) -> tuple[str | None, tuple[str, ...] | None, bool | None, list[AccessProblem]]:
         hosting = self._hosting
         assert hosting is not None  # noqa: S101 — проверено вызывающим
@@ -236,45 +222,14 @@ class PackStudioAdminUC:
         if account is None:
             return None, None, None, [AccessProblem.token_rejected]
         can_push = (await hosting.permissions(repo, target)).can_push
-        problems: list[AccessProblem] = []
-        if access.fork_mode:
-            problems += self._bot_problems(access, account.scopes, can_push)
-            if access.fork_url is None:
-                fork = await hosting.fork(repo, target, create=True)
-                if fork is None:
-                    problems.append(AccessProblem.fork_unavailable)
-                else:
-                    await services.set_fork_url(access.id, fork.clone_url)
+        problems = [AccessProblem.cannot_push] if can_push is False else []
         return account.login, account.scopes, can_push, problems
-
-    @staticmethod
-    def _bot_problems(
-        access: ServiceAccess, scopes: tuple[str, ...] | None, can_push: bool | None
-    ) -> list[AccessProblem]:
-        """Боту нужен классический токен с `public_repo`: точный токен GitHub не открывает PR в чужой репозиторий."""
-        problems: list[AccessProblem] = []
-        if access.token_family == "github_pat" or scopes is None:  # noqa: S105 — префикс, не токен
-            problems.append(AccessProblem.fine_grained_token)
-        elif not _BOT_SCOPES & set(scopes):
-            problems.append(AccessProblem.scope_missing)
-        if can_push:
-            problems.append(AccessProblem.bot_can_push)
-        return problems
 
     # ── официальные паки (срез T22) ──
 
-    async def official(self, actor: Actor) -> OfficialAdminView:
+    async def official(self, actor: Actor) -> OfficialRepo | None:
+        """Официальный репозиторий паков из окружения установки: админка его только показывает."""
         require_admin(actor)
-        return await self._official_packs().admin_view()
-
-    async def update_official(self, actor: Actor, *, bot_enabled: bool, daily_limit: int) -> OfficialAdminView:
-        admin_id = require_admin(actor)
-        async with self._uow.begin():
-            return await self._official_packs().update_settings(admin_id, enabled=bot_enabled, daily_limit=daily_limit)
-
-    def _official_packs(self) -> OfficialPacks:
-        if self._official is None:
-            raise PackStudioError(PackStudioErrorCode.official_unavailable)
         return self._official
 
     def _services(self) -> IServiceAccessRepository:

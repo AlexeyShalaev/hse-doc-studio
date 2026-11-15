@@ -8,8 +8,5 @@
     "license_url": "https://github.com/AlexeyShalaev/hse-doc-studio/blob/master/LICENSE",
     "contributing_url": "https://github.com/AlexeyShalaev/hse-doc-studio/blob/master/CONTRIBUTING.md#contributing-to-the-official-packs"
   },
-  "bot_enabled": false,
-  "daily_limit": 10,
-  "default_daily_limit": 5,
-  "service_access": null
+  "workspace_id": null
 }

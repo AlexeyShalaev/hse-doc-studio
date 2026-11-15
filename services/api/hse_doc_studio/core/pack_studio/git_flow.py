@@ -166,7 +166,7 @@ class PullRequestState(StrEnum):
 
 @dataclass(frozen=True)
 class HostingAccount:
-    """Чей токен (срез T22, проверка доступа бота): логин и области классического токена (`X-OAuth-Scopes`);
+    """Чей токен (проверка служебного доступа в админке): логин и области классического токена (`X-OAuth-Scopes`);
     `scopes` None: хостинг областей не назвал (точный токен GitHub, GitHub App, другой провайдер)."""
 
     login: str
@@ -327,13 +327,8 @@ def proposal_body(
     *,
     proposed_by: str | None,
     extra: str | None = None,
-    via_bot: str | None = None,
 ) -> str:
-    """Описание PR (4.3, шаг 3): версии, класс и причины, заметки ru/en, сводка проверок, кто предложил.
-
-    `via_bot` (срез T22): адрес установки Студии, бот которой отправил предложение от имени автора; почта автора в
-    описание не попадает.
-    """
+    """Описание PR (4.3, шаг 3): версии, класс и причины, заметки ru/en, сводка проверок, кто предложил."""
     lines: list[str] = []
     if extra and extra.strip():
         lines += [extra.strip(), ""]
@@ -345,12 +340,6 @@ def proposal_body(
     lines.append(
         f"Предложено в Студии шаблонов пользователем {proposed_by}." if proposed_by else "Предложено в Студии шаблонов."
     )
-    if via_bot is not None:
-        where = f" ({via_bot})" if via_bot else ""
-        lines.append(
-            f"Отправлено служебным аккаунтом установки Студии{where} от имени автора: у автора может не быть "
-            "аккаунта GitHub, его адрес почты не раскрывается."
-        )
     return "\n".join(lines).strip()[:BODY_MAX]
 
 

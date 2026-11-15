@@ -1,6 +1,5 @@
-import { useId, useState } from "react";
+import { useState } from "react";
 import {
-  GitFork,
   KeyRound,
   Plus,
   ShieldCheck,
@@ -33,45 +32,34 @@ import {
 } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 
-/** Что открыть в окне добавления: из раздела «Официальные паки» это доступ бота. */
-export type ServiceAccessPreset = { url: string; forkMode: boolean };
-
 /** Окно «Добавить служебный доступ»: адрес репозитория паков, метка и токен. */
-export const AddServiceAccessDialog = ({
+const AddDialog = ({
   isOpen,
   onClose,
-  preset = null,
 }: {
   isOpen: boolean;
   onClose: () => void;
-  preset?: ServiceAccessPreset | null;
 }) => {
   const { t } = useTranslation("adminPackStudio");
   const add = useAddPackServiceAccess();
-  const [url, setUrl] = useState<string | null>(null);
+  const [url, setUrl] = useState("");
   const [label, setLabel] = useState("");
   const [token, setToken] = useState("");
-  const [forkMode, setForkMode] = useState<boolean | null>(null);
-  const forkId = useId();
-  const urlValue = url ?? preset?.url ?? "";
-  const fork = forkMode ?? preset?.forkMode ?? false;
 
   const close = () => {
     if (add.isPending) return;
     add.reset();
-    setUrl(null);
+    setUrl("");
     setLabel("");
     setToken("");
-    setForkMode(null);
     onClose();
   };
 
   const submit = () => {
     const body = {
-      url: urlValue.trim(),
+      url: url.trim(),
       token: token.trim(),
       label: label.trim() === "" ? null : label.trim(),
-      ...(fork ? { fork_mode: true } : {}),
     };
     add.mutate(body, {
       onSuccess: close,
@@ -95,9 +83,7 @@ export const AddServiceAccessDialog = ({
             {t("grant.cancel")}
           </Button>
           <Button
-            disabled={
-              add.isPending || urlValue.trim() === "" || token.trim() === ""
-            }
+            disabled={add.isPending || url.trim() === "" || token.trim() === ""}
             onClick={submit}
             data-testid="ps-service-submit"
           >
@@ -110,7 +96,7 @@ export const AddServiceAccessDialog = ({
         <Input
           label={t("service.url")}
           placeholder="https://gitlab.example.org/fcs/packs.git"
-          value={urlValue}
+          value={url}
           maxLength={2048}
           onChange={(e) => {
             setUrl(e.target.value);
@@ -142,22 +128,6 @@ export const AddServiceAccessDialog = ({
           isMono
           data-testid="ps-service-token"
         />
-        <label className="ps-choice" htmlFor={forkId}>
-          <input
-            id={forkId}
-            type="checkbox"
-            checked={fork}
-            onChange={(e) => {
-              setForkMode(e.target.checked);
-            }}
-            style={{ accentColor: "var(--accent)" }}
-            data-testid="ps-service-fork"
-          />
-          <span className="ps-choice-text">
-            <span>{t("service.forkMode")}</span>
-            <span className="ps-choice-hint">{t("service.forkModeHint")}</span>
-          </span>
-        </label>
         {add.isError && (
           <Notice tone="err" role="alert" text={packErrorText(add.error)} />
         )}
@@ -166,7 +136,7 @@ export const AddServiceAccessDialog = ({
   );
 };
 
-/** Итог «Проверить»: чей токен, его области, право push, форк бота и что не так. */
+/** Итог «Проверить»: чей токен, его области и что не так (например, нет права push). */
 const CheckResult = ({ check }: { check: PackServiceAccessCheck }) => {
   const { t } = useTranslation("adminPackStudio");
   return (
@@ -192,11 +162,6 @@ const CheckResult = ({ check }: { check: PackServiceAccessCheck }) => {
             {t("service.check.scopes", {
               scopes: check.scopes.length > 0 ? check.scopes.join(", ") : "-",
             })}
-          </li>
-        )}
-        {check.access.fork_url && (
-          <li className="mono">
-            {t("service.check.fork", { url: check.access.fork_url })}
           </li>
         )}
       </ul>
@@ -266,21 +231,10 @@ export const ServiceAccessSection = () => {
           <ListRow
             key={item.id}
             testId={`ps-service-${item.id}`}
-            icon={
-              item.fork_mode ? (
-                <GitFork size="0.875rem" />
-              ) : (
-                <KeyRound size="0.875rem" />
-              )
-            }
+            icon={<KeyRound size="0.875rem" />}
             title={item.label}
             description={[
               item.url,
-              item.fork_mode
-                ? item.fork_url
-                  ? t("service.forkAt", { url: item.fork_url })
-                  : t("service.forkPending")
-                : null,
               item.token_family ? `${item.token_family}…` : null,
               t("service.since", {
                 when: formatPastTime(item.created_at),
@@ -373,7 +327,7 @@ export const ServiceAccessSection = () => {
       >
         {checked && <CheckResult check={checked} />}
       </Modal>
-      <AddServiceAccessDialog
+      <AddDialog
         isOpen={adding}
         onClose={() => {
           setAdding(false);

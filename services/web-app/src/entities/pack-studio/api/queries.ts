@@ -21,7 +21,6 @@ import type {
   PackSignaturesPatchRequest,
   PackWorkspace,
   StartPackPreviewRequest,
-  UpdatePackStudioOfficialRequest,
 } from "./schemas";
 
 export const packStudioKeys = {
@@ -601,33 +600,18 @@ export const useAddPackServiceAccess = () => {
   });
 };
 
-export const useCheckPackServiceAccess = () => {
-  const client = useQueryClient();
-  return useMutation({
+/** «Проверить» служебный доступ у хостинга: только чтение, кэш не меняется. */
+export const useCheckPackServiceAccess = () =>
+  useMutation({
     mutationFn: (accessId: string) =>
       packStudioApi.checkServiceAccess(accessId),
-    onSuccess: () => {
-      void client.invalidateQueries({ queryKey: packStudioKeys.admin() });
-    },
   });
-};
 
 export const usePackOfficialAdmin = () =>
   useQuery({
     queryKey: packStudioKeys.officialAdmin(),
     queryFn: () => packStudioApi.officialAdmin(),
   });
-
-export const useSetPackOfficialAdmin = () => {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: (body: UpdatePackStudioOfficialRequest) =>
-      packStudioApi.setOfficialAdmin(body),
-    onSuccess: (state) => {
-      client.setQueryData(packStudioKeys.officialAdmin(), state);
-    },
-  });
-};
 
 export const useRemovePackServiceAccess = () => {
   const client = useQueryClient();

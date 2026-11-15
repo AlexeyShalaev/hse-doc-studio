@@ -1,7 +1,8 @@
-"""Официальные паки (срез T22): кнопка, доступ бота, согласие с лицензией, лимит, только папка паков.
+"""Официальные паки (срез T22): кнопка, вклад своим токеном через форк, согласие с лицензией, только папка паков.
 
 Сценарий `PackGitService` и `OfficialPacks` на фейках портов: ни git, ни хостинга, ни сети. Push и PR записываются
-фейками, по ним проверяется, куда ушла ветка и что видно в PR.
+фейками, по ним проверяется, куда ушла ветка и что видно в PR. Бота установки нет: PR в официальные паки создают
+только люди своим аккаунтом.
 """
 
 from __future__ import annotations
@@ -36,41 +37,22 @@ from hse_doc_studio.core.pack_studio.git_flow import (
     WorkGitStatus,
 )
 from hse_doc_studio.core.pack_studio.official import official_repo
-from hse_doc_studio.core.pack_studio.protocols import PackCheckReport, ServiceAccess, VersionNotes
+from hse_doc_studio.core.pack_studio.protocols import PackCheckReport, VersionNotes
 from hse_doc_studio.core.vcs.entities import VcsAuthor
 from hse_doc_studio.use_cases.pack_studio.git import AUDIT_PROPOSED, PackGitService, ProposeInput
-from hse_doc_studio.use_cases.pack_studio.official import (
-    AUDIT_LICENSE,
-    OFFICIAL_LABEL,
-    OfficialAccess,
-    OfficialPacks,
-)
+from hse_doc_studio.use_cases.pack_studio.official import AUDIT_LICENSE, OFFICIAL_LABEL, OfficialPacks
 from hse_doc_studio.use_cases.pack_studio.workspaces import WorkspaceView
 
 UPSTREAM = "https://github.com/AlexeyShalaev/hse-doc-studio"
-BOT_FORK = "https://github.com/studio-bot/hse-doc-studio.git"
+ANNA_FORK = "https://github.com/anna/hse-doc-studio.git"
 ANNA = Actor.user("u_anna", "Анна Иванова", "anna@real.example.org")
 REAL_EMAIL = "anna@real.example.org"
 CHANGED = "hse-cs-sse/templates/coursework/versions/2026.1.8/version.yaml"
 NOW = datetime(2026, 11, 15, 10, 0, tzinfo=UTC)
 
 
-def _bot_access(**changes: Any) -> ServiceAccess:
-    base = ServiceAccess(
-        id=uuid4(),
-        url=UPSTREAM,
-        host="github.com",
-        port=None,
-        repo_key="github.com/alexeyshalaev/hse-doc-studio",
-        label="Бот",
-        created_at=NOW,
-        token_family="ghp",
-        fork_mode=True,
-    )
-    return replace(base, **changes)
-
-
 def _workspace(**changes: Any) -> PackWorkspace:
+    """Официальное пространство Анны своим токеном, форк уже известен (поток T6)."""
     base = PackWorkspace(
         id=uuid4(),
         owner_id="u_anna",
@@ -82,6 +64,8 @@ def _workspace(**changes: Any) -> PackWorkspace:
         state=WorkspaceState.ready,
         remote_url=UPSTREAM,
         base_branch="master",
+        credential_id=uuid4(),
+        fork_url=ANNA_FORK,
     )
     return replace(base, **changes)
 
@@ -175,21 +159,15 @@ class _Hosting:
     can_push: bool | None = False
     pulls: list[dict[str, str]] = field(default_factory=list)
     forks_made: int = 0
-    synced: list[str] = field(default_factory=list)
     ci: CiReport | None = None
     pr_state: PullRequestState | None = None
 
     async def permissions(self, *_args: Any) -> RepoPermissions:
         return RepoPermissions(can_push=self.can_push)
 
-    async def fork(self, _repo: Any, target: RemoteTarget, *, create: bool) -> ForkRef | None:
-        assert target.url.display_url.startswith(UPSTREAM), "форк ищется токеном бота по адресу официального"
+    async def fork(self, _repo: Any, _target: RemoteTarget, *, create: bool) -> ForkRef | None:
         self.forks_made += 1
-        return ForkRef(path="studio-bot/hse-doc-studio", clone_url=BOT_FORK)
-
-    async def sync_fork(self, fork: Any, _target: RemoteTarget, *, branch: str) -> bool:
-        self.synced.append(f"{fork.path}@{branch}")
-        return True
+        return ForkRef(path="anna/hse-doc-studio", clone_url=ANNA_FORK)
 
     async def open_pull_request(self, _repo: Any, target: RemoteTarget, **kwargs: str) -> PullRequestRef:
         self.pulls.append({**kwargs, "target": target.url.display_url})
@@ -230,42 +208,6 @@ class _Author:
         return VcsAuthor(name="Анна Иванова", email=REAL_EMAIL)
 
 
-class _Services:
-    def __init__(self, access: ServiceAccess | None) -> None:
-        self.access = access
-
-    async def get(self, access_id: UUID) -> ServiceAccess | None:
-        return self.access if self.access is not None and self.access.id == access_id else None
-
-    async def find(self, _key: str) -> ServiceAccess | None:
-        return self.access
-
-    async def set_fork_url(self, access_id: UUID, fork_url: str) -> None:
-        assert self.access is not None
-        assert access_id == self.access.id
-        self.access = replace(self.access, fork_url=fork_url)
-
-
-class _Settings:
-    def __init__(self, enabled: bool | None = None, limit: int | None = None) -> None:
-        self.value = (enabled, limit)
-
-    async def get(self) -> tuple[bool | None, int | None]:
-        return self.value
-
-    async def set(self, *, enabled: bool, daily_limit: int) -> None:
-        self.value = (enabled, daily_limit)
-
-
-class _Counter:
-    def __init__(self, used: int = 0) -> None:
-        self.used = used
-
-    async def count_since(self, user_id: str, since: datetime) -> int:
-        assert user_id == "u_anna"
-        return self.used
-
-
 class _Audit:
     def __init__(self) -> None:
         self.events: list[tuple[str, dict[str, Any]]] = []
@@ -274,21 +216,12 @@ class _Audit:
         self.events.append((action, kwargs))
 
 
-class _Access:
-    def __init__(self, right: bool = True) -> None:
-        self.right = right
-
-    async def has_right(self, _actor: Actor) -> bool:
-        return self.right
-
-
 @dataclass
 class _Stand:
     ws: PackWorkspace
     workspaces: _Workspaces
     git: _Git
     hosting: _Hosting
-    services: _Services
     audit: _Audit
     official: OfficialPacks
     service: PackGitService
@@ -298,32 +231,17 @@ class _Stand:
         return self.workspaces.items[self.ws.id]
 
 
-def _stand(  # noqa: PLR0913 — что меняют тесты
+def _stand(
     *,
-    access: ServiceAccess | None = None,
     ws: PackWorkspace | None = None,
-    settings: _Settings | None = None,
-    used: int = 0,
     git: _Git | None = None,
     hosting: _Hosting | None = None,
-    right: bool = True,
 ) -> _Stand:
-    bot = _bot_access() if access is None else access
-    workspace = ws or _workspace(service_access_id=bot.id)
+    workspace = ws or _workspace()
     workspaces = _Workspaces(workspace)
-    services = _Services(bot)
     audit = _Audit()
     repo = official_repo(UPSTREAM, packs_path="packs", base_branch="master", license="Apache-2.0")
-    official = OfficialPacks(
-        repo,
-        workspaces,  # type: ignore[arg-type]
-        _Access(right),  # type: ignore[arg-type]
-        settings or _Settings(),
-        default_daily_limit=5,
-        service_access=services,  # type: ignore[arg-type]
-        counter=_Counter(used),
-        audit=audit,  # type: ignore[arg-type]
-    )
+    official = OfficialPacks(repo, workspaces, audit=audit)  # type: ignore[arg-type]
     the_git = git or _Git()
     the_hosting = hosting or _Hosting()
     service = PackGitService(
@@ -338,55 +256,31 @@ def _stand(  # noqa: PLR0913 — что меняют тесты
         diff_max_bytes=1024,
         audit=audit,  # type: ignore[arg-type]
         official=official,
-        noreply_domain="noreply.studio.example.org",
-        site_url="https://studio.example.org",
     )
-    return _Stand(workspace, workspaces, the_git, the_hosting, services, audit, official, service)
+    return _Stand(workspace, workspaces, the_git, the_hosting, audit, official, service)
 
 
-# ── бот: куда уходит ветка и что видно в PR ──────────────────────────────────
+# ── своим токеном: куда уходит ветка и что видно в PR ────────────────────────
 
 
-async def test__bot__first_proposal__fork_found_by_bot_token_branch_to_fork_pr_into_official() -> None:
+async def test__own_token__proposal__branch_to_own_fork_pr_into_official_signed_by_profile() -> None:
     stand = _stand()
 
     view = await stand.service.propose(ANNA, stand.ws.id, ProposeInput(accept_license=True))
 
-    assert [t.url.display_url for t in stand.git.pushes] == [BOT_FORK]
-    assert stand.hosting.forks_made == 1
-    assert stand.services.access is not None
-    assert stand.services.access.fork_url == BOT_FORK
-    assert stand.hosting.synced == ["studio-bot/hse-doc-studio@master"]
+    assert [t.url.display_url for t in stand.git.pushes] == [ANNA_FORK]
+    assert stand.hosting.forks_made == 0
     (pull,) = stand.hosting.pulls
     assert pull["target"] == UPSTREAM
-    assert pull["head"].startswith("studio-bot:pack-studio/")
+    assert pull["head"].startswith("anna:pack-studio/")
     assert pull["base"] == "master"
     assert "пользователем Анна Иванова" in pull["body"]
-    assert "служебным аккаунтом установки Студии (https://studio.example.org)" in pull["body"]
-    assert REAL_EMAIL not in pull["body"]
-    assert view.pull_request is not None
-    assert view.pushed_to == BOT_FORK
+    assert "служебным аккаунтом" not in pull["body"]
+    assert stand.git.authors == [VcsAuthor(name="Анна Иванова", email=REAL_EMAIL)]
+    assert view.pushed_to == ANNA_FORK
 
 
-async def test__bot__commit_author__name_from_profile_email_noreply_even_if_real_was_chosen() -> None:
-    stand = _stand()
-
-    await stand.service.propose(ANNA, stand.ws.id, ProposeInput(accept_license=True))
-
-    assert stand.git.authors == [VcsAuthor(name="Анна Иванова", email="u_anna@noreply.studio.example.org")]
-
-
-async def test__bot__known_fork__no_fork_call_and_never_pushes_to_official() -> None:
-    hosting = _Hosting(can_push=True)
-    stand = _stand(access=_bot_access(fork_url=BOT_FORK), hosting=hosting)
-
-    await stand.service.propose(ANNA, stand.ws.id, ProposeInput(accept_license=True))
-
-    assert hosting.forks_made == 0
-    assert [t.url.display_url for t in stand.git.pushes] == [BOT_FORK]
-
-
-async def test__bot__proposal__audited_with_bot_flag_for_the_daily_count() -> None:
+async def test__own_token__proposal__audited_as_official_without_bot_flag() -> None:
     stand = _stand()
 
     await stand.service.propose(ANNA, stand.ws.id, ProposeInput(accept_license=True))
@@ -394,47 +288,25 @@ async def test__bot__proposal__audited_with_bot_flag_for_the_daily_count() -> No
     proposed = [details for action, details in stand.audit.events if action == AUDIT_PROPOSED]
     assert len(proposed) == 1
     assert proposed[0]["actor_id"] == "u_anna"
-    assert proposed[0]["details"]["bot"] is True
     assert proposed[0]["details"]["official"] is True
-    assert proposed[0]["details"]["pushed_to"] == BOT_FORK
+    assert "bot" not in proposed[0]["details"]
+    assert proposed[0]["details"]["pushed_to"] == ANNA_FORK
 
 
-# ── ограничения пути с ботом ─────────────────────────────────────────────────
-
-
-async def test__bot__daily_limit_reached__refused_before_any_commit_or_push() -> None:
-    stand = _stand(used=5)
+async def test__own_token__no_fork_and_no_push_right__fork_required_as_in_t6() -> None:
+    stand = _stand(ws=_workspace(fork_url=None))
 
     with pytest.raises(PackStudioError) as caught:
         await stand.service.propose(ANNA, stand.ws.id, ProposeInput(accept_license=True))
 
-    assert caught.value.code is PackStudioErrorCode.proposal_limit
-    assert caught.value.status == 429  # noqa: PLR2004
-    assert caught.value.ctx["limit"] == 5  # noqa: PLR2004
-    assert stand.git.authors == []
+    assert caught.value.code is PackStudioErrorCode.fork_required
     assert stand.git.pushes == []
 
 
-async def test__bot__limit_set_by_admin__applies() -> None:
-    stand = _stand(settings=_Settings(limit=2), used=2)
-
-    with pytest.raises(PackStudioError) as caught:
-        await stand.service.propose(ANNA, stand.ws.id, ProposeInput(accept_license=True))
-
-    assert caught.value.ctx["limit"] == 2  # noqa: PLR2004
+# ── только папка паков ───────────────────────────────────────────────────────
 
 
-async def test__bot__turned_off_by_admin__refused() -> None:
-    stand = _stand(settings=_Settings(enabled=False))
-
-    with pytest.raises(PackStudioError) as caught:
-        await stand.service.propose(ANNA, stand.ws.id, ProposeInput(accept_license=True))
-
-    assert caught.value.code is PackStudioErrorCode.official_bot_unavailable
-    assert stand.git.pushes == []
-
-
-async def test__service_access__branch_touches_files_outside_packs__refused() -> None:
+async def test__official__branch_touches_files_outside_packs__refused() -> None:
     git = _Git(branch_files=(f"packs/{CHANGED}", ".github/workflows/ci.yml"))
     stand = _stand(git=git)
 
@@ -444,6 +316,28 @@ async def test__service_access__branch_touches_files_outside_packs__refused() ->
     assert caught.value.code is PackStudioErrorCode.paths_outside_packs
     assert caught.value.ctx["files"] == [".github/workflows/ci.yml"]
     assert git.pushes == []
+
+
+async def test__service_access_of_other_repository__branch_outside_packs__refused() -> None:
+    git = _Git(branch_files=("README.md",))
+    ws = _workspace(remote_url="https://github.com/acme/packs", credential_id=None, service_access_id=uuid4())
+    stand = _stand(ws=ws, git=git, hosting=_Hosting(can_push=True))
+
+    with pytest.raises(PackStudioError) as caught:
+        await stand.service.propose(ANNA, ws.id, ProposeInput())
+
+    assert caught.value.code is PackStudioErrorCode.paths_outside_packs
+    assert git.pushes == []
+
+
+async def test__own_token_in_other_repository__files_outside_packs__allowed() -> None:
+    git = _Git(branch_files=("README.md",))
+    ws = _workspace(remote_url="https://github.com/acme/packs", fork_url=None)
+    stand = _stand(ws=ws, git=git, hosting=_Hosting(can_push=True))
+
+    await stand.service.propose(ANNA, ws.id, ProposeInput())
+
+    assert [t.url.display_url for t in git.pushes] == ["https://github.com/acme/packs"]
 
 
 # ── согласие с лицензией ─────────────────────────────────────────────────────
@@ -475,21 +369,8 @@ async def test__official__consent_given_once__remembered_and_audited() -> None:
     assert len(stand.git.pushes) == 2  # noqa: PLR2004
 
 
-async def test__own_token_in_official__consent_asked_but_no_bot_rules() -> None:
-    ws = _workspace(credential_id=uuid4(), fork_url="https://github.com/anna/hse-doc-studio.git")
-    stand = _stand(ws=ws, used=99, git=_Git(branch_files=("README.md",)))
-
-    with pytest.raises(PackStudioError) as caught:
-        await stand.service.propose(ANNA, ws.id, ProposeInput())
-    await stand.service.propose(ANNA, ws.id, ProposeInput(accept_license=True))
-
-    assert caught.value.code is PackStudioErrorCode.license_consent_required
-    assert [t.url.display_url for t in stand.git.pushes] == ["https://github.com/anna/hse-doc-studio.git"]
-    assert stand.git.authors[0].email == REAL_EMAIL
-
-
 async def test__other_repository__no_consent_needed() -> None:
-    ws = _workspace(remote_url="https://github.com/acme/packs", credential_id=uuid4())
+    ws = _workspace(remote_url="https://github.com/acme/packs", fork_url=None)
     stand = _stand(ws=ws, hosting=_Hosting(can_push=True))
 
     await stand.service.propose(ANNA, ws.id, ProposeInput())
@@ -517,96 +398,54 @@ async def test__checks__awaiting_approval_and_merged_pr__passed_through() -> Non
 # ── кнопка «Официальные паки» ────────────────────────────────────────────────
 
 
-async def test__info__bot_available_with_quota_and_no_workspace_yet() -> None:
-    stand = _stand(used=1)
+async def test__info__repository_and_no_workspace_yet() -> None:
+    stand = _stand()
     stand.workspaces.items.clear()
 
     info = await stand.official.info(ANNA)
 
     assert info.repo is not None
+    assert info.repo.url == UPSTREAM
     assert info.workspace_id is None
-    assert info.bot.available is True
-    assert info.bot.quota is not None
-    assert (info.bot.quota.limit, info.bot.quota.used) == (5, 1)
 
 
-@pytest.mark.parametrize(
-    ("access", "settings", "right", "reason"),
-    [
-        (_bot_access(fork_mode=False), None, True, "not_configured"),
-        (None, _Settings(enabled=False), True, "disabled"),
-        (None, None, False, "no_right"),
-    ],
-)
-async def test__info__bot_unavailable_reasons(
-    access: ServiceAccess | None, settings: _Settings | None, right: bool, reason: str
-) -> None:
-    stand = _stand(access=access, settings=settings, right=right)
+async def test__info__existing_official_workspace__named() -> None:
+    stand = _stand()
 
     info = await stand.official.info(ANNA)
 
-    assert info.bot.available is False
-    assert info.bot.reason is not None
-    assert info.bot.reason.value == reason
+    assert info.workspace_id == stand.ws.id
 
 
 async def test__open__existing_official_workspace__returned_not_created() -> None:
     stand = _stand()
 
-    view, created = await stand.official.open(ANNA, OfficialAccess.bot, None)
+    view, created = await stand.official.open(ANNA, uuid4())
 
     assert created is False
     assert view.workspace.id == stand.ws.id
     assert stand.workspaces.created == []
 
 
-async def test__open__bot__creates_partial_clone_of_packs_with_service_access() -> None:
-    stand = _stand()
-    stand.workspaces.items.clear()
-
-    _, created = await stand.official.open(ANNA, OfficialAccess.bot, None)
-
-    assert created is True
-    (inp,) = stand.workspaces.created
-    assert (inp.url, inp.packs_path, inp.base_branch, inp.label) == (UPSTREAM, "packs", "master", OFFICIAL_LABEL)
-    assert inp.service_access is True
-    assert inp.credential_id is None
-
-
-async def test__open__own_token__creates_with_that_credential() -> None:
+async def test__open__own_token__creates_partial_clone_of_packs_with_that_credential() -> None:
     stand = _stand()
     stand.workspaces.items.clear()
     credential = uuid4()
 
-    await stand.official.open(ANNA, OfficialAccess.token, credential)
+    _, created = await stand.official.open(ANNA, credential)
 
+    assert created is True
     (inp,) = stand.workspaces.created
+    assert (inp.url, inp.packs_path, inp.base_branch, inp.label) == (UPSTREAM, "packs", "master", OFFICIAL_LABEL)
     assert inp.credential_id == credential
     assert inp.service_access is False
 
 
-async def test__open__bot_turned_off__refused() -> None:
-    stand = _stand(settings=_Settings(enabled=False))
-    stand.workspaces.items.clear()
-
-    with pytest.raises(PackStudioError) as caught:
-        await stand.official.open(ANNA, OfficialAccess.bot, None)
-
-    assert caught.value.code is PackStudioErrorCode.official_bot_unavailable
-    assert stand.workspaces.created == []
-
-
 async def test__open__no_official_repository__refused() -> None:
     stand = _stand()
-    hidden = OfficialPacks(
-        None,
-        stand.workspaces,  # type: ignore[arg-type]
-        _Access(),  # type: ignore[arg-type]
-        None,
-        default_daily_limit=5,
-    )
+    hidden = OfficialPacks(None, stand.workspaces)  # type: ignore[arg-type]
 
     with pytest.raises(PackStudioError) as caught:
-        await hidden.open(ANNA, OfficialAccess.token, uuid4())
+        await hidden.open(ANNA, uuid4())
 
     assert caught.value.code is PackStudioErrorCode.official_unavailable

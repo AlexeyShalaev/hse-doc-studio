@@ -14,8 +14,6 @@ import { Button, Modal, Select } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import { hostOfUrl } from "../lib/hostOfUrl";
 
-type Access = "bot" | "token";
-
 /** Где человек добавляет токен: «Настройки», раздел «Доступы git». */
 const GIT_ACCESS_SETTINGS = "/settings/git-access";
 
@@ -27,9 +25,9 @@ export type OfficialPacksDialogProps = {
 };
 
 /**
- * Выбор доступа к официальным пакам (template-studio.md, 4.7): без своего
- * аккаунта GitHub (служебный аккаунт установки, если админ его настроил), своим
- * токеном GitHub или объяснение, какой токен выпустить.
+ * Доступ к официальным пакам (template-studio.md, 4.7): только свой токен
+ * GitHub (PR создают люди своим аккаунтом); без токена окно объясняет, какой
+ * выпустить.
  */
 export const OfficialPacksDialog = ({
   official,
@@ -42,7 +40,6 @@ export const OfficialPacksDialog = ({
   const credentials = useCredentials(isOpen);
   const uid = useId();
   const repo = official.repo;
-  const bot = official.bot;
   const host = repo ? hostOfUrl(repo.url) : null;
   const tokens = useMemo(
     () =>
@@ -51,28 +48,23 @@ export const OfficialPacksDialog = ({
       ),
     [credentials.data, host],
   );
-  const [chosen, setChosen] = useState<Access | null>(null);
   const [credentialId, setCredentialId] = useState<string | null>(null);
-  const access: Access | null =
-    chosen ?? (bot.available ? "bot" : tokens.length > 0 ? "token" : null);
   const tokenId = credentialId ?? tokens[0]?.id ?? null;
-  const nothing = !bot.available && tokens.length === 0;
+  const nothing = tokens.length === 0;
 
   const close = () => {
     if (open.isPending) return;
     open.reset();
-    setChosen(null);
+    setCredentialId(null);
     onClose();
   };
   const submit = () => {
-    if (access === null || (access === "token" && tokenId === null)) return;
+    if (tokenId === null) return;
     open.mutate(
-      access === "bot"
-        ? { access: "bot" }
-        : { access: "token", credential_id: tokenId ?? "" },
+      { credential_id: tokenId },
       {
         onSuccess: (workspace) => {
-          setChosen(null);
+          setCredentialId(null);
           onOpened(workspace);
         },
       },
@@ -80,10 +72,6 @@ export const OfficialPacksDialog = ({
   };
 
   if (!repo) return null;
-  const left =
-    bot.daily_limit !== null && bot.used !== null
-      ? Math.max(bot.daily_limit - bot.used, 0)
-      : null;
 
   return (
     <Modal
@@ -98,11 +86,7 @@ export const OfficialPacksDialog = ({
             {t("common.cancel")}
           </Button>
           <Button
-            disabled={
-              open.isPending ||
-              access === null ||
-              (access === "token" && tokenId === null)
-            }
+            disabled={open.isPending || tokenId === null}
             onClick={submit}
             data-testid="official-submit"
           >
@@ -116,49 +100,12 @@ export const OfficialPacksDialog = ({
         style={{ gap: "0.75rem" }}
         data-testid="official-dialog"
       >
-        {bot.available && (
-          <label className="ps-choice" htmlFor={`${uid}-bot`}>
-            <input
-              id={`${uid}-bot`}
-              type="radio"
-              name={`${uid}-access`}
-              checked={access === "bot"}
-              onChange={() => {
-                setChosen("bot");
-              }}
-              style={{ accentColor: "var(--accent)" }}
-              data-testid="official-access-bot"
-            />
-            <span className="ps-choice-text">
-              <span>{t("official.bot.title")}</span>
-              <span className="ps-choice-hint">
-                {t("official.bot.hint")}
-                {left !== null &&
-                  ` ${t("official.bot.quota", { left, limit: bot.daily_limit ?? 0 })}`}
-              </span>
-            </span>
-          </label>
-        )}
         {tokens.length > 0 && (
-          <label className="ps-choice" htmlFor={`${uid}-token`}>
-            <input
-              id={`${uid}-token`}
-              type="radio"
-              name={`${uid}-access`}
-              checked={access === "token"}
-              onChange={() => {
-                setChosen("token");
-              }}
-              style={{ accentColor: "var(--accent)" }}
-              data-testid="official-access-token"
-            />
-            <span className="ps-choice-text">
-              <span>{t("official.token.title")}</span>
-              <span className="ps-choice-hint">{t("official.token.hint")}</span>
-            </span>
-          </label>
+          <p className="ps-dialog-text" data-testid="official-access-token">
+            {t("official.token.hint")}
+          </p>
         )}
-        {access === "token" && tokens.length > 1 && (
+        {tokens.length > 1 && (
           <div className="field">
             <label htmlFor={`${uid}-credential`}>
               {t("create.credential")}
@@ -180,26 +127,19 @@ export const OfficialPacksDialog = ({
             <Notice tone="info" role="status" text={t("official.none.lead")} />
           </div>
         )}
-        {!bot.available && bot.reason && bot.reason !== "local" && (
-          <p className="ps-dialog-text" data-testid="official-bot-reason">
-            {t(`official.bot.reason.${bot.reason}`)}
-          </p>
-        )}
-        {(nothing || access === "token") && (
-          <details className="sync-details" open={nothing}>
-            <summary>{t("official.none.token")}</summary>
-            <div
-              className="flex flex-col"
-              style={{ gap: "0.5rem", marginTop: "0.5rem" }}
-            >
-              <p className="ps-dialog-text">{t("official.none.steps")}</p>
-              <RepoTokenHelp url={repo.url} profile="packs" defaultOpen />
-              <a href={GIT_ACCESS_SETTINGS} className="ps-dialog-text">
-                {t("official.none.settings")}
-              </a>
-            </div>
-          </details>
-        )}
+        <details className="sync-details" open={nothing}>
+          <summary>{t("official.none.token")}</summary>
+          <div
+            className="flex flex-col"
+            style={{ gap: "0.5rem", marginTop: "0.5rem" }}
+          >
+            <p className="ps-dialog-text">{t("official.none.steps")}</p>
+            <RepoTokenHelp url={repo.url} profile="packs" defaultOpen />
+            <a href={GIT_ACCESS_SETTINGS} className="ps-dialog-text">
+              {t("official.none.settings")}
+            </a>
+          </div>
+        </details>
         {open.isError && (
           <Notice tone="err" role="alert" text={packErrorText(open.error)} />
         )}

@@ -395,8 +395,6 @@
       "consentHint": "Everyone will see the PR and its commits. You are asked once for this workspace.",
       "license": "License",
       "rules": "Contributing rules",
-      "bot": "The instance service account sends the branch to its fork. The PR shows your profile name, your email stays private.",
-      "quota": "You can send {{left}} more of {{limit}} proposals today.",
       "afterMerge": "Official packs ship with the Studio: after the PR is merged, the new version reaches users with the next release."
     },
     "merged": {
@@ -409,20 +407,9 @@
     "title": "Official packs",
     "lead": "Packs from the Studio's own repository. Edit them here and propose changes through a PR: no repository of your own is needed.",
     "start": "Start",
-    "dialogLead": "The Studio downloads only the packs folder and opens a workspace. Choose how to send your changes.",
+    "dialogLead": "The Studio downloads only the packs folder and opens a workspace. Changes are sent only with your own GitHub account.",
     "submit": "Open official packs",
-    "bot": {
-      "title": "Without your own GitHub account",
-      "hint": "The instance service account sends the changes and opens the PR. The PR shows your profile name, your email stays private.",
-      "quota": "You can send {{left}} more of {{limit}} proposals today.",
-      "reason": {
-        "not_configured": "The administrator of this instance has not set up contributing without a GitHub account.",
-        "disabled": "The administrator of this instance has turned off contributing without a GitHub account.",
-        "no_right": "Contributing without a GitHub account needs the Pack author right."
-      }
-    },
     "token": {
-      "title": "With your own GitHub token",
       "hint": "The branch goes to your fork on GitHub, the PR is opened from your account."
     },
     "none": {

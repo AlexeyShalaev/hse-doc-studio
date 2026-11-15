@@ -70,7 +70,6 @@ nav = [
         { "Самодиагностика сервера" = "deploy/diagnostics.md" },
         { "Автообновление сервера" = "deploy/auto-update.md" },
         { "Обновление и потеря ключа" = "deploy/operations.md" },
-        { "Официальные паки без аккаунта GitHub" = "deploy/pack-studio-bot.md" },
         { "Студия шаблонов у себя" = "deploy/pack-studio-local.md" },
         { "Автономная работа и хранение данных" = "deploy/autonomy.md" },
     ] },

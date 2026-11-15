@@ -104,8 +104,5 @@ class PackStudioServiceAccessRow(Base):
     label: Mapped[str] = mapped_column(Text, nullable=False)
     token_family: Mapped[str | None] = mapped_column(String(32))
     secret_enc: Mapped[str] = mapped_column(Text, nullable=False)
-    # Срез T22: доступ бота, push только в его форк (`fork_url`), PR из форка.
-    fork_mode: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default=text("false"))
-    fork_url: Mapped[str | None] = mapped_column(Text)
     created_by: Mapped[str | None] = mapped_column(String(64), ForeignKey("users.id", ondelete="SET NULL"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

@@ -431,25 +431,19 @@ class PackServiceAccessResponse(StrictModel):
     created_by: str | None
     created_by_name: str | None
     created_at: datetime
-    # Срез T22: доступ бота, push только в форк аккаунта токена (`fork_url`, null до первой проверки или отправки).
-    fork_mode: bool = False
-    fork_url: str | None = None
 
 
 class CreatePackServiceAccessRequest(StrictModel):
     url: str = Field(min_length=1, max_length=2048)
     token: str = Field(min_length=1, max_length=4096)
     label: str | None = Field(default=None, max_length=120)
-    fork_mode: bool = False
 
 
-ServiceAccessProblemName = Literal[
-    "token_rejected", "fine_grained_token", "scope_missing", "fork_unavailable", "bot_can_push", "provider_unsupported"
-]
+ServiceAccessProblemName = Literal["token_rejected", "cannot_push", "provider_unsupported"]
 
 
 class PackServiceAccessCheckResponse(StrictModel):
-    """`POST /api/admin/pack-studio/service-access/{id}/check`: проверка доступа у хостинга (срез T22)."""
+    """`POST /api/admin/pack-studio/service-access/{id}/check`: проверка доступа у хостинга."""
 
     access: PackServiceAccessResponse
     ok: bool
@@ -462,9 +456,6 @@ class PackServiceAccessCheckResponse(StrictModel):
 
 # ── срез T22: официальные паки ──────────────────────────────────────────────
 
-OfficialAccessName = Literal["bot", "token"]
-BotUnavailableName = Literal["local", "not_configured", "disabled", "no_right"]
-
 
 class PackOfficialRepo(StrictModel):
     url: str
@@ -476,46 +467,24 @@ class PackOfficialRepo(StrictModel):
     contributing_url: str
 
 
-class PackOfficialBot(StrictModel):
-    available: bool
-    reason: BotUnavailableName | None
-    daily_limit: int | None
-    used: int | None
-
-
 class PackOfficialResponse(StrictModel):
-    """`GET /pack-studio/official`: официальный репозиторий паков установки (null: кнопки нет), доступ бота и уже
-    созданное пространство человека."""
+    """`GET /pack-studio/official`: официальный репозиторий паков установки (null: кнопки нет) и уже созданное
+    пространство человека."""
 
     repo: PackOfficialRepo | None
-    bot: PackOfficialBot
     workspace_id: str | None
 
 
 class OpenPackOfficialRequest(StrictModel):
-    access: OfficialAccessName
-    credential_id: UUID | None = None
+    """Вклад в официальные паки только своим аккаунтом: личный доступ git человека к хосту репозитория."""
 
-    @model_validator(mode="after")
-    def _token_needs_credential(self) -> OpenPackOfficialRequest:
-        if (self.access == "token") != (self.credential_id is not None):
-            raise ValueError("credential_id goes with access=token only")
-        return self
+    credential_id: UUID
 
 
 class PackStudioOfficialAdminResponse(StrictModel):
-    """`GET/PUT /api/admin/pack-studio/official`: вклад через бота (срез T22)."""
+    """`GET /api/admin/pack-studio/official`: официальный репозиторий из окружения установки (null: кнопки нет)."""
 
     repo: PackOfficialRepo | None
-    bot_enabled: bool
-    daily_limit: int
-    default_daily_limit: int
-    service_access: PackServiceAccessResponse | None
-
-
-class UpdatePackStudioOfficialRequest(StrictModel):
-    bot_enabled: bool
-    daily_limit: int = Field(ge=1, le=1000)
 
 
 # ── Предпросмотр (раздел 6, срез T7) ─────────────────────────────────────────

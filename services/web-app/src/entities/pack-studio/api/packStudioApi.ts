@@ -35,7 +35,6 @@ import {
   type PackOfficial,
   type PackServiceAccessCheck,
   type PackStudioOfficialAdmin,
-  type UpdatePackStudioOfficialRequest,
   type CreatePackStudioGrantRequest,
   type CreatePackVersionRequest,
   type CreatePackWorkspaceRequest,
@@ -167,8 +166,8 @@ export const packStudioApi = {
   refreshWorkspace: (id: string): Promise<PackWorkspace> =>
     apiClient.post(`${ws(id)}/refresh`).then(parseResp(PackWorkspaceSchema)),
 
-  // Официальные паки (срез T22): репозиторий установки, доступ бота и
-  // своё пространство; открыть отвечает уже созданным или новым (клон в фоне).
+  // Официальные паки (срез T22): репозиторий установки и своё пространство;
+  // открыть своим токеном отвечает уже созданным или новым (клон в фоне).
   official: (): Promise<PackOfficial> =>
     apiClient
       .get(`${BASE}/official`, quiet)
@@ -429,7 +428,7 @@ export const packStudioApi = {
   removeServiceAccess: async (accessId: string): Promise<void> => {
     await adminClient.delete(`${BASE}/service-access/${enc(accessId)}`, quiet);
   },
-  /** Проверка у хостинга: чей токен, области, у бота форк (находится или создаётся). */
+  /** Проверка у хостинга: чей токен, его области и право push. */
   checkServiceAccess: (accessId: string): Promise<PackServiceAccessCheck> =>
     adminClient
       .post(
@@ -444,11 +443,5 @@ export const packStudioApi = {
   officialAdmin: (): Promise<PackStudioOfficialAdmin> =>
     adminClient
       .get(`${BASE}/official`, quiet)
-      .then(parseResp(PackStudioOfficialAdminSchema)),
-  setOfficialAdmin: (
-    body: UpdatePackStudioOfficialRequest,
-  ): Promise<PackStudioOfficialAdmin> =>
-    adminClient
-      .put(`${BASE}/official`, body, quiet)
       .then(parseResp(PackStudioOfficialAdminSchema)),
 };

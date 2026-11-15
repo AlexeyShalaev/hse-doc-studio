@@ -32,8 +32,6 @@ from hse_doc_studio.infra.db.orm.pack_studio import (
 from hse_doc_studio.infra.db.session import SessionProvider
 
 SECTION_KEY = "pack_studio.enabled"
-OFFICIAL_BOT_ENABLED_KEY = "pack_studio.official_bot_enabled"
-OFFICIAL_BOT_LIMIT_KEY = "pack_studio.official_bot_daily_limit"
 
 
 def _entity(row: PackWorkspaceRow) -> PackWorkspace:
@@ -246,26 +244,6 @@ class InstanceSectionStore:
         await self._settings.set(SECTION_KEY, enabled, source=SOURCE_ADMIN)
 
 
-class InstanceOfficialSettingsStore:
-    """Срез T22: вклад через бота в настройках установки (ключи `pack_studio.official_bot_*`, источник «админ»)."""
-
-    def __init__(self, settings: IInstanceSettingsRepository) -> None:
-        self._settings = settings
-
-    async def get(self) -> tuple[bool | None, int | None]:
-        values = await self._settings.get_all()
-        enabled = values.get(OFFICIAL_BOT_ENABLED_KEY)
-        limit = values.get(OFFICIAL_BOT_LIMIT_KEY)
-        return (
-            enabled if isinstance(enabled, bool) else None,
-            limit if isinstance(limit, int) and not isinstance(limit, bool) and limit > 0 else None,
-        )
-
-    async def set(self, *, enabled: bool, daily_limit: int) -> None:
-        await self._settings.set(OFFICIAL_BOT_ENABLED_KEY, enabled, source=SOURCE_ADMIN)
-        await self._settings.set(OFFICIAL_BOT_LIMIT_KEY, daily_limit, source=SOURCE_ADMIN)
-
-
 _SA_TABLE = "pack_studio_service_access"
 _SA_COLUMN = "secret_enc"
 
@@ -282,8 +260,6 @@ def _service_access(row: PackStudioServiceAccessRow, creator: str | None) -> Ser
         token_family=row.token_family,
         created_by=row.created_by,
         created_by_name=creator,
-        fork_mode=row.fork_mode,
-        fork_url=row.fork_url,
     )
 
 
@@ -329,8 +305,6 @@ class PostgresServiceAccessRepository:
                 label=access.label,
                 token_family=access.token_family,
                 secret_enc=sealed,
-                fork_mode=access.fork_mode,
-                fork_url=access.fork_url,
                 created_by=access.created_by,
                 created_at=access.created_at,
             )
@@ -347,15 +321,6 @@ class PostgresServiceAccessRepository:
         async with self._sessions.use() as db:
             await db.execute(delete(PackStudioServiceAccessRow).where(PackStudioServiceAccessRow.id == access_id))
         return found
-
-    async def set_fork_url(self, access_id: UUID, fork_url: str) -> None:
-        stmt = (
-            update(PackStudioServiceAccessRow)
-            .where(PackStudioServiceAccessRow.id == access_id)
-            .values(fork_url=fork_url)
-        )
-        async with self._sessions.use() as db:
-            await db.execute(stmt)
 
     async def secret(self, access_id: UUID) -> Secret | None:
         stmt = select(PackStudioServiceAccessRow.secret_enc).where(PackStudioServiceAccessRow.id == access_id)

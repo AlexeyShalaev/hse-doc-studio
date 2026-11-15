@@ -34,9 +34,9 @@ const DIRTY = fixture(PackGitSchema, "PackGit", "detached_dirty");
 const OFFICIAL_WS = fixture(
   PackWorkspaceSchema,
   "PackWorkspace",
-  "git_official_bot",
+  "git_official",
 );
-const OFFICIAL = fixture(PackOfficialSchema, "PackOfficial", "bot_available");
+const OFFICIAL = fixture(PackOfficialSchema, "PackOfficial", "available");
 const APPROVAL = fixture(
   PackCiStatusSchema,
   "PackCiStatus",
@@ -49,7 +49,7 @@ const PR = fixture(
   "github_pr",
 );
 
-/** Официальное пространство с ботом: правки есть, согласия ещё нет. */
+/** Официальное пространство своим токеном: правки есть, согласия ещё нет. */
 const officialGit = (patch: Partial<PackGit["workspace"]> = {}): PackGit => ({
   ...DIRTY,
   workspace: {
@@ -92,15 +92,12 @@ describe("официальные паки в панели git", () => {
     vi.restoreAllMocks();
   });
 
-  it("первая отправка через бота: согласие с лицензией обязательно, остаток лимита виден", async () => {
+  it("первая отправка своим токеном: согласие с лицензией обязательно, служебного аккаунта нет", async () => {
     vi.spyOn(packStudioApi, "official").mockResolvedValue(OFFICIAL);
     const propose = vi.spyOn(packStudioApi, "propose").mockResolvedValue(PR);
     mount(officialGit());
     await userEvent.click(await screen.findByTestId("propose-changes"));
 
-    expect(await screen.findByTestId("git-propose-bot")).toHaveTextContent(
-      "Сегодня можно ещё 4 из 5 предложений.",
-    );
     expect(await screen.findByTestId("git-propose-license")).toHaveTextContent(
       "Apache-2.0",
     );
@@ -112,6 +109,8 @@ describe("официальные паки в панели git", () => {
       "href",
       OFFICIAL.repo?.contributing_url,
     );
+    expect(screen.queryByTestId("git-propose-bot")).not.toBeInTheDocument();
+    expect(screen.queryByText(/служебн/i)).not.toBeInTheDocument();
     const submit = screen.getByTestId("git-propose-submit");
     expect(submit).toBeDisabled();
 
@@ -130,7 +129,7 @@ describe("официальные паки в панели git", () => {
     const propose = vi.spyOn(packStudioApi, "propose").mockResolvedValue(PR);
     mount(officialGit({ license_accepted_at: "2026-11-15T10:05:00Z" }));
     await userEvent.click(await screen.findByTestId("propose-changes"));
-    await screen.findByTestId("git-propose-bot");
+    await screen.findByTestId("git-propose-submit");
     expect(screen.queryByTestId("git-propose-license")).not.toBeInTheDocument();
     await userEvent.click(screen.getByTestId("git-propose-submit"));
     await waitFor(() => {

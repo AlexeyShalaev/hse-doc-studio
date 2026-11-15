@@ -31,7 +31,6 @@ from hse_doc_studio.core.git_sync.policy import GitSyncPolicy
 from hse_doc_studio.core.git_sync.protocols import IGitTransport
 from hse_doc_studio.core.git_sync.providers import GitProvider, web_base
 from hse_doc_studio.core.git_sync.url import RemoteKind, RemoteUrl, parse_remote_url
-from hse_doc_studio.core.identity.commit_identity import DEFAULT_NOREPLY_DOMAIN, noreply_email
 from hse_doc_studio.core.identity.protocols import IAuditLog
 from hse_doc_studio.core.pack_studio.entities import PackWorkspace
 from hse_doc_studio.core.pack_studio.errors import PackStudioError, PackStudioErrorCode
@@ -56,16 +55,14 @@ from hse_doc_studio.core.pack_studio.git_flow import (
     touched_scopes,
     work_branch_name,
 )
-from hse_doc_studio.core.pack_studio.official import PROPOSED_ACTION, outside_packs
+from hse_doc_studio.core.pack_studio.official import outside_packs
 from hse_doc_studio.core.pack_studio.paths import RELEASES_FILE, TEMPLATES_DIR
 from hse_doc_studio.core.pack_studio.protocols import (
     IPackChecker,
     IPackHosting,
     IPackWorkspaceGit,
     PackCheckReport,
-    ServiceAccess,
 )
-from hse_doc_studio.core.vcs.entities import VcsAuthor
 from hse_doc_studio.core.vcs.errors import VcsInvalidRefError
 from hse_doc_studio.core.vcs.protocols import ICommitAuthorProvider
 from hse_doc_studio.core.vcs.refs import validate_ref_name
@@ -76,7 +73,7 @@ from hse_doc_studio.use_cases.pack_studio.workspaces import PackWorkspaceService
 logger = structlog.get_logger()
 _T = TypeVar("_T")
 
-AUDIT_PROPOSED = PROPOSED_ACTION
+AUDIT_PROPOSED = "pack_studio.proposed"
 _API_SUFFIXES = ("/api/v3", "/api/v4", "/api/v1")
 _GITHUB_API = "https://api.github.com"
 # Свежий форк GitHub создаётся асинхронно: первая отправка может не найти репозиторий.
@@ -165,8 +162,6 @@ class PackGitService:
         diff_max_bytes: int,
         audit: IAuditLog | None = None,
         official: OfficialPacks | None = None,
-        noreply_domain: str = DEFAULT_NOREPLY_DOMAIN,
-        site_url: str | None = None,
     ) -> None:
         self._workspaces = workspaces
         self._git = git
@@ -179,8 +174,6 @@ class PackGitService:
         self._diff_max = diff_max_bytes
         self._audit = audit
         self._official = official
-        self._noreply_domain = noreply_domain
-        self._site_url = site_url
 
     # ── чтение ───────────────────────────────────────────────────────────────
 
@@ -229,7 +222,7 @@ class PackGitService:
         ws = await self._workspaces.git_ready(actor, workspace_id)
 
         async def work() -> CommitView:
-            current, sha = await self._commit(actor, ws, message)
+            current, sha = await self._commit(ws, message)
             return CommitView(git=await self._view(current), sha=sha, committed=sha is not None)
 
         return await self._locked(ws, work)
@@ -253,7 +246,7 @@ class PackGitService:
                 self._workspaces.dirs_of(fresh),
                 self._workspaces.target_of(fresh),
                 base_branch=base,
-                author=await self._signature(actor, fresh),
+                author=self._author.author(),
                 message=f"Merge {base} into {status.branch or 'HEAD'}",
             )
             if outcome.conflicts:
@@ -307,7 +300,7 @@ class PackGitService:
         moved = replace(ws, work_branch=wanted, pr_url=None, pr_number=None, ci_status=None, pushed_sha=None)
         return await self._workspaces.save(moved)
 
-    async def _commit(self, actor: Actor, ws: PackWorkspace, message: str | None) -> tuple[PackWorkspace, str | None]:
+    async def _commit(self, ws: PackWorkspace, message: str | None) -> tuple[PackWorkspace, str | None]:
         status = await self._status(ws)
         if not status.dirty:
             return ws, None
@@ -320,28 +313,23 @@ class PackGitService:
             report = await asyncio.to_thread(self._checker.check, root, touched_scopes(status.changed), {})
             text = default_commit_message(self._summaries(ws, status, report))
         sha = await self._git.commit(
-            self._workspaces.dirs_of(ws),
-            packs_path=ws.packs_path,
-            message=text,
-            author=await self._signature(actor, ws),
+            self._workspaces.dirs_of(ws), packs_path=ws.packs_path, message=text, author=self._author.author()
         )
         return ws, sha
 
-    async def _propose(self, actor: Actor, ws: PackWorkspace, inp: ProposeInput) -> ProposeView:  # noqa: PLR0914 — шаги одного предложения
-        bot = await self._bot_access(ws)
+    async def _propose(self, actor: Actor, ws: PackWorkspace, inp: ProposeInput) -> ProposeView:
+        official = self._official is not None and self._official.is_official(ws)
         if self._official is not None:
-            # Согласие и лимит до любых коммитов и сети: отказ ничего не меняет в пространстве.
+            # Согласие до любых коммитов и сети: отказ ничего не меняет в пространстве.
             ws = await self._official.accept_license(actor, ws, accepted=inp.accept_license)
-            if bot is not None:
-                await self._official.require_bot_quota(actor)
-        ws, _ = await self._commit(actor, ws, inp.message)
+        ws, _ = await self._commit(ws, inp.message)
         status = await self._status(ws)
         if not status.changed and status.ahead == 0:
             raise PackStudioError(PackStudioErrorCode.nothing_to_propose)
         if status.branch is None:
             ws = await self._switch(ws, None)
             status = await self._status(ws)
-        if ws.service_access_id is not None:
+        if official or ws.service_access_id is not None:
             await self._require_packs_only(ws)
         report = await self._gate(ws, status)
         branch = status.branch or ""
@@ -355,24 +343,15 @@ class PackGitService:
             CheckSummary(errors=report.errors, warnings=report.warnings),
             proposed_by=self._author.author().name,
             extra=_clip(inp.description, _DESCRIPTION_MAX),
-            via_bot=(self._site_url or "") if bot is not None else None,
         )
-        if bot is not None:
-            ws, push_target, fork = await self._bot_push_target(ws, target, repo, bot)
-        else:
-            ws, push_target, fork = await self._push_target(ws, target, repo, inp.fork)
+        ws, push_target, fork = await self._push_target(ws, target, repo, inp.fork)
         options = (
             gitlab_push_options(target_branch=base, title=title, description=body)
             if repo.provider is GitProvider.gitlab and fork is None
             else []
         )
         pushed = await self._push(
-            ws,
-            push_target,
-            repo,
-            branch,
-            options,
-            fresh_fork=fork is not None and (inp.fork is not None or bot is not None),
+            ws, push_target, repo, branch, options, fresh_fork=fork is not None and inp.fork is not None
         )
         pull, pr_error = await self._pull_request(repo, target, pushed.remote_output, fork, branch, base, title, body)
         link = None if pull is not None else compare_url(repo, base=base, branch=branch, fork=fork)
@@ -387,7 +366,7 @@ class PackGitService:
                 fork_url=fork.clone_url if fork else ws.fork_url,
             )
         )
-        await self._record(actor, saved, pull, push_target, bot=bot is not None)
+        await self._record(actor, saved, pull, push_target, official=official)
         return ProposeView(
             git=await self._view(saved),
             pushed_sha=pushed.sha,
@@ -509,44 +488,15 @@ class PackGitService:
             raise
         return pull, None
 
-    # ── официальные паки и бот (срез T22) ─────────────────────────────────────
-
-    async def _bot_access(self, ws: PackWorkspace) -> ServiceAccess | None:
-        return None if self._official is None else await self._official.bot_access_of(ws)
-
-    async def _signature(self, actor: Actor, ws: PackWorkspace) -> VcsAuthor:
-        """Подпись коммита: профиль человека; у пространства бота адрес всегда noreply Студии (почта не раскрывается
-        в публичном репозитории, даже если человек выбрал для коммитов свой адрес)."""
-        author = self._author.author()
-        if actor.id is None or await self._bot_access(ws) is None:
-            return author
-        return VcsAuthor(name=author.name, email=noreply_email(actor.id, self._noreply_domain))
+    # ── официальные паки (срез T22) ──────────────────────────────────────────
 
     async def _require_packs_only(self, ws: PackWorkspace) -> None:
-        """Служебный доступ предлагает только паки: коммиты ветки не трогают ничего вне папки паков (раздел 9)."""
+        """Официальное пространство и служебный доступ предлагают только паки: коммиты ветки не трогают ничего вне
+        папки паков (раздел 9)."""
         paths = await self._git.branch_paths(self._workspaces.dirs_of(ws), base_branch=ws.base_branch or "")
         outside = outside_packs(paths, ws.packs_path)
         if outside:
             raise PackStudioError(PackStudioErrorCode.paths_outside_packs, files=list(outside[:_FINDINGS_MAX]))
-
-    async def _bot_push_target(
-        self, ws: PackWorkspace, target: RemoteTarget, repo: HostingRepo, access: ServiceAccess
-    ) -> tuple[PackWorkspace, RemoteTarget, ForkRef]:
-        """Форк бота: адрес из доступа или найденный и созданный его токеном. В сам репозиторий push не идёт."""
-        if access.fork_url:
-            fork = ForkRef(path=repo_path_of(access.fork_url, repo.web_base), clone_url=access.fork_url)
-        else:
-            found = await self._hosting.fork(repo, target, create=True)
-            if found is None:
-                raise PackStudioError(PackStudioErrorCode.push_denied, reason="bot_fork_unavailable")
-            fork = found
-            if self._official is not None:
-                await self._official.remember_bot_fork(access.id, fork.clone_url)
-        fork_target = self._fork_target(target, fork.clone_url)
-        if repo.provider is GitProvider.github:
-            fork_repo = replace(repo, path=fork.path)
-            await self._hosting.sync_fork(fork_repo, fork_target, branch=ws.base_branch or "")
-        return ws, fork_target, fork
 
     async def _pr_state(self, repo: HostingRepo, target: RemoteTarget, number: int) -> PullRequestState | None:
         try:
@@ -635,7 +585,7 @@ class PackGitService:
         raise PackStudioError(PackStudioErrorCode.fork_required, can_create=can_create)
 
     async def _record(
-        self, actor: Actor, ws: PackWorkspace, pull: PullRequestRef | None, pushed_to: RemoteTarget, *, bot: bool
+        self, actor: Actor, ws: PackWorkspace, pull: PullRequestRef | None, pushed_to: RemoteTarget, *, official: bool
     ) -> None:
         if self._audit is None:
             return
@@ -650,9 +600,8 @@ class PackGitService:
                 "sha": ws.pushed_sha,
                 "pr_url": pull.url if pull else None,
                 "service_access": ws.service_access_id is not None,
-                # Срез T22: отправлено доступом бота (по этим записям считается лимит в сутки), официальные паки.
-                "bot": bot,
-                "official": self._official is not None and self._official.is_official(ws),
+                # Срез T22: предложение в официальные паки.
+                "official": official,
             },
         )
 

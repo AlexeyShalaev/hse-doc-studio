@@ -432,7 +432,6 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("DELETE", "/api/admin/pack-studio/service-access/{access_id}"): _ADM,
     ("POST", "/api/admin/pack-studio/service-access/{access_id}/check"): _ADM,
     ("GET", "/api/admin/pack-studio/official"): _ADM,
-    ("PUT", "/api/admin/pack-studio/official"): _ADM,
     ("GET", "/api/admin/mail-log/summary"): _ADM,
     ("GET", "/api/admin/mail-log/{entry_id}"): _ADM,
     ("POST", "/api/admin/mail-log/resend"): _ADM,

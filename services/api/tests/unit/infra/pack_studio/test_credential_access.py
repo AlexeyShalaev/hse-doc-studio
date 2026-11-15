@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from collections.abc import Iterator
-from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
@@ -151,47 +150,3 @@ async def test__service_access__no_actor_or_guest__does_not_see_it() -> None:
         assert await access.get(SERVICE, project_id=None) is not None
     finally:
         set_current_actor(saved)
-
-
-# ── срез T22: доступ бота отдаётся ещё и для своего форка ──
-
-_FORK = "https://gitlab.example.org/bot/packs.git"
-
-
-class _BotService(_Service):
-    def __init__(self, *, fork_mode: bool, fork_url: str | None) -> None:
-        self.access = replace(_Service.access, fork_mode=fork_mode, fork_url=fork_url)
-
-
-def _bot_access(*, fork_mode: bool, fork_url: str | None) -> PackStudioCredentialAccess:
-    return PackStudioCredentialAccess(
-        _Base(),  # type: ignore[arg-type]
-        _BotService(fork_mode=fork_mode, fork_url=fork_url),  # type: ignore[arg-type]
-        _Grants({"anna"}),  # type: ignore[arg-type]
-        _Audit(),  # type: ignore[arg-type]
-    )
-
-
-@pytest.mark.usefixtures("actor")
-async def test__bot_access__its_fork__given() -> None:
-    access = _bot_access(fork_mode=True, fork_url=_FORK)
-
-    secret = await access.get_secret(SERVICE, project_id=None, remote=parse_remote_url(_FORK))
-
-    assert secret.reveal() == "service"
-
-
-@pytest.mark.usefixtures("actor")
-@pytest.mark.parametrize(
-    ("fork_mode", "fork_url", "remote"),
-    [
-        (False, _FORK, _FORK),  # прямой служебный доступ форка не знает
-        (True, None, _FORK),  # форк ещё не записан
-        (True, _FORK, "https://gitlab.example.org/eve/packs.git"),  # чужой репозиторий
-    ],
-)
-async def test__bot_access__other_than_its_fork__not_found(fork_mode: bool, fork_url: str | None, remote: str) -> None:
-    access = _bot_access(fork_mode=fork_mode, fork_url=fork_url)
-
-    with pytest.raises(NotFoundError):
-        await access.get_secret(SERVICE, project_id=None, remote=parse_remote_url(remote))

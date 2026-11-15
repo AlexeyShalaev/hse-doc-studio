@@ -9,6 +9,9 @@ Contract-миграция помечает себя тремя переменн�
 (выпуск, в который та ревизия вошла). Разрушающие шаги в её `upgrade()` разрешены только над
 этими таблицами, и только если у таблиц уже нет моделей, ревизия вывода стоит раньше в цепочке,
 а выпуск уже вышел и, по его тегу, содержит ревизию вывода, но не саму contract-миграцию.
+
+Contract-миграция над колонками живой таблицы вместо `contract_drops` называет `contract_drop_columns` (таблица и её
+удаляемые колонки). Разрешены только `drop_column` этих колонок; у модели таблицы их уже нет, остальные условия те же.
 """
 
 from __future__ import annotations
@@ -31,7 +34,9 @@ pytestmark = pytest.mark.unit
 _DESTRUCTIVE = {"drop_column", "drop_table", "rename_table", "drop_constraint"}
 # Ревизии, написанные до правила: данные ещё не жили в выпущенных установках.
 _LEGACY_ALLOWED = {"0004_invite_scope"}
-_CONTRACT_MARKERS = ("contract_drops", "contract_retired_by", "contract_released_in")
+_CONTRACT_MARKERS = ("contract_drops", "contract_drop_columns", "contract_retired_by", "contract_released_in")
+_TABLE_MARKERS = ("contract_drops", "contract_retired_by", "contract_released_in")
+_COLUMN_MARKERS = ("contract_drop_columns", "contract_retired_by", "contract_released_in")
 _VERSIONS_DIR = MIGRATIONS_DIR / "versions"
 
 
@@ -62,16 +67,47 @@ def _call_table(call: ast.Call) -> str | None:
     return node.value if isinstance(node, ast.Constant) and isinstance(node.value, str) else None
 
 
-def _steps(path: Path) -> list[tuple[str, str | None]]:
-    """Разрушающие шаги `upgrade()`: что за шаг и над какой таблицей."""
+def _call_column(call: ast.Call) -> str | None:
+    """Колонка шага `drop_column`: `column_name=` или второй позиционный аргумент."""
+    keywords = {kw.arg: kw.value for kw in call.keywords if kw.arg}
+    node = keywords.get("column_name") or (call.args[1] if len(call.args) > 1 else None)
+    return node.value if isinstance(node, ast.Constant) and isinstance(node.value, str) else None
+
+
+def _destructive_calls(path: Path) -> list[tuple[str, ast.Call]]:
     tree = ast.parse(path.read_text(encoding="utf-8"))
     upgrades = [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "upgrade"]
     calls = [c for fn in upgrades for c in ast.walk(fn) if isinstance(c, ast.Call)]
-    return [(found, _call_table(call)) for call in calls if (found := _call_violation(call))]
+    return [(found, call) for call in calls if (found := _call_violation(call))]
 
 
-def _violations(path: Path, allowed_tables: frozenset[str] = frozenset()) -> list[str]:
-    return [found for found, table in _steps(path) if table is None or table not in allowed_tables]
+def _steps(path: Path) -> list[tuple[str, str | None]]:
+    """Разрушающие шаги `upgrade()`: что за шаг и над какой таблицей."""
+    return [(found, _call_table(call)) for found, call in _destructive_calls(path)]
+
+
+def _column_steps(path: Path) -> list[tuple[str, str | None, str | None]]:
+    """Разрушающие шаги `upgrade()` с колонкой: что за шаг, таблица и колонка (у не `drop_column` колонки нет)."""
+    return [
+        (found, _call_table(call), _call_column(call) if found == "drop_column" else None)
+        for found, call in _destructive_calls(path)
+    ]
+
+
+def _dropped_columns(module: ModuleType | None) -> set[tuple[str, str]]:
+    raw = getattr(module, "contract_drop_columns", {})
+    return {(table, column) for table, columns in raw.items() for column in columns}
+
+
+def _violations(
+    path: Path, allowed_tables: frozenset[str] = frozenset(), allowed_columns: frozenset[tuple[str, str]] = frozenset()
+) -> list[str]:
+    def allowed(found: str, table: str | None, column: str | None) -> bool:
+        if table is None:
+            return False
+        return table in allowed_tables or (found == "drop_column" and (table, column) in allowed_columns)
+
+    return [found for found, table, column in _column_steps(path) if not allowed(found, table, column)]
 
 
 def _revision_files() -> list[Path]:
@@ -123,7 +159,8 @@ def test__upgrade__no_contract_steps_outside_legacy_allowlist() -> None:
         if stem in _LEGACY_ALLOWED:
             continue
         allowed = frozenset(getattr(contracts.get(stem), "contract_drops", ()))
-        if found := _violations(path, allowed):
+        columns = frozenset(_dropped_columns(contracts.get(stem)))
+        if found := _violations(path, allowed, columns):
             offenders[stem] = found
 
     assert offenders == {}, "contract-шаги вынесите в отдельную миграцию следующего выпуска"
@@ -137,10 +174,18 @@ def test__legacy_allowlist__only_lists_existing_offenders() -> None:
         assert _violations(stems[revision]), f"{revision} больше не нарушает правило: уберите из списка"
 
 
-@pytest.mark.parametrize("revision", sorted(_contracts()))
+def _table_contracts() -> list[str]:
+    return sorted(revision for revision, module in _contracts().items() if not hasattr(module, "contract_drop_columns"))
+
+
+def _column_contracts() -> list[str]:
+    return sorted(revision for revision, module in _contracts().items() if hasattr(module, "contract_drop_columns"))
+
+
+@pytest.mark.parametrize("revision", _table_contracts())
 def test__contract_migration__drops_only_tables_retired_in_a_released_version(revision: str) -> None:
     module = _contracts()[revision]
-    assert all(hasattr(module, marker) for marker in _CONTRACT_MARKERS), f"нужны все пометки {_CONTRACT_MARKERS}"
+    assert all(hasattr(module, marker) for marker in _TABLE_MARKERS), f"нужны все пометки {_TABLE_MARKERS}"
     drops = set(module.contract_drops)
     path = next(path for path in _revision_files() if _stem(path) == revision)
 
@@ -148,6 +193,26 @@ def test__contract_migration__drops_only_tables_retired_in_a_released_version(re
     assert drops == {table for _, table in _steps(path)}, "пометка не совпадает с шагами upgrade()"
     assert not drops & set(migrator.Base.metadata.tables), "у удаляемой таблицы есть модель: код ей пользуется"
     assert not drops & migrator.RETIRED_TABLES, "удалённую таблицу уберите из RETIRED_TABLES"
+    assert module.contract_retired_by in _ancestors(revision), "ревизия вывода из употребления должна идти раньше"
+    assert _version(module.contract_released_in) <= _version(__version__), "выпуск с выводом ещё не вышел"
+
+
+@pytest.mark.parametrize("revision", _column_contracts())
+def test__column_contract_migration__drops_only_columns_the_models_no_longer_have(revision: str) -> None:
+    module = _contracts()[revision]
+    assert all(hasattr(module, marker) for marker in _COLUMN_MARKERS), f"нужны все пометки {_COLUMN_MARKERS}"
+    assert not hasattr(module, "contract_drops"), "колонки и таблицы удаляются разными миграциями"
+    drops = _dropped_columns(module)
+    path = next(path for path in _revision_files() if _stem(path) == revision)
+
+    assert drops, "contract_drop_columns пуст"
+    assert drops == {(table, column) for found, table, column in _column_steps(path) if table and column}, (
+        "пометка не совпадает с шагами upgrade()"
+    )
+    assert all(found == "drop_column" for found, _, _ in _column_steps(path)), "разрешены только drop_column"
+    tables = migrator.Base.metadata.tables
+    still = {(table, column) for table, column in drops if table in tables and column in tables[table].columns}
+    assert not still, "у модели ещё есть удаляемая колонка: код ей пользуется"
     assert module.contract_retired_by in _ancestors(revision), "ревизия вывода из употребления должна идти раньше"
     assert _version(module.contract_released_in) <= _version(__version__), "выпуск с выводом ещё не вышел"
 

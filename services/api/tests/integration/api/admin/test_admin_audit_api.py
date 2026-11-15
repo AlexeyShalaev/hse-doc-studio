@@ -328,9 +328,8 @@ _AUDITED_ELSEWHERE: dict[tuple[str, str], str] = {
     ("DELETE", "/api/admin/pack-studio/grants/{id}"): "pack_studio.grant_remove",
     ("POST", "/api/admin/pack-studio/service-access"): "pack_studio.service_access_add",
     ("DELETE", "/api/admin/pack-studio/service-access/{id}"): "pack_studio.service_access_remove",
-    # Срез T22: проверка доступа у хостинга и вклад через бота.
+    # Проверка служебного доступа у хостинга.
     ("POST", "/api/admin/pack-studio/service-access/{id}/check"): "pack_studio.service_access_check",
-    ("PUT", "/api/admin/pack-studio/official"): "pack_studio.official_update",
 }
 
 # Изменяющие ручки без записи в журнале осознанно: только проверка соединения, состояние не меняется.
