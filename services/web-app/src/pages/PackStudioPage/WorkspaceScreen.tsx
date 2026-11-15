@@ -212,14 +212,21 @@ export const WorkspaceScreen = () => {
     [file, go],
   );
 
-  // Места подписей записали манифест: открытый он же без правок открывается заново, с правками
-  // его запись упрётся в «файл изменился» и покажет, что делать.
+  // Места подписей записали манифест: открытый он же без правок открывается заново (после свежего
+  // чтения файла), с правками его запись упрётся в «файл изменился» и покажет, что делать. Сам
+  // редактор с предпросмотром не пересоздаётся: окно мест остаётся открытым.
+  const [contentRevision, setContentRevision] = useState(0);
   const onPlacesSaved = useCallback(
     (path: string) => {
       setPlacesSaves((n) => n + 1);
-      if (path === file && !dirtyRef.current) setReload((n) => n + 1);
+      if (path !== file || dirtyRef.current) return;
+      void client
+        .refetchQueries({ queryKey: packStudioKeys.file(workspaceId, path) })
+        .then(() => {
+          if (!dirtyRef.current) setContentRevision((n) => n + 1);
+        });
     },
-    [file],
+    [client, file, workspaceId],
   );
 
   const onFilesChanged = useCallback(() => {
@@ -363,6 +370,7 @@ export const WorkspaceScreen = () => {
                     setGate(null);
                   }}
                   problemsFocus={problemsFocus}
+                  contentRevision={contentRevision}
                   preview={
                     <PackPreviewPane
                       workspaceId={ws.id}
