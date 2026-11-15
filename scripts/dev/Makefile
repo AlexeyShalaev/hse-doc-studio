@@ -23,7 +23,7 @@ else
 	DEV_NULL = /dev/null
 endif
 
-.PHONY: dev-help ensure-network run-services stop-all-services clean-volumes dev server-lite-up server-lite-seed server-lite-down server-lite-reset server-lite-credentials e2e-install e2e-m1 e2e-landing e2e-mobile e2e-passkeys e2e-runner-install e2e-model-servers server-lite-runner-up server-lite-runner-down e2e-signing-route e2e-pdf-comments server-stack-build server-stack-up server-stack-down e2e-full
+.PHONY: dev-help ensure-network run-services stop-all-services clean-volumes dev server-lite-up server-lite-seed server-lite-down server-lite-reset server-lite-credentials e2e-install e2e-m1 e2e-landing e2e-mobile e2e-passkeys e2e-runner-install e2e-model-servers e2e-pack-studio server-lite-runner-up server-lite-runner-down e2e-signing-route e2e-pdf-comments server-stack-build server-stack-up server-stack-down e2e-full
 
 dev-help:
 	@echo.
@@ -193,6 +193,13 @@ e2e-model-servers: $(SERVER_LITE_ENV)
 	  E2E_BASE_URL=http://localhost:$${SERVER_LITE_PORT:-8100} E2E_SEED_PASSWORD=$$SERVER_LITE_SEED_PASSWORD \
 	  E2E_ADMIN_PASSWORD=$$SERVER_LITE_ADMIN_PASSWORD E2E_ADMIN_EMAIL=$${SERVER_LITE_ADMIN_EMAIL:-admin@example.org} \
 	  pnpm exec playwright test --project=model-servers
+
+# Студия шаблонов: включение в админке и экраны на подменённом API пространств (git на стенде не нужен).
+e2e-pack-studio: $(SERVER_LITE_ENV)
+	@. $(SERVER_LITE_ENV); cd e2e && \
+	  E2E_BASE_URL=http://localhost:$${SERVER_LITE_PORT:-8100} E2E_SEED_PASSWORD=$$SERVER_LITE_SEED_PASSWORD \
+	  E2E_ADMIN_PASSWORD=$$SERVER_LITE_ADMIN_PASSWORD E2E_ADMIN_EMAIL=$${SERVER_LITE_ADMIN_EMAIL:-admin@example.org} \
+	  pnpm exec playwright test --project=pack-studio
 
 # Passkey с виртуальным аутентификатором Chrome на том же стенде (нужен ещё пароль админа для сброса ключей).
 e2e-passkeys: $(SERVER_LITE_ENV)
