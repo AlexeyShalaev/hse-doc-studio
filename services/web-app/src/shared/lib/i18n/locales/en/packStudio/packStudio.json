@@ -71,6 +71,7 @@
     "openFiles": "Open files",
     "outcome": "Outcome",
     "outcomeHint": "What a student gets: documents, fields, participants and route",
+    "backToResult": "Back to the outcome",
     "pickTitle": "Pick a file",
     "pickLead": "Open a file in the tree on the left: a version manifest, a document or a Jinja template."
   },

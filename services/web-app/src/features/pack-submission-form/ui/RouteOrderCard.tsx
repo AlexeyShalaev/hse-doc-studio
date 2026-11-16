@@ -23,6 +23,8 @@ export type RouteOrderCardProps = {
   disabled: boolean;
   onSave: (steps: Steps | null) => void;
   testId: string;
+  /** Указатель записи манифеста (переход к правилу из экрана «Результат»). */
+  at?: string | undefined;
 };
 
 /**
@@ -41,6 +43,7 @@ export const RouteOrderCard = ({
   disabled,
   onSave,
   testId,
+  at,
 }: RouteOrderCardProps) => {
   const { t } = useTranslation("packStudio");
   const missing = declared ? missingSlots(declared, catalog) : [];
@@ -48,7 +51,7 @@ export const RouteOrderCard = ({
     ? declared.flat().filter((slot) => !catalog.includes(slot))
     : [];
   return (
-    <section className="psf-block" data-testid={testId}>
+    <section className="psf-block" data-testid={testId} data-pf-at={at}>
       <BlockHead
         title={title}
         hint={hint}

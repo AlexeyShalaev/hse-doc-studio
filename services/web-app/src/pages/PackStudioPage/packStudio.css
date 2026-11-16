@@ -1225,3 +1225,9 @@ button.ps-git-file:hover {
     height: 60vh;
   }
 }
+
+/* «Назад к результату»: кнопка над крошками файла, открытого переходом из экрана «Результат». */
+.ps-back-result {
+  align-self: flex-start;
+  margin: 0.5rem 0.75rem 0;
+}

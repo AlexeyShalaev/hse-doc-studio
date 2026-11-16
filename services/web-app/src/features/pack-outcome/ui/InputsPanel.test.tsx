@@ -747,7 +747,7 @@ describe("панель «Вводные»", () => {
       await pause();
     });
 
-    it("Tab идёт по строке: сброс, значение, подсветка; отключённый сброс пропускается", async () => {
+    it("Tab идёт по строке: сброс, значение, подсветка, влияние; отключённый сброс пропускается", async () => {
       const user = userEvent.setup();
       mount({ query: "i.kind=research" });
       await panel();
@@ -765,6 +765,10 @@ describe("панель «Вводные»", () => {
       await user.tab();
       expect(
         within(kind).getByTestId("outcome-input-kind-highlight"),
+      ).toHaveFocus();
+      await user.tab();
+      expect(
+        within(kind).getByTestId("outcome-input-kind-impact"),
       ).toHaveFocus();
       await user.tab();
       // Следующая строка: сброс у неё отключён, фокус сразу на значении.

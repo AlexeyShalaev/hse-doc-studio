@@ -1,5 +1,6 @@
 export { PackFileEditor } from "./ui/PackFileEditor";
-export type { PackFileEditorProps } from "./ui/PackFileEditor";
+export type { MainView, PackFileEditorProps } from "./ui/PackFileEditor";
+export { parsePointer, pointerLine } from "./lib/yamlPointer";
 export { ProblemsPanel } from "./ui/ProblemsPanel";
 export { GateFindings } from "./ui/GateFindings";
 export type { GateFindingsProps } from "./ui/GateFindings";

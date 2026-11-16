@@ -23,16 +23,19 @@ vi.mock("@shared/ui/CodeEditor", async () => {
       readOnly,
       diagnostics,
       ariaLabel,
+      reveal,
     }: {
       value: string;
       onChange?: (value: string) => void;
       readOnly?: boolean;
       diagnostics?: { line: number; message: string }[];
       ariaLabel?: string;
+      reveal?: { line: number; token: number };
     }) =>
       createElement("textarea", {
         "aria-label": ariaLabel,
         "data-testid": "code",
+        "data-reveal": reveal ? String(reveal.line) : undefined,
         "data-diagnostics": (diagnostics ?? [])
           .map((d) => `${String(d.line)}:${d.message}`)
           .join("|"),
@@ -152,6 +155,45 @@ describe("редактор файла пака", () => {
     // У YAML-манифеста вкладка «Исходник», форма впереди.
     expect(screen.getByRole("tab", { name: "Исходник" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: "Форма" })).toBeDisabled();
+  });
+
+  it("переход к правилу: курсор на строке записи по указателю, вкладка по запросу", async () => {
+    stub(
+      file({
+        content:
+          'id: "2026.1.1"\npack_submission:\n  profiles:\n    - id: a\n      signing_slots:\n        - slot: s\n          when: x\n',
+      }),
+    );
+    mount({
+      pointer: "/pack_submission/profiles/0/signing_slots/0/when",
+      initialView: "source",
+    });
+    const code = await screen.findByTestId("code");
+    expect(code).toHaveAttribute("data-reveal", "7");
+    expect(screen.getByRole("tab", { name: "Исходник" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
+  it("явный reveal важнее указателя, неизвестный указатель курсор не двигает", async () => {
+    stub();
+    mount({ pointer: "not-a-pointer" });
+    const code = await screen.findByTestId("code");
+    expect(code).not.toHaveAttribute("data-reveal");
+  });
+
+  it("initialView form открывает вкладку «Форма», если она есть", async () => {
+    stub();
+    mount({
+      initialView: "form",
+      form: <p data-testid="form-pane">форма</p>,
+    });
+    expect(await screen.findByTestId("form-pane")).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "Форма" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
   });
 
   it("сохранение с If-Match по версии открытого файла и перепроверка", async () => {

@@ -1,0 +1,1677 @@
+{
+  "vkr": {
+    "inputs": {
+      "lang": "ru",
+      "kind": "project",
+      "staffing": "solo",
+      "supervisor": "university",
+      "co_supervisor": "no",
+      "academic_supervisor": "yes",
+      "meta.manuals": "Только программиста",
+      "meta.nda": "yes",
+      "answer.ai_declaration.used_ai": "no",
+      "variant.presentation": "pptx"
+    },
+    "elements": {
+      "documents:operator_manual": {
+        "element": {
+          "section": "documents",
+          "id": "operator_manual"
+        },
+        "state": "inactive",
+        "chain": [
+          {
+            "id": "t22",
+            "rule": {
+              "origin": "manifest",
+              "file": "files/operator_manual/doc.yaml",
+              "pointer": "/supported_kinds",
+              "builtin": null
+            },
+            "kind": "supported_kinds",
+            "effect": "gate",
+            "join": "all",
+            "terms": [
+              {
+                "op": "in",
+                "subject": "kind",
+                "expected": ["project"]
+              }
+            ],
+            "actual": {
+              "kind": "project"
+            },
+            "status": "held",
+            "subjects": [
+              {
+                "section": "documents",
+                "id": "operator_manual"
+              }
+            ]
+          },
+          {
+            "id": "t23",
+            "rule": {
+              "origin": "manifest",
+              "file": "files/operator_manual/doc.yaml",
+              "pointer": "/supported_staffing",
+              "builtin": null
+            },
+            "kind": "supported_staffing",
+            "effect": "gate",
+            "join": "all",
+            "terms": [
+              {
+                "op": "in",
+                "subject": "staffing",
+                "expected": ["solo", "team2", "team3"]
+              }
+            ],
+            "actual": {
+              "staffing": "solo"
+            },
+            "status": "held",
+            "subjects": [
+              {
+                "section": "documents",
+                "id": "operator_manual"
+              }
+            ]
+          },
+          {
+            "id": "t24",
+            "rule": {
+              "origin": "builtin",
+              "file": null,
+              "pointer": null,
+              "builtin": "manuals_gate"
+            },
+            "kind": "builtin_gate",
+            "effect": "gate",
+            "join": "all",
+            "terms": [
+              {
+                "op": "contains_any",
+                "subject": "meta.manuals",
+                "expected": ["оператора"]
+              }
+            ],
+            "actual": {
+              "meta.manuals": "Только программиста"
+            },
+            "status": "not_held",
+            "subjects": [
+              {
+                "section": "documents",
+                "id": "operator_manual"
+              }
+            ]
+          },
+          {
+            "id": "t25",
+            "rule": {
+              "origin": "manifest",
+              "file": "files/operator_manual/doc.yaml",
+              "pointer": "/supported_langs",
+              "builtin": null
+            },
+            "kind": "supported_langs",
+            "effect": "display",
+            "join": "all",
+            "terms": [
+              {
+                "op": "in",
+                "subject": "lang",
+                "expected": ["ru", "en"]
+              }
+            ],
+            "actual": {
+              "lang": "ru"
+            },
+            "status": "held",
+            "subjects": [
+              {
+                "section": "documents",
+                "id": "operator_manual"
+              }
+            ]
+          }
+        ],
+        "readers": [],
+        "counterfactuals": [
+          {
+            "input": "meta.manuals",
+            "value": "Программиста и оператора",
+            "result": "active"
+          },
+          {
+            "input": "meta.manuals",
+            "value": "Только оператора",
+            "result": "active"
+          },
+          {
+            "input": "kind",
+            "value": "research",
+            "result": "absent"
+          }
+        ]
+      },
+      "documents:technical_specification": {
+        "element": {
+          "section": "documents",
+          "id": "technical_specification"
+        },
+        "state": "active",
+        "chain": [
+          {
+            "id": "t1",
+            "rule": {
+              "origin": "manifest",
+              "file": "files/technical_specification/doc.yaml",
+              "pointer": "/supported_kinds",
+              "builtin": null
+            },
+            "kind": "supported_kinds",
+            "effect": "gate",
+            "join": "all",
+            "terms": [
+              {
+                "op": "in",
+                "subject": "kind",
+                "expected": ["project"]
+              }
+            ],
+            "actual": {
+              "kind": "project"
+            },
+            "status": "held",
+            "subjects": [
+              {
+                "section": "documents",
+                "id": "technical_specification"
+              }
+            ]
+          },
+          {
+            "id": "t2",
+            "rule": {
+              "origin": "manifest",
+              "file": "files/technical_specification/doc.yaml",
+              "pointer": "/supported_staffing",
+              "builtin": null
+            },
+            "kind": "supported_staffing",
+            "effect": "gate",
+            "join": "all",
+            "terms": [
+              {
+                "op": "in",
+                "subject": "staffing",
+                "expected": ["solo", "team2", "team3"]
+              }
+            ],
+            "actual": {
+              "staffing": "solo"
+            },
+            "status": "held",
+            "subjects": [
+              {
+                "section": "documents",
+                "id": "technical_specification"
+              }
+            ]
+          },
+          {
+            "id": "t3",
+            "rule": {
+              "origin": "manifest",
+              "file": "files/technical_specification/doc.yaml",
+              "pointer": "/supported_langs",
+              "builtin": null
+            },
+            "kind": "supported_langs",
+            "effect": "display",
+            "join": "all",
+            "terms": [
+              {
+                "op": "in",
+                "subject": "lang",
+                "expected": ["ru", "en"]
+              }
+            ],
+            "actual": {
+              "lang": "ru"
+            },
+            "status": "held",
+            "subjects": [
+              {
+                "section": "documents",
+                "id": "technical_specification"
+              }
+            ]
+          }
+        ],
+        "readers": [],
+        "counterfactuals": [
+          {
+            "input": "kind",
+            "value": "research",
+            "result": "absent"
+          }
+        ]
+      },
+      "documents:shared_technical_specification": {
+        "element": {
+          "section": "documents",
+          "id": "shared_technical_specification"
+        },
+        "state": "absent",
+        "chain": [
+          {
+            "id": "t5",
+            "rule": {
+              "origin": "manifest",
+              "file": "files/shared_technical_specification/doc.yaml",
+              "pointer": "/supported_kinds",
+              "builtin": null
+            },
+            "kind": "supported_kinds",
+            "effect": "gate",
+            "join": "all",
+            "terms": [
+              {
+                "op": "in",
+                "subject": "kind",
+                "expected": ["project"]
+              }
+            ],
+            "actual": {
+              "kind": "project"
+            },
+            "status": "held",
+            "subjects": [
+              {
+                "section": "documents",
+                "id": "shared_technical_specification"
+              }
+            ]
+          },
+          {
+            "id": "t6",
+            "rule": {
+              "origin": "manifest",
+              "file": "files/shared_technical_specification/doc.yaml",
+              "pointer": "/supported_staffing",
+              "builtin": null
+            },
+            "kind": "supported_staffing",
+            "effect": "gate",
+            "join": "all",
+            "terms": [
+              {
+                "op": "in",
+                "subject": "staffing",
+                "expected": ["team2", "team3"]
+              }
+            ],
+            "actual": {
+              "staffing": "solo"
+            },
+            "status": "not_held",
+            "subjects": [
+              {
+                "section": "documents",
+                "id": "shared_technical_specification"
+              }
+            ]
+          },
+          {
+            "id": "t7",
+            "rule": {
+              "origin": "manifest",
+              "file": "files/shared_technical_specification/doc.yaml",
+              "pointer": "/supported_langs",
+              "builtin": null
+            },
+            "kind": "supported_langs",
+            "effect": "display",
+            "join": "all",
+            "terms": [
+              {
+                "op": "in",
+                "subject": "lang",
+                "expected": ["ru", "en"]
+              }
+            ],
+            "actual": {
+              "lang": "ru"
+            },
+            "status": "held",
+            "subjects": [
+              {
+                "section": "documents",
+                "id": "shared_technical_specification"
+              }
+            ]
+          }
+        ],
+        "readers": [],
+        "counterfactuals": [
+          {
+            "input": "staffing",
+            "value": "team2",
+            "result": "active"
+          },
+          {
+            "input": "staffing",
+            "value": "team3",
+            "result": "active"
+          }
+        ]
+      },
+      "meta:year": {
+        "element": {
+          "section": "meta",
+          "id": "year"
+        },
+        "state": "present",
+        "chain": [],
+        "readers": [],
+        "counterfactuals": []
+      },
+      "forms:ai_declaration": {
+        "element": {
+          "section": "forms",
+          "id": "ai_declaration"
+        },
+        "state": "present",
+        "chain": [],
+        "readers": [],
+        "counterfactuals": []
+      },
+      "forms:ai_declaration/used_ai": {
+        "element": {
+          "section": "forms",
+          "id": "ai_declaration/used_ai"
+        },
+        "state": "present",
+        "chain": [],
+        "readers": [],
+        "counterfactuals": []
+      },
+      "forms:ai_declaration/tools": {
+        "element": {
+          "section": "forms",
+          "id": "ai_declaration/tools"
+        },
+        "state": "absent",
+        "chain": [
+          {
+            "id": "t62",
+            "rule": {
+              "origin": "manifest",
+              "file": "version.yaml",
+              "pointer": "/forms/0/sections/0/fields/1/visible_if",
+              "builtin": null
+            },
+            "kind": "visible_if",
+            "effect": "display",
+            "join": "all",
+            "terms": [
+              {
+                "op": "equals",
+                "subject": "answer.ai_declaration.used_ai",
+                "expected": ["yes"]
+              }
+            ],
+            "actual": {
+              "answer.ai_declaration.used_ai": "no"
+            },
+            "status": "not_held",
+            "subjects": [
+              {
+                "section": "forms",
+                "id": "ai_declaration/tools"
+              }
+            ]
+          }
+        ],
+        "readers": [],
+        "counterfactuals": [
+          {
+            "input": "answer.ai_declaration.used_ai",
+            "value": "yes",
+            "result": "present"
+          }
+        ]
+      },
+      "participants:author": {
+        "element": {
+          "section": "participants",
+          "id": "author"
+        },
+        "state": "present",
+        "chain": [],
+        "readers": [],
+        "counterfactuals": [
+          {
+            "input": "staffing",
+            "value": "team2",
+            "result": "absent"
+          },
+          {
+            "input": "staffing",
+            "value": "team3",
+            "result": "absent"
+          }
+        ]
+      },
+      "participants:co_supervisor": {
+        "element": {
+          "section": "participants",
+          "id": "co_supervisor"
+        },
+        "state": "absent",
+        "chain": [],
+        "readers": [],
+        "counterfactuals": [
+          {
+            "input": "co_supervisor",
+            "value": "yes",
+            "result": "present"
+          }
+        ]
+      },
+      "points:checkpoint-1": {
+        "element": {
+          "section": "points",
+          "id": "checkpoint-1"
+        },
+        "state": "present",
+        "chain": [],
+        "readers": [],
+        "counterfactuals": []
+      },
+      "points:checkpoint-1/topic_presentation": {
+        "element": {
+          "section": "points",
+          "id": "checkpoint-1/topic_presentation"
+        },
+        "state": "present",
+        "chain": [],
+        "readers": [],
+        "counterfactuals": []
+      },
+      "points:final/.hse-studio/forms/ai_declaration.json": {
+        "element": {
+          "section": "points",
+          "id": "final/.hse-studio/forms/ai_declaration.json"
+        },
+        "state": "present",
+        "chain": [],
+        "readers": [],
+        "counterfactuals": []
+      },
+      "route:checkpoint-1": {
+        "element": {
+          "section": "route",
+          "id": "checkpoint-1"
+        },
+        "state": "present",
+        "chain": [
+          {
+            "id": "t66",
+            "rule": {
+              "origin": "builtin",
+              "file": null,
+              "pointer": null,
+              "builtin": "builtin_route"
+            },
+            "kind": "route_order",
+            "effect": "order",
+            "join": "all",
+            "terms": [],
+            "actual": {},
+            "status": "held",
+            "subjects": [
+              {
+                "section": "route",
+                "id": "checkpoint-1"
+              },
+              {
+                "section": "route",
+                "id": "checkpoint-2"
+              },
+              {
+                "section": "route",
+                "id": "checkpoint-3"
+              },
+              {
+                "section": "route",
+                "id": "pdp-application"
+              },
+              {
+                "section": "route",
+                "id": "final"
+              },
+              {
+                "section": "route",
+                "id": "gia"
+              }
+            ]
+          }
+        ],
+        "readers": [
+          {
+            "section": "route",
+            "id": "checkpoint-2"
+          },
+          {
+            "section": "route",
+            "id": "checkpoint-3"
+          },
+          {
+            "section": "route",
+            "id": "pdp-application"
+          },
+          {
+            "section": "route",
+            "id": "final"
+          },
+          {
+            "section": "route",
+            "id": "gia"
+          }
+        ],
+        "counterfactuals": []
+      },
+      "route:pdp-application/step/1": {
+        "element": {
+          "section": "route",
+          "id": "pdp-application/step/1"
+        },
+        "state": "present",
+        "chain": [
+          {
+            "id": "t66",
+            "rule": {
+              "origin": "builtin",
+              "file": null,
+              "pointer": null,
+              "builtin": "builtin_route"
+            },
+            "kind": "route_order",
+            "effect": "order",
+            "join": "all",
+            "terms": [],
+            "actual": {},
+            "status": "held",
+            "subjects": [
+              {
+                "section": "route",
+                "id": "checkpoint-1"
+              },
+              {
+                "section": "route",
+                "id": "checkpoint-2"
+              },
+              {
+                "section": "route",
+                "id": "checkpoint-3"
+              },
+              {
+                "section": "route",
+                "id": "pdp-application"
+              },
+              {
+                "section": "route",
+                "id": "final"
+              },
+              {
+                "section": "route",
+                "id": "gia"
+              }
+            ]
+          }
+        ],
+        "readers": [
+          {
+            "section": "route",
+            "id": "checkpoint-1"
+          },
+          {
+            "section": "route",
+            "id": "checkpoint-2"
+          },
+          {
+            "section": "route",
+            "id": "checkpoint-3"
+          },
+          {
+            "section": "route",
+            "id": "pdp-application"
+          },
+          {
+            "section": "route",
+            "id": "final"
+          },
+          {
+            "section": "route",
+            "id": "gia"
+          }
+        ],
+        "counterfactuals": []
+      },
+      "route:pdp-application/step/2": {
+        "element": {
+          "section": "route",
+          "id": "pdp-application/step/2"
+        },
+        "state": "present",
+        "chain": [
+          {
+            "id": "t66",
+            "rule": {
+              "origin": "builtin",
+              "file": null,
+              "pointer": null,
+              "builtin": "builtin_route"
+            },
+            "kind": "route_order",
+            "effect": "order",
+            "join": "all",
+            "terms": [],
+            "actual": {},
+            "status": "held",
+            "subjects": [
+              {
+                "section": "route",
+                "id": "checkpoint-1"
+              },
+              {
+                "section": "route",
+                "id": "checkpoint-2"
+              },
+              {
+                "section": "route",
+                "id": "checkpoint-3"
+              },
+              {
+                "section": "route",
+                "id": "pdp-application"
+              },
+              {
+                "section": "route",
+                "id": "final"
+              },
+              {
+                "section": "route",
+                "id": "gia"
+              }
+            ]
+          }
+        ],
+        "readers": [
+          {
+            "section": "route",
+            "id": "checkpoint-1"
+          },
+          {
+            "section": "route",
+            "id": "checkpoint-2"
+          },
+          {
+            "section": "route",
+            "id": "checkpoint-3"
+          },
+          {
+            "section": "route",
+            "id": "pdp-application"
+          },
+          {
+            "section": "route",
+            "id": "final"
+          },
+          {
+            "section": "route",
+            "id": "gia"
+          }
+        ],
+        "counterfactuals": []
+      },
+      "route:pdp-application/pdp_assignment/author": {
+        "element": {
+          "section": "route",
+          "id": "pdp-application/pdp_assignment/author"
+        },
+        "state": "present",
+        "chain": [],
+        "readers": [],
+        "counterfactuals": [
+          {
+            "input": "staffing",
+            "value": "team2",
+            "result": "absent"
+          },
+          {
+            "input": "staffing",
+            "value": "team3",
+            "result": "absent"
+          }
+        ]
+      },
+      "route:pdp-application/pdp_assignment/supervisor": {
+        "element": {
+          "section": "route",
+          "id": "pdp-application/pdp_assignment/supervisor"
+        },
+        "state": "present",
+        "chain": [],
+        "readers": [],
+        "counterfactuals": []
+      },
+      "checks:gost-19.201-78/section-introduction": {
+        "element": {
+          "section": "checks",
+          "id": "gost-19.201-78/section-introduction"
+        },
+        "state": "present",
+        "chain": [],
+        "readers": [],
+        "counterfactuals": [
+          {
+            "input": "kind",
+            "value": "research",
+            "result": "absent"
+          }
+        ]
+      },
+      "checks:gost-19.201-78/section-grounds": {
+        "element": {
+          "section": "checks",
+          "id": "gost-19.201-78/section-grounds"
+        },
+        "state": "present",
+        "chain": [],
+        "readers": [],
+        "counterfactuals": [
+          {
+            "input": "kind",
+            "value": "research",
+            "result": "absent"
+          }
+        ]
+      }
+    }
+  },
+  "coursework": {
+    "inputs": {
+      "lang": "ru",
+      "kind": "project",
+      "staffing": "solo",
+      "supervisor": "company",
+      "co_supervisor": "yes",
+      "academic_supervisor": "yes",
+      "meta.proposal_stage": "Предварительная",
+      "meta.report_margins": "ГОСТ 7.32 — 30/15/20/20",
+      "variant.presentation": "pptx"
+    },
+    "elements": {
+      "documents:project_proposal": {
+        "element": {
+          "section": "documents",
+          "id": "project_proposal"
+        },
+        "state": "active",
+        "chain": [
+          {
+            "id": "t1",
+            "rule": {
+              "origin": "manifest",
+              "file": "files/project_proposal/doc.yaml",
+              "pointer": "/supported_kinds",
+              "builtin": null
+            },
+            "kind": "supported_kinds",
+            "effect": "gate",
+            "join": "all",
+            "terms": [
+              {
+                "op": "in",
+                "subject": "kind",
+                "expected": ["project", "research"]
+              }
+            ],
+            "actual": {
+              "kind": "project"
+            },
+            "status": "held",
+            "subjects": [
+              {
+                "section": "documents",
+                "id": "project_proposal"
+              }
+            ]
+          },
+          {
+            "id": "t2",
+            "rule": {
+              "origin": "manifest",
+              "file": "files/project_proposal/doc.yaml",
+              "pointer": "/supported_staffing",
+              "builtin": null
+            },
+            "kind": "supported_staffing",
+            "effect": "gate",
+            "join": "all",
+            "terms": [
+              {
+                "op": "in",
+                "subject": "staffing",
+                "expected": ["solo", "team2", "team3"]
+              }
+            ],
+            "actual": {
+              "staffing": "solo"
+            },
+            "status": "held",
+            "subjects": [
+              {
+                "section": "documents",
+                "id": "project_proposal"
+              }
+            ]
+          },
+          {
+            "id": "t3",
+            "rule": {
+              "origin": "manifest",
+              "file": "files/project_proposal/doc.yaml",
+              "pointer": "/supported_langs",
+              "builtin": null
+            },
+            "kind": "supported_langs",
+            "effect": "display",
+            "join": "all",
+            "terms": [
+              {
+                "op": "in",
+                "subject": "lang",
+                "expected": ["ru", "en"]
+              }
+            ],
+            "actual": {
+              "lang": "ru"
+            },
+            "status": "held",
+            "subjects": [
+              {
+                "section": "documents",
+                "id": "project_proposal"
+              }
+            ]
+          }
+        ],
+        "readers": [],
+        "counterfactuals": []
+      },
+      "meta:year": {
+        "element": {
+          "section": "meta",
+          "id": "year"
+        },
+        "state": "present",
+        "chain": [],
+        "readers": [],
+        "counterfactuals": []
+      },
+      "forms:code_link": {
+        "element": {
+          "section": "forms",
+          "id": "code_link"
+        },
+        "state": "present",
+        "chain": [],
+        "readers": [],
+        "counterfactuals": []
+      },
+      "forms:code_link/repo_url": {
+        "element": {
+          "section": "forms",
+          "id": "code_link/repo_url"
+        },
+        "state": "present",
+        "chain": [],
+        "readers": [],
+        "counterfactuals": []
+      },
+      "forms:code_link/branch": {
+        "element": {
+          "section": "forms",
+          "id": "code_link/branch"
+        },
+        "state": "present",
+        "chain": [],
+        "readers": [],
+        "counterfactuals": []
+      },
+      "participants:author": {
+        "element": {
+          "section": "participants",
+          "id": "author"
+        },
+        "state": "present",
+        "chain": [],
+        "readers": [],
+        "counterfactuals": []
+      },
+      "points:topic-approval": {
+        "element": {
+          "section": "points",
+          "id": "topic-approval"
+        },
+        "state": "present",
+        "chain": [],
+        "readers": [],
+        "counterfactuals": []
+      },
+      "points:topic-approval/project_proposal": {
+        "element": {
+          "section": "points",
+          "id": "topic-approval/project_proposal"
+        },
+        "state": "present",
+        "chain": [],
+        "readers": [],
+        "counterfactuals": []
+      },
+      "points:final/.hse-studio/forms/code_link.json": {
+        "element": {
+          "section": "points",
+          "id": "final/.hse-studio/forms/code_link.json"
+        },
+        "state": "present",
+        "chain": [],
+        "readers": [],
+        "counterfactuals": []
+      },
+      "route:topic-approval": {
+        "element": {
+          "section": "route",
+          "id": "topic-approval"
+        },
+        "state": "present",
+        "chain": [
+          {
+            "id": "t13",
+            "rule": {
+              "origin": "manifest",
+              "file": "version.yaml",
+              "pointer": "/pack_submission/profiles/0/signing_route",
+              "builtin": null
+            },
+            "kind": "route_order",
+            "effect": "order",
+            "join": "all",
+            "terms": [],
+            "actual": {},
+            "status": "held",
+            "subjects": [
+              {
+                "section": "route",
+                "id": "topic-approval"
+              }
+            ]
+          }
+        ],
+        "readers": [],
+        "counterfactuals": []
+      },
+      "route:topic-approval/step/1": {
+        "element": {
+          "section": "route",
+          "id": "topic-approval/step/1"
+        },
+        "state": "present",
+        "chain": [
+          {
+            "id": "t13",
+            "rule": {
+              "origin": "manifest",
+              "file": "version.yaml",
+              "pointer": "/pack_submission/profiles/0/signing_route",
+              "builtin": null
+            },
+            "kind": "route_order",
+            "effect": "order",
+            "join": "all",
+            "terms": [],
+            "actual": {},
+            "status": "held",
+            "subjects": [
+              {
+                "section": "route",
+                "id": "topic-approval"
+              }
+            ]
+          }
+        ],
+        "readers": [
+          {
+            "section": "route",
+            "id": "topic-approval"
+          }
+        ],
+        "counterfactuals": []
+      },
+      "route:topic-approval/step/2": {
+        "element": {
+          "section": "route",
+          "id": "topic-approval/step/2"
+        },
+        "state": "present",
+        "chain": [
+          {
+            "id": "t13",
+            "rule": {
+              "origin": "manifest",
+              "file": "version.yaml",
+              "pointer": "/pack_submission/profiles/0/signing_route",
+              "builtin": null
+            },
+            "kind": "route_order",
+            "effect": "order",
+            "join": "all",
+            "terms": [],
+            "actual": {},
+            "status": "held",
+            "subjects": [
+              {
+                "section": "route",
+                "id": "topic-approval"
+              }
+            ]
+          },
+          {
+            "id": "t14",
+            "rule": {
+              "origin": "manifest",
+              "file": "version.yaml",
+              "pointer": "/pack_submission/profiles/0/signing_slots/0/when",
+              "builtin": null
+            },
+            "kind": "slot_when",
+            "effect": "add",
+            "join": "all",
+            "terms": [
+              {
+                "op": "present",
+                "subject": "co_supervisor",
+                "expected": []
+              }
+            ],
+            "actual": {
+              "co_supervisor": "yes"
+            },
+            "status": "held",
+            "subjects": [
+              {
+                "section": "route",
+                "id": "topic-approval/topic_application/co_supervisor"
+              }
+            ]
+          }
+        ],
+        "readers": [
+          {
+            "section": "route",
+            "id": "topic-approval"
+          },
+          {
+            "section": "route",
+            "id": "topic-approval/topic_application/co_supervisor"
+          }
+        ],
+        "counterfactuals": []
+      },
+      "route:topic-approval/project_proposal/supervisor": {
+        "element": {
+          "section": "route",
+          "id": "topic-approval/project_proposal/supervisor"
+        },
+        "state": "present",
+        "chain": [],
+        "readers": [],
+        "counterfactuals": []
+      },
+      "route:topic-approval/topic_application/author": {
+        "element": {
+          "section": "route",
+          "id": "topic-approval/topic_application/author"
+        },
+        "state": "present",
+        "chain": [],
+        "readers": [],
+        "counterfactuals": []
+      },
+      "checks:gost-7.32-2017/page-margins": {
+        "element": {
+          "section": "checks",
+          "id": "gost-7.32-2017/page-margins"
+        },
+        "state": "present",
+        "chain": [],
+        "readers": [],
+        "counterfactuals": []
+      },
+      "checks:gost-7.32-2017/line-spacing": {
+        "element": {
+          "section": "checks",
+          "id": "gost-7.32-2017/line-spacing"
+        },
+        "state": "present",
+        "chain": [],
+        "readers": [],
+        "counterfactuals": []
+      }
+    }
+  },
+  "vkr_alt": {
+    "inputs": {
+      "lang": "ru",
+      "kind": "research",
+      "staffing": "team2",
+      "supervisor": "none",
+      "co_supervisor": "yes",
+      "academic_supervisor": "no",
+      "meta.manuals": "Только программиста",
+      "meta.nda": "yes",
+      "answer.ai_declaration.used_ai": "no",
+      "variant.presentation": "pptx"
+    },
+    "elements": {
+      "route:checkpoint-1/step/1": {
+        "element": {
+          "section": "route",
+          "id": "checkpoint-1/step/1"
+        },
+        "state": "present",
+        "chain": [
+          {
+            "id": "t63",
+            "rule": {
+              "origin": "builtin",
+              "file": null,
+              "pointer": null,
+              "builtin": "builtin_route"
+            },
+            "kind": "route_order",
+            "effect": "order",
+            "join": "all",
+            "terms": [],
+            "actual": {},
+            "status": "held",
+            "subjects": [
+              {
+                "section": "route",
+                "id": "checkpoint-1"
+              },
+              {
+                "section": "route",
+                "id": "checkpoint-2"
+              },
+              {
+                "section": "route",
+                "id": "checkpoint-3"
+              },
+              {
+                "section": "route",
+                "id": "pdp-application"
+              },
+              {
+                "section": "route",
+                "id": "final"
+              },
+              {
+                "section": "route",
+                "id": "gia"
+              }
+            ]
+          }
+        ],
+        "readers": [
+          {
+            "section": "route",
+            "id": "checkpoint-1"
+          },
+          {
+            "section": "route",
+            "id": "checkpoint-2"
+          },
+          {
+            "section": "route",
+            "id": "checkpoint-3"
+          },
+          {
+            "section": "route",
+            "id": "pdp-application"
+          },
+          {
+            "section": "route",
+            "id": "final"
+          },
+          {
+            "section": "route",
+            "id": "gia"
+          }
+        ],
+        "counterfactuals": [
+          {
+            "input": "kind",
+            "value": "project",
+            "result": "absent"
+          }
+        ]
+      },
+      "route:checkpoint-1/step/2": {
+        "element": {
+          "section": "route",
+          "id": "checkpoint-1/step/2"
+        },
+        "state": "present",
+        "chain": [
+          {
+            "id": "t63",
+            "rule": {
+              "origin": "builtin",
+              "file": null,
+              "pointer": null,
+              "builtin": "builtin_route"
+            },
+            "kind": "route_order",
+            "effect": "order",
+            "join": "all",
+            "terms": [],
+            "actual": {},
+            "status": "held",
+            "subjects": [
+              {
+                "section": "route",
+                "id": "checkpoint-1"
+              },
+              {
+                "section": "route",
+                "id": "checkpoint-2"
+              },
+              {
+                "section": "route",
+                "id": "checkpoint-3"
+              },
+              {
+                "section": "route",
+                "id": "pdp-application"
+              },
+              {
+                "section": "route",
+                "id": "final"
+              },
+              {
+                "section": "route",
+                "id": "gia"
+              }
+            ]
+          }
+        ],
+        "readers": [
+          {
+            "section": "route",
+            "id": "checkpoint-1"
+          },
+          {
+            "section": "route",
+            "id": "checkpoint-2"
+          },
+          {
+            "section": "route",
+            "id": "checkpoint-3"
+          },
+          {
+            "section": "route",
+            "id": "pdp-application"
+          },
+          {
+            "section": "route",
+            "id": "final"
+          },
+          {
+            "section": "route",
+            "id": "gia"
+          }
+        ],
+        "counterfactuals": [
+          {
+            "input": "kind",
+            "value": "project",
+            "result": "absent"
+          }
+        ]
+      },
+      "participants:supervisor": {
+        "element": {
+          "section": "participants",
+          "id": "supervisor"
+        },
+        "state": "absent",
+        "chain": [],
+        "readers": [],
+        "counterfactuals": [
+          {
+            "input": "supervisor",
+            "value": "university",
+            "result": "present"
+          },
+          {
+            "input": "supervisor",
+            "value": "company",
+            "result": "present"
+          }
+        ]
+      },
+      "participants:academic_supervisor": {
+        "element": {
+          "section": "participants",
+          "id": "academic_supervisor"
+        },
+        "state": "absent",
+        "chain": [],
+        "readers": [],
+        "counterfactuals": [
+          {
+            "input": "academic_supervisor",
+            "value": "yes",
+            "result": "present"
+          }
+        ]
+      },
+      "documents:technical_specification": {
+        "element": {
+          "section": "documents",
+          "id": "technical_specification"
+        },
+        "state": "absent",
+        "chain": [
+          {
+            "id": "t1",
+            "rule": {
+              "origin": "manifest",
+              "file": "files/technical_specification/doc.yaml",
+              "pointer": "/supported_kinds",
+              "builtin": null
+            },
+            "kind": "supported_kinds",
+            "effect": "gate",
+            "join": "all",
+            "terms": [
+              {
+                "op": "in",
+                "subject": "kind",
+                "expected": ["project"]
+              }
+            ],
+            "actual": {
+              "kind": "research"
+            },
+            "status": "not_held",
+            "subjects": [
+              {
+                "section": "documents",
+                "id": "technical_specification"
+              }
+            ]
+          },
+          {
+            "id": "t2",
+            "rule": {
+              "origin": "manifest",
+              "file": "files/technical_specification/doc.yaml",
+              "pointer": "/supported_staffing",
+              "builtin": null
+            },
+            "kind": "supported_staffing",
+            "effect": "gate",
+            "join": "all",
+            "terms": [
+              {
+                "op": "in",
+                "subject": "staffing",
+                "expected": ["solo", "team2", "team3"]
+              }
+            ],
+            "actual": {
+              "staffing": "team2"
+            },
+            "status": "skipped",
+            "subjects": [
+              {
+                "section": "documents",
+                "id": "technical_specification"
+              }
+            ]
+          },
+          {
+            "id": "t3",
+            "rule": {
+              "origin": "manifest",
+              "file": "files/technical_specification/doc.yaml",
+              "pointer": "/supported_langs",
+              "builtin": null
+            },
+            "kind": "supported_langs",
+            "effect": "display",
+            "join": "all",
+            "terms": [
+              {
+                "op": "in",
+                "subject": "lang",
+                "expected": ["ru", "en"]
+              }
+            ],
+            "actual": {
+              "lang": "ru"
+            },
+            "status": "held",
+            "subjects": [
+              {
+                "section": "documents",
+                "id": "technical_specification"
+              }
+            ]
+          }
+        ],
+        "readers": [],
+        "counterfactuals": [
+          {
+            "input": "kind",
+            "value": "project",
+            "result": "active"
+          }
+        ]
+      },
+      "forms:ai_declaration/tools": {
+        "element": {
+          "section": "forms",
+          "id": "ai_declaration/tools"
+        },
+        "state": "absent",
+        "chain": [
+          {
+            "id": "t59",
+            "rule": {
+              "origin": "manifest",
+              "file": "version.yaml",
+              "pointer": "/forms/0/sections/0/fields/1/visible_if",
+              "builtin": null
+            },
+            "kind": "visible_if",
+            "effect": "display",
+            "join": "all",
+            "terms": [
+              {
+                "op": "equals",
+                "subject": "answer.ai_declaration.used_ai",
+                "expected": ["yes"]
+              }
+            ],
+            "actual": {
+              "answer.ai_declaration.used_ai": "no"
+            },
+            "status": "not_held",
+            "subjects": [
+              {
+                "section": "forms",
+                "id": "ai_declaration/tools"
+              }
+            ]
+          }
+        ],
+        "readers": [],
+        "counterfactuals": [
+          {
+            "input": "answer.ai_declaration.used_ai",
+            "value": "yes",
+            "result": "present"
+          }
+        ]
+      }
+    }
+  },
+  "coursework_alt": {
+    "inputs": {
+      "lang": "ru",
+      "kind": "project",
+      "staffing": "solo",
+      "supervisor": "university",
+      "co_supervisor": "no",
+      "academic_supervisor": "yes",
+      "meta.proposal_stage": "Предварительная",
+      "meta.report_margins": "ГОСТ 7.32 — 30/15/20/20",
+      "variant.presentation": "pptx"
+    },
+    "elements": {
+      "route:topic-approval/topic_application/co_supervisor": {
+        "element": {
+          "section": "route",
+          "id": "topic-approval/topic_application/co_supervisor"
+        },
+        "state": "absent",
+        "chain": [
+          {
+            "id": "t14",
+            "rule": {
+              "origin": "manifest",
+              "file": "version.yaml",
+              "pointer": "/pack_submission/profiles/0/signing_slots/0/when",
+              "builtin": null
+            },
+            "kind": "slot_when",
+            "effect": "add",
+            "join": "all",
+            "terms": [
+              {
+                "op": "present",
+                "subject": "co_supervisor",
+                "expected": []
+              }
+            ],
+            "actual": {
+              "co_supervisor": "no"
+            },
+            "status": "not_held",
+            "subjects": [
+              {
+                "section": "route",
+                "id": "topic-approval/topic_application/co_supervisor"
+              }
+            ]
+          }
+        ],
+        "readers": [],
+        "counterfactuals": [
+          {
+            "input": "co_supervisor",
+            "value": "yes",
+            "result": "present"
+          }
+        ]
+      },
+      "route:topic-approval/topic_application/academic_supervisor": {
+        "element": {
+          "section": "route",
+          "id": "topic-approval/topic_application/academic_supervisor"
+        },
+        "state": "absent",
+        "chain": [
+          {
+            "id": "t15",
+            "rule": {
+              "origin": "manifest",
+              "file": "version.yaml",
+              "pointer": "/pack_submission/profiles/0/signing_slots/1/when",
+              "builtin": null
+            },
+            "kind": "slot_when",
+            "effect": "add",
+            "join": "all",
+            "terms": [
+              {
+                "op": "present",
+                "subject": "supervisor",
+                "expected": []
+              },
+              {
+                "op": "equals",
+                "subject": "supervisor.role",
+                "expected": ["company"]
+              }
+            ],
+            "actual": {
+              "supervisor": "yes",
+              "supervisor.role": "university"
+            },
+            "status": "not_held",
+            "subjects": [
+              {
+                "section": "route",
+                "id": "topic-approval/topic_application/academic_supervisor"
+              }
+            ]
+          }
+        ],
+        "readers": [],
+        "counterfactuals": [
+          {
+            "input": "supervisor",
+            "value": "company",
+            "result": "present"
+          }
+        ]
+      },
+      "participants:co_supervisor": {
+        "element": {
+          "section": "participants",
+          "id": "co_supervisor"
+        },
+        "state": "absent",
+        "chain": [],
+        "readers": [],
+        "counterfactuals": [
+          {
+            "input": "co_supervisor",
+            "value": "yes",
+            "result": "present"
+          }
+        ]
+      }
+    }
+  }
+}
