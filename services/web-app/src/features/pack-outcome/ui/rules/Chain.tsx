@@ -1,4 +1,4 @@
-import { Suspense, useState } from "react";
+import { Suspense, useRef, useState } from "react";
 import { Cpu, ExternalLink, FileCode, Pencil } from "lucide-react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
@@ -25,6 +25,7 @@ const Origin = ({ trace, phone }: { trace: OutcomeTrace; phone: boolean }) => {
   const edit = useRuleEdit();
   const model = useOutcomeModel();
   const [editing, setEditing] = useState(false);
+  const editButton = useRef<HTMLButtonElement>(null);
   const { rule } = trace;
   if (rule.origin === "builtin") {
     const name = rule.builtin ?? "";
@@ -73,6 +74,7 @@ const Origin = ({ trace, phone }: { trace: OutcomeTrace; phone: boolean }) => {
             <button
               type="button"
               className="btn sm"
+              ref={editButton}
               aria-expanded={editing}
               aria-describedby={
                 edit.blocked ? `po-edit-why-${trace.id}` : undefined
@@ -149,6 +151,8 @@ const Origin = ({ trace, phone }: { trace: OutcomeTrace; phone: boolean }) => {
             }}
             onClose={() => {
               setEditing(false);
+              // Форма исчезает вместе с фокусом: он возвращается на кнопку, которая её открыла.
+              editButton.current?.focus();
             }}
           />
         </Suspense>

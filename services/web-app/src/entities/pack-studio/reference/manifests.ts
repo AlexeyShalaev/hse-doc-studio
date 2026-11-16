@@ -153,6 +153,58 @@ export const touchReferenceManifest = (
   target.etag = `"m-${String(store.counter)}"`;
 };
 
+const findFile = (
+  id: string,
+  path: string,
+): { store: Store; file: FileState } | undefined => {
+  for (const [key, store] of stores) {
+    if (!key.startsWith(`${id}|`)) continue;
+    if (store.version.path === path) return { store, file: store.version };
+    for (const file of store.documents.values()) {
+      if (file.path === path) return { store, file };
+    }
+  }
+  return undefined;
+};
+
+/**
+ * Файл манифеста целиком (`GET .../files/<путь>`): подмена хранит данные, а не YAML, поэтому
+ * текст это JSON; прежний текст возвращается тем же, и ETag по нему тот же.
+ */
+export const readReferenceFile = (
+  id: string,
+  path: string,
+): { text: string; etag: string } | undefined => {
+  const found = findFile(id, path);
+  return found
+    ? { text: JSON.stringify(found.file.data), etag: found.file.etag }
+    : undefined;
+};
+
+export type FileWrite =
+  | { status: 200; etag: string; size: number }
+  | { status: 404 }
+  | { status: 409; etag: string };
+
+/** Запись файла целиком (`PUT .../files/<путь>`) с `If-Match`: так откат возвращает прежний текст. */
+export const writeReferenceFile = (
+  id: string,
+  path: string,
+  body: unknown,
+  ifMatch: string | null,
+): FileWrite => {
+  const found = findFile(id, path);
+  if (!found) return { status: 404 };
+  if (ifMatch !== null && ifMatch !== found.file.etag) {
+    return { status: 409, etag: found.file.etag };
+  }
+  const text = typeof body === "string" ? body : JSON.stringify(body);
+  found.file.data = JSON.parse(text) as Json;
+  found.store.counter += 1;
+  found.file.etag = `"m-${String(found.store.counter)}"`;
+  return { status: 200, etag: found.file.etag, size: text.length };
+};
+
 /** Манифест версии для проверки в тестах. */
 export const referenceManifest = (
   id: string,

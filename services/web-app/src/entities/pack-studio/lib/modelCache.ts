@@ -40,3 +40,31 @@ export const cacheModelResult = (
     queryKey: packOutcomeKeys.version(workspaceId, ref),
   });
 };
+
+/**
+ * Файл манифеста записан целиком (откат правки по месту возвращает прежний текст): кэш файла,
+ * подсказки, результат и модель версии обновляются; модель перечитывается и ждётся, чтобы
+ * следующая правка опиралась на новый ETag.
+ */
+export const refreshAfterFileWrite = async (
+  client: QueryClient,
+  workspaceId: string,
+  ref: PackVersionRef,
+  path: string,
+): Promise<void> => {
+  void client.invalidateQueries({
+    queryKey: packStudioKeys.file(workspaceId, path),
+  });
+  void client.invalidateQueries({
+    queryKey: packStudioKeys.hints(
+      workspaceId,
+      path.replace(/\/(version|files\/[^/]+\/doc)\.yaml$/, ""),
+    ),
+  });
+  void client.invalidateQueries({
+    queryKey: packOutcomeKeys.version(workspaceId, ref),
+  });
+  await client.refetchQueries({
+    queryKey: packStudioKeys.model(workspaceId, ref),
+  });
+};

@@ -11,9 +11,11 @@ import { useTranslation } from "react-i18next";
 import {
   PackStaleFileError,
   cacheModelResult,
+  refreshAfterFileWrite,
   packStudioApi,
   packStudioKeys,
   usePackVersionModel,
+  type PackFileVersion,
   type PackOutcome,
   type PackVersionModel,
   type PackYamlOp,
@@ -30,7 +32,7 @@ import {
   undoTarget,
   type History,
 } from "../../lib/edit/history";
-import { dataOf, placeOf } from "../../lib/edit/place";
+import { dataOf, fileOf, placeOf } from "../../lib/edit/place";
 import {
   guardHolds,
   planChange,
@@ -55,6 +57,9 @@ export const FLASH_MS = 4_000;
 
 const NO_KEYS: ReadonlySet<string> = new Set();
 const NO_LIST: readonly string[] = [];
+
+/** Файл до правки целиком и ETag, который у него должен быть, чтобы откат был точным. */
+type Snapshot = { path: string; before: string; etag: string };
 
 type Tracking = {
   baseline: PackOutcome;
@@ -120,61 +125,122 @@ export const RuleEditHost = ({ children }: RuleEditHostProps) => {
   const modelData = modelQuery.data;
   const modelKey = packStudioKeys.model(workspaceId, ref);
   const registry = modelData?.read_only === "releases_read_only";
-  const blocked: RuleEditUi["blocked"] = released
-    ? "released"
-    : url.state.state !== "work_tree"
-      ? "state"
-      : registry
-        ? "registry"
-        : null;
+  // Выпущенность решает дерево, но и модель знает её: версию могли выпустить с другой вкладки.
+  const blocked: RuleEditUi["blocked"] =
+    released || modelData?.read_only === "version_released"
+      ? "released"
+      : url.state.state !== "work_tree"
+        ? "state"
+        : registry
+          ? "registry"
+          : null;
 
   // Самая свежая модель из кэша: правка и откат опираются на неё, а не на последнюю отрисовку.
   const liveModel = (): PackVersionModel | undefined =>
     client.getQueryData<PackVersionModel>(modelKey) ?? modelData;
 
+  // «Файл изменили» это ожидаемый исход, а не сбой: он возвращается значением, чтобы общий
+  // обработчик ошибок не показал ещё и тост поверх плашки.
   const write = useMutation({
     scope: { id: `pack-model:${workspaceId}` },
-    mutationFn: ({ file, ops }: { file: string; ops: PackYamlOp[] }) => {
-      const current = client.getQueryData<PackVersionModel>(modelKey);
-      const etag =
-        file === "version.yaml"
-          ? current?.manifest.etag
-          : current?.documents.find((d) => `files/${d.id}/doc.yaml` === file)
-              ?.manifest?.etag;
-      return packStudioApi.patchVersionModel(
-        workspaceId,
-        ref,
-        { file, ops },
-        etag ?? null,
-      );
+    mutationFn: async ({
+      file,
+      ops,
+    }: {
+      file: string;
+      ops: PackYamlOp[];
+    }): Promise<PackVersionModel | PackStaleFileError> => {
+      try {
+        return await packStudioApi.patchVersionModel(
+          workspaceId,
+          ref,
+          { file, ops },
+          fileOf(client.getQueryData<PackVersionModel>(modelKey), file)?.etag ??
+            null,
+        );
+      } catch (error) {
+        if (error instanceof PackStaleFileError) return error;
+        throw error;
+      }
     },
     onSuccess: (next) => {
-      cacheModelResult(client, workspaceId, ref, next);
+      if (!(next instanceof PackStaleFileError)) {
+        cacheModelResult(client, workspaceId, ref, next);
+      }
     },
   });
   const { mutateAsync: send } = write;
 
-  /** Одна запись правок: `true`, если записана; отказ разбирается в плашку. */
+  // Откат возвращает файл прежним текстом: так он совпадает с прежним байт в байт, чего не даёт
+  // обратная правка значения (удалённый ключ встал бы в конец, список записался бы в строку).
+  const restore = useMutation({
+    scope: { id: `pack-model:${workspaceId}` },
+    mutationFn: async ({
+      path,
+      text,
+      etag,
+    }: {
+      path: string;
+      text: string;
+      etag: string;
+    }): Promise<PackFileVersion | PackStaleFileError> => {
+      try {
+        return await packStudioApi.writeFile(workspaceId, path, text, etag);
+      } catch (error) {
+        if (error instanceof PackStaleFileError) return error;
+        throw error;
+      }
+    },
+    onSuccess: async (written, vars) => {
+      if (!(written instanceof PackStaleFileError)) {
+        await refreshAfterFileWrite(client, workspaceId, ref, vars.path);
+      }
+    },
+  });
+  const { mutateAsync: sendRestore } = restore;
+
+  const afterWrite = useCallback(() => {
+    void client.invalidateQueries({
+      queryKey: packStudioKeys.git(workspaceId),
+    });
+    void client.invalidateQueries({
+      queryKey: packStudioKeys.signaturesAll(workspaceId),
+    });
+  }, [client, workspaceId]);
+
+  const failure = useCallback(
+    (error: unknown, source: "form" | "history") => {
+      if (error instanceof PackStaleFileError) {
+        setNotice({ source, kind: "stale" });
+        void client.invalidateQueries({ queryKey: modelKey });
+      } else {
+        setNotice({ source, kind: "error", error });
+      }
+    },
+    [client, modelKey],
+  );
+
+  /** Правка значения: новая модель версии при успехе; отказ разбирается в плашку. */
   const post = useCallback(
     async (
       file: string,
       ops: PackYamlOp[],
       source: "form" | "history",
-    ): Promise<boolean> => {
+    ): Promise<PackVersionModel | null> => {
       try {
-        await send({ file, ops });
-        return true;
-      } catch (error) {
-        if (error instanceof PackStaleFileError) {
-          setNotice({ source, kind: "stale" });
-          void client.invalidateQueries({ queryKey: modelKey });
-        } else {
-          setNotice({ source, kind: "error", error });
+        const next = await send({ file, ops });
+        if (next instanceof PackStaleFileError) {
+          failure(next, source);
+          return null;
         }
-        return false;
+        afterWrite();
+        return next;
+      } catch (error) {
+        failure(error, source);
+        return null;
       }
     },
-    [send, client, modelKey],
+    [send, afterWrite, failure],
   );
 
   const baselineOf = (): PackOutcome | undefined => shown;
@@ -185,6 +251,10 @@ export const RuleEditHost = ({ children }: RuleEditHostProps) => {
     setDelta(null);
     setTracking({ baseline, edit, direction, sawFetching: false });
   };
+
+  // Прежний текст файла каждой правки: откат возвращает его целиком, пока файл не тронули после
+  // правки. Если тронули, остаётся обратная правка значения (чужие изменения файла не теряются).
+  const snapshots = useRef(new Map<string, Snapshot>());
 
   const commit = async (
     planned: Planned,
@@ -198,14 +268,34 @@ export const RuleEditHost = ({ children }: RuleEditHostProps) => {
       return null;
     }
     setNotice(null);
-    const ok = await post(planned.edit.file, planned.edit.forward, source);
-    if (!ok) return null;
+    const { file } = planned.edit;
+    // Текст до правки: годится, только если файл на диске ровно тот, на который опирается модель.
+    const known = fileOf(liveModel(), file);
+    let before: string | null = null;
+    if (known) {
+      try {
+        const text = await packStudioApi.readFile(workspaceId, known.path);
+        if (text.etag === known.etag) before = text.content;
+      } catch {
+        before = null;
+      }
+    }
+    const next = await post(file, planned.edit.forward, source);
+    if (!next) return null;
     counter += 1;
     const edit: RuleEdit = {
       ...planned.edit,
       id: `edit-${String(counter)}`,
       at: Date.now(),
     };
+    const written = fileOf(next, file);
+    if (known && before !== null && written) {
+      snapshots.current.set(edit.id, {
+        path: known.path,
+        before,
+        etag: written.etag,
+      });
+    }
     setHistory((h) => pushEdit(h, edit));
     track(edit, "apply");
     setLive(t("edit.live.saved"));
@@ -228,19 +318,63 @@ export const RuleEditHost = ({ children }: RuleEditHostProps) => {
     const edit =
       direction === "undo" ? undoTarget(history) : redoTarget(history);
     if (!edit) return;
-    const data = dataOf(liveModel(), edit.file);
+    const live = liveModel();
+    const data = dataOf(live, edit.file);
     const guard = direction === "undo" ? edit.after : edit.before;
-    if (!force && data !== undefined && !guardHolds(data, guard)) {
+    const snapshot = snapshots.current.get(edit.id);
+    const current = fileOf(live, edit.file);
+    // Файл после правки не трогали: откат вернёт прежний текст, ничего чужого он не затрёт.
+    const exact =
+      direction === "undo" &&
+      snapshot !== undefined &&
+      current?.etag === snapshot.etag;
+    if (!exact && !force && data !== undefined && !guardHolds(data, guard)) {
       setNotice({ source: "history", kind: "drift", direction });
       return;
     }
     setNotice(null);
-    const ok = await post(
+    if (exact && snapshot) {
+      try {
+        const written = await sendRestore({
+          path: snapshot.path,
+          text: snapshot.before,
+          etag: snapshot.etag,
+        });
+        if (written instanceof PackStaleFileError) {
+          failure(written, "history");
+          return;
+        }
+        afterWrite();
+        // Повтор пойдёт правкой значения: он вернёт тот же текст, пока файл остаётся этим.
+        snapshots.current.set(edit.id, { ...snapshot, etag: written.etag });
+      } catch (error) {
+        failure(error, "history");
+        return;
+      }
+      setHistory((h) => markUndone(h));
+      track(edit, "undo");
+      setLive(t("edit.live.undone"));
+      return;
+    }
+    const next = await post(
       edit.file,
       direction === "undo" ? edit.inverse : edit.forward,
       "history",
     );
-    if (!ok) return;
+    if (!next) return;
+    const saved = snapshots.current.get(edit.id);
+    const written = fileOf(next, edit.file);
+    if (
+      direction === "redo" &&
+      saved &&
+      written &&
+      saved.etag === current?.etag
+    ) {
+      // Файл после отката не трогали: повтор дал прежний текст, следующий откат снова точный.
+      snapshots.current.set(edit.id, { ...saved, etag: written.etag });
+    } else {
+      snapshots.current.delete(edit.id);
+    }
     setHistory((h) => (direction === "undo" ? markUndone(h) : markRedone(h)));
     track(edit, direction);
     setLive(t(direction === "undo" ? "edit.live.undone" : "edit.live.redone"));
@@ -389,7 +523,7 @@ export const RuleEditHost = ({ children }: RuleEditHostProps) => {
     blocked,
     ready: modelData !== undefined,
     loadFailed: modelQuery.isError ? modelQuery.error : null,
-    busy: write.isPending,
+    busy: write.isPending || restore.isPending,
     begin: () => {
       setWanted(true);
     },

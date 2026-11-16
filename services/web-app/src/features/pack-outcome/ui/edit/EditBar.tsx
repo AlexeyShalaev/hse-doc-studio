@@ -120,25 +120,27 @@ export const EditBar = () => {
                     <span className="po-edit-sign" aria-hidden="true">
                       {item.symbol === "-" ? "−" : item.symbol}
                     </span>
-                    <span className="sr-only">
-                      {t(`edit.delta.symbol.${item.symbol}`)}
-                    </span>
-                    <button
-                      type="button"
-                      className="po-edit-link"
-                      onClick={() => {
-                        select({ section: item.section, id: item.id });
-                      }}
-                    >
-                      {item.label}
-                    </button>
-                    <span className="po-note">
-                      {t(`sections.${item.section}`)}
-                      {item.symbol === "~" &&
-                      item.before !== null &&
-                      item.after !== null
-                        ? `: ${item.before} → ${item.after}`
-                        : ""}
+                    <span className="po-edit-delta-text">
+                      <span className="sr-only">
+                        {t(`edit.delta.symbol.${item.symbol}`)}:{" "}
+                      </span>
+                      <button
+                        type="button"
+                        className="po-edit-link"
+                        onClick={() => {
+                          select({ section: item.section, id: item.id });
+                        }}
+                      >
+                        {item.label}
+                      </button>{" "}
+                      <span className="po-note">
+                        {t(`sections.${item.section}`)}
+                        {item.symbol === "~" &&
+                        item.before !== null &&
+                        item.after !== null
+                          ? `: ${t("edit.delta.from", { before: item.before, after: item.after })}`
+                          : ""}
+                      </span>
                     </span>
                   </li>
                 ))}

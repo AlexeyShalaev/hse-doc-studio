@@ -18,6 +18,20 @@ export const dataOf = (
   return model.documents.find((doc) => doc.id === id)?.manifest?.data;
 };
 
+/** Путь и ETag манифеста в модели версии (по ним читается и пишется файл целиком). */
+export const fileOf = (
+  model: PackVersionModel | undefined,
+  file: string,
+): { path: string; etag: string } | undefined => {
+  if (!model) return undefined;
+  if (file === "version.yaml") {
+    return { path: model.manifest.path, etag: model.manifest.etag };
+  }
+  const id = DOC_FILE.exec(file)?.[1];
+  const manifest = model.documents.find((doc) => doc.id === id)?.manifest;
+  return manifest ? { path: manifest.path, etag: manifest.etag } : undefined;
+};
+
 const str = (value: unknown): string =>
   typeof value === "string" ? value : "";
 

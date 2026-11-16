@@ -55,6 +55,8 @@ describe("галерея экрана «Результат»", () => {
         "po_why_error",
         "po_why_busy",
         "po_why_impact",
+        "po_edit_ready",
+        "po_edit_released",
       ]),
     );
   });
@@ -292,5 +294,44 @@ describe("галерея «Почему?»", () => {
         '[data-testid="outcome-chain-empty"]',
       ),
     ).not.toBeNull();
+  });
+});
+
+describe("галерея: правка по месту", () => {
+  beforeAll(async () => {
+    await Promise.all([loadPackOutcomeNamespace(), loadPackStudioNamespace()]);
+    await i18n.changeLanguage("ru");
+  });
+  afterEach(cleanup);
+  const entry = (id: string) =>
+    getPackOutcomeGallery()
+      .flatMap((g) => g.entries)
+      .find((e) => e.id === id);
+  const show = (id: string) => {
+    const found = entry(id);
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    found?.seed?.(client);
+    return render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>{found?.render()}</MemoryRouter>
+      </QueryClientProvider>,
+    );
+  };
+
+  it("рабочее дерево: «Править правило» доступна", async () => {
+    const { findByTestId } = show("po_edit_ready");
+    const button = await findByTestId("outcome-chain-t14-edit");
+    expect(button).toBeEnabled();
+  });
+
+  it("выпущенная версия: кнопка неактивна, есть объяснение и ссылка на новую версию", async () => {
+    const { findByTestId } = show("po_edit_released");
+    expect(await findByTestId("outcome-chain-t1-edit")).toBeDisabled();
+    expect(await findByTestId("outcome-chain-t1-new-version")).toHaveAttribute(
+      "href",
+      expect.stringContaining("newVersion=hse-cs-se%2Fvkr"),
+    );
   });
 });

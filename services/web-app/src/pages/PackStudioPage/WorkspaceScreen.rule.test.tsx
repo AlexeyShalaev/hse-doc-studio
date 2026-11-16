@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
-import { MemoryRouter, Route, Routes } from "react-router";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
+  packNewVersionPath,
   packOutcomePath,
   packRulePath,
   packStudioKeys,
@@ -49,7 +50,16 @@ vi.mock("@features/pack-tree", () => ({
 }));
 vi.mock("@features/pack-version", () => ({
   VersionBar: () => null,
-  NewVersionDialog: () => null,
+  NewVersionDialog: (props: {
+    target: { pack: string; template: string } | null;
+  }) =>
+    props.target ? (
+      <div
+        data-testid="new-version"
+        data-pack={props.target.pack}
+        data-template={props.target.template}
+      />
+    ) : null,
 }));
 vi.mock("@features/pack-scaffold", () => ({ NewPackDialog: () => null }));
 
@@ -116,6 +126,8 @@ const tree: PackTree = {
   truncated: false,
 };
 
+const Where = () => <output data-testid="where">{useLocation().search}</output>;
+
 const open = (url: string) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
@@ -139,6 +151,7 @@ const open = (url: string) => {
             element={<WorkspaceScreen />}
           />
         </Routes>
+        <Where />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -207,5 +220,22 @@ describe("режим «Файлы» при переходе к правилу", 
     expect(editor).toHaveAttribute("data-pointer", "");
     expect(editor).toHaveAttribute("data-view", "");
     expect(screen.queryByTestId("ws-back-to-result")).not.toBeInTheDocument();
+  });
+
+  it("«Создать новую версию» с экрана результата открывает мастер и убирает параметр", async () => {
+    open(packNewVersionPath(WS, REF));
+    const dialog = await screen.findByTestId("new-version");
+    expect(dialog).toHaveAttribute("data-pack", "hse-cs-sse");
+    expect(dialog).toHaveAttribute("data-template", "coursework");
+    await waitFor(() => {
+      expect(screen.getByTestId("where")).toHaveTextContent("?view=files");
+    });
+    expect(screen.getByTestId("where")).not.toHaveTextContent("newVersion");
+  });
+
+  it("без параметра мастер не открывается", async () => {
+    open(`/pack-studio/w/${WS}?view=files`);
+    await screen.findByTestId("tree");
+    expect(screen.queryByTestId("new-version")).not.toBeInTheDocument();
   });
 });

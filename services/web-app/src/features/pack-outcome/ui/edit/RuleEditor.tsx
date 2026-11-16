@@ -223,7 +223,12 @@ export const RuleEditor = ({ trace, target, onClose }: RuleEditorProps) => {
   const { t } = useTranslation("packOutcome");
   const ui = useRuleEdit();
   const uid = useId();
+  const group = useRef<HTMLDivElement>(null);
   const [confirm, setConfirm] = useState<"condition" | "record" | null>(null);
+  // Открытая правка забирает фокус: Tab ведёт по полям формы, а не по цепочке выше.
+  useEffect(() => {
+    group.current?.focus();
+  }, []);
   if (!ui) return null;
   const data = ui.data(target.file);
   const found =
@@ -236,6 +241,8 @@ export const RuleEditor = ({ trace, target, onClose }: RuleEditorProps) => {
     <div
       className="po-edit"
       role="group"
+      ref={group}
+      tabIndex={-1}
       aria-labelledby={`${uid}-t`}
       data-testid={`outcome-edit-${trace.id}`}
       onKeyDown={(event) => {
@@ -351,6 +358,7 @@ export const RuleEditor = ({ trace, target, onClose }: RuleEditorProps) => {
           record={record}
           onCancel={() => {
             setConfirm(null);
+            group.current?.focus();
           }}
           onDone={() => {
             setConfirm(null);

@@ -378,9 +378,7 @@ describe("правка правила по месту", () => {
 
       await userEvent.click(undo);
       await waitFor(() => {
-        expect(kinds(VKR, "technical_specification")).toEqual(
-          ["research", "project"].slice(0, 0),
-        );
+        expect(kinds(VKR, "technical_specification")).toEqual([]);
       });
       expect(screen.getByTestId("outcome-edit-live")).toHaveTextContent(
         /Отменено|Результат/,
@@ -483,6 +481,98 @@ describe("правка правила по месту", () => {
     });
   });
 
+  describe("точный откат", () => {
+    it("файл не трогали после правки: возвращается прежний текст целиком, одним PUT с If-Match", async () => {
+      const write = vi.spyOn(packStudioApi, "writeFile");
+      const patch = vi.spyOn(packStudioApi, "patchVersionModel");
+      mount(DOC);
+      const editor = await openEditor("t1");
+      const original = JSON.stringify(
+        referenceManifest(WS, VKR, "files/technical_specification/doc.yaml"),
+      );
+      await userEvent.click(
+        await within(editor).findByRole("checkbox", { name: "Проектная" }),
+      );
+      await delta();
+      expect(patch).toHaveBeenCalledTimes(1);
+      ctrlZ();
+      await waitFor(() => {
+        expect(write).toHaveBeenCalledTimes(1);
+      });
+      const [, path, text, ifMatch] = write.mock.calls[0] ?? [];
+      expect(path).toBe(
+        "hse-cs-se/templates/vkr/versions/2026.1.2/files/technical_specification/doc.yaml",
+      );
+      expect(text).toBe(original);
+      expect(ifMatch).toMatch(/^"m-\d+"$/);
+      await waitFor(() => {
+        expect(
+          JSON.stringify(
+            referenceManifest(
+              WS,
+              VKR,
+              "files/technical_specification/doc.yaml",
+            ),
+          ),
+        ).toBe(original);
+      });
+      // Повтор идёт правкой значения и снова даёт тот же результат.
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Повторить" }),
+      );
+      await waitFor(() => {
+        expect(kinds(VKR, "technical_specification")).toEqual(["research"]);
+      });
+      expect(patch).toHaveBeenCalledTimes(2);
+      // Следующий откат снова точный.
+      ctrlZ();
+      await waitFor(() => {
+        expect(write).toHaveBeenCalledTimes(2);
+      });
+    });
+
+    it("файл тронули в другом месте: откат правкой значения, чужое изменение остаётся", async () => {
+      const write = vi.spyOn(packStudioApi, "writeFile");
+      const patch = vi.spyOn(packStudioApi, "patchVersionModel");
+      const client = mount(DOC);
+      const editor = await openEditor("t1");
+      await userEvent.click(
+        await within(editor).findByRole("checkbox", { name: "Проектная" }),
+      );
+      await delta();
+      touchReferenceManifest(
+        WS,
+        VKR,
+        "files/technical_specification/doc.yaml",
+        (data) => {
+          data.supported_langs = ["ru"];
+        },
+      );
+      await act(async () => {
+        await client.invalidateQueries({
+          queryKey: packStudioKeys.model(WS, VKR),
+        });
+      });
+      ctrlZ();
+      await waitFor(() => {
+        expect(kinds(VKR, "technical_specification")).toEqual([]);
+      });
+      expect(write).not.toHaveBeenCalled();
+      expect(patch).toHaveBeenCalledTimes(2);
+      expect(
+        (
+          referenceManifest(
+            WS,
+            VKR,
+            "files/technical_specification/doc.yaml",
+          ) as {
+            supported_langs: string[];
+          }
+        ).supported_langs,
+      ).toEqual(["ru"]);
+    });
+  });
+
   describe("конфликт при откате", () => {
     it("файл изменили, модель экрана старая: откат получает stale_file и мягко предупреждает", async () => {
       mount(STEP, COURSEWORK);
@@ -517,7 +607,7 @@ describe("правка правила по месту", () => {
       const confirm = await screen.findByTestId("outcome-edit-confirm");
       expect(confirm).toHaveTextContent("Удалить: слот подписи?");
       expect(screen.getByTestId("outcome-edit-affected")).toHaveTextContent(
-        /Изменится \d+ элемент/,
+        /Затрагивает \d+ элемент/,
       );
       // Ничего не записано, пока нет согласия.
       expect(slots()).toHaveLength(2);
@@ -702,8 +792,13 @@ describe("правка правила по месту", () => {
     it("Escape закрывает мини-форму, фокус остаётся на кнопке правки", async () => {
       mount(DOC);
       const editor = await openEditor("t1");
+      // Форма открыта: фокус внутри неё.
+      await waitFor(() => {
+        expect(editor).toHaveFocus();
+      });
       fireEvent.keyDown(editor, { key: "Escape" });
       expect(screen.queryByTestId("outcome-edit-t1")).toBeNull();
+      expect(screen.getByTestId("outcome-chain-t1-edit")).toHaveFocus();
       expect(screen.getByTestId("outcome-chain-t1-edit")).toHaveAttribute(
         "aria-expanded",
         "false",

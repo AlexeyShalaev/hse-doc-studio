@@ -24,8 +24,10 @@ export type {
 } from "./routes";
 export {
   patchReferenceModel,
+  readReferenceFile,
   referenceManifest,
   referenceModel,
   resetReferenceManifests,
   touchReferenceManifest,
+  writeReferenceFile,
 } from "./manifests";

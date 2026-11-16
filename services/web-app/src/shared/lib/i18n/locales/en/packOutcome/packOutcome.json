@@ -898,11 +898,6 @@
       "state": "Only the working tree can be edited: switch the state to Working tree.",
       "registry": "Registry releases are read-only."
     },
-    "blockedLead": {
-      "released": "Create a new version and edit that one.",
-      "state": "Files in a commit or the base do not change.",
-      "registry": "Copy the version into your own pack."
-    },
     "removeCondition": "Remove the condition",
     "delete": {
       "slot": "Delete the slot",
@@ -923,9 +918,9 @@
       "condition": "Remove the condition?",
       "record": "Delete the {{what}}?",
       "noOutcome": "The outcome is not loaded yet, so the number of affected elements is unknown.",
-      "none": "In the current combination of inputs no outcome element changes.",
-      "count_one": "{{count}} outcome element changes in the current combination.",
-      "count_other": "{{count}} outcome elements change in the current combination.",
+      "none": "In the current combination of inputs the rule decides no outcome element.",
+      "count_one": "Affects {{count}} outcome element in the current combination.",
+      "count_other": "Affects {{count}} outcome elements in the current combination.",
       "more_one": "and {{count}} more",
       "more_other": "and {{count}} more",
       "scope": "The number comes from the trace of the shown outcome; the server did not compute other input combinations. A deletion can be undone for 10 seconds, then from the edit history.",
@@ -958,7 +953,8 @@
         "+": "Added",
         "~": "Changed",
         "-": "Removed"
-      }
+      },
+      "from": "was {{before}}, now {{after}}"
     },
     "history": {
       "title_one": "Edit history ({{count}})",
