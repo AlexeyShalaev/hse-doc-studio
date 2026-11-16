@@ -1,0 +1,7 @@
+{
+  "state": "work_tree",
+  "scenario": null,
+  "example": null,
+  "inputs": {"kind": "project", "staffing": "solo", "meta.manuals": "Только программиста"},
+  "element": {"section": "documents", "id": "operator_manual"}
+}

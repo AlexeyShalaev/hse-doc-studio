@@ -88,6 +88,13 @@ class PackStudioErrorCode(StrEnum):
     pack_not_found = "pack_not_found"
     # Локальная копия репозитория пространства: сбой git без сети
     workspace_git_failed = "workspace_git_failed"
+    # Вычислитель результата (docs/design/template-studio-outcome.md, раздел 4): вводные, сценарии, атлас, база
+    inputs_invalid = "inputs_invalid"
+    scenario_invalid = "scenario_invalid"
+    scenario_not_found = "scenario_not_found"
+    scenario_taken = "scenario_taken"
+    atlas_too_large = "atlas_too_large"
+    diff_base_unavailable = "diff_base_unavailable"
 
 
 _C = PackStudioErrorCode
@@ -333,6 +340,36 @@ _TABLE: dict[PackStudioErrorCode, tuple[int, str, str]] = {
         409,
         "Не удалось прочитать локальную копию репозитория. Если ошибка повторится, перешлите админу поле hint.",
         "The local copy of the repository could not be read. If the error repeats, send the hint to the admin.",
+    ),
+    _C.inputs_invalid: (
+        400,
+        "Вводные не подходят к этой версии шаблона: незнакомая вводная или значение вне списка.",
+        "The inputs do not fit this template version: an unknown input or a value outside the list.",
+    ),
+    _C.scenario_invalid: (
+        400,
+        "Сценарий нельзя записать: он не соответствует формату. Причина ниже.",
+        "The scenario cannot be written: it does not match the format. The reason is below.",
+    ),
+    _C.scenario_not_found: (
+        404,
+        "Сценарий не найден.",
+        "Scenario not found.",
+    ),
+    _C.scenario_taken: (
+        409,
+        "Сценарий с таким id в этом шаблоне уже есть.",
+        "This template already has a scenario with this id.",
+    ),
+    _C.atlas_too_large: (
+        413,
+        "У версии слишком много комбинаций вводных для атласа. Зафиксируйте часть вводных.",
+        "The version has too many input combinations for the atlas. Pin some of the inputs.",
+    ),
+    _C.diff_base_unavailable: (
+        409,
+        "Сравнивать не с чем: у рабочего пространства нет базовой ветки или нужной версии в ней.",
+        "Nothing to compare with: the workspace has no base branch or the version is missing in it.",
     ),
 }
 

@@ -1,0 +1,233 @@
+{
+  "workspace_id": "6f1c1c8e-1b7a-4d51-9a43-0a5b2f3c4d10",
+  "pack": "hse-cs-sse",
+  "template": "coursework",
+  "version": "2026.1.6",
+  "state": "work_tree",
+  "revision": "sha256-d85b5ca370523fd0",
+  "passed": 2,
+  "failed": 1,
+  "errors": 0,
+  "unchecked": 0,
+  "results": [
+    {
+      "scenario": "company-supervisor",
+      "status": "passed",
+      "fingerprint": "51ad330cf2f4a6ca",
+      "failures": [],
+      "changes": [],
+      "message": null
+    },
+    {
+      "scenario": "university-supervisor",
+      "status": "failed",
+      "fingerprint": "5bb2e007b2ade751",
+      "failures": [
+        {
+          "index": 0,
+          "kind": "route_steps",
+          "expected": "[[\"author\"], [\"supervisor\"]]",
+          "actual": "[[\"author\"], [\"supervisor\"], [\"academic_supervisor\"]]",
+          "why": ["t14", "t15"]
+        },
+        {"index": 1, "kind": "route_pair", "expected": "false", "actual": "true", "why": ["t14", "t15"]}
+      ],
+      "changes": [
+        {
+          "symbol": "+",
+          "section": "route",
+          "kind": "route_step",
+          "id": "topic-approval/step/3",
+          "label": "topic-approval: шаг 3",
+          "before": null,
+          "after": "academic_supervisor"
+        },
+        {
+          "symbol": "+",
+          "section": "route",
+          "kind": "route_pair",
+          "id": "topic-approval/topic_application/academic_supervisor",
+          "label": "topic_application: academic_supervisor",
+          "before": null,
+          "after": "academic_supervisor"
+        },
+        {
+          "symbol": "-",
+          "section": "route",
+          "kind": "skipped_pair",
+          "id": "topic-approval/topic_application/academic_supervisor",
+          "label": "topic_application: academic_supervisor",
+          "before": null,
+          "after": null
+        }
+      ],
+      "message": null
+    },
+    {
+      "scenario": "no-supervisor",
+      "status": "passed",
+      "fingerprint": "6ebf3d76562ab9d2",
+      "failures": [],
+      "changes": [],
+      "message": null
+    }
+  ],
+  "coverage": {
+    "scenarios": 3,
+    "rules_total": 16,
+    "rules_covered": 2,
+    "rules_half": 14,
+    "rules_uncovered": 0,
+    "rules": [
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/project_proposal/doc.yaml",
+          "pointer": "/supported_kinds",
+          "builtin": null
+        },
+        "kind": "supported_kinds",
+        "seen": ["held"],
+        "scenarios": ["company-supervisor", "university-supervisor", "no-supervisor"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/project_proposal/doc.yaml",
+          "pointer": "/supported_staffing",
+          "builtin": null
+        },
+        "kind": "supported_staffing",
+        "seen": ["held"],
+        "scenarios": ["company-supervisor", "university-supervisor", "no-supervisor"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/project_proposal/doc.yaml",
+          "pointer": "/supported_langs",
+          "builtin": null
+        },
+        "kind": "supported_langs",
+        "seen": ["held"],
+        "scenarios": ["company-supervisor", "university-supervisor", "no-supervisor"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/topic_application/doc.yaml",
+          "pointer": "/supported_kinds",
+          "builtin": null
+        },
+        "kind": "supported_kinds",
+        "seen": ["held"],
+        "scenarios": ["company-supervisor", "university-supervisor", "no-supervisor"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/topic_application/doc.yaml",
+          "pointer": "/supported_staffing",
+          "builtin": null
+        },
+        "kind": "supported_staffing",
+        "seen": ["held"],
+        "scenarios": ["company-supervisor", "university-supervisor", "no-supervisor"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/topic_application/doc.yaml",
+          "pointer": "/supported_langs",
+          "builtin": null
+        },
+        "kind": "supported_langs",
+        "seen": ["held"],
+        "scenarios": ["company-supervisor", "university-supervisor", "no-supervisor"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/report/doc.yaml",
+          "pointer": "/supported_kinds",
+          "builtin": null
+        },
+        "kind": "supported_kinds",
+        "seen": ["held"],
+        "scenarios": ["company-supervisor", "university-supervisor", "no-supervisor"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/report/doc.yaml",
+          "pointer": "/supported_staffing",
+          "builtin": null
+        },
+        "kind": "supported_staffing",
+        "seen": ["held"],
+        "scenarios": ["company-supervisor", "university-supervisor", "no-supervisor"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/report/doc.yaml",
+          "pointer": "/supported_langs",
+          "builtin": null
+        },
+        "kind": "supported_langs",
+        "seen": ["held"],
+        "scenarios": ["company-supervisor", "university-supervisor", "no-supervisor"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/presentation/doc.yaml",
+          "pointer": "/supported_kinds",
+          "builtin": null
+        },
+        "kind": "supported_kinds",
+        "seen": ["held"],
+        "scenarios": ["company-supervisor", "university-supervisor", "no-supervisor"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/presentation/doc.yaml",
+          "pointer": "/supported_staffing",
+          "builtin": null
+        },
+        "kind": "supported_staffing",
+        "seen": ["held"],
+        "scenarios": ["company-supervisor", "university-supervisor", "no-supervisor"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/presentation/doc.yaml",
+          "pointer": "/supported_langs",
+          "builtin": null
+        },
+        "kind": "supported_langs",
+        "seen": ["held"],
+        "scenarios": ["company-supervisor", "university-supervisor", "no-supervisor"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "version.yaml",
+          "pointer": "/pack_submission/profiles/0/signing_route",
+          "builtin": null
+        },
+        "kind": "route_order",
+        "seen": ["held"],
+        "scenarios": ["company-supervisor", "university-supervisor", "no-supervisor"]
+      },
+      {
+        "rule": {"origin": "builtin", "file": null, "pointer": null, "builtin": "builtin_route"},
+        "kind": "route_order",
+        "seen": ["held"],
+        "scenarios": ["company-supervisor", "university-supervisor", "no-supervisor"]
+      }
+    ]
+  }
+}

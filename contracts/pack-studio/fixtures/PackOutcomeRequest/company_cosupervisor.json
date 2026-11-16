@@ -1,0 +1,7 @@
+{
+  "state": "work_tree",
+  "scenario": null,
+  "example": "auto:normal",
+  "inputs": {"supervisor": "company", "co_supervisor": "yes"},
+  "include": ["checks", "branches"]
+}

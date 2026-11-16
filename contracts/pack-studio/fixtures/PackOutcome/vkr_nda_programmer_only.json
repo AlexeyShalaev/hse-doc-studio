@@ -1,0 +1,2581 @@
+{
+  "workspace_id": "6f1c1c8e-1b7a-4d51-9a43-0a5b2f3c4d10",
+  "pack": "hse-cs-se",
+  "template": "vkr",
+  "version": "2026.1.2",
+  "state": "work_tree",
+  "revision": "sha256-99e5f70b531e4d96",
+  "inputs": {
+    "lang": "ru",
+    "kind": "project",
+    "staffing": "solo",
+    "supervisor": "university",
+    "co_supervisor": "no",
+    "academic_supervisor": "yes",
+    "meta.manuals": "Только программиста",
+    "meta.nda": "yes",
+    "answer.ai_declaration.used_ai": "no",
+    "variant.presentation": "pptx"
+  },
+  "example": "auto:normal",
+  "fingerprint": "ab068aed9d333f09",
+  "documents": [
+    {
+      "id": "technical_specification",
+      "name": {"ru": "Техническое задание", "en": "Statement of Work"},
+      "group": "espd",
+      "scope": "personal",
+      "required": true,
+      "state": "active",
+      "lang_state": "native",
+      "languages": ["ru", "en"],
+      "variants": [
+        {
+          "id": "espd",
+          "label": {"ru": "ГОСТ 19 ЕСПД (ТЗ)", "en": "GOST 19 ESPD (ТЗ)"},
+          "langs": [],
+          "available": true,
+          "chosen": true,
+          "why": []
+        },
+        {
+          "id": "srs-29148",
+          "label": {"ru": "ISO/IEC/IEEE 29148 (SRS)", "en": "ISO/IEC/IEEE 29148 (SRS)"},
+          "langs": ["en"],
+          "available": false,
+          "chosen": false,
+          "why": ["t4"]
+        }
+      ],
+      "instances": [
+        {
+          "id": "technical_specification",
+          "owner": null,
+          "owner_name": null,
+          "file_name": "Техническое задание.pdf"
+        }
+      ],
+      "source_file": "technical_specification/technical_specification.tex",
+      "manifest": "files/technical_specification/doc.yaml",
+      "why": ["t1", "t2", "t3"]
+    },
+    {
+      "id": "shared_technical_specification",
+      "name": {"ru": "Общее техническое задание", "en": "Shared Statement of Work"},
+      "group": "espd",
+      "scope": "shared",
+      "required": true,
+      "state": "absent",
+      "lang_state": "native",
+      "languages": ["ru", "en"],
+      "variants": [],
+      "instances": [],
+      "source_file": null,
+      "manifest": "files/shared_technical_specification/doc.yaml",
+      "why": ["t5", "t6", "t7"]
+    },
+    {
+      "id": "test_program_and_methodology",
+      "name": {"ru": "Программа и методика испытаний", "en": "Test Program & Methodology"},
+      "group": "espd",
+      "scope": "personal",
+      "required": true,
+      "state": "active",
+      "lang_state": "native",
+      "languages": ["ru", "en"],
+      "variants": [
+        {
+          "id": "espd",
+          "label": {"ru": "ГОСТ 19 ЕСПД (ПМИ)", "en": "GOST 19 ESPD (ПМИ)"},
+          "langs": [],
+          "available": true,
+          "chosen": true,
+          "why": []
+        },
+        {
+          "id": "ieee-829",
+          "label": {"ru": "IEEE 829 / 29119-3 (Test docs)", "en": "IEEE 829 / 29119-3 (Test docs)"},
+          "langs": ["en"],
+          "available": false,
+          "chosen": false,
+          "why": ["t11"]
+        }
+      ],
+      "instances": [
+        {
+          "id": "test_program_and_methodology",
+          "owner": null,
+          "owner_name": null,
+          "file_name": "Программа и методика испытаний.pdf"
+        }
+      ],
+      "source_file": "test_program_and_methodology/test_program_and_methodology.tex",
+      "manifest": "files/test_program_and_methodology/doc.yaml",
+      "why": ["t8", "t9", "t10"]
+    },
+    {
+      "id": "shared_test_program_and_methodology",
+      "name": {"ru": "Общая программа и методика испытаний", "en": "Shared Test Program & Methodology"},
+      "group": "espd",
+      "scope": "shared",
+      "required": true,
+      "state": "absent",
+      "lang_state": "native",
+      "languages": ["ru", "en"],
+      "variants": [],
+      "instances": [],
+      "source_file": null,
+      "manifest": "files/shared_test_program_and_methodology/doc.yaml",
+      "why": ["t12", "t13", "t14"]
+    },
+    {
+      "id": "source_listing",
+      "name": {"ru": "Текст программы", "en": "Source Listing"},
+      "group": "espd",
+      "scope": "personal",
+      "required": false,
+      "state": "active",
+      "lang_state": "native",
+      "languages": ["ru", "en"],
+      "variants": [],
+      "instances": [{"id": "source_listing", "owner": null, "owner_name": null, "file_name": "Текст программы.pdf"}],
+      "source_file": "source_listing/source_listing.tex",
+      "manifest": "files/source_listing/doc.yaml",
+      "why": ["t15", "t16", "t17"]
+    },
+    {
+      "id": "programmer_manual",
+      "name": {"ru": "Руководство программиста", "en": "Programmer's Manual"},
+      "group": "espd",
+      "scope": "personal",
+      "required": false,
+      "state": "active",
+      "lang_state": "native",
+      "languages": ["ru", "en"],
+      "variants": [],
+      "instances": [
+        {
+          "id": "programmer_manual",
+          "owner": null,
+          "owner_name": null,
+          "file_name": "Руководство программиста.pdf"
+        }
+      ],
+      "source_file": "programmer_manual/programmer_manual.tex",
+      "manifest": "files/programmer_manual/doc.yaml",
+      "why": ["t18", "t19", "t20", "t21"]
+    },
+    {
+      "id": "operator_manual",
+      "name": {"ru": "Руководство оператора", "en": "Operator's Manual"},
+      "group": "espd",
+      "scope": "personal",
+      "required": false,
+      "state": "inactive",
+      "lang_state": "native",
+      "languages": ["ru", "en"],
+      "variants": [
+        {
+          "id": "espd",
+          "label": {"ru": "ГОСТ 19 ЕСПД (РО)", "en": "GOST 19 ESPD (РО)"},
+          "langs": [],
+          "available": true,
+          "chosen": true,
+          "why": []
+        },
+        {
+          "id": "ieee-1063",
+          "label": {"ru": "IEEE Std 1063 (User doc)", "en": "IEEE Std 1063 (User doc)"},
+          "langs": ["en"],
+          "available": false,
+          "chosen": false,
+          "why": ["t26"]
+        }
+      ],
+      "instances": [{"id": "operator_manual", "owner": null, "owner_name": null, "file_name": "Руководство оператора.pdf"}],
+      "source_file": "operator_manual/operator_manual.tex",
+      "manifest": "files/operator_manual/doc.yaml",
+      "why": ["t22", "t23", "t24", "t25"]
+    },
+    {
+      "id": "annotation",
+      "name": {"ru": "Аннотация", "en": "Annotation"},
+      "group": "report",
+      "scope": "personal",
+      "required": true,
+      "state": "absent",
+      "lang_state": "native",
+      "languages": ["ru", "en"],
+      "variants": [],
+      "instances": [],
+      "source_file": null,
+      "manifest": "files/annotation/doc.yaml",
+      "why": ["t27", "t28", "t29"]
+    },
+    {
+      "id": "shared_annotation",
+      "name": {"ru": "Общая аннотация", "en": "Shared Annotation"},
+      "group": "report",
+      "scope": "shared",
+      "required": true,
+      "state": "absent",
+      "lang_state": "native",
+      "languages": ["ru", "en"],
+      "variants": [],
+      "instances": [],
+      "source_file": null,
+      "manifest": "files/shared_annotation/doc.yaml",
+      "why": ["t30", "t31", "t32"]
+    },
+    {
+      "id": "interim_report",
+      "name": {"ru": "Отчёт ВКР", "en": "Thesis report"},
+      "group": "report",
+      "scope": "personal",
+      "required": true,
+      "state": "absent",
+      "lang_state": "native",
+      "languages": ["ru", "en"],
+      "variants": [],
+      "instances": [],
+      "source_file": null,
+      "manifest": "files/interim_report/doc.yaml",
+      "why": ["t33", "t34", "t35"]
+    },
+    {
+      "id": "pdp_assignment",
+      "name": {"ru": "Индивидуальное задание на ПДП", "en": "Practice individual assignment"},
+      "group": "pdp",
+      "scope": "personal",
+      "required": false,
+      "state": "active",
+      "lang_state": "native",
+      "languages": ["ru"],
+      "variants": [],
+      "instances": [
+        {
+          "id": "pdp_assignment",
+          "owner": null,
+          "owner_name": null,
+          "file_name": "Индивидуальное задание ПДП.pdf"
+        }
+      ],
+      "source_file": "pdp_assignment/pdp_assignment.tex",
+      "manifest": "files/pdp_assignment/doc.yaml",
+      "why": ["t36", "t37", "t38"]
+    },
+    {
+      "id": "pdp_work_plan",
+      "name": {"ru": "Рабочий план ПДП", "en": "Practice work plan"},
+      "group": "pdp",
+      "scope": "personal",
+      "required": false,
+      "state": "active",
+      "lang_state": "native",
+      "languages": ["ru"],
+      "variants": [],
+      "instances": [{"id": "pdp_work_plan", "owner": null, "owner_name": null, "file_name": "Рабочий план ПДП.pdf"}],
+      "source_file": "pdp_work_plan/pdp_work_plan.tex",
+      "manifest": "files/pdp_work_plan/doc.yaml",
+      "why": ["t39", "t40", "t41"]
+    },
+    {
+      "id": "pdp_report_title",
+      "name": {"ru": "Титульный лист отчёта о ПДП", "en": "Practice report title page"},
+      "group": "pdp",
+      "scope": "personal",
+      "required": false,
+      "state": "active",
+      "lang_state": "native",
+      "languages": ["ru"],
+      "variants": [],
+      "instances": [
+        {
+          "id": "pdp_report_title",
+          "owner": null,
+          "owner_name": null,
+          "file_name": "Титульный лист отчёта о ПДП.pdf"
+        }
+      ],
+      "source_file": "pdp_report_title/pdp_report_title.tex",
+      "manifest": "files/pdp_report_title/doc.yaml",
+      "why": ["t42", "t43", "t44"]
+    },
+    {
+      "id": "pdp_review",
+      "name": {"ru": "Отзыв руководителя ПДП", "en": "Practice supervisor's review"},
+      "group": "pdp",
+      "scope": "personal",
+      "required": false,
+      "state": "active",
+      "lang_state": "native",
+      "languages": ["ru"],
+      "variants": [],
+      "instances": [{"id": "pdp_review", "owner": null, "owner_name": null, "file_name": "Отзыв руководителя ПДП.pdf"}],
+      "source_file": "pdp_review/pdp_review.tex",
+      "manifest": "files/pdp_review/doc.yaml",
+      "why": ["t45", "t46", "t47"]
+    },
+    {
+      "id": "topic_presentation",
+      "name": {"ru": "Презентация защиты темы", "en": "Topic defence presentation"},
+      "group": "pres",
+      "scope": "personal",
+      "required": true,
+      "state": "active",
+      "lang_state": "native",
+      "languages": ["ru", "en"],
+      "variants": [],
+      "instances": [
+        {
+          "id": "topic_presentation",
+          "owner": null,
+          "owner_name": null,
+          "file_name": "Презентация защиты темы.pdf"
+        }
+      ],
+      "source_file": "topic_presentation/topic_presentation.tex",
+      "manifest": "files/topic_presentation/doc.yaml",
+      "why": ["t48", "t49", "t50"]
+    },
+    {
+      "id": "presentation",
+      "name": {"ru": "Презентация защиты", "en": "Defense Presentation"},
+      "group": "pres",
+      "scope": "personal",
+      "required": true,
+      "state": "active",
+      "lang_state": "native",
+      "languages": ["ru", "en"],
+      "variants": [
+        {
+          "id": "pptx",
+          "label": {"ru": "PowerPoint-шаблон", "en": "PowerPoint template"},
+          "langs": [],
+          "available": true,
+          "chosen": true,
+          "why": []
+        },
+        {
+          "id": "reveal",
+          "label": {"ru": "RevealJS (HTML)", "en": "RevealJS (HTML)"},
+          "langs": [],
+          "available": true,
+          "chosen": false,
+          "why": []
+        },
+        {
+          "id": "beamer",
+          "label": {"ru": "LaTeX Beamer", "en": "LaTeX Beamer"},
+          "langs": [],
+          "available": true,
+          "chosen": false,
+          "why": []
+        }
+      ],
+      "instances": [{"id": "presentation", "owner": null, "owner_name": null, "file_name": "Презентация.pptx"}],
+      "source_file": "presentation/pptx/presentation.pptx",
+      "manifest": "files/presentation/doc.yaml",
+      "why": ["t51", "t52", "t53"]
+    },
+    {
+      "id": "thesis",
+      "name": {"ru": "Выпускная квалификационная работа", "en": "Thesis"},
+      "group": "work",
+      "scope": "personal",
+      "required": true,
+      "state": "active",
+      "lang_state": "native",
+      "languages": ["ru", "en"],
+      "variants": [],
+      "instances": [
+        {
+          "id": "thesis",
+          "owner": null,
+          "owner_name": null,
+          "file_name": "Выпускная квалификационная работа.pdf"
+        }
+      ],
+      "source_file": "thesis/thesis.tex",
+      "manifest": "files/thesis/doc.yaml",
+      "why": ["t54", "t55", "t56"]
+    },
+    {
+      "id": "nda",
+      "name": {"ru": "Расписка (NDA)", "en": "Student undertaking (NDA)"},
+      "group": "nda",
+      "scope": "personal",
+      "required": false,
+      "state": "active",
+      "lang_state": "native",
+      "languages": ["ru"],
+      "variants": [],
+      "instances": [{"id": "nda", "owner": null, "owner_name": null, "file_name": "Расписка NDA.pdf"}],
+      "source_file": "nda/nda.tex",
+      "manifest": "files/nda/doc.yaml",
+      "why": ["t57", "t58", "t59", "t60"]
+    }
+  ],
+  "meta": [
+    {
+      "id": "year",
+      "type": "string",
+      "label": {"ru": "Учебный год (год защиты)", "en": "Academic year (defense year)"},
+      "scope": "project",
+      "group": "study",
+      "visible": true,
+      "required_at": "create",
+      "value": "2026",
+      "options": [],
+      "why": []
+    },
+    {
+      "id": "specialization",
+      "type": "string",
+      "label": {"ru": "Образовательная программа", "en": "Educational program"},
+      "scope": "project",
+      "group": "study",
+      "visible": true,
+      "required_at": "create",
+      "value": "Программная инженерия",
+      "options": [],
+      "why": []
+    },
+    {
+      "id": "manuals",
+      "type": "select",
+      "label": {"ru": "Руководства в комплекте", "en": "Manuals in the set"},
+      "scope": "author",
+      "group": "docset",
+      "visible": true,
+      "required_at": "never",
+      "value": "Только программиста",
+      "options": ["Программиста и оператора", "Только программиста", "Только оператора"],
+      "why": ["t61"]
+    },
+    {
+      "id": "name_en",
+      "type": "string",
+      "label": {"ru": "Название работы на английском", "en": "English title"},
+      "scope": "author",
+      "group": "naming",
+      "visible": true,
+      "required_at": "never",
+      "value": "The Core of the Cloud Platform for IT Infrastructure Management",
+      "options": [],
+      "why": []
+    },
+    {
+      "id": "name_short",
+      "type": "string",
+      "label": {"ru": "Краткое наименование программы", "en": "Short program name"},
+      "scope": "author",
+      "group": "naming",
+      "visible": true,
+      "required_at": "never",
+      "value": "CloudInfra",
+      "options": [],
+      "why": []
+    },
+    {
+      "id": "faculty",
+      "type": "string",
+      "label": {"ru": "Факультет", "en": "Faculty"},
+      "scope": "project",
+      "group": "vkr_title",
+      "visible": true,
+      "required_at": "never",
+      "value": "Факультет компьютерных наук",
+      "options": [],
+      "why": []
+    },
+    {
+      "id": "city",
+      "type": "string",
+      "label": {"ru": "Город", "en": "City"},
+      "scope": "project",
+      "group": "vkr_title",
+      "visible": true,
+      "required_at": "never",
+      "value": "Москва",
+      "options": [],
+      "why": []
+    },
+    {
+      "id": "city_en",
+      "type": "string",
+      "label": {"ru": "Город на английском", "en": "City in English"},
+      "scope": "project",
+      "group": "vkr_title",
+      "visible": true,
+      "required_at": "never",
+      "value": "Moscow",
+      "options": [],
+      "why": []
+    },
+    {
+      "id": "udc",
+      "type": "string",
+      "label": {"ru": "Код УДК", "en": "UDC code"},
+      "scope": "author",
+      "group": "vkr_title",
+      "visible": true,
+      "required_at": "finalize",
+      "value": "004",
+      "options": [],
+      "why": []
+    },
+    {
+      "id": "program_code",
+      "type": "string",
+      "label": {"ru": "Код направления подготовки", "en": "Programme code"},
+      "scope": "project",
+      "group": "vkr_title",
+      "visible": true,
+      "required_at": "never",
+      "value": "09.03.04",
+      "options": [],
+      "why": []
+    },
+    {
+      "id": "course",
+      "type": "string",
+      "label": {"ru": "Курс обучения", "en": "Year of study"},
+      "scope": "project",
+      "group": "study",
+      "visible": true,
+      "required_at": "never",
+      "value": "4",
+      "options": [],
+      "why": []
+    },
+    {
+      "id": "academic_supervisor",
+      "type": "person",
+      "label": {"ru": "Академический руководитель ОП", "en": "Academic programme supervisor"},
+      "scope": "project",
+      "group": null,
+      "visible": true,
+      "required_at": "never",
+      "value": null,
+      "options": [],
+      "why": []
+    },
+    {
+      "id": "doc_code_base",
+      "type": "string",
+      "label": {"ru": "Базовый код документа (ЕСПД)", "en": "ESPD base document code"},
+      "scope": "author",
+      "group": "espd",
+      "visible": true,
+      "required_at": "finalize",
+      "value": "RU.17701729.09.10-01",
+      "options": [],
+      "why": []
+    },
+    {
+      "id": "font_main",
+      "type": "font",
+      "label": {"ru": "Основной шрифт", "en": "Main font"},
+      "scope": "project",
+      "group": null,
+      "visible": true,
+      "required_at": "never",
+      "value": "Times New Roman",
+      "options": ["Times New Roman", "PT Serif", "Liberation Serif", "Tinos", "Georgia", "Cambria"],
+      "why": []
+    },
+    {
+      "id": "font_sans",
+      "type": "font",
+      "label": {"ru": "Рубленый шрифт (заголовки, подписи)", "en": "Sans-serif font"},
+      "scope": "project",
+      "group": null,
+      "visible": true,
+      "required_at": "never",
+      "value": "Arial",
+      "options": ["Arial", "PT Sans", "Liberation Sans", "Helvetica", "Verdana"],
+      "why": []
+    },
+    {
+      "id": "font_mono",
+      "type": "font",
+      "label": {"ru": "Моноширинный шрифт (код, листинги)", "en": "Monospace font"},
+      "scope": "project",
+      "group": null,
+      "visible": true,
+      "required_at": "never",
+      "value": "Consolas / Courier New",
+      "options": ["Consolas", "Courier New", "PT Mono", "JetBrains Mono", "Fira Mono", "DejaVu Sans Mono"],
+      "why": []
+    },
+    {
+      "id": "nda",
+      "type": "bool",
+      "label": {"ru": "Работа под NDA", "en": "NDA work"},
+      "scope": "project",
+      "group": null,
+      "visible": true,
+      "required_at": "never",
+      "value": "yes",
+      "options": [],
+      "why": []
+    },
+    {
+      "id": "supervisor",
+      "type": "person",
+      "label": {"ru": "Научный руководитель", "en": "Supervisor"},
+      "scope": "project",
+      "group": null,
+      "visible": true,
+      "required_at": "create",
+      "value": null,
+      "options": [],
+      "why": []
+    },
+    {
+      "id": "co_supervisor",
+      "type": "person",
+      "label": {"ru": "Со-руководитель (опционально)", "en": "Co-supervisor (optional)"},
+      "scope": "project",
+      "group": null,
+      "visible": true,
+      "required_at": "never",
+      "value": null,
+      "options": [],
+      "why": []
+    }
+  ],
+  "forms": [
+    {
+      "id": "ai_declaration",
+      "title": {"ru": "Декларация об использовании ИИ", "en": "AI usage declaration"},
+      "per_author": true,
+      "applies": true,
+      "required_for_pack": true,
+      "fields": [
+        {
+          "id": "used_ai",
+          "type": "select",
+          "label": {"ru": "Использование ИИ", "en": "AI usage"},
+          "visible": true,
+          "required": true,
+          "why": []
+        },
+        {
+          "id": "tools",
+          "type": "multiselect",
+          "label": {"ru": "Какие инструменты", "en": "Which tools"},
+          "visible": false,
+          "required": false,
+          "why": ["t62"]
+        },
+        {
+          "id": "usage_table",
+          "type": "table",
+          "label": {"ru": "Детализация использования", "en": "Usage detail"},
+          "visible": false,
+          "required": false,
+          "why": ["t63"]
+        },
+        {
+          "id": "pct",
+          "type": "number",
+          "label": {"ru": "Оценка вклада ИИ, %", "en": "Estimated AI contribution, %"},
+          "visible": false,
+          "required": false,
+          "why": ["t64"]
+        },
+        {
+          "id": "details",
+          "type": "textarea",
+          "label": {"ru": "Подробное описание", "en": "Detailed description"},
+          "visible": false,
+          "required": false,
+          "why": ["t65"]
+        },
+        {
+          "id": "clauses",
+          "type": "markdown",
+          "label": {"ru": "Подтверждение", "en": "Confirmation"},
+          "visible": true,
+          "required": false,
+          "why": []
+        },
+        {
+          "id": "consent",
+          "type": "bool",
+          "label": {"ru": "Я подтверждаю все пункты выше", "en": "I confirm all the statements above"},
+          "visible": true,
+          "required": true,
+          "why": []
+        }
+      ],
+      "why": []
+    },
+    {
+      "id": "code_link",
+      "title": {"ru": "Ссылка на код программы", "en": "Source code link"},
+      "per_author": true,
+      "applies": true,
+      "required_for_pack": true,
+      "fields": [
+        {
+          "id": "repo_url",
+          "type": "text",
+          "label": {"ru": "Ссылка на репозиторий / сервис", "en": "Repository / service URL"},
+          "visible": true,
+          "required": true,
+          "why": []
+        },
+        {
+          "id": "branch",
+          "type": "text",
+          "label": {"ru": "Ветка / тег (опционально)", "en": "Branch / tag (optional)"},
+          "visible": true,
+          "required": false,
+          "why": []
+        },
+        {
+          "id": "access",
+          "type": "textarea",
+          "label": {"ru": "Как получить доступ (опционально)", "en": "Access notes (optional)"},
+          "visible": true,
+          "required": false,
+          "why": []
+        }
+      ],
+      "why": []
+    }
+  ],
+  "participants": [
+    {
+      "persona": "author",
+      "role": "author",
+      "name": "Иванов Иван Иванович",
+      "present": true,
+      "org": null,
+      "why": []
+    },
+    {
+      "persona": "supervisor",
+      "role": "supervisor",
+      "name": "Петров Пётр Петрович",
+      "present": true,
+      "org": "university",
+      "why": []
+    },
+    {
+      "persona": "co_supervisor",
+      "role": "co_supervisor",
+      "name": "",
+      "present": false,
+      "org": null,
+      "why": []
+    },
+    {
+      "persona": "academic_supervisor",
+      "role": "academic_supervisor",
+      "name": "Васильев Дмитрий Андреевич",
+      "present": true,
+      "org": "university",
+      "why": []
+    }
+  ],
+  "points": [
+    {
+      "id": "checkpoint-1",
+      "index": 0,
+      "name": {"ru": "КТ1 — Защита темы ВКР", "en": "CP1 — Thesis topic defence"},
+      "deadline_hint": null,
+      "items": [
+        {"doc_id": "topic_presentation", "active": true, "off_reason": null, "signatures": [], "why": []},
+        {"doc_id": "technical_specification", "active": true, "off_reason": null, "signatures": [], "why": []},
+        {
+          "doc_id": "shared_technical_specification",
+          "active": false,
+          "off_reason": "absent",
+          "signatures": [],
+          "why": ["t5"]
+        },
+        {
+          "doc_id": "annotation",
+          "active": false,
+          "off_reason": "absent",
+          "signatures": ["author", "supervisor"],
+          "why": ["t27"]
+        },
+        {
+          "doc_id": "shared_annotation",
+          "active": false,
+          "off_reason": "absent",
+          "signatures": ["author", "supervisor"],
+          "why": ["t30"]
+        }
+      ],
+      "extra_items": [],
+      "route": {
+        "steps": [],
+        "pairs": [],
+        "skipped": [],
+        "may_add": [],
+        "order_source": "builtin",
+        "preset": false,
+        "why": ["t66"]
+      },
+      "why": []
+    },
+    {
+      "id": "checkpoint-2",
+      "index": 1,
+      "name": {"ru": "КТ2 — Промежуточная защита", "en": "CP2 — Interim defence"},
+      "deadline_hint": null,
+      "items": [
+        {"doc_id": "topic_presentation", "active": true, "off_reason": null, "signatures": [], "why": []},
+        {"doc_id": "technical_specification", "active": true, "off_reason": null, "signatures": [], "why": []},
+        {
+          "doc_id": "shared_technical_specification",
+          "active": false,
+          "off_reason": "absent",
+          "signatures": [],
+          "why": ["t5"]
+        },
+        {"doc_id": "thesis", "active": true, "off_reason": null, "signatures": [], "why": ["t67"]},
+        {
+          "doc_id": "interim_report",
+          "active": false,
+          "off_reason": "absent",
+          "signatures": ["author", "supervisor"],
+          "why": ["t33"]
+        }
+      ],
+      "extra_items": [],
+      "route": {
+        "steps": [],
+        "pairs": [],
+        "skipped": [],
+        "may_add": [],
+        "order_source": "builtin",
+        "preset": false,
+        "why": ["t66"]
+      },
+      "why": []
+    },
+    {
+      "id": "checkpoint-3",
+      "index": 2,
+      "name": {"ru": "КТ3 — Итоговая аттестация", "en": "CP3 — Final assessment"},
+      "deadline_hint": null,
+      "items": [
+        {"doc_id": "technical_specification", "active": true, "off_reason": null, "signatures": [], "why": []},
+        {
+          "doc_id": "shared_technical_specification",
+          "active": false,
+          "off_reason": "absent",
+          "signatures": [],
+          "why": ["t5"]
+        },
+        {"doc_id": "thesis", "active": true, "off_reason": null, "signatures": [], "why": ["t68"]},
+        {
+          "doc_id": "interim_report",
+          "active": false,
+          "off_reason": "absent",
+          "signatures": [],
+          "why": ["t33"]
+        },
+        {
+          "doc_id": "test_program_and_methodology",
+          "active": true,
+          "off_reason": null,
+          "signatures": [],
+          "why": []
+        },
+        {
+          "doc_id": "shared_test_program_and_methodology",
+          "active": false,
+          "off_reason": "absent",
+          "signatures": [],
+          "why": ["t12"]
+        },
+        {"doc_id": "source_listing", "active": true, "off_reason": null, "signatures": [], "why": []},
+        {"doc_id": "presentation", "active": true, "off_reason": null, "signatures": [], "why": []}
+      ],
+      "extra_items": [],
+      "route": {
+        "steps": [],
+        "pairs": [],
+        "skipped": [],
+        "may_add": [],
+        "order_source": "builtin",
+        "preset": false,
+        "why": ["t66"]
+      },
+      "why": []
+    },
+    {
+      "id": "pdp-application",
+      "index": 3,
+      "name": {"ru": "Заявление на ПДП", "en": "Practice application"},
+      "deadline_hint": null,
+      "items": [
+        {
+          "doc_id": "pdp_assignment",
+          "active": true,
+          "off_reason": null,
+          "signatures": ["author", "supervisor"],
+          "why": []
+        },
+        {
+          "doc_id": "pdp_work_plan",
+          "active": true,
+          "off_reason": null,
+          "signatures": ["author", "supervisor"],
+          "why": []
+        }
+      ],
+      "extra_items": [],
+      "route": {
+        "steps": [
+          [{"persona": "author", "role": "author", "name": "Иванов Иван Иванович"}],
+          [{"persona": "supervisor", "role": "supervisor", "name": "Петров Пётр Петрович"}]
+        ],
+        "pairs": [
+          {
+            "doc_id": "pdp_assignment",
+            "slot_id": "author",
+            "persona": "author",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          },
+          {
+            "doc_id": "pdp_assignment",
+            "slot_id": "supervisor",
+            "persona": "supervisor",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          },
+          {
+            "doc_id": "pdp_work_plan",
+            "slot_id": "author",
+            "persona": "author",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          },
+          {
+            "doc_id": "pdp_work_plan",
+            "slot_id": "supervisor",
+            "persona": "supervisor",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          }
+        ],
+        "skipped": [],
+        "may_add": [
+          {"doc_id": "pdp_assignment", "slot_id": "co_supervisor"},
+          {"doc_id": "pdp_work_plan", "slot_id": "co_supervisor"}
+        ],
+        "order_source": "builtin",
+        "preset": false,
+        "why": ["t66"]
+      },
+      "why": []
+    },
+    {
+      "id": "final",
+      "index": 4,
+      "name": {
+        "ru": "КТ4 — Преддипломная практика (предзащита ВКР)",
+        "en": "CP4 — Pre-graduation practice (thesis pre-defence)"
+      },
+      "deadline_hint": null,
+      "items": [
+        {
+          "doc_id": "technical_specification",
+          "active": true,
+          "off_reason": null,
+          "signatures": ["author", "supervisor"],
+          "why": []
+        },
+        {
+          "doc_id": "shared_technical_specification",
+          "active": false,
+          "off_reason": "absent",
+          "signatures": ["author", "supervisor"],
+          "why": ["t5"]
+        },
+        {
+          "doc_id": "thesis",
+          "active": true,
+          "off_reason": null,
+          "signatures": ["author", "supervisor"],
+          "why": []
+        },
+        {
+          "doc_id": "test_program_and_methodology",
+          "active": true,
+          "off_reason": null,
+          "signatures": ["author", "supervisor"],
+          "why": []
+        },
+        {
+          "doc_id": "shared_test_program_and_methodology",
+          "active": false,
+          "off_reason": "absent",
+          "signatures": ["author", "supervisor"],
+          "why": ["t12"]
+        },
+        {
+          "doc_id": "source_listing",
+          "active": true,
+          "off_reason": null,
+          "signatures": ["author", "supervisor"],
+          "why": []
+        },
+        {
+          "doc_id": "programmer_manual",
+          "active": true,
+          "off_reason": null,
+          "signatures": ["author", "supervisor"],
+          "why": []
+        },
+        {
+          "doc_id": "operator_manual",
+          "active": false,
+          "off_reason": "inactive",
+          "signatures": ["author", "supervisor"],
+          "why": ["t22"]
+        },
+        {"doc_id": "presentation", "active": true, "off_reason": null, "signatures": [], "why": []},
+        {
+          "doc_id": "pdp_report_title",
+          "active": true,
+          "off_reason": null,
+          "signatures": ["author", "supervisor"],
+          "why": []
+        },
+        {"doc_id": "pdp_review", "active": true, "off_reason": null, "signatures": ["supervisor"], "why": []},
+        {"doc_id": "nda", "active": true, "off_reason": null, "signatures": [], "why": []}
+      ],
+      "extra_items": [
+        {
+          "source": ".hse-studio/forms/ai_declaration.json",
+          "output_name": "Декларация ИИ.md",
+          "format": "markdown",
+          "active": true,
+          "off_reason": null,
+          "why": []
+        },
+        {
+          "source": ".hse-studio/forms/code_link.json",
+          "output_name": "Ссылка на код.txt",
+          "format": "markdown",
+          "active": true,
+          "off_reason": null,
+          "why": []
+        }
+      ],
+      "route": {
+        "steps": [
+          [{"persona": "author", "role": "author", "name": "Иванов Иван Иванович"}],
+          [{"persona": "supervisor", "role": "supervisor", "name": "Петров Пётр Петрович"}]
+        ],
+        "pairs": [
+          {
+            "doc_id": "technical_specification",
+            "slot_id": "author",
+            "persona": "author",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          },
+          {
+            "doc_id": "technical_specification",
+            "slot_id": "supervisor",
+            "persona": "supervisor",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          },
+          {
+            "doc_id": "thesis",
+            "slot_id": "author",
+            "persona": "author",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          },
+          {
+            "doc_id": "thesis",
+            "slot_id": "supervisor",
+            "persona": "supervisor",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          },
+          {
+            "doc_id": "test_program_and_methodology",
+            "slot_id": "author",
+            "persona": "author",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          },
+          {
+            "doc_id": "test_program_and_methodology",
+            "slot_id": "supervisor",
+            "persona": "supervisor",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          },
+          {
+            "doc_id": "source_listing",
+            "slot_id": "author",
+            "persona": "author",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          },
+          {
+            "doc_id": "source_listing",
+            "slot_id": "supervisor",
+            "persona": "supervisor",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          },
+          {
+            "doc_id": "programmer_manual",
+            "slot_id": "author",
+            "persona": "author",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          },
+          {
+            "doc_id": "programmer_manual",
+            "slot_id": "supervisor",
+            "persona": "supervisor",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          },
+          {
+            "doc_id": "pdp_report_title",
+            "slot_id": "author",
+            "persona": "author",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          },
+          {
+            "doc_id": "pdp_report_title",
+            "slot_id": "supervisor",
+            "persona": "supervisor",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          },
+          {
+            "doc_id": "pdp_review",
+            "slot_id": "supervisor",
+            "persona": "supervisor",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          }
+        ],
+        "skipped": [],
+        "may_add": [
+          {"doc_id": "technical_specification", "slot_id": "co_supervisor"},
+          {"doc_id": "test_program_and_methodology", "slot_id": "co_supervisor"},
+          {"doc_id": "source_listing", "slot_id": "co_supervisor"},
+          {"doc_id": "programmer_manual", "slot_id": "co_supervisor"},
+          {"doc_id": "pdp_report_title", "slot_id": "co_supervisor"},
+          {"doc_id": "pdp_review", "slot_id": "co_supervisor"},
+          {"doc_id": "thesis", "slot_id": "co_supervisor"}
+        ],
+        "order_source": "builtin",
+        "preset": false,
+        "why": ["t66"]
+      },
+      "why": []
+    },
+    {
+      "id": "gia",
+      "index": 5,
+      "name": {"ru": "Загрузка ВКР — ГИА", "en": "Thesis upload — state examination"},
+      "deadline_hint": null,
+      "items": [
+        {
+          "doc_id": "thesis",
+          "active": true,
+          "off_reason": null,
+          "signatures": ["author", "supervisor"],
+          "why": []
+        },
+        {
+          "doc_id": "technical_specification",
+          "active": true,
+          "off_reason": null,
+          "signatures": ["author", "supervisor"],
+          "why": []
+        },
+        {
+          "doc_id": "shared_technical_specification",
+          "active": false,
+          "off_reason": "absent",
+          "signatures": ["author", "supervisor"],
+          "why": ["t5"]
+        },
+        {
+          "doc_id": "test_program_and_methodology",
+          "active": true,
+          "off_reason": null,
+          "signatures": ["author", "supervisor"],
+          "why": []
+        },
+        {
+          "doc_id": "shared_test_program_and_methodology",
+          "active": false,
+          "off_reason": "absent",
+          "signatures": ["author", "supervisor"],
+          "why": ["t12"]
+        },
+        {
+          "doc_id": "source_listing",
+          "active": true,
+          "off_reason": null,
+          "signatures": ["author", "supervisor"],
+          "why": []
+        },
+        {
+          "doc_id": "programmer_manual",
+          "active": true,
+          "off_reason": null,
+          "signatures": ["author", "supervisor"],
+          "why": []
+        },
+        {
+          "doc_id": "operator_manual",
+          "active": false,
+          "off_reason": "inactive",
+          "signatures": ["author", "supervisor"],
+          "why": ["t22"]
+        },
+        {"doc_id": "nda", "active": true, "off_reason": null, "signatures": [], "why": []}
+      ],
+      "extra_items": [
+        {
+          "source": ".hse-studio/forms/ai_declaration.json",
+          "output_name": "Декларация ИИ.md",
+          "format": "markdown",
+          "active": true,
+          "off_reason": null,
+          "why": []
+        }
+      ],
+      "route": {
+        "steps": [
+          [{"persona": "author", "role": "author", "name": "Иванов Иван Иванович"}],
+          [{"persona": "supervisor", "role": "supervisor", "name": "Петров Пётр Петрович"}]
+        ],
+        "pairs": [
+          {
+            "doc_id": "thesis",
+            "slot_id": "author",
+            "persona": "author",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          },
+          {
+            "doc_id": "thesis",
+            "slot_id": "supervisor",
+            "persona": "supervisor",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          },
+          {
+            "doc_id": "technical_specification",
+            "slot_id": "author",
+            "persona": "author",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          },
+          {
+            "doc_id": "technical_specification",
+            "slot_id": "supervisor",
+            "persona": "supervisor",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          },
+          {
+            "doc_id": "test_program_and_methodology",
+            "slot_id": "author",
+            "persona": "author",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          },
+          {
+            "doc_id": "test_program_and_methodology",
+            "slot_id": "supervisor",
+            "persona": "supervisor",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          },
+          {
+            "doc_id": "source_listing",
+            "slot_id": "author",
+            "persona": "author",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          },
+          {
+            "doc_id": "source_listing",
+            "slot_id": "supervisor",
+            "persona": "supervisor",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          },
+          {
+            "doc_id": "programmer_manual",
+            "slot_id": "author",
+            "persona": "author",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          },
+          {
+            "doc_id": "programmer_manual",
+            "slot_id": "supervisor",
+            "persona": "supervisor",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          }
+        ],
+        "skipped": [],
+        "may_add": [
+          {"doc_id": "technical_specification", "slot_id": "co_supervisor"},
+          {"doc_id": "test_program_and_methodology", "slot_id": "co_supervisor"},
+          {"doc_id": "source_listing", "slot_id": "co_supervisor"},
+          {"doc_id": "programmer_manual", "slot_id": "co_supervisor"},
+          {"doc_id": "thesis", "slot_id": "co_supervisor"}
+        ],
+        "order_source": "builtin",
+        "preset": false,
+        "why": ["t66"]
+      },
+      "why": []
+    }
+  ],
+  "checks": null,
+  "branches": null,
+  "digest": {
+    "documents": {
+      "technical_specification": "active",
+      "shared_technical_specification": "absent",
+      "test_program_and_methodology": "active",
+      "shared_test_program_and_methodology": "absent",
+      "source_listing": "active",
+      "programmer_manual": "active",
+      "operator_manual": "inactive",
+      "annotation": "absent",
+      "shared_annotation": "absent",
+      "interim_report": "absent",
+      "pdp_assignment": "active",
+      "pdp_work_plan": "active",
+      "pdp_report_title": "active",
+      "pdp_review": "active",
+      "topic_presentation": "active",
+      "presentation": "active",
+      "thesis": "active",
+      "nda": "active"
+    },
+    "participants": ["author", "supervisor", "academic_supervisor"],
+    "meta_visible": [
+      "year",
+      "specialization",
+      "manuals",
+      "name_en",
+      "name_short",
+      "faculty",
+      "city",
+      "city_en",
+      "udc",
+      "program_code",
+      "course",
+      "academic_supervisor",
+      "doc_code_base",
+      "font_main",
+      "font_sans",
+      "font_mono",
+      "nda",
+      "supervisor",
+      "co_supervisor"
+    ],
+    "points": [
+      {
+        "id": "checkpoint-1",
+        "items": ["topic_presentation", "technical_specification"],
+        "steps": [],
+        "pairs": 0
+      },
+      {
+        "id": "checkpoint-2",
+        "items": ["topic_presentation", "technical_specification", "thesis"],
+        "steps": [],
+        "pairs": 0
+      },
+      {
+        "id": "checkpoint-3",
+        "items": [
+          "technical_specification",
+          "thesis",
+          "test_program_and_methodology",
+          "source_listing",
+          "presentation"
+        ],
+        "steps": [],
+        "pairs": 0
+      },
+      {
+        "id": "pdp-application",
+        "items": ["pdp_assignment", "pdp_work_plan"],
+        "steps": [["author"], ["supervisor"]],
+        "pairs": 4
+      },
+      {
+        "id": "final",
+        "items": [
+          "technical_specification",
+          "thesis",
+          "test_program_and_methodology",
+          "source_listing",
+          "programmer_manual",
+          "presentation",
+          "pdp_report_title",
+          "pdp_review",
+          "nda"
+        ],
+        "steps": [["author"], ["supervisor"]],
+        "pairs": 13
+      },
+      {
+        "id": "gia",
+        "items": [
+          "thesis",
+          "technical_specification",
+          "test_program_and_methodology",
+          "source_listing",
+          "programmer_manual",
+          "nda"
+        ],
+        "steps": [["author"], ["supervisor"]],
+        "pairs": 10
+      }
+    ],
+    "sections": [
+      {"section": "documents", "fingerprint": "1179488124a9", "count": 12},
+      {"section": "meta", "fingerprint": "f00aa9f710c7", "count": 19},
+      {"section": "forms", "fingerprint": "a9d1bf7be127", "count": 2},
+      {"section": "participants", "fingerprint": "880bb0cd5fbd", "count": 3},
+      {"section": "points", "fingerprint": "2a23534203d6", "count": 27},
+      {"section": "route", "fingerprint": "a83aa25a6f0b", "count": 27},
+      {"section": "checks", "fingerprint": "74234e98afe7", "count": 0}
+    ]
+  },
+  "trace": [
+    {
+      "id": "t1",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/technical_specification/doc.yaml",
+        "pointer": "/supported_kinds",
+        "builtin": null
+      },
+      "kind": "supported_kinds",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "kind", "expected": ["project"]}],
+      "actual": {"kind": "project"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "technical_specification"}]
+    },
+    {
+      "id": "t2",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/technical_specification/doc.yaml",
+        "pointer": "/supported_staffing",
+        "builtin": null
+      },
+      "kind": "supported_staffing",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "staffing", "expected": ["solo", "team2", "team3"]}],
+      "actual": {"staffing": "solo"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "technical_specification"}]
+    },
+    {
+      "id": "t3",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/technical_specification/doc.yaml",
+        "pointer": "/supported_langs",
+        "builtin": null
+      },
+      "kind": "supported_langs",
+      "effect": "display",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "lang", "expected": ["ru", "en"]}],
+      "actual": {"lang": "ru"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "technical_specification"}]
+    },
+    {
+      "id": "t4",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/technical_specification/doc.yaml",
+        "pointer": "/variants/1/supported_langs",
+        "builtin": null
+      },
+      "kind": "variant_langs",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "lang", "expected": ["en"]}],
+      "actual": {"lang": "ru"},
+      "status": "not_held",
+      "subjects": [{"section": "documents", "id": "technical_specification"}]
+    },
+    {
+      "id": "t5",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/shared_technical_specification/doc.yaml",
+        "pointer": "/supported_kinds",
+        "builtin": null
+      },
+      "kind": "supported_kinds",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "kind", "expected": ["project"]}],
+      "actual": {"kind": "project"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "shared_technical_specification"}]
+    },
+    {
+      "id": "t6",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/shared_technical_specification/doc.yaml",
+        "pointer": "/supported_staffing",
+        "builtin": null
+      },
+      "kind": "supported_staffing",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "staffing", "expected": ["team2", "team3"]}],
+      "actual": {"staffing": "solo"},
+      "status": "not_held",
+      "subjects": [{"section": "documents", "id": "shared_technical_specification"}]
+    },
+    {
+      "id": "t7",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/shared_technical_specification/doc.yaml",
+        "pointer": "/supported_langs",
+        "builtin": null
+      },
+      "kind": "supported_langs",
+      "effect": "display",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "lang", "expected": ["ru", "en"]}],
+      "actual": {"lang": "ru"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "shared_technical_specification"}]
+    },
+    {
+      "id": "t8",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/test_program_and_methodology/doc.yaml",
+        "pointer": "/supported_kinds",
+        "builtin": null
+      },
+      "kind": "supported_kinds",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "kind", "expected": ["project"]}],
+      "actual": {"kind": "project"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "test_program_and_methodology"}]
+    },
+    {
+      "id": "t9",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/test_program_and_methodology/doc.yaml",
+        "pointer": "/supported_staffing",
+        "builtin": null
+      },
+      "kind": "supported_staffing",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "staffing", "expected": ["solo", "team2", "team3"]}],
+      "actual": {"staffing": "solo"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "test_program_and_methodology"}]
+    },
+    {
+      "id": "t10",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/test_program_and_methodology/doc.yaml",
+        "pointer": "/supported_langs",
+        "builtin": null
+      },
+      "kind": "supported_langs",
+      "effect": "display",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "lang", "expected": ["ru", "en"]}],
+      "actual": {"lang": "ru"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "test_program_and_methodology"}]
+    },
+    {
+      "id": "t11",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/test_program_and_methodology/doc.yaml",
+        "pointer": "/variants/1/supported_langs",
+        "builtin": null
+      },
+      "kind": "variant_langs",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "lang", "expected": ["en"]}],
+      "actual": {"lang": "ru"},
+      "status": "not_held",
+      "subjects": [{"section": "documents", "id": "test_program_and_methodology"}]
+    },
+    {
+      "id": "t12",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/shared_test_program_and_methodology/doc.yaml",
+        "pointer": "/supported_kinds",
+        "builtin": null
+      },
+      "kind": "supported_kinds",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "kind", "expected": ["project"]}],
+      "actual": {"kind": "project"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "shared_test_program_and_methodology"}]
+    },
+    {
+      "id": "t13",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/shared_test_program_and_methodology/doc.yaml",
+        "pointer": "/supported_staffing",
+        "builtin": null
+      },
+      "kind": "supported_staffing",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "staffing", "expected": ["team2", "team3"]}],
+      "actual": {"staffing": "solo"},
+      "status": "not_held",
+      "subjects": [{"section": "documents", "id": "shared_test_program_and_methodology"}]
+    },
+    {
+      "id": "t14",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/shared_test_program_and_methodology/doc.yaml",
+        "pointer": "/supported_langs",
+        "builtin": null
+      },
+      "kind": "supported_langs",
+      "effect": "display",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "lang", "expected": ["ru", "en"]}],
+      "actual": {"lang": "ru"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "shared_test_program_and_methodology"}]
+    },
+    {
+      "id": "t15",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/source_listing/doc.yaml",
+        "pointer": "/supported_kinds",
+        "builtin": null
+      },
+      "kind": "supported_kinds",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "kind", "expected": ["project"]}],
+      "actual": {"kind": "project"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "source_listing"}]
+    },
+    {
+      "id": "t16",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/source_listing/doc.yaml",
+        "pointer": "/supported_staffing",
+        "builtin": null
+      },
+      "kind": "supported_staffing",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "staffing", "expected": ["solo", "team2", "team3"]}],
+      "actual": {"staffing": "solo"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "source_listing"}]
+    },
+    {
+      "id": "t17",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/source_listing/doc.yaml",
+        "pointer": "/supported_langs",
+        "builtin": null
+      },
+      "kind": "supported_langs",
+      "effect": "display",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "lang", "expected": ["ru", "en"]}],
+      "actual": {"lang": "ru"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "source_listing"}]
+    },
+    {
+      "id": "t18",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/programmer_manual/doc.yaml",
+        "pointer": "/supported_kinds",
+        "builtin": null
+      },
+      "kind": "supported_kinds",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "kind", "expected": ["project"]}],
+      "actual": {"kind": "project"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "programmer_manual"}]
+    },
+    {
+      "id": "t19",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/programmer_manual/doc.yaml",
+        "pointer": "/supported_staffing",
+        "builtin": null
+      },
+      "kind": "supported_staffing",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "staffing", "expected": ["solo", "team2", "team3"]}],
+      "actual": {"staffing": "solo"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "programmer_manual"}]
+    },
+    {
+      "id": "t20",
+      "rule": {"origin": "builtin", "file": null, "pointer": null, "builtin": "manuals_gate"},
+      "kind": "builtin_gate",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "contains_any", "subject": "meta.manuals", "expected": ["программиста"]}],
+      "actual": {"meta.manuals": "Только программиста"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "programmer_manual"}]
+    },
+    {
+      "id": "t21",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/programmer_manual/doc.yaml",
+        "pointer": "/supported_langs",
+        "builtin": null
+      },
+      "kind": "supported_langs",
+      "effect": "display",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "lang", "expected": ["ru", "en"]}],
+      "actual": {"lang": "ru"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "programmer_manual"}]
+    },
+    {
+      "id": "t22",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/operator_manual/doc.yaml",
+        "pointer": "/supported_kinds",
+        "builtin": null
+      },
+      "kind": "supported_kinds",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "kind", "expected": ["project"]}],
+      "actual": {"kind": "project"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "operator_manual"}]
+    },
+    {
+      "id": "t23",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/operator_manual/doc.yaml",
+        "pointer": "/supported_staffing",
+        "builtin": null
+      },
+      "kind": "supported_staffing",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "staffing", "expected": ["solo", "team2", "team3"]}],
+      "actual": {"staffing": "solo"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "operator_manual"}]
+    },
+    {
+      "id": "t24",
+      "rule": {"origin": "builtin", "file": null, "pointer": null, "builtin": "manuals_gate"},
+      "kind": "builtin_gate",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "contains_any", "subject": "meta.manuals", "expected": ["оператора"]}],
+      "actual": {"meta.manuals": "Только программиста"},
+      "status": "not_held",
+      "subjects": [{"section": "documents", "id": "operator_manual"}]
+    },
+    {
+      "id": "t25",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/operator_manual/doc.yaml",
+        "pointer": "/supported_langs",
+        "builtin": null
+      },
+      "kind": "supported_langs",
+      "effect": "display",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "lang", "expected": ["ru", "en"]}],
+      "actual": {"lang": "ru"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "operator_manual"}]
+    },
+    {
+      "id": "t26",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/operator_manual/doc.yaml",
+        "pointer": "/variants/1/supported_langs",
+        "builtin": null
+      },
+      "kind": "variant_langs",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "lang", "expected": ["en"]}],
+      "actual": {"lang": "ru"},
+      "status": "not_held",
+      "subjects": [{"section": "documents", "id": "operator_manual"}]
+    },
+    {
+      "id": "t27",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/annotation/doc.yaml",
+        "pointer": "/supported_kinds",
+        "builtin": null
+      },
+      "kind": "supported_kinds",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "kind", "expected": ["research"]}],
+      "actual": {"kind": "project"},
+      "status": "not_held",
+      "subjects": [{"section": "documents", "id": "annotation"}]
+    },
+    {
+      "id": "t28",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/annotation/doc.yaml",
+        "pointer": "/supported_staffing",
+        "builtin": null
+      },
+      "kind": "supported_staffing",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "staffing", "expected": ["solo", "team2", "team3"]}],
+      "actual": {"staffing": "solo"},
+      "status": "skipped",
+      "subjects": [{"section": "documents", "id": "annotation"}]
+    },
+    {
+      "id": "t29",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/annotation/doc.yaml",
+        "pointer": "/supported_langs",
+        "builtin": null
+      },
+      "kind": "supported_langs",
+      "effect": "display",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "lang", "expected": ["ru", "en"]}],
+      "actual": {"lang": "ru"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "annotation"}]
+    },
+    {
+      "id": "t30",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/shared_annotation/doc.yaml",
+        "pointer": "/supported_kinds",
+        "builtin": null
+      },
+      "kind": "supported_kinds",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "kind", "expected": ["research"]}],
+      "actual": {"kind": "project"},
+      "status": "not_held",
+      "subjects": [{"section": "documents", "id": "shared_annotation"}]
+    },
+    {
+      "id": "t31",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/shared_annotation/doc.yaml",
+        "pointer": "/supported_staffing",
+        "builtin": null
+      },
+      "kind": "supported_staffing",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "staffing", "expected": ["team2", "team3"]}],
+      "actual": {"staffing": "solo"},
+      "status": "skipped",
+      "subjects": [{"section": "documents", "id": "shared_annotation"}]
+    },
+    {
+      "id": "t32",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/shared_annotation/doc.yaml",
+        "pointer": "/supported_langs",
+        "builtin": null
+      },
+      "kind": "supported_langs",
+      "effect": "display",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "lang", "expected": ["ru", "en"]}],
+      "actual": {"lang": "ru"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "shared_annotation"}]
+    },
+    {
+      "id": "t33",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/interim_report/doc.yaml",
+        "pointer": "/supported_kinds",
+        "builtin": null
+      },
+      "kind": "supported_kinds",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "kind", "expected": ["research"]}],
+      "actual": {"kind": "project"},
+      "status": "not_held",
+      "subjects": [{"section": "documents", "id": "interim_report"}]
+    },
+    {
+      "id": "t34",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/interim_report/doc.yaml",
+        "pointer": "/supported_staffing",
+        "builtin": null
+      },
+      "kind": "supported_staffing",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "staffing", "expected": ["solo", "team2", "team3"]}],
+      "actual": {"staffing": "solo"},
+      "status": "skipped",
+      "subjects": [{"section": "documents", "id": "interim_report"}]
+    },
+    {
+      "id": "t35",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/interim_report/doc.yaml",
+        "pointer": "/supported_langs",
+        "builtin": null
+      },
+      "kind": "supported_langs",
+      "effect": "display",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "lang", "expected": ["ru", "en"]}],
+      "actual": {"lang": "ru"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "interim_report"}]
+    },
+    {
+      "id": "t36",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/pdp_assignment/doc.yaml",
+        "pointer": "/supported_kinds",
+        "builtin": null
+      },
+      "kind": "supported_kinds",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "kind", "expected": ["research", "project"]}],
+      "actual": {"kind": "project"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "pdp_assignment"}]
+    },
+    {
+      "id": "t37",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/pdp_assignment/doc.yaml",
+        "pointer": "/supported_staffing",
+        "builtin": null
+      },
+      "kind": "supported_staffing",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "staffing", "expected": ["solo", "team2", "team3"]}],
+      "actual": {"staffing": "solo"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "pdp_assignment"}]
+    },
+    {
+      "id": "t38",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/pdp_assignment/doc.yaml",
+        "pointer": "/supported_langs",
+        "builtin": null
+      },
+      "kind": "supported_langs",
+      "effect": "display",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "lang", "expected": ["ru"]}],
+      "actual": {"lang": "ru"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "pdp_assignment"}]
+    },
+    {
+      "id": "t39",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/pdp_work_plan/doc.yaml",
+        "pointer": "/supported_kinds",
+        "builtin": null
+      },
+      "kind": "supported_kinds",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "kind", "expected": ["research", "project"]}],
+      "actual": {"kind": "project"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "pdp_work_plan"}]
+    },
+    {
+      "id": "t40",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/pdp_work_plan/doc.yaml",
+        "pointer": "/supported_staffing",
+        "builtin": null
+      },
+      "kind": "supported_staffing",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "staffing", "expected": ["solo", "team2", "team3"]}],
+      "actual": {"staffing": "solo"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "pdp_work_plan"}]
+    },
+    {
+      "id": "t41",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/pdp_work_plan/doc.yaml",
+        "pointer": "/supported_langs",
+        "builtin": null
+      },
+      "kind": "supported_langs",
+      "effect": "display",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "lang", "expected": ["ru"]}],
+      "actual": {"lang": "ru"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "pdp_work_plan"}]
+    },
+    {
+      "id": "t42",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/pdp_report_title/doc.yaml",
+        "pointer": "/supported_kinds",
+        "builtin": null
+      },
+      "kind": "supported_kinds",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "kind", "expected": ["research", "project"]}],
+      "actual": {"kind": "project"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "pdp_report_title"}]
+    },
+    {
+      "id": "t43",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/pdp_report_title/doc.yaml",
+        "pointer": "/supported_staffing",
+        "builtin": null
+      },
+      "kind": "supported_staffing",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "staffing", "expected": ["solo", "team2", "team3"]}],
+      "actual": {"staffing": "solo"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "pdp_report_title"}]
+    },
+    {
+      "id": "t44",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/pdp_report_title/doc.yaml",
+        "pointer": "/supported_langs",
+        "builtin": null
+      },
+      "kind": "supported_langs",
+      "effect": "display",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "lang", "expected": ["ru"]}],
+      "actual": {"lang": "ru"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "pdp_report_title"}]
+    },
+    {
+      "id": "t45",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/pdp_review/doc.yaml",
+        "pointer": "/supported_kinds",
+        "builtin": null
+      },
+      "kind": "supported_kinds",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "kind", "expected": ["research", "project"]}],
+      "actual": {"kind": "project"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "pdp_review"}]
+    },
+    {
+      "id": "t46",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/pdp_review/doc.yaml",
+        "pointer": "/supported_staffing",
+        "builtin": null
+      },
+      "kind": "supported_staffing",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "staffing", "expected": ["solo", "team2", "team3"]}],
+      "actual": {"staffing": "solo"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "pdp_review"}]
+    },
+    {
+      "id": "t47",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/pdp_review/doc.yaml",
+        "pointer": "/supported_langs",
+        "builtin": null
+      },
+      "kind": "supported_langs",
+      "effect": "display",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "lang", "expected": ["ru"]}],
+      "actual": {"lang": "ru"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "pdp_review"}]
+    },
+    {
+      "id": "t48",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/topic_presentation/doc.yaml",
+        "pointer": "/supported_kinds",
+        "builtin": null
+      },
+      "kind": "supported_kinds",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "kind", "expected": ["research", "project"]}],
+      "actual": {"kind": "project"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "topic_presentation"}]
+    },
+    {
+      "id": "t49",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/topic_presentation/doc.yaml",
+        "pointer": "/supported_staffing",
+        "builtin": null
+      },
+      "kind": "supported_staffing",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "staffing", "expected": ["solo", "team2", "team3"]}],
+      "actual": {"staffing": "solo"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "topic_presentation"}]
+    },
+    {
+      "id": "t50",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/topic_presentation/doc.yaml",
+        "pointer": "/supported_langs",
+        "builtin": null
+      },
+      "kind": "supported_langs",
+      "effect": "display",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "lang", "expected": ["ru", "en"]}],
+      "actual": {"lang": "ru"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "topic_presentation"}]
+    },
+    {
+      "id": "t51",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/presentation/doc.yaml",
+        "pointer": "/supported_kinds",
+        "builtin": null
+      },
+      "kind": "supported_kinds",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "kind", "expected": ["research", "project"]}],
+      "actual": {"kind": "project"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "presentation"}]
+    },
+    {
+      "id": "t52",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/presentation/doc.yaml",
+        "pointer": "/supported_staffing",
+        "builtin": null
+      },
+      "kind": "supported_staffing",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "staffing", "expected": ["solo", "team2", "team3"]}],
+      "actual": {"staffing": "solo"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "presentation"}]
+    },
+    {
+      "id": "t53",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/presentation/doc.yaml",
+        "pointer": "/supported_langs",
+        "builtin": null
+      },
+      "kind": "supported_langs",
+      "effect": "display",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "lang", "expected": ["ru", "en"]}],
+      "actual": {"lang": "ru"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "presentation"}]
+    },
+    {
+      "id": "t54",
+      "rule": {"origin": "manifest", "file": "files/thesis/doc.yaml", "pointer": "/supported_kinds", "builtin": null},
+      "kind": "supported_kinds",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "kind", "expected": ["research", "project"]}],
+      "actual": {"kind": "project"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "thesis"}]
+    },
+    {
+      "id": "t55",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/thesis/doc.yaml",
+        "pointer": "/supported_staffing",
+        "builtin": null
+      },
+      "kind": "supported_staffing",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "staffing", "expected": ["solo", "team2", "team3"]}],
+      "actual": {"staffing": "solo"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "thesis"}]
+    },
+    {
+      "id": "t56",
+      "rule": {"origin": "manifest", "file": "files/thesis/doc.yaml", "pointer": "/supported_langs", "builtin": null},
+      "kind": "supported_langs",
+      "effect": "display",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "lang", "expected": ["ru", "en"]}],
+      "actual": {"lang": "ru"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "thesis"}]
+    },
+    {
+      "id": "t57",
+      "rule": {"origin": "manifest", "file": "files/nda/doc.yaml", "pointer": "/supported_kinds", "builtin": null},
+      "kind": "supported_kinds",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "kind", "expected": ["research", "project"]}],
+      "actual": {"kind": "project"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "nda"}]
+    },
+    {
+      "id": "t58",
+      "rule": {"origin": "manifest", "file": "files/nda/doc.yaml", "pointer": "/supported_staffing", "builtin": null},
+      "kind": "supported_staffing",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "staffing", "expected": ["solo", "team2", "team3"]}],
+      "actual": {"staffing": "solo"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "nda"}]
+    },
+    {
+      "id": "t59",
+      "rule": {"origin": "builtin", "file": null, "pointer": null, "builtin": "nda_gate"},
+      "kind": "builtin_gate",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "truthy", "subject": "meta.nda", "expected": []}],
+      "actual": {"meta.nda": "yes"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "nda"}]
+    },
+    {
+      "id": "t60",
+      "rule": {"origin": "manifest", "file": "files/nda/doc.yaml", "pointer": "/supported_langs", "builtin": null},
+      "kind": "supported_langs",
+      "effect": "display",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "lang", "expected": ["ru"]}],
+      "actual": {"lang": "ru"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "nda"}]
+    },
+    {
+      "id": "t61",
+      "rule": {
+        "origin": "manifest",
+        "file": "version.yaml",
+        "pointer": "/meta_fields/manuals/supported_kinds",
+        "builtin": null
+      },
+      "kind": "field_kinds",
+      "effect": "display",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "kind", "expected": ["project"]}],
+      "actual": {"kind": "project"},
+      "status": "held",
+      "subjects": [{"section": "meta", "id": "manuals"}]
+    },
+    {
+      "id": "t62",
+      "rule": {
+        "origin": "manifest",
+        "file": "version.yaml",
+        "pointer": "/forms/0/sections/0/fields/1/visible_if",
+        "builtin": null
+      },
+      "kind": "visible_if",
+      "effect": "display",
+      "join": "all",
+      "terms": [{"op": "equals", "subject": "answer.ai_declaration.used_ai", "expected": ["yes"]}],
+      "actual": {"answer.ai_declaration.used_ai": "no"},
+      "status": "not_held",
+      "subjects": [{"section": "forms", "id": "ai_declaration/tools"}]
+    },
+    {
+      "id": "t63",
+      "rule": {
+        "origin": "manifest",
+        "file": "version.yaml",
+        "pointer": "/forms/0/sections/0/fields/2/visible_if",
+        "builtin": null
+      },
+      "kind": "visible_if",
+      "effect": "display",
+      "join": "all",
+      "terms": [{"op": "equals", "subject": "answer.ai_declaration.used_ai", "expected": ["yes"]}],
+      "actual": {"answer.ai_declaration.used_ai": "no"},
+      "status": "not_held",
+      "subjects": [{"section": "forms", "id": "ai_declaration/usage_table"}]
+    },
+    {
+      "id": "t64",
+      "rule": {
+        "origin": "manifest",
+        "file": "version.yaml",
+        "pointer": "/forms/0/sections/0/fields/3/visible_if",
+        "builtin": null
+      },
+      "kind": "visible_if",
+      "effect": "display",
+      "join": "all",
+      "terms": [{"op": "equals", "subject": "answer.ai_declaration.used_ai", "expected": ["yes"]}],
+      "actual": {"answer.ai_declaration.used_ai": "no"},
+      "status": "not_held",
+      "subjects": [{"section": "forms", "id": "ai_declaration/pct"}]
+    },
+    {
+      "id": "t65",
+      "rule": {
+        "origin": "manifest",
+        "file": "version.yaml",
+        "pointer": "/forms/0/sections/0/fields/4/visible_if",
+        "builtin": null
+      },
+      "kind": "visible_if",
+      "effect": "display",
+      "join": "all",
+      "terms": [{"op": "equals", "subject": "answer.ai_declaration.used_ai", "expected": ["yes"]}],
+      "actual": {"answer.ai_declaration.used_ai": "no"},
+      "status": "not_held",
+      "subjects": [{"section": "forms", "id": "ai_declaration/details"}]
+    },
+    {
+      "id": "t66",
+      "rule": {"origin": "builtin", "file": null, "pointer": null, "builtin": "builtin_route"},
+      "kind": "route_order",
+      "effect": "order",
+      "join": "all",
+      "terms": [],
+      "actual": {},
+      "status": "held",
+      "subjects": [
+        {"section": "route", "id": "checkpoint-1"},
+        {"section": "route", "id": "checkpoint-2"},
+        {"section": "route", "id": "checkpoint-3"},
+        {"section": "route", "id": "pdp-application"},
+        {"section": "route", "id": "final"},
+        {"section": "route", "id": "gia"}
+      ]
+    },
+    {
+      "id": "t67",
+      "rule": {
+        "origin": "manifest",
+        "file": "version.yaml",
+        "pointer": "/pack_submission/profiles/1/items/3/supported_kinds",
+        "builtin": null
+      },
+      "kind": "item_kinds",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "kind", "expected": ["project"]}],
+      "actual": {"kind": "project"},
+      "status": "held",
+      "subjects": [{"section": "points", "id": "checkpoint-2/thesis"}]
+    },
+    {
+      "id": "t68",
+      "rule": {
+        "origin": "manifest",
+        "file": "version.yaml",
+        "pointer": "/pack_submission/profiles/2/items/2/supported_kinds",
+        "builtin": null
+      },
+      "kind": "item_kinds",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "kind", "expected": ["project"]}],
+      "actual": {"kind": "project"},
+      "status": "held",
+      "subjects": [{"section": "points", "id": "checkpoint-3/thesis"}]
+    }
+  ],
+  "out_of_scope": ["python_checks", "signature_anchors", "tex_content", "jinja_content"],
+  "elapsed_ms": 1
+}

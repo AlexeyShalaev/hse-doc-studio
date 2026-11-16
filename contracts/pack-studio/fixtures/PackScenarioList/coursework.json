@@ -1,0 +1,281 @@
+{
+  "workspace_id": "6f1c1c8e-1b7a-4d51-9a43-0a5b2f3c4d10",
+  "pack": "hse-cs-sse",
+  "template": "coursework",
+  "dir": "hse-cs-sse/templates/coursework/scenarios",
+  "scenarios": [
+    {
+      "id": "company-supervisor",
+      "path": "hse-cs-sse/templates/coursework/scenarios/company-supervisor.yaml",
+      "etag": "\"sha256-e2f3\"",
+      "scenario": {
+        "format": 1,
+        "name": {"ru": "Научрук из компании, есть консультант", "en": "Company supervisor with a co-supervisor"},
+        "description": {
+          "ru": "Заявка уходит на подпись автору, научруку с консультантом и академическому руководителю.",
+          "en": "The application goes to the author, the supervisor with the co-supervisor and the academic supervisor."
+        },
+        "example": "auto:normal",
+        "inputs": {"supervisor": "company", "co_supervisor": "yes"},
+        "versions": ["2026.1.*"],
+        "snapshot": {
+          "documents": {
+            "project_proposal": "active",
+            "topic_application": "active",
+            "report": "active",
+            "presentation": "active"
+          },
+          "participants": ["author", "supervisor", "co_supervisor", "academic_supervisor"],
+          "meta_visible": [
+            "year",
+            "name_en",
+            "name_ru",
+            "proposal_stage",
+            "specialization",
+            "program_code",
+            "department",
+            "supervisor_department",
+            "faculty",
+            "city",
+            "city_en",
+            "form_year",
+            "udc",
+            "report_margins",
+            "font_main",
+            "font_sans",
+            "font_mono",
+            "supervisor",
+            "co_supervisor",
+            "academic_supervisor"
+          ],
+          "points": [
+            {
+              "id": "topic-approval",
+              "items": ["project_proposal", "topic_application"],
+              "steps": [["author"], ["supervisor", "co_supervisor"], ["academic_supervisor"]],
+              "pairs": 5
+            },
+            {
+              "id": "extended-proposal",
+              "items": ["project_proposal", "presentation"],
+              "steps": [],
+              "pairs": 0
+            },
+            {"id": "pre-defence", "items": ["report", "presentation"], "steps": [], "pairs": 0},
+            {
+              "id": "final",
+              "items": ["report", "presentation", "project_proposal"],
+              "steps": [["author"]],
+              "pairs": 1
+            }
+          ],
+          "sections": [
+            {"section": "documents", "fingerprint": "94a80e445490", "count": 4},
+            {"section": "meta", "fingerprint": "2ad6ed600e12", "count": 20},
+            {"section": "forms", "fingerprint": "82107665d317", "count": 1},
+            {"section": "participants", "fingerprint": "03681a49e263", "count": 4},
+            {"section": "points", "fingerprint": "7b23fb4c856d", "count": 9},
+            {"section": "route", "fingerprint": "a39d65532fca", "count": 6},
+            {"section": "checks", "fingerprint": "74234e98afe7", "count": 0}
+          ]
+        },
+        "assertions": [
+          {
+            "kind": "route_steps",
+            "point": "topic-approval",
+            "steps": [["author"], ["supervisor", "co_supervisor"], ["academic_supervisor"]]
+          },
+          {
+            "kind": "route_pair",
+            "point": "topic-approval",
+            "doc": "topic_application",
+            "slot": "academic_supervisor",
+            "persona": "academic_supervisor",
+            "present": true
+          },
+          {"kind": "participant_present", "persona": "co_supervisor", "present": true}
+        ]
+      },
+      "error": null
+    },
+    {
+      "id": "university-supervisor",
+      "path": "hse-cs-sse/templates/coursework/scenarios/university-supervisor.yaml",
+      "etag": "\"sha256-bab5\"",
+      "scenario": {
+        "format": 1,
+        "name": {"ru": "Научрук из ВШЭ, без консультанта", "en": "University supervisor, no co-supervisor"},
+        "description": {
+          "ru": "Академический руководитель в маршрут заявки не попадает.",
+          "en": "The academic supervisor is not part of the application route."
+        },
+        "example": null,
+        "inputs": {"supervisor": "university", "co_supervisor": "no"},
+        "versions": ["2026.1.*"],
+        "snapshot": {
+          "documents": {
+            "project_proposal": "active",
+            "topic_application": "active",
+            "report": "active",
+            "presentation": "active"
+          },
+          "participants": ["author", "supervisor", "academic_supervisor"],
+          "meta_visible": [
+            "year",
+            "name_en",
+            "name_ru",
+            "proposal_stage",
+            "specialization",
+            "program_code",
+            "department",
+            "supervisor_department",
+            "faculty",
+            "city",
+            "city_en",
+            "form_year",
+            "udc",
+            "report_margins",
+            "font_main",
+            "font_sans",
+            "font_mono",
+            "supervisor",
+            "co_supervisor",
+            "academic_supervisor"
+          ],
+          "points": [
+            {
+              "id": "topic-approval",
+              "items": ["project_proposal", "topic_application"],
+              "steps": [["author"], ["supervisor"]],
+              "pairs": 3
+            },
+            {
+              "id": "extended-proposal",
+              "items": ["project_proposal", "presentation"],
+              "steps": [],
+              "pairs": 0
+            },
+            {"id": "pre-defence", "items": ["report", "presentation"], "steps": [], "pairs": 0},
+            {
+              "id": "final",
+              "items": ["report", "presentation", "project_proposal"],
+              "steps": [["author"]],
+              "pairs": 1
+            }
+          ],
+          "sections": [
+            {"section": "documents", "fingerprint": "94a80e445490", "count": 4},
+            {"section": "meta", "fingerprint": "2ad6ed600e12", "count": 20},
+            {"section": "forms", "fingerprint": "82107665d317", "count": 1},
+            {"section": "participants", "fingerprint": "880bb0cd5fbd", "count": 3},
+            {"section": "points", "fingerprint": "7b23fb4c856d", "count": 9},
+            {"section": "route", "fingerprint": "eee2fbd16601", "count": 4},
+            {"section": "checks", "fingerprint": "74234e98afe7", "count": 0}
+          ]
+        },
+        "assertions": [
+          {"kind": "route_steps", "point": "topic-approval", "steps": [["author"], ["supervisor"]]},
+          {
+            "kind": "route_pair",
+            "point": "topic-approval",
+            "doc": "topic_application",
+            "slot": "academic_supervisor",
+            "persona": "academic_supervisor",
+            "present": false
+          },
+          {"kind": "item_active", "point": "final", "doc": "report", "active": true}
+        ]
+      },
+      "error": null
+    },
+    {
+      "id": "no-supervisor",
+      "path": "hse-cs-sse/templates/coursework/scenarios/no-supervisor.yaml",
+      "etag": "\"sha256-c0f8\"",
+      "scenario": {
+        "format": 1,
+        "name": {"ru": "Без научного руководителя", "en": "No supervisor"},
+        "description": {
+          "ru": "Крайний случай: в проекте указан только автор.",
+          "en": "An edge case: the project has only the author."
+        },
+        "example": null,
+        "inputs": {"supervisor": "none", "co_supervisor": "no", "academic_supervisor": "no"},
+        "versions": [],
+        "snapshot": {
+          "documents": {
+            "project_proposal": "active",
+            "topic_application": "active",
+            "report": "active",
+            "presentation": "active"
+          },
+          "participants": ["author"],
+          "meta_visible": [
+            "year",
+            "name_en",
+            "name_ru",
+            "proposal_stage",
+            "specialization",
+            "program_code",
+            "department",
+            "supervisor_department",
+            "faculty",
+            "city",
+            "city_en",
+            "form_year",
+            "udc",
+            "report_margins",
+            "font_main",
+            "font_sans",
+            "font_mono",
+            "supervisor",
+            "co_supervisor",
+            "academic_supervisor"
+          ],
+          "points": [
+            {
+              "id": "topic-approval",
+              "items": ["project_proposal", "topic_application"],
+              "steps": [["author"], ["supervisor"]],
+              "pairs": 3
+            },
+            {
+              "id": "extended-proposal",
+              "items": ["project_proposal", "presentation"],
+              "steps": [],
+              "pairs": 0
+            },
+            {"id": "pre-defence", "items": ["report", "presentation"], "steps": [], "pairs": 0},
+            {
+              "id": "final",
+              "items": ["report", "presentation", "project_proposal"],
+              "steps": [["author"]],
+              "pairs": 1
+            }
+          ],
+          "sections": [
+            {"section": "documents", "fingerprint": "94a80e445490", "count": 4},
+            {"section": "meta", "fingerprint": "2ad6ed600e12", "count": 20},
+            {"section": "forms", "fingerprint": "82107665d317", "count": 1},
+            {"section": "participants", "fingerprint": "16f5f07ca1f4", "count": 1},
+            {"section": "points", "fingerprint": "7b23fb4c856d", "count": 9},
+            {"section": "route", "fingerprint": "eee2fbd16601", "count": 4},
+            {"section": "checks", "fingerprint": "74234e98afe7", "count": 0}
+          ]
+        },
+        "assertions": [
+          {"kind": "participant_present", "persona": "supervisor", "present": false},
+          {"kind": "document_count", "state": "active", "count": 4}
+        ]
+      },
+      "error": null
+    },
+    {
+      "id": "draft",
+      "path": "hse-cs-sse/templates/coursework/scenarios/draft.yaml",
+      "etag": "\"sha256-77d0\"",
+      "scenario": null,
+      "error": "inputs.supervisor: значение 'firm' не из списка university, company, none"
+    }
+  ]
+}

@@ -1,0 +1,108 @@
+{
+  "workspace_id": "6f1c1c8e-1b7a-4d51-9a43-0a5b2f3c4d10",
+  "pack": "hse-cs-sse",
+  "template": "coursework",
+  "version": "2026.1.6",
+  "left": {
+    "state": "work_tree",
+    "revision": "sha256-5ee257ee0e5e3197",
+    "fingerprint": "1e216ad85e279a9b",
+    "inputs": {
+      "lang": "ru",
+      "kind": "project",
+      "staffing": "solo",
+      "supervisor": "university",
+      "co_supervisor": "no",
+      "academic_supervisor": "yes",
+      "meta.proposal_stage": "Предварительная",
+      "meta.report_margins": "ГОСТ 7.32 — 30/15/20/20",
+      "variant.presentation": "pptx"
+    }
+  },
+  "right": {
+    "state": "work_tree",
+    "revision": "sha256-5ee257ee0e5e3197",
+    "fingerprint": "51ad330cf2f4a6ca",
+    "inputs": {
+      "lang": "ru",
+      "kind": "project",
+      "staffing": "solo",
+      "supervisor": "company",
+      "co_supervisor": "yes",
+      "academic_supervisor": "yes",
+      "meta.proposal_stage": "Предварительная",
+      "meta.report_margins": "ГОСТ 7.32 — 30/15/20/20",
+      "variant.presentation": "pptx"
+    }
+  },
+  "identical": false,
+  "summary": [
+    {"section": "participants", "added": 1, "changed": 0, "removed": 0},
+    {"section": "route", "added": 3, "changed": 1, "removed": 2}
+  ],
+  "changes": [
+    {
+      "symbol": "+",
+      "section": "participants",
+      "kind": "participant",
+      "id": "co_supervisor",
+      "label": "co_supervisor",
+      "before": null,
+      "after": null
+    },
+    {
+      "symbol": "~",
+      "section": "route",
+      "kind": "route_step",
+      "id": "topic-approval/step/2",
+      "label": "topic-approval: шаг 2",
+      "before": "supervisor",
+      "after": "supervisor, co_supervisor"
+    },
+    {
+      "symbol": "+",
+      "section": "route",
+      "kind": "route_step",
+      "id": "topic-approval/step/3",
+      "label": "topic-approval: шаг 3",
+      "before": null,
+      "after": "academic_supervisor"
+    },
+    {
+      "symbol": "+",
+      "section": "route",
+      "kind": "route_pair",
+      "id": "topic-approval/topic_application/co_supervisor",
+      "label": "topic_application: co_supervisor",
+      "before": null,
+      "after": "co_supervisor"
+    },
+    {
+      "symbol": "+",
+      "section": "route",
+      "kind": "route_pair",
+      "id": "topic-approval/topic_application/academic_supervisor",
+      "label": "topic_application: academic_supervisor",
+      "before": null,
+      "after": "academic_supervisor"
+    },
+    {
+      "symbol": "-",
+      "section": "route",
+      "kind": "skipped_pair",
+      "id": "topic-approval/topic_application/academic_supervisor",
+      "label": "topic_application: academic_supervisor",
+      "before": null,
+      "after": null
+    },
+    {
+      "symbol": "-",
+      "section": "route",
+      "kind": "skipped_pair",
+      "id": "topic-approval/topic_application/co_supervisor",
+      "label": "topic_application: co_supervisor",
+      "before": null,
+      "after": null
+    }
+  ]
+}

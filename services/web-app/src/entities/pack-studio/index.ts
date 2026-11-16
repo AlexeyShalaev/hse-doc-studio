@@ -10,6 +10,8 @@ export {
   PackStaleFileError,
 } from "./api/packStudioApi";
 export type { PackFile, PackVersionRef } from "./api/packStudioApi";
+// Вычислитель результата (docs/design/template-studio-outcome.md): схемы контракта, эндпоинты в срезе O1.
+export * from "./api/outcome";
 // Срез T14: файлы правил проверок и checks_version формой.
 export {
   PackChecksConfigRequestSchema,

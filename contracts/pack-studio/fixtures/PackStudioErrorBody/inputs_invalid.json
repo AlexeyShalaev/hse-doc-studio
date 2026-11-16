@@ -1,0 +1,7 @@
+{
+  "detail": "Вводные не подходят к этой версии шаблона: незнакомая вводная или значение вне списка. Причина ниже.",
+  "code": "inputs_invalid",
+  "field": "inputs.supervisor",
+  "value": "firm",
+  "reason": "value not allowed"
+}

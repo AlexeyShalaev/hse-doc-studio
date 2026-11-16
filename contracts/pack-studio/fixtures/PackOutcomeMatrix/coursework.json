@@ -1,0 +1,83 @@
+{
+  "workspace_id": "6f1c1c8e-1b7a-4d51-9a43-0a5b2f3c4d10",
+  "pack": "hse-cs-sse",
+  "template": "coursework",
+  "version": "2026.1.6",
+  "state": "work_tree",
+  "revision": "sha256-d85b5ca370523fd0",
+  "columns": ["documents", "meta", "forms", "participants", "points", "route", "checks"],
+  "rows": [
+    {
+      "scenario": "company-supervisor",
+      "name": {"ru": "Научрук из компании, есть консультант", "en": "Company supervisor with a co-supervisor"},
+      "inputs": {
+        "lang": "ru",
+        "kind": "project",
+        "staffing": "solo",
+        "supervisor": "company",
+        "co_supervisor": "yes",
+        "academic_supervisor": "yes",
+        "meta.proposal_stage": "Предварительная",
+        "meta.report_margins": "ГОСТ 7.32 — 30/15/20/20",
+        "variant.presentation": "pptx"
+      },
+      "cells": [
+        {"section": "documents", "fingerprint": "94a80e445490", "count": 4, "changed": false},
+        {"section": "meta", "fingerprint": "2ad6ed600e12", "count": 20, "changed": false},
+        {"section": "forms", "fingerprint": "82107665d317", "count": 1, "changed": false},
+        {"section": "participants", "fingerprint": "03681a49e263", "count": 4, "changed": false},
+        {"section": "points", "fingerprint": "7b23fb4c856d", "count": 9, "changed": false},
+        {"section": "route", "fingerprint": "a39d65532fca", "count": 6, "changed": false},
+        {"section": "checks", "fingerprint": "74234e98afe7", "count": 0, "changed": false}
+      ]
+    },
+    {
+      "scenario": "university-supervisor",
+      "name": {"ru": "Научрук из ВШЭ, без консультанта", "en": "University supervisor, no co-supervisor"},
+      "inputs": {
+        "lang": "ru",
+        "kind": "project",
+        "staffing": "solo",
+        "supervisor": "university",
+        "co_supervisor": "no",
+        "academic_supervisor": "yes",
+        "meta.proposal_stage": "Предварительная",
+        "meta.report_margins": "ГОСТ 7.32 — 30/15/20/20",
+        "variant.presentation": "pptx"
+      },
+      "cells": [
+        {"section": "documents", "fingerprint": "94a80e445490", "count": 4, "changed": false},
+        {"section": "meta", "fingerprint": "2ad6ed600e12", "count": 20, "changed": false},
+        {"section": "forms", "fingerprint": "82107665d317", "count": 1, "changed": false},
+        {"section": "participants", "fingerprint": "880bb0cd5fbd", "count": 3, "changed": false},
+        {"section": "points", "fingerprint": "7b23fb4c856d", "count": 9, "changed": false},
+        {"section": "route", "fingerprint": "47a0733ffa58", "count": 5, "changed": true},
+        {"section": "checks", "fingerprint": "74234e98afe7", "count": 0, "changed": false}
+      ]
+    },
+    {
+      "scenario": "no-supervisor",
+      "name": {"ru": "Без научного руководителя", "en": "No supervisor"},
+      "inputs": {
+        "lang": "ru",
+        "kind": "project",
+        "staffing": "solo",
+        "supervisor": "none",
+        "co_supervisor": "no",
+        "academic_supervisor": "no",
+        "meta.proposal_stage": "Предварительная",
+        "meta.report_margins": "ГОСТ 7.32 — 30/15/20/20",
+        "variant.presentation": "pptx"
+      },
+      "cells": [
+        {"section": "documents", "fingerprint": "94a80e445490", "count": 4, "changed": false},
+        {"section": "meta", "fingerprint": "2ad6ed600e12", "count": 20, "changed": false},
+        {"section": "forms", "fingerprint": "82107665d317", "count": 1, "changed": false},
+        {"section": "participants", "fingerprint": "16f5f07ca1f4", "count": 1, "changed": false},
+        {"section": "points", "fingerprint": "7b23fb4c856d", "count": 9, "changed": false},
+        {"section": "route", "fingerprint": "eee2fbd16601", "count": 4, "changed": false},
+        {"section": "checks", "fingerprint": "74234e98afe7", "count": 0, "changed": false}
+      ]
+    }
+  ]
+}
