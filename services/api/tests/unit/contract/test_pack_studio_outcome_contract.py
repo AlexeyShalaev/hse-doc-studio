@@ -289,3 +289,36 @@ def test__models__reject_unknown_fields_and_unknown_assertion_kinds() -> None:
         )
     with pytest.raises(ValidationError):
         out.PackOutcomeRequest.model_validate({"state": "yesterday"})
+
+
+def test__explain__reference_chain_is_the_why_of_the_element_in_the_outcome_reference() -> None:
+    request = _load("PackOutcomeExplainRequest", "operator_manual")
+    explain = _load("PackOutcomeExplain", "operator_manual")
+    outcome = _load("PackOutcome", "vkr_nda_programmer_only")
+    trace = {t["id"]: t for t in outcome["trace"]}
+    element = request["element"]
+    doc = next(d for d in outcome["documents"] if d["id"] == element["id"])
+
+    assert explain["element"] == element
+    assert {k: outcome["inputs"][k] for k in request["inputs"]} == request["inputs"]
+    assert explain["state"] == doc["state"]
+    assert [t["id"] for t in explain["chain"]] == doc["why"]
+    assert explain["chain"] == [trace[i] for i in doc["why"]]
+    # Соседи говорят про другие элементы, а ответ «что если» меняет состояние элемента.
+    assert element not in explain["readers"]
+    assert all(c["result"] != explain["state"] for c in explain["counterfactuals"])
+    assert all(c["input"] in outcome["inputs"] for c in explain["counterfactuals"])
+
+
+def test__explain__reference_models_are_strict() -> None:
+    explain = _load("PackOutcomeExplain", "operator_manual")
+
+    out.PackOutcomeExplainResponse.model_validate(explain)
+    with pytest.raises(ValidationError):
+        out.PackOutcomeExplainResponse.model_validate({**explain, "extra": 1})
+    with pytest.raises(ValidationError):
+        out.PackOutcomeExplainResponse.model_validate({k: v for k, v in explain.items() if k != "readers"})
+    with pytest.raises(ValidationError):
+        out.PackOutcomeExplainResponse.model_validate({**explain, "counterfactuals": [{"input": "kind"}]})
+    with pytest.raises(ValidationError):
+        out.PackOutcomeExplainRequest.model_validate({"element": {"section": "nope", "id": "x"}})

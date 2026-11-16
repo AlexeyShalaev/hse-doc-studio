@@ -185,18 +185,21 @@ def test__right__person_without_grant__outcome_endpoints_are_refused_and_capabil
 
     inputs = anna.get(f"{outcome}/inputs")
     result = anna.post(outcome, json={})
+    explain = anna.post(f"{outcome}/explain", json={"element": {"section": "documents", "id": "nda"}})
     before = anna.get("/api/v1/session/bootstrap").json()["capabilities"]
     admin.post(f"{ADMIN_API}/grants", json={"user_id": anna_id})
     allowed = anna.post(outcome, json={})
+    allowed_explain = anna.post(f"{outcome}/explain", json={"element": {"section": "documents", "id": "nda"}})
     after = anna.get("/api/v1/session/bootstrap").json()["capabilities"]
 
-    for resp in (inputs, result):
+    for resp in (inputs, result, explain):
         assert resp.status_code == 403
         assert resp.json()["code"] == "pack_studio_forbidden"
     assert (before["pack_studio"], before["pack_outcome"]) == (False, False)
     # С правом доходит до пространства: чужого или несуществующего у человека нет.
-    assert allowed.status_code == 404
-    assert allowed.json()["code"] == "workspace_not_found"
+    for resp in (allowed, allowed_explain):
+        assert resp.status_code == 404
+        assert resp.json()["code"] == "workspace_not_found"
     assert (after["pack_studio"], after["pack_outcome"]) == (True, True)
 
 

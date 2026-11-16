@@ -70,6 +70,7 @@ export const PACK_STUDIO_ERROR_CODES = [
   "atlas_too_large",
   "diff_base_unavailable",
   "outcome_busy",
+  "outcome_element_not_found",
 ] as const;
 
 export type PackStudioErrorCode = (typeof PACK_STUDIO_ERROR_CODES)[number];

@@ -146,7 +146,11 @@ def test__expensive_routes__are_real_project_or_user_routes() -> None:
 def test__pack_outcome_routes__share_one_rule_of_20_per_second() -> None:
     base = "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/outcome"
 
-    rules = {EXPENSIVE_ROUTES[("GET", f"{base}/inputs")], EXPENSIVE_ROUTES[("POST", base)]}
+    rules = {
+        EXPENSIVE_ROUTES[("GET", f"{base}/inputs")],
+        EXPENSIVE_ROUTES[("POST", base)],
+        EXPENSIVE_ROUTES[("POST", f"{base}/explain")],
+    }
 
     assert rules == {PACK_OUTCOME}
     assert (PACK_OUTCOME.limit, PACK_OUTCOME.window_s) == (20, 1)

@@ -300,6 +300,7 @@
     "atlas_too_large": "The version has too many input combinations for the atlas. Pin some of the inputs.",
     "diff_base_unavailable": "Nothing to compare with: the workspace has no base branch or the version is missing in it.",
     "outcome_busy": "The outcome calculation took too long or the server is busy with other calculations. Try again later.",
+    "outcome_element_not_found": "There is no such element in the outcome for these inputs. The version may have changed: refresh the outcome.",
     "source_not_found": "Catalog source not found. Reload the page.",
     "source_busy": "This source is already being checked or applied. Wait for it to finish.",
     "source_kind_not_allowed": "This kind of source is not available here: a folder connects only in the local Studio.",
