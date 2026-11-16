@@ -837,6 +837,8 @@ export type PackScenarioRunRequest = z.infer<
   typeof PackScenarioRunRequestSchema
 >;
 export type PackScenarioRun = z.infer<typeof PackScenarioRunSchema>;
+export type PackScenarioRunResult = z.infer<typeof PackScenarioRunResultSchema>;
+export type ScenarioFailureInfo = z.infer<typeof ScenarioFailureSchema>;
 export type OutcomeCoverage = z.infer<typeof OutcomeCoverageSchema>;
 export type OutcomeFinding = z.infer<typeof OutcomeFindingSchema>;
 export type PackOutcomeLint = z.infer<typeof PackOutcomeLintSchema>;

@@ -46,7 +46,8 @@ from hse_doc_studio.core.pack_studio.outcome.points import evaluate_points
 from hse_doc_studio.core.pack_studio.outcome.summary import diff_sections, digest_of, fingerprint_of, section_prints
 from hse_doc_studio.core.pack_studio.outcome.trace import Tracer
 from hse_doc_studio.core.pack_studio.preview import PreviewExample, synthetic_project
-from hse_doc_studio.use_cases.pack_studio.submission import profile_route, synthetic_core_project
+from hse_doc_studio.use_cases.pack_studio.submission import profile_route
+from hse_doc_studio.use_cases.pack_studio.synthetic_project import synthetic_core_project
 
 __all__ = ["OutcomeInputError", "resolve"]
 

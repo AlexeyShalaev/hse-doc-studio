@@ -1,0 +1,220 @@
+{
+  "workspace_id": "4f0c2a8e-1b7d-4c55-9a51-3b8d6f0e2c11",
+  "pack": "hse-cs-se",
+  "template": "vkr",
+  "version": "2026.1.2",
+  "pack_id": "hse-cs-se",
+  "template_id": "vkr",
+  "version_id": "2026.1.2",
+  "documents": [
+    {
+      "id": "technical_specification",
+      "name": {
+        "ru": "Техническое задание",
+        "en": "Statement of Work"
+      },
+      "kinds": [
+        "project"
+      ],
+      "staffing": [
+        "solo",
+        "team"
+      ],
+      "langs": [
+        "ru",
+        "en"
+      ],
+      "variants": [
+        {
+          "id": "espd",
+          "label": {
+            "ru": "ГОСТ 19 ЕСПД (ТЗ)",
+            "en": "GOST 19 ESPD (ТЗ)"
+          },
+          "langs": [],
+          "pdf": true
+        },
+        {
+          "id": "srs-29148",
+          "label": {
+            "ru": "ISO/IEC/IEEE 29148 (SRS)",
+            "en": "ISO/IEC/IEEE 29148 (SRS)"
+          },
+          "langs": [
+            "en"
+          ],
+          "pdf": true
+        }
+      ],
+      "default_variant": "espd"
+    },
+    {
+      "id": "presentation",
+      "name": {
+        "ru": "Презентация защиты",
+        "en": "Defense Presentation"
+      },
+      "kinds": [
+        "research",
+        "project"
+      ],
+      "staffing": [
+        "solo",
+        "team"
+      ],
+      "langs": [
+        "ru",
+        "en"
+      ],
+      "variants": [
+        {
+          "id": "pptx",
+          "label": {
+            "ru": "PowerPoint-шаблон",
+            "en": "PowerPoint template"
+          },
+          "langs": [],
+          "pdf": true
+        },
+        {
+          "id": "reveal",
+          "label": {
+            "ru": "RevealJS (HTML)",
+            "en": "RevealJS (HTML)"
+          },
+          "langs": [],
+          "pdf": false
+        },
+        {
+          "id": "beamer",
+          "label": {
+            "ru": "LaTeX Beamer",
+            "en": "LaTeX Beamer"
+          },
+          "langs": [],
+          "pdf": true
+        }
+      ],
+      "default_variant": "pptx"
+    },
+    {
+      "id": "report",
+      "name": {
+        "ru": "Отчёт",
+        "en": "Report"
+      },
+      "kinds": [
+        "research",
+        "project"
+      ],
+      "staffing": [
+        "solo"
+      ],
+      "langs": [
+        "ru",
+        "en"
+      ],
+      "variants": [],
+      "default_variant": null
+    }
+  ],
+  "switches": [
+    {
+      "id": "lang",
+      "values": [
+        "ru",
+        "en"
+      ],
+      "default": "ru",
+      "label": null
+    },
+    {
+      "id": "kind",
+      "values": [
+        "project",
+        "research"
+      ],
+      "default": "project",
+      "label": null
+    },
+    {
+      "id": "staffing",
+      "values": [
+        "solo",
+        "team2",
+        "team3"
+      ],
+      "default": "solo",
+      "label": null
+    },
+    {
+      "id": "supervisor",
+      "values": [
+        "university",
+        "company",
+        "none"
+      ],
+      "default": "university",
+      "label": null
+    },
+    {
+      "id": "co_supervisor",
+      "values": [
+        "no",
+        "yes"
+      ],
+      "default": "no",
+      "label": null
+    },
+    {
+      "id": "academic_supervisor",
+      "values": [
+        "yes",
+        "no"
+      ],
+      "default": "yes",
+      "label": null
+    }
+  ],
+  "examples": [
+    {
+      "id": "auto:normal",
+      "source": "auto",
+      "label": {
+        "ru": "Обычный",
+        "en": "Typical"
+      },
+      "error": null,
+      "defaults": {}
+    },
+    {
+      "id": "auto:long",
+      "source": "auto",
+      "label": {
+        "ru": "Длинные значения",
+        "en": "Long values"
+      },
+      "error": null,
+      "defaults": {}
+    },
+    {
+      "id": "auto:empty",
+      "source": "auto",
+      "label": {
+        "ru": "Пустой",
+        "en": "Empty"
+      },
+      "error": null,
+      "defaults": {}
+    }
+  ],
+  "default_example": "auto:normal",
+  "combination": {
+    "academic_supervisor": "yes",
+    "co_supervisor": "no",
+    "kind": "project",
+    "lang": "ru",
+    "staffing": "solo",
+    "supervisor": "university"
+  }
+}

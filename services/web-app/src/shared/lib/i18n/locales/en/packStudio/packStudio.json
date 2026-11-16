@@ -71,6 +71,7 @@
     "openFiles": "Open files",
     "outcome": "Outcome",
     "outcomeHint": "What a student gets: documents, fields, participants and route",
+    "backToResult": "Back to the outcome",
     "pickTitle": "Pick a file",
     "pickLead": "Open a file in the tree on the left: a version manifest, a document or a Jinja template."
   },
@@ -154,6 +155,9 @@
     "outside": "Preview builds a template version. Open a file inside a version: the manifest, a document or a template.",
     "document": "Document",
     "documentOff": "{{name}} (not in this combination)",
+    "variant": "Document variant",
+    "variantLangs": "{{name}} (only {{langs}})",
+    "variantNoPdf": "This variant does not produce a PDF: the build will end without one.",
     "example": "Sample data",
     "autoExample": "Auto set: {{name}}",
     "switches": "Combination",

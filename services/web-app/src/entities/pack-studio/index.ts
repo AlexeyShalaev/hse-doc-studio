@@ -15,13 +15,26 @@ export type { PackFile, PackVersionRef } from "./api/packStudioApi";
 // живёт на эталонах контракта (reference/, только разработка и тесты).
 export * from "./api/outcome";
 export { packOutcomeApi } from "./api/outcomeApi";
+export type { OutcomeExplainReply } from "./api/outcomeApi";
 export {
+  busyDelaySeconds,
+  isElementGone,
+  isOutcomeBusy,
+  normalizeExplainRequest,
   normalizeOutcomeRequest,
   packOutcomeKeys,
   retryOutcome,
   usePackOutcome,
+  useDeletePackScenario,
+  usePackOutcomeExplain,
   usePackOutcomeInputs,
+  usePackScenarioRun,
   usePackScenarios,
+  useWritePackScenario,
+} from "./api/outcomeQueries";
+export type {
+  DeletePackScenario,
+  WritePackScenario,
 } from "./api/outcomeQueries";
 // Срез T14: файлы правил проверок и checks_version формой.
 export {
@@ -159,5 +172,8 @@ export {
   PACK_STUDIO_PATH,
   packFilesPath,
   packOutcomePath,
+  packRulePath,
   packWorkspacePath,
+  safeOutcomeBack,
 } from "./lib/routes";
+export type { RulePane } from "./lib/routes";

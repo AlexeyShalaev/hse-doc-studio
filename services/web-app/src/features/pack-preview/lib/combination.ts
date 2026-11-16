@@ -2,6 +2,7 @@ import type {
   PackPreviewDocument,
   PackPreviewExample,
   PackPreviewOptions,
+  PackPreviewVariant,
 } from "@entities/pack-studio";
 
 // Комбинация предпросмотра (template-studio.md, 6.2): переключатели поверх набора
@@ -50,3 +51,29 @@ export const documentFits = (
   combination: Combination,
 ): boolean =>
   fits(doc.kinds, combination.kind) && fits(doc.staffing, combination.staffing);
+
+/** Вариант доступен при языке комбинации: пустой список языков значит «во всех». */
+export const variantFits = (
+  variant: PackPreviewVariant,
+  lang: string | undefined,
+): boolean =>
+  variant.langs.length === 0 ||
+  lang === undefined ||
+  variant.langs.includes(lang);
+
+/**
+ * Вариант документа для сборки (срез O9): выбор человека, если он доступен при
+ * языке комбинации, иначе вариант по умолчанию, иначе первый доступный. null:
+ * у документа нет вариантов (или сервер прежний и их не отдаёт).
+ */
+export const effectiveVariant = (
+  doc: PackPreviewDocument,
+  picked: string | undefined,
+  lang: string | undefined,
+): string | null => {
+  const variants = doc.variants ?? [];
+  const fitting = variants.filter((v) => variantFits(v, lang));
+  const byId = (id: string | null | undefined) =>
+    fitting.find((v) => v.id === id)?.id;
+  return byId(picked) ?? byId(doc.default_variant) ?? fitting[0]?.id ?? null;
+};

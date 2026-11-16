@@ -10,9 +10,11 @@ export type PreviewSelection = {
   example: string | null;
   /** Переключатели, которые человек выбрал сам. */
   overrides: Combination;
+  /** Варианты документов, которые человек выбрал сам (id документа -> id варианта). */
+  variants: Record<string, string>;
 };
 
-const EMPTY: PreviewSelection = { example: null, overrides: {} };
+const EMPTY: PreviewSelection = { example: null, overrides: {}, variants: {} };
 const selections = new Map<string, PreviewSelection>();
 const listeners = new Set<() => void>();
 
@@ -38,6 +40,7 @@ export type PreviewSelectionApi = {
   selection: PreviewSelection;
   setExample: (example: string | null) => void;
   setSwitch: (id: string, value: string) => void;
+  setVariant: (document: string, variant: string) => void;
   reset: () => void;
 };
 
@@ -63,10 +66,24 @@ export const usePreviewSelection = (key: string): PreviewSelectionApi => {
     },
     [key],
   );
+  const setVariant = useCallback(
+    (document: string, variant: string) => {
+      const current = selections.get(key) ?? EMPTY;
+      write(key, {
+        ...current,
+        variants: { ...current.variants, [document]: variant },
+      });
+    },
+    [key],
+  );
   const reset = useCallback(() => {
-    write(key, { ...(selections.get(key) ?? EMPTY), overrides: {} });
+    write(key, {
+      ...(selections.get(key) ?? EMPTY),
+      overrides: {},
+      variants: {},
+    });
   }, [key]);
-  return { selection, setExample, setSwitch, reset };
+  return { selection, setExample, setSwitch, setVariant, reset };
 };
 
 /** Только для тестов: забыть выбор всех версий. */

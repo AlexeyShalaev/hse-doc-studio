@@ -319,9 +319,10 @@ class PackStudioProvider(Provider):
         renderer: IPackPreviewRenderer,
         store: IPreviewStore,
         dispatcher: IPreviewDispatcher,
+        files: IPackWorkspaceFiles,
     ) -> PackPreviewService:
         limits = PreviewLimits(max_concurrent=settings.pack_studio.preview_max_concurrent)
-        return PackPreviewService(workspaces, renderer, store, dispatcher, limits=limits)
+        return PackPreviewService(workspaces, renderer, store, dispatcher, limits=limits, files=files)
 
     @provide
     def get_places_service(self, files: PackFilesService, previews: PackPreviewService) -> PackPlacesService:

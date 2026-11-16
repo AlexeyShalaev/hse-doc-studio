@@ -5,11 +5,13 @@ import {
   PackOutcomeInputsSchema,
   PackOutcomeSchema,
   PackScenarioListSchema,
+  PackScenarioRunSchema,
   type OutcomeBranch,
   type OutcomeCheckRule,
   type PackOutcome,
   type PackOutcomeInputs,
   type PackScenarioList,
+  type PackScenarioRun,
 } from "../api/outcome";
 
 // Эталоны контракта вычислителя (contracts/pack-studio/fixtures), собранные в браузере. Модуль
@@ -41,6 +43,10 @@ const scenarioFiles = import.meta.glob<unknown>(
   "../../../../../../contracts/pack-studio/fixtures/PackScenarioList/*.json",
   { eager: true, import: "default" },
 );
+const runFiles = import.meta.glob<unknown>(
+  "../../../../../../contracts/pack-studio/fixtures/PackScenarioRun/*.json",
+  { eager: true, import: "default" },
+);
 
 /** ВКР бакалавриата с NDA и руководствами «только программиста» (18 документов, 6 точек). */
 export const VKR_OUTCOME: PackOutcome = PackOutcomeSchema.parse(
@@ -57,6 +63,10 @@ export const COURSEWORK_SCENARIOS: PackScenarioList =
   PackScenarioListSchema.parse(
     load(scenarioFiles, "PackScenarioList", "coursework"),
   );
+/** Прогон сценариев курсового после правки правила: два совпали, один изменился. */
+export const COURSEWORK_RUN: PackScenarioRun = PackScenarioRunSchema.parse(
+  load(runFiles, "PackScenarioRun", "coursework_after_edit"),
+);
 
 const STANDARD_INPUT_IDS = [
   "lang",

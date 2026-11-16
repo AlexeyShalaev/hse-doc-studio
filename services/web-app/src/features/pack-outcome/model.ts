@@ -37,6 +37,8 @@ export const isHighlighted = (
 export type OutcomeModel = {
   workspaceId: string;
   ref: PackVersionRef;
+  /** Каталог версии от папки паков (`hse-cs-se/templates/vkr/versions/2026.1.2`): файлы правил лежат под ним. */
+  versionPath: string;
   /** Выпущенная версия: правка отключена. */
   released: boolean;
   /** Телефон: колонки уступают место листам и вкладкам. */

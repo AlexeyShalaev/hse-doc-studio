@@ -493,12 +493,29 @@ PreviewStatusName = Literal["queued", "running", "succeeded", "failed", "cancell
 PreviewExampleSource = Literal["file", "auto"]
 
 
+class PackPreviewVariant(StrictModel):
+    """Вариант документа для выбора при сборке (срез O9, `variant` запроса)."""
+
+    id: str
+    label: dict[str, str]
+    # Языки проекта, в которых вариант доступен; пусто: во всех (IEEE и ISO-редакции только для en).
+    langs: list[str]
+    # Из варианта выходит PDF предпросмотра: есть движок, либо исходник офисный (PowerPoint, конвертация) или PDF.
+    # У RevealJS (HTML) PDF нет, сборка кончится `pdf_missing`.
+    pdf: bool
+
+
 class PackPreviewDocument(StrictModel):
     id: str
     name: dict[str, str]
     # Виды работы и составы, в которых документ есть: в остальных комбинациях его нет в проекте.
     kinds: list[str]
     staffing: list[str]
+    # Языки редакций документа: его `supported_langs`, иначе все языки версии (срез O9).
+    langs: list[str] = Field(default_factory=list)
+    # Варианты документа в порядке манифеста (пусто: вариантов нет) и вариант по умолчанию, первый (срез O9).
+    variants: list[PackPreviewVariant] = Field(default_factory=list)
+    default_variant: str | None = None
 
 
 class PackPreviewSwitch(StrictModel):
@@ -548,6 +565,12 @@ class StartPackPreviewRequest(StrictModel):
     combination: dict[str, str] = Field(default_factory=dict, max_length=32)
     # Прогнать правила проверок версии на собранном документе (срез T14): находки в `checks` сборки.
     checks: bool = False
+    # Вариант документа (срез O9): у запроса ровно с одним документом; нет: вводная `variant.<документ>` сценария,
+    # иначе первый вариант. Вариант, которого нет или который не доступен при языке комбинации, это `preview_invalid`.
+    variant: str | None = Field(default=None, max_length=255)
+    # Сценарий пака (срез O9): вводные и набор данных берёт из него (набор запроса главнее), `combination` ложится
+    # поверх. Нет файла: `scenario_not_found`, файл не по формату: `scenario_invalid`.
+    scenario: str | None = Field(default=None, max_length=64)
 
 
 class PackPreviewErrorBody(StrictModel):
@@ -593,6 +616,12 @@ class PackPreviewBuildResponse(StrictModel):
     # Сборка с проверками правил версии (срез T14); `checks` находки удачной сборки, null: проверок не было.
     with_checks: bool = False
     checks: list[PackPreviewCheck] | None = None
+    # Что вышло из запроса (срез O9): выбранный вариант документа (null: вариантов нет), итоговое имя файла в
+    # пакете, сценарий и его вводные как в файле (до наложения `combination`).
+    variant: str | None = None
+    file_name: str | None = None
+    scenario: str | None = None
+    scenario_inputs: dict[str, str] = Field(default_factory=dict)
 
 
 class PackPreviewStartResponse(StrictModel):

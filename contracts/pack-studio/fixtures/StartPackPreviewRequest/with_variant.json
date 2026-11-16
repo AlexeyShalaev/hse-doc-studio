@@ -1,0 +1,10 @@
+{
+  "documents": [
+    "presentation"
+  ],
+  "example": "auto:normal",
+  "combination": {
+    "lang": "en"
+  },
+  "variant": "beamer"
+}

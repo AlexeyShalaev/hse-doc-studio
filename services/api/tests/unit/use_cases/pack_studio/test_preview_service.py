@@ -84,6 +84,7 @@ class FakeRenderer:
     fail: str | None = None
     describes: int = 0
     gate: asyncio.Event | None = None
+    requests: list[MaterializeRequest] = field(default_factory=list)
 
     async def inputs(self, root: Path, ref: VersionRef) -> PreviewInputs:
         return PreviewInputs(files=dict(self.files), extra=(), tree=str(sorted(self.files.items())))
@@ -95,6 +96,7 @@ class FakeRenderer:
     async def materialize(
         self, root: Path, ref: VersionRef, request: MaterializeRequest, dest: Path
     ) -> MaterializedDoc:
+        self.requests.append(request)
         if self.gate is not None:
             await self.gate.wait()
         if self.fail is not None:

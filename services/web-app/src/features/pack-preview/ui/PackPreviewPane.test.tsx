@@ -38,11 +38,19 @@ const OPTIONS = fixture(
   "PackPreviewOptions",
   "coursework",
 );
+const OPTIONS_VARIANTS = fixture(
+  PackPreviewOptionsSchema,
+  "PackPreviewOptions",
+  "with_variants",
+);
 const build = (name: string) =>
   fixture(PackPreviewBuildSchema, "PackPreviewBuild", name);
 const WS = OPTIONS.workspace_id;
 const FILE = "hse-cs-sse/templates/coursework/versions/2026.1.7/version.yaml";
 const REF = { pack: "hse-cs-sse", template: "coursework", version: "2026.1.7" };
+
+const VKR_FILE = "hse-cs-se/templates/vkr/versions/2026.1.2/version.yaml";
+const VKR_REF = { pack: "hse-cs-se", template: "vkr", version: "2026.1.2" };
 
 const mount = (path = FILE, revision = 0) => {
   const client = new QueryClient({
@@ -68,6 +76,15 @@ describe("предпросмотр версии шаблона", () => {
   beforeAll(async () => {
     await loadPackStudioNamespace();
     await i18n.changeLanguage("ru");
+    // Radix Select ловит указатель; в jsdom этих методов нет.
+    const proto = Element.prototype as Partial<Element> & {
+      hasPointerCapture?: (id: number) => boolean;
+      releasePointerCapture?: (id: number) => void;
+      scrollIntoView?: () => void;
+    };
+    proto.hasPointerCapture ??= () => false;
+    proto.releasePointerCapture ??= () => undefined;
+    proto.scrollIntoView ??= () => undefined;
   });
   afterEach(() => {
     vi.restoreAllMocks();
@@ -126,6 +143,131 @@ describe("предпросмотр версии шаблона", () => {
     expect(
       await screen.findByText(/Файлы менялись после этой сборки/),
     ).toBeInTheDocument();
+  });
+
+  it("документ без вариантов: выбора варианта нет, в запросе нет поля variant", async () => {
+    vi.spyOn(packStudioApi, "previewOptions").mockResolvedValue(OPTIONS);
+    const start = vi
+      .spyOn(packStudioApi, "startPreview")
+      .mockResolvedValue([build("queued")]);
+    mount();
+    await userEvent.click(await screen.findByTestId("preview-build"));
+    await waitFor(() => {
+      expect(start).toHaveBeenCalled();
+    });
+    expect(
+      screen.queryByRole("combobox", { name: "Вариант документа" }),
+    ).not.toBeInTheDocument();
+    expect(start.mock.calls[0]?.[2]).not.toHaveProperty("variant");
+  });
+
+  it("прежний сервер без полей вариантов: экран работает как раньше", async () => {
+    const legacy = {
+      ...OPTIONS_VARIANTS,
+      documents: OPTIONS_VARIANTS.documents.map((doc) => ({
+        id: doc.id,
+        name: doc.name,
+        kinds: doc.kinds,
+        staffing: doc.staffing,
+      })),
+    };
+    vi.spyOn(packStudioApi, "previewOptions").mockResolvedValue(legacy);
+    const start = vi
+      .spyOn(packStudioApi, "startPreview")
+      .mockResolvedValue([build("queued")]);
+    mount(VKR_FILE);
+    await userEvent.click(await screen.findByTestId("preview-build"));
+    await waitFor(() => {
+      expect(start).toHaveBeenCalled();
+    });
+    expect(
+      screen.queryByRole("combobox", { name: "Вариант документа" }),
+    ).not.toBeInTheDocument();
+    expect(start.mock.calls[0]?.[2]).not.toHaveProperty("variant");
+  });
+
+  it("документ с вариантами: выбор варианта, по умолчанию первый, в запросе variant", async () => {
+    vi.spyOn(packStudioApi, "previewOptions").mockResolvedValue(
+      OPTIONS_VARIANTS,
+    );
+    const start = vi
+      .spyOn(packStudioApi, "startPreview")
+      .mockResolvedValue([build("queued")]);
+    mount(VKR_FILE);
+    const select = await screen.findByRole("combobox", {
+      name: "Вариант документа",
+    });
+    expect(select).toHaveTextContent("ГОСТ 19 ЕСПД (ТЗ)");
+    await userEvent.click(screen.getByTestId("preview-build"));
+    await waitFor(() => {
+      expect(start).toHaveBeenCalledWith(WS, VKR_REF, {
+        documents: ["technical_specification"],
+        example: "auto:normal",
+        combination: OPTIONS_VARIANTS.combination,
+        variant: "espd",
+      });
+    });
+  });
+
+  it("вариант только для другого языка недоступен в списке", async () => {
+    vi.spyOn(packStudioApi, "previewOptions").mockResolvedValue(
+      OPTIONS_VARIANTS,
+    );
+    mount(VKR_FILE);
+    await userEvent.click(
+      await screen.findByRole("combobox", { name: "Вариант документа" }),
+    );
+    const iso = await screen.findByRole("option", {
+      name: /ISO\/IEC\/IEEE 29148 \(SRS\) \(только en\)/,
+    });
+    expect(iso).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("выбранный вариант другого документа уходит в сборку, у варианта без PDF есть подсказка", async () => {
+    vi.spyOn(packStudioApi, "previewOptions").mockResolvedValue(
+      OPTIONS_VARIANTS,
+    );
+    const start = vi
+      .spyOn(packStudioApi, "startPreview")
+      .mockResolvedValue([build("queued")]);
+    mount(VKR_FILE);
+    await userEvent.click(
+      await screen.findByRole("combobox", { name: "Документ" }),
+    );
+    await userEvent.click(
+      await screen.findByRole("option", { name: "Презентация защиты" }),
+    );
+    const variant = await screen.findByRole("combobox", {
+      name: "Вариант документа",
+    });
+    expect(variant).toHaveTextContent("PowerPoint-шаблон");
+    await userEvent.click(variant);
+    await userEvent.click(
+      await screen.findByRole("option", { name: "RevealJS (HTML)" }),
+    );
+    expect(
+      await screen.findByText(/Из этого варианта PDF не собирается/),
+    ).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("combobox", { name: "Вариант документа" }),
+    );
+    await userEvent.click(
+      await screen.findByRole("option", { name: "LaTeX Beamer" }),
+    );
+    expect(
+      screen.queryByText(/Из этого варианта PDF не собирается/),
+    ).not.toBeInTheDocument();
+    await userEvent.click(screen.getByTestId("preview-build"));
+    await waitFor(() => {
+      expect(start).toHaveBeenCalledWith(
+        WS,
+        VKR_REF,
+        expect.objectContaining({
+          documents: ["presentation"],
+          variant: "beamer",
+        }),
+      );
+    });
   });
 
   it("неудачная сборка: текст по коду, подробность и журнал", async () => {

@@ -258,6 +258,9 @@ def _materialize(
     doc = next((d for d in project.documents if d.def_id == request.def_id), None)
     if doc is None:
         raise ValueError(f"документа {request.def_id!r} нет в проекте этой комбинации")
+    if request.variant is not None:
+        # Выбранный вариант (срез O9): от него зависят исходник, движок и то, собирается ли PDF.
+        doc.chosen_variant = request.variant
     source_file, engine, needs_compile = _source_of(project, doc, version)
     if not (dest / source_file).is_file():
         raise ValueError(f"исходник документа не появился в проекте: {source_file}")

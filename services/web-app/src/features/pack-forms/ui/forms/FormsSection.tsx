@@ -483,7 +483,11 @@ const SectionEditor = ({
   const sectionId = asString(section.id);
   const sectionsPath = path.slice(0, -1);
   return (
-    <li className="pf-item pf-subitem" data-testid={`pf-section-${sectionId}`}>
+    <li
+      className="pf-item pf-subitem"
+      data-testid={`pf-section-${sectionId}`}
+      data-pf-at={`/${path.join("/")}`}
+    >
       <div className="pf-item-head">
         <span className="mono pf-id">{sectionId}</span>
         <span className="pf-item-sub">
@@ -523,6 +527,7 @@ const SectionEditor = ({
             <li
               key={`${id}-${String(i)}`}
               className={clsx("pf-item", expanded && "open")}
+              data-pf-at={`/${[...path, "fields", i].join("/")}`}
             >
               <div className="pf-item-head">
                 <button
@@ -857,6 +862,7 @@ export const FormsSection = () => {
               <li
                 key={`${id}-${String(i)}`}
                 className={clsx("pf-item", expanded && "open")}
+                data-pf-at={`/forms/${String(i)}`}
               >
                 <div className="pf-item-head">
                   <button

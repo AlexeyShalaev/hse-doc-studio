@@ -56,24 +56,35 @@ def _state(instances: list[Document], project: Project) -> DocumentStateName:
     return "active" if any(is_doc_active(project, inst) for inst in instances) else "inactive"
 
 
+def document_file_name(
+    project: Project, doc_def: DocumentDefinition, doc: Document, lang: str, templates: ProjectTemplateService
+) -> str | None:
+    """Итоговое имя файла экземпляра в пакете: имя выбранного варианта на языке проекта (иначе русское, иначе имя
+    файла сборки), у личного документа команды с фамилией владельца. Его читает и предпросмотр: имя собираемого
+    документа совпадает с именем в результате."""
+    names = resolve_output_names(doc_def, doc.chosen_variant)
+    try:
+        output_file = templates.resolve_document_source(doc_def, doc.chosen_variant)[1]
+    except ValueError:
+        output_file = ""
+    if not names and not output_file:
+        return None
+    owner = author_by_slug(project, doc.owner)
+    return with_owner_suffix(
+        output_arcname(names, lang, output_file),
+        owner_short_name(owner.name, owner.slug) if owner is not None else None,
+    )
+
+
 def _instance(
     project: Project, doc_def: DocumentDefinition, doc: Document, facts: Facts, templates: ProjectTemplateService
 ) -> Instance:
-    chosen = doc.chosen_variant
-    names = resolve_output_names(doc_def, chosen)
-    try:
-        output_file = templates.resolve_document_source(doc_def, chosen)[1]
-    except ValueError:
-        output_file = ""
     owner = author_by_slug(project, doc.owner)
-    file_name: str | None = None
-    if names or output_file:
-        file_name = with_owner_suffix(
-            output_arcname(names, facts.lang, output_file),
-            owner_short_name(owner.name, owner.slug) if owner is not None else None,
-        )
     return Instance(
-        id=doc.id, owner=doc.owner, owner_name=owner.name if owner is not None else None, file_name=file_name
+        id=doc.id,
+        owner=doc.owner,
+        owner_name=owner.name if owner is not None else None,
+        file_name=document_file_name(project, doc_def, doc, facts.lang, templates),
     )
 
 

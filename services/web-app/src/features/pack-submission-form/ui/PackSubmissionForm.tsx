@@ -44,6 +44,8 @@ export type PackSubmissionFormProps = {
   docName?: ((doc: string) => string | null) | undefined;
   /** Правка записана в манифест (`path`). */
   onSaved: (path: string) => void;
+  /** Переход к правилу: указатель записи; профиль из него раскрыт сразу. */
+  at?: string | null | undefined;
 };
 
 const reasonOf = (error: unknown): string | null =>
@@ -193,6 +195,7 @@ export const PackSubmissionForm = ({
   revision,
   docName: modelDocName,
   onSaved,
+  at,
 }: PackSubmissionFormProps) => {
   const { t, i18n } = useTranslation("packStudio");
   const versionRef = useMemo(() => versionRefOf(path), [path]);
@@ -203,7 +206,12 @@ export const PackSubmissionForm = ({
   const options = usePackPreviewOptions(workspaceId, ref);
   const { selection } = usePreviewSelection(selectionKey(workspaceId, ref));
   const [error, setError] = useState<unknown>(null);
-  const [open, setOpen] = useState<Record<number, boolean>>({ 0: true });
+  const [open, setOpen] = useState<Record<number, boolean>>(() => {
+    const profile = /^\/pack_submission\/profiles\/(\d+)/.exec(at ?? "")?.[1];
+    return profile === undefined
+      ? { 0: true }
+      : { 0: true, [Number(profile)]: true };
+  });
   const data = query.data;
 
   const combination = options.data
@@ -347,6 +355,7 @@ export const PackSubmissionForm = ({
         title={t("submission.route.versionTitle")}
         hint={t("submission.route.versionHint")}
         declared={sub.route}
+        at="/signatures/route"
         inherited={sub.builtin_route}
         inheritedLabel={t("submission.route.builtinName")}
         catalog={catalog}

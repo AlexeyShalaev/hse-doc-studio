@@ -6,8 +6,9 @@ from datetime import date
 from pathlib import Path
 
 import pytest
-from hse_doc_studio.core.catalog import TemplateVersion
+from hse_doc_studio.core.catalog import DocumentDefinition, TemplateVersion
 from hse_doc_studio.core.enums import PersonRole, ProjectKind, ProjectStaffing
+from hse_doc_studio.core.pack_studio.outcome.predicates import document_in_scope
 from hse_doc_studio.core.pack_studio.preview import (
     AUTO_EMPTY,
     AUTO_LONG,
@@ -15,10 +16,10 @@ from hse_doc_studio.core.pack_studio.preview import (
     ExampleFormatError,
     PreviewExample,
     PreviewInputError,
+    SyntheticProject,
     auto_examples,
     combination_query,
     document_digest,
-    document_present,
     parse_example,
     preview_cache_key,
     resolve_combination,
@@ -229,7 +230,11 @@ def test__example_people__override_samples_but_switches_decide_roles(version: Te
     assert project.supervisor.role is PersonRole.university
 
 
-def test__document_present__by_kind_and_staffing(version: TemplateVersion) -> None:
+def _present(doc: DocumentDefinition, project: SyntheticProject) -> bool:
+    return document_in_scope(doc.supported_kinds, doc.supported_staffing, project.kind.value, project.staffing.value)
+
+
+def test__document_scope__by_kind_and_staffing(version: TemplateVersion) -> None:
     memo = next(d for d in version.documents if d.id == "memo")
     switches = switches_for(version)
     solo = synthetic_project(version, _example(version), resolve_combination(switches, {"kind": "project"}), TODAY)
@@ -237,8 +242,8 @@ def test__document_present__by_kind_and_staffing(version: TemplateVersion) -> No
         version, _example(version), resolve_combination(switches, {"kind": "project", "staffing": "team2"}), TODAY
     )
 
-    assert not document_present(memo, solo)
-    assert document_present(memo, team)
+    assert not _present(memo, solo)
+    assert _present(memo, team)
 
 
 def test__document_digest__other_document_edit_keeps_it_common_edit_changes_it(version: TemplateVersion) -> None:

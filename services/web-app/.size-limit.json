@@ -231,7 +231,7 @@
     "name": "Студия шаблонов (lazy, pages/PackStudioPage и фичи pack-*)",
     "path": "dist/assets/pack-studio-app-*.js",
     "gzip": true,
-    "limit": "29 kB"
+    "limit": "29.9 kB"
   },
   {
     "name": "Студия шаблонов, формы проверок (lazy, features/pack-checks-form)",
@@ -261,7 +261,7 @@
     "name": "Студия шаблонов, формы манифестов (lazy, features/pack-forms)",
     "path": "dist/assets/pack-forms-*.js",
     "gzip": true,
-    "limit": "15 kB"
+    "limit": "15.2 kB"
   },
   {
     "name": "Словарь форм Студии шаблонов (ru и en, features/pack-forms)",
@@ -285,18 +285,18 @@
     "name": "Словарь Студии шаблонов (ru и en)",
     "path": "dist/assets/locale-packStudio-*.js",
     "gzip": true,
-    "limit": "27.7 kB"
+    "limit": "27.9 kB"
   },
   {
     "name": "Студия шаблонов, экран «Результат» (lazy, features/pack-outcome)",
     "path": "dist/assets/pack-outcome-*.js",
     "gzip": true,
-    "limit": "22.6 kB"
+    "limit": "35.8 kB"
   },
   {
     "name": "Словарь экрана «Результат» (ru и en, features/pack-outcome)",
     "path": "dist/assets/locale-packOutcome-*.js",
     "gzip": true,
-    "limit": "12.5 kB"
+    "limit": "19.8 kB"
   }
 ]

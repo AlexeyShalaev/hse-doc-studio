@@ -16,13 +16,15 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field, replace
 from datetime import date, datetime
 from enum import StrEnum
+from pathlib import PurePosixPath
 from typing import Any
 from uuid import UUID
 
-from hse_doc_studio.core.catalog import DocumentDefinition, MetaFieldDef, TemplateVersion
+from hse_doc_studio.core.catalog import DocumentDefinition, DocumentVariant, MetaFieldDef, TemplateVersion
 from hse_doc_studio.core.doc_dirs import def_source_dirs
 from hse_doc_studio.core.enums import Lang, MetaFieldType, PersonRole, ProjectKind, ProjectStaffing, RequiredAt
-from hse_doc_studio.core.pack_studio.outcome.predicates import document_in_scope
+from hse_doc_studio.core.office import CONVERTIBLE_OFFICE_EXTS
+from hse_doc_studio.core.pack_studio.outcome.predicates import variant_available
 from hse_doc_studio.core.team import normalize_team_authors
 from hse_doc_studio.core.value_objects import Author, Person
 
@@ -582,9 +584,42 @@ def _lengthened(project: SyntheticProject) -> SyntheticProject:
     )
 
 
-def document_present(doc: DocumentDefinition, project: SyntheticProject) -> bool:
-    """Есть ли документ в проекте этой комбинации: вид работы и состав (как `create_project._build_documents`)."""
-    return document_in_scope(doc.supported_kinds, doc.supported_staffing, project.kind.value, project.staffing.value)
+# ── Варианты документа ─────────────────────────────────────────────────────
+
+
+@dataclass(frozen=True)
+class PreviewVariant:
+    """Вариант документа для выбора при сборке: `langs` пусто, если он доступен во всех языках проекта; `pdf` нет у
+    варианта, из которого предпросмотр PDF не получит: без движка его файл только копируется, а PDF выходит лишь у
+    офисного файла (PowerPoint: конвертация LibreOffice, как у сборки проекта) и у готового PDF."""
+
+    id: str
+    label: Mapping[str, str]
+    langs: tuple[str, ...]
+    pdf: bool
+
+
+def document_variants(doc: DocumentDefinition) -> tuple[PreviewVariant, ...]:
+    """Варианты документа в порядке манифеста; без вариантов пусто."""
+    return tuple(PreviewVariant(v.id, dict(v.label), tuple(v.supported_langs), _makes_pdf(v)) for v in doc.variants)
+
+
+def _makes_pdf(variant: DocumentVariant) -> bool:
+    """Сборка варианта даёт PDF для предпросмотра: есть движок, либо исходник офисный или уже PDF (`run_copy_only`)."""
+    suffix = PurePosixPath(variant.source_file).suffix.lower()
+    return variant.engine is not None or suffix == ".pdf" or suffix in CONVERTIBLE_OFFICE_EXTS
+
+
+def check_variant(doc: DocumentDefinition, variant: str, lang: str) -> None:
+    """Вариант `variant` можно собрать у документа при этом языке проекта; иначе `PreviewInputError` с полем `variant`
+    (его значение и причина показываются рядом с ошибкой)."""
+    if not doc.variants:
+        raise PreviewInputError("variant", variant, "the document has no variants")
+    found = next((v for v in doc.variants if v.id == variant), None)
+    if found is None:
+        raise PreviewInputError("variant", variant, "unknown variant")
+    if not variant_available(found.supported_langs, lang):
+        raise PreviewInputError("variant", variant, "not available for this language")
 
 
 # ── Ключ кэша ──────────────────────────────────────────────────────────────
@@ -614,13 +649,22 @@ def document_digest(files: Mapping[str, str], version: TemplateVersion, def_id: 
 
 
 def preview_cache_key(
-    *, doc_digest: str, def_id: str, project: SyntheticProject, engine: str, checks: bool = False
+    *,
+    doc_digest: str,
+    def_id: str,
+    project: SyntheticProject,
+    engine: str,
+    checks: bool = False,
+    variant: str | None = None,
 ) -> str:
     """Ключ кэша сборки: вход документа, сам документ, синтетический проект (набор и комбинация) и движок.
 
     Правка другого набора данных или комбинации ключ не меняет: в ключ входит только то, что попало в проект.
     Сборка с проверками (срез T14) это другой ключ: у неё есть находки, у сборки без проверок их нет. Правила
     лежат в каталоге версии (`checks/*.yaml`, `checks_version`), их правка и так меняет вход документа.
+    Выбранный вариант документа это другой исходник и другой PDF, поэтому входит в ключ (O9). Сценарий в ключ не
+    входит сам: он действует через то, что из него вышло, то есть через проект и вариант; два сценария с тем же
+    итогом делят один PDF.
     """
     body: dict[str, Any] = {
         "salt": PREVIEW_RENDER_SALT,
@@ -631,6 +675,8 @@ def preview_cache_key(
     }
     if checks:
         body["checks"] = True
+    if variant is not None:
+        body["variant"] = variant
     return hashlib.sha256(json.dumps(body, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
 
 
@@ -685,6 +731,12 @@ class PreviewBuild:
     # Сборка с проверками правил версии (срез T14); `checks` находки удачной сборки (None: проверок не было).
     with_checks: bool = False
     checks: tuple[PreviewCheck, ...] | None = None
+    # Выбранный вариант документа (None: у документа нет вариантов) и итоговое имя файла в пакете (срез O9).
+    variant: str | None = None
+    file_name: str | None = None
+    # Сценарий, по которому собрана комбинация, и его вводные как в файле (до наложения запроса); без сценария пусто.
+    scenario: str | None = None
+    scenario_inputs: Mapping[str, str] = field(default_factory=dict)
 
     @property
     def slot(self) -> tuple[str, ...]:
@@ -698,6 +750,8 @@ class PreviewBuild:
             self.example,
             combination_query(self.combination),
             "checks" if self.with_checks else "",
+            self.variant or "",
+            self.scenario or "",
         )
 
 
@@ -745,6 +799,8 @@ class MaterializeRequest:
     def_id: str
     project: SyntheticProject
     build_id: UUID
+    # Вариант документа `def_id`; None: первый (как у проекта без выбора).
+    variant: str | None = None
 
 
 @dataclass(frozen=True)

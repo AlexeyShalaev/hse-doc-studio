@@ -1,0 +1,36 @@
+{
+  "id": "9b2e7d4c-5a61-4f0e-8c3b-2d1f6a7e9c05",
+  "workspace_id": "4f0c2a8e-1b7d-4c55-9a51-3b8d6f0e2c11",
+  "pack": "hse-cs-se",
+  "template": "vkr",
+  "version": "2026.1.2",
+  "document": "presentation",
+  "example": "auto:normal",
+  "combination": {
+    "academic_supervisor": "yes",
+    "co_supervisor": "no",
+    "kind": "project",
+    "lang": "ru",
+    "meta.nda": "yes",
+    "staffing": "team3",
+    "supervisor": "university"
+  },
+  "key": "3f2a3f2a3f2a3f2a3f2a3f2a3f2a3f2a3f2a3f2a3f2a3f2a3f2a3f2a3f2a3f2a",
+  "status": "succeeded",
+  "cached": false,
+  "created_at": "2026-11-15T09:30:00Z",
+  "started_at": "2026-11-15T09:30:02Z",
+  "finished_at": "2026-11-15T09:30:21Z",
+  "pages": 14,
+  "error": null,
+  "source_file": "presentation/beamer/presentation.tex",
+  "has_anchors": true,
+  "variant": "beamer",
+  "file_name": "Презентация — Иванов.pdf",
+  "scenario": "team-of-three-nda",
+  "scenario_inputs": {
+    "kind": "project",
+    "staffing": "team3",
+    "meta.nda": "yes"
+  }
+}
