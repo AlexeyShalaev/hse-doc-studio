@@ -38,6 +38,7 @@ import {
 } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import { findingsToDiagnostics } from "../lib/findings";
+import { pointerLine } from "../lib/yamlPointer";
 import { packCompletionExtension } from "../lib/packCompletion";
 import { GateFindings } from "./GateFindings";
 import { ProblemsPanel } from "./ProblemsPanel";
@@ -72,10 +73,17 @@ export type PackFileEditorProps = {
    * мышкой. Без неё у манифеста стоит выключенная вкладка.
    */
   form?: ReactNode;
+  /**
+   * Переход к правилу из экрана «Результат»: JSON Pointer записи манифеста. Редактор открывается
+   * на её строке (если нет явного `reveal`).
+   */
+  pointer?: string | null | undefined;
+  /** С какой вкладки открыть манифест; без значения последняя выбранная в этой вкладке браузера. */
+  initialView?: MainView | undefined;
 };
 
 type SidePane = "problems" | "preview";
-type MainView = "source" | "form";
+export type MainView = "source" | "form";
 
 // Последний выбранный вид манифеста: форма или исходник (на вкладку браузера).
 const VIEW_KEY = "pack-studio:manifest-view";
@@ -104,6 +112,7 @@ const hasForm = (path: string): boolean =>
 type LoadedProps = {
   workspaceId: string;
   file: PackFile;
+  pointer: string | null | undefined;
   diagnostics: ReturnType<typeof findingsToDiagnostics>;
   reveal: RevealRequest | undefined;
   onSaved: () => void;
@@ -116,6 +125,7 @@ type Conflict = { diskContent: string | null; diskEtag: string | null };
 const LoadedEditor = ({
   workspaceId,
   file,
+  pointer,
   diagnostics,
   reveal,
   onSaved,
@@ -134,6 +144,12 @@ const LoadedEditor = ({
   const [savedOnce, setSavedOnce] = useState(false);
   const readOnly = file.readOnly !== null;
   const dirty = value !== saved.content;
+  // Строка правила считается один раз на открытие файла: правки текста курсор не уводят.
+  const [pointerReveal] = useState<RevealRequest | undefined>(() => {
+    const line = pointer ? pointerLine(file.content, pointer) : null;
+    return line === null ? undefined : { line, token: 1 };
+  });
+  const shownReveal = reveal ?? pointerReveal;
 
   const versionDir = versionDirOf(file.path);
   const inVersionFiles = file.path.includes("/files/") && versionDir !== null;
@@ -318,7 +334,7 @@ const LoadedEditor = ({
           readOnly={readOnly}
           language={language}
           diagnostics={diagnostics}
-          {...(reveal ? { reveal } : {})}
+          {...(shownReveal ? { reveal: shownReveal } : {})}
           extraExtensions={extensions}
           ariaLabel={file.path}
         />
@@ -362,6 +378,8 @@ export const PackFileEditor = ({
   problemsFocus,
   contentRevision = 0,
   form,
+  pointer,
+  initialView,
 }: PackFileEditorProps) => {
   const { t } = useTranslation("packStudio");
   const phone = useIsPhoneWidth();
@@ -373,7 +391,7 @@ export const PackFileEditor = ({
   // Подсказки автодополнения: редактор читает их из кэша запросов.
   usePackHints(workspaceId, versionDir);
   const [pane, setPane] = useState<SidePane>("problems");
-  const [view, setView] = useState<MainView>(readView);
+  const [view, setView] = useState<MainView>(initialView ?? readView);
   // Несохранённая правка исходника: форма писала бы мимо неё, поэтому вкладка формы закрыта.
   const [sourceDirty, setSourceDirty] = useState(false);
   const trackDirty = useCallback(
@@ -424,6 +442,7 @@ export const PackFileEditor = ({
         key={`${path}:${String(contentRevision)}`}
         workspaceId={workspaceId}
         file={file.data}
+        pointer={pointer}
         diagnostics={diagnostics}
         reveal={reveal}
         onSaved={onSaved}

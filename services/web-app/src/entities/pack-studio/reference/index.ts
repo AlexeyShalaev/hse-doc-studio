@@ -7,10 +7,16 @@ export {
   VKR_INPUTS,
   VKR_OUTCOME,
 } from "./fixtures";
+export { elementInfos, explainFor, realExplains } from "./explain";
 export {
   REFERENCE_BEHAVIORS,
+  setExplainBehavior,
   installOutcomeReference,
   outcomeReference,
   outcomeReferenceRoutes,
 } from "./routes";
-export type { ReferenceBehavior, ReferenceSource } from "./routes";
+export type {
+  ExplainBehavior,
+  ReferenceBehavior,
+  ReferenceSource,
+} from "./routes";

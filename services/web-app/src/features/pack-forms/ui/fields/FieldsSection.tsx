@@ -802,6 +802,7 @@ export const FieldsSection = () => {
               <li
                 key={field.key}
                 className={clsx("pf-item", expanded && "open")}
+                data-pf-at={`/meta_fields/${field.key.replace(/~/g, "~0").replace(/\//g, "~1")}`}
               >
                 <button
                   type="button"

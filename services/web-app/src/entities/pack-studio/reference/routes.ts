@@ -12,6 +12,8 @@ import type {
   PackOutcomeRequest,
   PackScenarioList,
 } from "../api/outcome";
+import type { OutcomeElementRef } from "../api/outcome";
+import { explainFor } from "./explain";
 import {
   COURSEWORK_INPUTS,
   COURSEWORK_OUTCOME,
@@ -218,6 +220,15 @@ const guarded =
     return demoJson(build(params, req.query, req.body));
   };
 
+/** Что подмена отвечает на «Почему?»: ответ, 404 исчезнувшего элемента или 503 занятого сервера. */
+export type ExplainBehavior = "normal" | "gone" | "busy" | "fail";
+
+let explainBehavior: ExplainBehavior = "normal";
+/** Для тестов и галереи: как отвечает подмена `explain`; `busy` один раз, затем нормально, `fail` пока не сменят. */
+export const setExplainBehavior = (next: ExplainBehavior): void => {
+  explainBehavior = next;
+};
+
 const VERSION =
   "/pack-studio/workspaces/:id/versions/:pack/:template/:version/outcome";
 const SCENARIOS =
@@ -238,6 +249,52 @@ export const outcomeReferenceRoutes: DemoRoute[] = [
     handler: guarded((params, _query, body) =>
       outcomeFor(params, body as PackOutcomeRequest),
     ),
+  },
+  {
+    method: "POST",
+    pattern: `${VERSION}/explain`,
+    handler: async (req) => {
+      if (source === "server") return (await req.forward()) as never;
+      if (behavior === "slow") await sleep(SLOW_MS);
+      const failed = failure();
+      if (failed) return failed;
+      if (explainBehavior === "fail") {
+        return demoError(500, "internal_error", "Внутренняя ошибка.");
+      }
+      if (explainBehavior === "busy") {
+        explainBehavior = "normal";
+        return demoError(503, "outcome_busy", "Сервер занят.", {
+          reason: "overloaded",
+          retry_after_s: 0,
+        });
+      }
+      const params: Params = {
+        id: req.params.id ?? "",
+        pack: req.params.pack ?? "",
+        template: req.params.template ?? "",
+        version: req.params.version ?? "",
+      };
+      const body = req.body as PackOutcomeRequest & {
+        element: OutcomeElementRef;
+      };
+      const outcome = outcomeFor(params, {
+        ...body,
+        include: ["checks", "branches"],
+      });
+      const reply =
+        explainBehavior === "gone"
+          ? null
+          : explainFor(outcome, body.element, params.template);
+      if (!reply) {
+        return demoError(
+          404,
+          "outcome_element_not_found",
+          "Элемента нет в результате.",
+          { section: body.element.section, id: body.element.id },
+        );
+      }
+      return demoJson(reply);
+    },
   },
   {
     method: "GET",

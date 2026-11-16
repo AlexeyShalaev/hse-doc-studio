@@ -264,6 +264,7 @@ const fixture = (dir: string, name: string): Record<string, unknown> =>
 
 type Fake = {
   outcomes: { version: string; body: unknown }[];
+  explains: unknown[];
   calls: string[];
   writes: { path: string; ifMatch: string | null; body: string }[];
   proposals: unknown[];
@@ -275,7 +276,7 @@ type Fake = {
 
 /** Подмена /api/v1/pack-studio/workspaces*: клон идёт два опроса, файлы с ETag, запись с If-Match. */
 const mockWorkspaces = async (page: Page): Promise<Fake> => {
-  const fake: Fake = { outcomes: [], calls: [], writes: [], proposals: [], previews: [], notes: [], releases: [], created: [] };
+  const fake: Fake = { outcomes: [], explains: [], calls: [], writes: [], proposals: [], previews: [], notes: [], releases: [], created: [] };
   let created = false;
   let notes = NO_NOTES;
   let polls = 0;
@@ -347,11 +348,23 @@ const mockWorkspaces = async (page: Page): Promise<Fake> => {
       });
     }
     // Экран «Результат» (F1): сервера результата пока нет, отвечают эталоны контракта.
-    const outcome = /^\/[^/]+\/versions\/hse-cs-sse\/coursework\/([^/]+)\/outcome(\/inputs)?$/.exec(rest);
+    const outcome = /^\/[^/]+\/versions\/hse-cs-sse\/coursework\/([^/]+)\/outcome(\/inputs|\/explain)?$/.exec(rest);
     if (outcome) {
       const [, version = "", inputs] = outcome;
+      if (inputs === "/explain") {
+        // «Почему?» (F6): эталон объяснения, правила манифеста указывают на version.yaml открытой версии.
+        fake.explains.push(req.postDataJSON());
+        const explain = fixture("PackOutcomeExplain", "operator_manual") as { chain: { rule: { file: string | null } }[] };
+        return json(route, {
+          ...explain,
+          chain: explain.chain.map((entry) => ({
+            ...entry,
+            rule: { ...entry.rule, file: entry.rule.file === null ? null : "version.yaml" },
+          })),
+        });
+      }
       const identity = { workspace_id: WS, pack: "hse-cs-sse", template: "coursework", version };
-      if (inputs) return json(route, { ...fixture("PackOutcomeInputs", "vkr"), ...identity, template: "coursework" });
+      if (inputs === "/inputs") return json(route, { ...fixture("PackOutcomeInputs", "vkr"), ...identity, template: "coursework" });
       fake.outcomes.push({ version, body: req.postDataJSON() });
       return json(route, { ...fixture("PackOutcome", "coursework_company_cosupervisor"), ...identity });
     }
@@ -787,6 +800,32 @@ for (const lang of LANGS) {
       await page.getByTestId("outcome-inputs-reset").click();
       await expect(page).not.toHaveURL(/i\.staffing/);
       await expect(page.getByTestId("outcome-control-staffing-solo")).toHaveAttribute("aria-checked", "true");
+
+      // Правая панель «Правила и причины» (F6): выбор документа открывает цепочку правил, «Что если»
+      // применяет одну вводную, «Открыть правило» ведёт в «Файлы», «Назад к результату» возвращает.
+      await page.getByTestId("outcome-doc-project_proposal").getByRole("button").first().click();
+      await expect(page).toHaveURL(/selected=documents%3Aproject_proposal/);
+      const chain = page.getByTestId("outcome-chain");
+      await expect(chain).toBeVisible();
+      await expect(chain.getByRole("listitem")).toHaveCount(4);
+      await expect(chain).toContainText(text("Не выполнено", "Not held"));
+      await expect(chain).toContainText(text("в движке", "in the engine"));
+      await expect.poll(() => fake.explains.length).toBeGreaterThan(0);
+      await shot(page, L, "ps-82-outcome-why");
+      await page.getByTestId("outcome-whatif-kind-research").click();
+      await expect(page).toHaveURL(/i\.kind=research/);
+      await expect(page.getByTestId("outcome-whatif-applied")).toBeVisible();
+      await page.getByTestId("outcome-chain-t22-open").click();
+      await expect(page).toHaveURL(/[?&]at=%2Fsupported_kinds/);
+      await expect(page).toHaveURL(/pane=form/);
+      await expect(page.getByTestId("ws-back-to-result")).toBeVisible({ timeout: 15_000 });
+      await page.getByTestId("ws-back-to-result").click();
+      await expect(page).toHaveURL(/\/result\/hse-cs-sse\/coursework\/2026\.1\.6/);
+      await expect(page).toHaveURL(/selected=documents%3Aproject_proposal/);
+      await expect(page).toHaveURL(/i\.kind=research/);
+      await expect(page.getByTestId("outcome-chain")).toBeVisible();
+      await page.getByTestId("outcome-selected-clear").click();
+      await page.getByTestId("outcome-inputs-reset").click();
 
       // Режим «Как студент» живёт в адресе: перезагрузка возвращает тот же экран.
       await page.getByTestId("outcome-mode-student").click();
