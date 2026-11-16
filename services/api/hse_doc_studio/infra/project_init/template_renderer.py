@@ -268,6 +268,12 @@ def _render_text(content: str, context: dict[str, Any], source_path: Path, *, st
         return _fallback_copy(exc, content, source_path)
 
 
+def render_text_strict(content: str, context: dict[str, Any], source_path: Path) -> str:
+    """Рендер текста шаблона строгим режимом: ошибка это `TemplateRenderError`, а не тихая копия файла. Нужен
+    линтеру результата (правило `jinja-fail-open`), сборка проекта строгий режим не включает."""
+    return _render_text(content, context, source_path, strict=True)
+
+
 def _fallback_copy(exc: Exception, content: str, source_path: Path) -> str:
     """Тихая копия файла как есть с предупреждением: так сборка проекта переживает битый шаблон."""
     if isinstance(exc, TemplateSyntaxError):

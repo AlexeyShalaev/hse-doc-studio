@@ -42,9 +42,12 @@ def _validators() -> dict[str, Any]:
 
 
 def schema_for(path: Path) -> str | None:
-    """Какая схема описывает файл пака; None у правил проверок (`checks/*.yaml`) и прочих файлов."""
+    """Какая схема описывает файл пака; None у правил проверок (`checks/*.yaml`) и прочих файлов. Файл сценария
+    (`scenarios/<id>.yaml` шаблона) описывает схема `scenario`."""
     if path.parent.name == "checks":
         return None
+    if path.parent.name == "scenarios" and path.suffix == ".yaml":
+        return "scenario"
     if path.name == "doc.yaml":
         return "doc"
     name = path.name.removesuffix(".yaml")

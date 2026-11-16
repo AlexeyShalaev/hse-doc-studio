@@ -182,10 +182,13 @@ class DiagnosticSeverity(StrEnum):
 
 
 class DiagnosticCheck(StrEnum):
-    """`lint`: `pack_lint` версии; `schema`: схема манифеста (`contracts/pack/*.schema.json`)."""
+    """`lint`: `pack_lint` версии; `schema`: схема манифеста (`contracts/pack/*.schema.json`); `outcome`: статические
+    правила линтера результата (`docs/design/template-studio-outcome.md`, раздел 6; находка называет правило в
+    начале сообщения: `[slot-never-routed] ...`)."""
 
     lint = "lint"
     schema = "schema"
+    outcome = "outcome"
 
 
 @dataclass(frozen=True)

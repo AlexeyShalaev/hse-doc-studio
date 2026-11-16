@@ -138,7 +138,8 @@
     "line": "line {{line}}",
     "check": {
       "lint": "linter",
-      "schema": "schema"
+      "schema": "schema",
+      "outcome": "outcome"
     },
     "gate": {
       "title": "Checks before sending",

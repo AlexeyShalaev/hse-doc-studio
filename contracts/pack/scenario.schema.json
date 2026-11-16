@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://hse-doc-studio.local/contracts/pack/scenario.schema.json",
+  "title": "scenarios/<id>.yaml",
+  "description": "Сценарий шаблона: именованная точка в пространстве вводных и необязательное ожидание (снимок и утверждения). Файл лежит рядом с `examples/` вне каталога версии (`<пак>/templates/<шаблон>/scenarios/<id>.yaml`), id это имя файла (строчная латиница, цифры, дефис). Лоадер паков файл не читает; его читают Студия шаблонов и `pack check`. Допустимость вводных относительно версии схема не проверяет: её проверяет прогон сценария. Правила разбора те же, что у `core/pack_studio/outcome/scenarios.py`.",
+  "type": "object",
+  "properties": {
+    "format": { "const": 1 },
+    "name": { "$ref": "#/$defs/names", "minProperties": 1 },
+    "description": { "$ref": "#/$defs/names" },
+    "example": {
+      "description": "Набор данных: `auto:normal`, `auto:long`, `auto:empty` или имя файла из `examples/`; по умолчанию `auto:normal`.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "versions": {
+      "description": "Шаблоны номеров версий, для которых сценарий действует (`2026.1.*`); пусто: любая. Номер в кавычках, иначе YAML прочитает его числом.",
+      "type": "array",
+      "maxItems": 16,
+      "items": { "type": "string", "pattern": "^[0-9A-Za-z._*-]+$", "maxLength": 64 }
+    },
+    "inputs": {
+      "description": "Частичные вводные `{id: значение}`: остальное по умолчанию набора данных и версии. Логическое значение: `\"yes\"` и `\"no\"` строкой, голое `yes` YAML читает как true, парсер Студии понимает и его.",
+      "type": "object",
+      "maxProperties": 64,
+      "propertyNames": { "minLength": 1, "maxLength": 128 },
+      "additionalProperties": {
+        "oneOf": [{ "type": "string", "minLength": 1, "maxLength": 128 }, { "type": "boolean" }]
+      }
+    },
+    "assertions": {
+      "description": "Закрытый набор утверждений о результате; упавшее утверждение это расхождение сценария.",
+      "type": "array",
+      "maxItems": 64,
+      "items": {
+        "oneOf": [
+          { "$ref": "#/$defs/documentState" },
+          { "$ref": "#/$defs/documentCount" },
+          { "$ref": "#/$defs/metaVisible" },
+          { "$ref": "#/$defs/participantPresent" },
+          { "$ref": "#/$defs/itemActive" },
+          { "$ref": "#/$defs/routeSteps" },
+          { "$ref": "#/$defs/routePair" }
+        ]
+      }
+    },
+    "snapshot": { "$ref": "#/$defs/snapshot" }
+  },
+  "required": ["format", "name"],
+  "additionalProperties": false,
+  "$defs": {
+    "names": {
+      "description": "Текст по языкам: `{ ru: ..., en: ... }`, до четырёх языков.",
+      "type": "object",
+      "maxProperties": 4,
+      "propertyNames": { "pattern": "^[a-z]{2,3}$" },
+      "additionalProperties": { "type": "string", "minLength": 1, "maxLength": 2000 }
+    },
+    "ref": { "type": "string", "minLength": 1, "maxLength": 128 },
+    "refs": { "type": "array", "items": { "$ref": "#/$defs/ref" } },
+    "state": { "enum": ["active", "inactive", "absent"] },
+    "steps": {
+      "type": "array",
+      "maxItems": 16,
+      "items": { "$ref": "#/$defs/refs" }
+    },
+    "documentState": {
+      "type": "object",
+      "properties": { "kind": { "const": "document_state" }, "doc": { "$ref": "#/$defs/ref" }, "state": { "$ref": "#/$defs/state" } },
+      "required": ["kind", "doc", "state"],
+      "additionalProperties": false
+    },
+    "documentCount": {
+      "type": "object",
+      "properties": {
+        "kind": { "const": "document_count" },
+        "state": { "$ref": "#/$defs/state" },
+        "count": { "type": "integer", "minimum": 0, "maximum": 1000 }
+      },
+      "required": ["kind", "state", "count"],
+      "additionalProperties": false
+    },
+    "metaVisible": {
+      "type": "object",
+      "properties": { "kind": { "const": "meta_visible" }, "field": { "$ref": "#/$defs/ref" }, "visible": { "type": "boolean" } },
+      "required": ["kind", "field", "visible"],
+      "additionalProperties": false
+    },
+    "participantPresent": {
+      "type": "object",
+      "properties": {
+        "kind": { "const": "participant_present" },
+        "persona": { "$ref": "#/$defs/ref" },
+        "present": { "type": "boolean" }
+      },
+      "required": ["kind", "persona", "present"],
+      "additionalProperties": false
+    },
+    "itemActive": {
+      "type": "object",
+      "properties": {
+        "kind": { "const": "item_active" },
+        "point": { "$ref": "#/$defs/ref" },
+        "doc": { "$ref": "#/$defs/ref" },
+        "active": { "type": "boolean" }
+      },
+      "required": ["kind", "point", "doc", "active"],
+      "additionalProperties": false
+    },
+    "routeSteps": {
+      "type": "object",
+      "properties": { "kind": { "const": "route_steps" }, "point": { "$ref": "#/$defs/ref" }, "steps": { "$ref": "#/$defs/steps" } },
+      "required": ["kind", "point", "steps"],
+      "additionalProperties": false
+    },
+    "routePair": {
+      "type": "object",
+      "properties": {
+        "kind": { "const": "route_pair" },
+        "point": { "$ref": "#/$defs/ref" },
+        "doc": { "$ref": "#/$defs/ref" },
+        "slot": { "$ref": "#/$defs/ref" },
+        "persona": { "$ref": "#/$defs/ref" },
+        "present": { "type": "boolean" }
+      },
+      "required": ["kind", "point", "doc", "slot", "persona", "present"],
+      "additionalProperties": false
+    },
+    "snapshot": {
+      "description": "Сжатый результат (`digest`), с которым сравнивается прогон: пишется кнопкой «Записать снимок», руками не правится. Хэш отпечатка в кавычках.",
+      "type": "object",
+      "properties": {
+        "documents": { "type": "object", "additionalProperties": { "$ref": "#/$defs/state" } },
+        "participants": { "$ref": "#/$defs/refs" },
+        "meta_visible": { "$ref": "#/$defs/refs" },
+        "points": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "$ref": "#/$defs/ref" },
+              "items": { "$ref": "#/$defs/refs" },
+              "steps": { "$ref": "#/$defs/steps" },
+              "pairs": { "type": "integer", "minimum": 0, "maximum": 1000 }
+            },
+            "required": ["id", "items", "steps", "pairs"],
+            "additionalProperties": false
+          }
+        },
+        "sections": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "section": { "enum": ["documents", "meta", "forms", "participants", "points", "route", "checks"] },
+              "fingerprint": { "type": "string", "minLength": 1, "maxLength": 64 },
+              "count": { "type": "integer", "minimum": 0, "maximum": 1000 }
+            },
+            "required": ["section", "fingerprint", "count"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

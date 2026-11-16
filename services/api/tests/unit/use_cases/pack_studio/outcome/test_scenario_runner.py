@@ -431,11 +431,11 @@ def test__coverage__rule_seen_by_scenarios_but_missing_from_the_universe_still_c
 
     cover = coverage_of((), {"company": company})
 
-    rules = {e.rule for e in company.trace}
     decided = {e.rule for e in company.trace if e.status != "skipped"}
-    assert cover.rules_total == len(rules)
-    # Правило, которое в этом результате только пропущено (`skipped`), исхода не видело: не покрыто.
-    assert cover.rules_uncovered == len(rules - decided)
+    # Правило, которое в результате только пропущено (`skipped`), исхода не имеет: в универсум не входит.
+    assert cover.rules_total == len(decided)
+    assert cover.rules_uncovered == 0
+    assert cover.approximate
 
 
 def test__coverage__universe_is_deterministic_and_has_one_result_per_neighbour(
@@ -452,6 +452,19 @@ def test__coverage__contract_shape(version: TemplateVersion, examples: tuple[Pre
 
     shape = to_json(run.coverage)
 
-    assert set(shape) == {"scenarios", "rules_total", "rules_covered", "rules_half", "rules_uncovered", "rules"}
-    assert set(shape["rules"][0]) == {"rule", "kind", "seen", "scenarios"}
+    assert set(shape) == {
+        "scenarios",
+        "rules_total",
+        "rules_covered",
+        "rules_half",
+        "rules_uncovered",
+        "rules",
+        "percent",
+        "rows_total",
+        "rows_touched",
+        "uncovered_rows",
+        "rules_omitted",
+        "approximate",
+    }
+    assert set(shape["rules"][0]) == {"rule", "kind", "seen", "possible", "scenarios", "witness"}
     assert set(shape["rules"][0]["rule"]) == {"origin", "file", "pointer", "builtin"}

@@ -12,6 +12,11 @@
 Атлас считается дольше расчёта: срок 20 с, не больше двух одновременных на процесс, частота 6 в минуту на человека
 (правило `pack_atlas`), больше 2000 строк это `atlas_too_large`.
 
+`GET .../outcome/lint?state=&jinja=` отдаёт находки линтера результата и покрытие правил сценариями шаблона
+(`PackOutcomeLint`, срез O8): статические правила, правила по атласу, а по `jinja=true` на рабочем дереве ещё и
+правила по файлам шаблонов (рендер в отдельном процессе). Считается как атлас: срок 30 с, не больше двух
+одновременных на процесс, частота 6 в минуту на человека (правило `pack_outcome_lint`).
+
 Ответ несёт `ETag` по ключу запроса (версия, источник, `revision`, вводные); по `If-None-Match` сервер отвечает 304,
 не считая. Расчёт идёт с пределом времени, при его превышении и при перегрузке 503 `outcome_busy` с `Retry-After`;
 частота ограничена правилом `pack_outcome` (20 в секунду на человека, `api/rate_limit.py`).
@@ -34,12 +39,14 @@ from hse_doc_studio.api.schemas.pack_studio_outcome import (
     PackOutcomeExplainRequest,
     PackOutcomeExplainResponse,
     PackOutcomeInputsResponse,
+    PackOutcomeLintResponse,
     PackOutcomeRequest,
     PackOutcomeResponse,
 )
 from hse_doc_studio.core.access.context import require_actor
 from hse_doc_studio.core.pack_studio.outcome.model import ElementRef
 from hse_doc_studio.use_cases.pack_studio.outcome_atlas import PackAtlasService, parse_pins
+from hse_doc_studio.use_cases.pack_studio.outcome_lint import PackOutcomeLintService
 from hse_doc_studio.use_cases.pack_studio.outcome_service import (
     ExplainRequest,
     OutcomeReply,
@@ -156,5 +163,26 @@ async def post_outcome_explain(  # noqa: PLR0913 — путь версии, те
     )
     reply = await outcome.explain(
         require_actor(), workspace_id, pack, template, version, request, if_none_match=if_none_match
+    )
+    return _respond(reply)
+
+
+@router.get(f"{_OUTCOME}/lint", response_model=PackOutcomeLintResponse)
+async def get_outcome_lint(  # noqa: PLR0913 — путь версии, параметры запроса и условный запрос
+    workspace_id: UUID,
+    pack: str,
+    template: str,
+    version: str,
+    lint: FromDishka[PackOutcomeLintService],
+    state: OutcomeStateName = "work_tree",
+    jinja: Annotated[
+        bool, Query(description="Добавить правила по файлам шаблонов (Jinja), только рабочее дерево")
+    ] = False,
+    if_none_match: IfNoneMatch = None,
+) -> Response:
+    """Находки линтера результата (ошибки первыми) и покрытие правил сценариями: какие правила и комбинации ни один
+    сценарий не затрагивает. Каждая находка с файлом, указателем, строкой, подсказкой и до трёх комбинациями вводных."""
+    reply = await lint.lint(
+        require_actor(), workspace_id, pack, template, version, state, jinja=jinja, if_none_match=if_none_match
     )
     return _respond(reply)

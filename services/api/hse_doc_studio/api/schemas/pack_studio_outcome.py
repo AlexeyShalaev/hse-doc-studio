@@ -630,18 +630,42 @@ class PackScenarioWriteRequest(StrictModel):
 class RuleCoverage(StrictModel):
     rule: OutcomeRuleRef
     kind: RuleKindName
-    # Какие исходы правила видели сценарии: `held` и `not_held`; покрыто полностью, когда видели оба.
+    # Какие исходы правила видели сценарии: `held` и `not_held`; покрыто полностью, когда видели все достижимые.
     seen: list[Literal["held", "not_held"]]
     scenarios: list[str]
+    # Исходы, достижимые в строках атласа (у условия, которое всегда выполнено, один). Пусто у ответа старой Студии.
+    possible: list[Literal["held", "not_held"]] = Field(default_factory=list)
+    # Строка атласа (значения измерений), где виден первый недостающий исход; null: недостающего нет или атласа нет.
+    witness: dict[str, str] | None = None
+
+
+class UncoveredRow(StrictModel):
+    """Строка атласа, которую стоит закрыть сценарием, и сколько исходов правил она добавит."""
+
+    inputs: dict[str, str]
+    gain: int = Field(ge=1)
 
 
 class OutcomeCoverage(StrictModel):
+    """Покрытие правил сценариями по строкам атласа (раздел 6.2). Правило покрыто полностью, когда видны все его
+    достижимые исходы; `percent` это доля увиденных достижимых исходов всех правил. `rules` только покрытые не
+    полностью, не больше 200 (`rules_omitted` остальные)."""
+
     scenarios: int = Field(ge=0)
     rules_total: int = Field(ge=0)
     rules_covered: int = Field(ge=0)
     rules_half: int = Field(ge=0)
     rules_uncovered: int = Field(ge=0)
     rules: list[RuleCoverage]
+    percent: float = Field(default=0.0, ge=0, le=100)
+    # Строки атласа и сколько из них затронуто сценариями (вводные сценария совпали с ключом строки).
+    rows_total: int = Field(default=0, ge=0)
+    rows_touched: int = Field(default=0, ge=0)
+    # До десяти строк, которые закрывают больше всего недостающих исходов (жадный выбор).
+    uncovered_rows: list[UncoveredRow] = Field(default_factory=list, max_length=10)
+    rules_omitted: int = Field(default=0, ge=0)
+    # Атлас не построен (слишком большой): универсум правил приближённый, цифры это нижняя граница.
+    approximate: bool = False
 
 
 class PackScenarioRunRequest(StrictModel):
@@ -714,6 +738,8 @@ class OutcomeFinding(StrictModel):
     rule_id: str = Field(min_length=1, max_length=64)
     severity: FindingSeverityName
     message: str
+    # Как исправить; null у находки без подсказки.
+    hint: str | None = None
     file: str | None
     pointer: str | None
     line: int | None
@@ -721,7 +747,15 @@ class OutcomeFinding(StrictModel):
     witnesses: list[dict[str, str]] = Field(max_length=3)
 
 
+LintJinjaName = Literal["not_run", "ran", "unavailable"]
+
+
 class PackOutcomeLintResponse(StrictModel):
+    """Находки линтера результата версии и покрытие правил её сценариями (раздел 6, срез O8). Ошибки первыми, затем
+    предупреждения и информация; Jinja (правила `jinja-fail-open`, `jinja-unknown-meta-key`) только по `jinja=true` и
+    на рабочем дереве (`jinja`: `ran` запускалось, `not_run` нет, `unavailable` запросили, но состояние не
+    рабочее дерево). `atlas_skipped`: таблица исходов больше предела, остались статические правила."""
+
     workspace_id: str
     pack: str
     template: str
@@ -732,6 +766,10 @@ class PackOutcomeLintResponse(StrictModel):
     warnings: int = Field(ge=0)
     findings: list[OutcomeFinding]
     coverage: OutcomeCoverage
+    infos: int = Field(default=0, ge=0)
+    jinja: LintJinjaName = "not_run"
+    atlas_skipped: bool = False
+    elapsed_ms: int = Field(default=0, ge=0)
 
 
 # ── Сравнения: два сценария, «до и после», матрица ───────────────────────────

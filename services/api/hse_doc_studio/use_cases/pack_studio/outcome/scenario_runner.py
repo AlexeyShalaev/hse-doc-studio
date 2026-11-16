@@ -15,6 +15,8 @@ from dataclasses import dataclass
 from datetime import date
 
 from hse_doc_studio.core.catalog import TemplateVersion
+from hse_doc_studio.core.pack_studio.outcome.atlas import AtlasTooLarge
+from hse_doc_studio.core.pack_studio.outcome.coverage import RuleUniverse, outcomes_universe
 from hse_doc_studio.core.pack_studio.outcome.inputs import OutcomeInputError, input_specs, normalize_inputs
 from hse_doc_studio.core.pack_studio.outcome.model import Outcome
 from hse_doc_studio.core.pack_studio.outcome.scenario_check import (
@@ -27,6 +29,7 @@ from hse_doc_studio.core.pack_studio.outcome.scenario_check import (
 )
 from hse_doc_studio.core.pack_studio.outcome.scenarios import Scenario, version_matches
 from hse_doc_studio.core.pack_studio.preview import AUTO_NORMAL, PreviewExample
+from hse_doc_studio.use_cases.pack_studio.outcome.lint import scan_atlas
 from hse_doc_studio.use_cases.pack_studio.outcome.resolve import resolve
 
 
@@ -89,15 +92,18 @@ def resolve_scenario(  # noqa: PLR0913 — версия, наборы, сцен�
         raise ScenarioRunError(f"{exc.field}={exc.value!r}: {exc.reason}") from None
 
 
-def run_scenarios(  # noqa: PLR0913 — версия, наборы, сценарии и день
+def run_scenarios(  # noqa: PLR0913 — версия, наборы, сценарии, день и готовый универсум
     version: TemplateVersion,
     examples: Sequence[PreviewExample],
     scenarios: Mapping[str, Scenario | str],
     today: date,
     *,
     revision: str = "",
+    universe: RuleUniverse | None = None,
 ) -> ScenarioRun:
-    """Прогон сценариев на версии. Значение `str` у сценария это ошибка файла (он не разобран): статус `error`."""
+    """Прогон сценариев на версии. Значение `str` у сценария это ошибка файла (он не разобран): статус `error`.
+
+    Покрытие считается по строкам атласа (`universe`; без него атлас строится здесь, служба передаёт кэшированный)."""
     results: list[ScenarioResult] = []
     outcomes: dict[str, Outcome] = {}
     for scenario_id, scenario in scenarios.items():
@@ -125,8 +131,20 @@ def run_scenarios(  # noqa: PLR0913 — версия, наборы, сценар
         errors=counts["error"],
         unchecked=len(results) - sum(counts.values()),
         results=tuple(results),
-        coverage=coverage_of(coverage_universe(version, examples, today), outcomes, total=len(results)),
+        coverage=coverage_of(universe or atlas_universe(version, examples, today), outcomes, total=len(results)),
     )
+
+
+def atlas_universe(version: TemplateVersion, examples: Sequence[PreviewExample], today: date) -> RuleUniverse:
+    """Универсум покрытия по строкам атласа на наборе «Обычный». Атлас больше предела: приближение по умолчаниям и
+    переключению вводных по одной (`coverage_universe`), покрытие в этом случае нижняя граница (`approximate`)."""
+    example = next((e for e in examples if e.id == AUTO_NORMAL and e.error is None), None)
+    if example is None:
+        return RuleUniverse()
+    try:
+        return scan_atlas(version, example, today).universe
+    except AtlasTooLarge:
+        return outcomes_universe(coverage_universe(version, examples, today))
 
 
 def coverage_universe(version: TemplateVersion, examples: Sequence[PreviewExample], today: date) -> tuple[Outcome, ...]:

@@ -27,6 +27,7 @@ from hse_doc_studio.core.rate_limit import (
     LINK_TOKEN,
     PACK_ATLAS,
     PACK_OUTCOME,
+    PACK_OUTCOME_LINT,
     UPLOAD,
     IRateLimiter,
     RateRule,
@@ -56,6 +57,11 @@ EXPENSIVE_ROUTES: Mapping[RouteKey, RateRule] = {
     ("POST", "/projects/{project_id}/git/bundle/import"): GIT_SYNC,
     # Студия шаблонов: таблица исходов считает тысячи комбинаций (кэш и 304 дёшевы, но попадают в тот же счёт).
     ("GET", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/outcome/atlas"): PACK_ATLAS,
+    # Линтер результата (срез O8): атлас с результатом каждой строки и прогон сценариев.
+    (
+        "GET",
+        "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/outcome/lint",
+    ): PACK_OUTCOME_LINT,
 }
 
 

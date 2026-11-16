@@ -13,16 +13,16 @@
 from __future__ import annotations
 
 import json
-from collections.abc import Collection, Iterable, Mapping
+from collections.abc import Collection, Iterable
 from dataclasses import dataclass
 from typing import Literal
 
+from hse_doc_studio.core.pack_studio.outcome.coverage import Coverage, RuleCoverage, coverage_of
 from hse_doc_studio.core.pack_studio.outcome.model import (
     Digest,
     DigestPoint,
     Outcome,
     PointOutcome,
-    RuleRef,
     SectionName,
     SectionPrint,
 )
@@ -369,65 +369,16 @@ def judge(scenario: Scenario, outcome: Outcome) -> Verdict:
     return Verdict("failed" if failures else "passed", tuple(failures), changes)
 
 
-# ── Покрытие правил сценариями ───────────────────────────────────────────────
-
-
-@dataclass(frozen=True, slots=True)
-class RuleCoverage:
-    rule: RuleRef
-    kind: str
-    # Исходы, которые видели сценарии: `held` и `not_held` (`skipped` не считается).
-    seen: tuple[Literal["held", "not_held"], ...]
-    scenarios: tuple[str, ...]
-
-
-@dataclass(frozen=True, slots=True)
-class Coverage:
-    """Покрытие правил манифеста сценариями (6.2 дизайна). `rules` только покрытые не полностью."""
-
-    scenarios: int
-    rules_total: int
-    rules_covered: int
-    rules_half: int
-    rules_uncovered: int
-    rules: tuple[RuleCoverage, ...]
-
-
-def coverage_of(universe: Iterable[Outcome], seen_by: Mapping[str, Outcome], *, total: int | None = None) -> Coverage:
-    """Покрытие. `universe` это результаты, по трассам которых определяется набор правил (атлас или его замена),
-    `seen_by` результаты сценариев по id (у сценариев с ошибкой результата нет), `total` число всех сценариев (по
-    умолчанию столько, сколько результатов). Правило покрыто полностью, если
-    сценарии видели оба исхода, наполовину, если один, не покрыто, если ни одного."""
-    kinds: dict[RuleRef, str] = {}
-    for outcome in (*universe, *seen_by.values()):
-        for entry in outcome.trace:
-            kinds.setdefault(entry.rule, entry.kind)
-    outcomes: dict[RuleRef, set[str]] = {rule: set() for rule in kinds}
-    owners: dict[RuleRef, list[str]] = {rule: [] for rule in kinds}
-    for scenario_id, outcome in seen_by.items():
-        for entry in outcome.trace:
-            if entry.status == "skipped":
-                continue
-            outcomes[entry.rule].add(entry.status)
-            if scenario_id not in owners[entry.rule]:
-                owners[entry.rule].append(scenario_id)
-    full = sum(1 for seen in outcomes.values() if len(seen) == 2)  # noqa: PLR2004 — held и not_held
-    half = sum(1 for seen in outcomes.values() if len(seen) == 1)
-    partial = tuple(
-        RuleCoverage(
-            rule,
-            kinds[rule],
-            tuple(s for s in ("held", "not_held") if s in seen),
-            tuple(owners[rule]),
-        )
-        for rule, seen in outcomes.items()
-        if len(seen) < 2  # noqa: PLR2004
-    )
-    return Coverage(
-        scenarios=len(seen_by) if total is None else total,
-        rules_total=len(kinds),
-        rules_covered=full,
-        rules_half=half,
-        rules_uncovered=len(kinds) - full - half,
-        rules=partial,
-    )
+__all__ = [
+    "Change",
+    "Coverage",
+    "Failure",
+    "RuleCoverage",
+    "StatusName",
+    "Verdict",
+    "check_assertions",
+    "coverage_of",
+    "diff_digest",
+    "judge",
+    "snapshot_fingerprint",
+]

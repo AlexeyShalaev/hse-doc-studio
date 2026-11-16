@@ -22,7 +22,7 @@ ReadOnlyReason = Literal["version_released", "releases_read_only"]
 YamlOpName = Literal["set", "insert", "delete", "move"]
 GrantSubjectName = Literal["user", "group"]
 DiagnosticSeverityName = Literal["error", "warning"]
-DiagnosticCheckName = Literal["lint", "schema"]
+DiagnosticCheckName = Literal["lint", "schema", "outcome"]
 LintScopeName = Literal["version", "file", "none"]
 
 
