@@ -586,6 +586,21 @@ button.ps-problem:hover {
 .ps-git-notice {
   flex-basis: 100%;
 }
+/* Подсказка сервера к workspace_git_failed: свёрнута, раскрывается для пересылки. */
+.ps-error-hint {
+  margin-top: 0.25rem;
+}
+.ps-error-hint summary {
+  cursor: pointer;
+  color: var(--fg-2);
+}
+.ps-error-hint code {
+  display: block;
+  margin-top: 0.25rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: all;
+}
 .ps-git-branch {
   display: inline-flex;
   align-items: center;

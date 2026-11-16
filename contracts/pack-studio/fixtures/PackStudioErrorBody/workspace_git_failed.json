@@ -1,0 +1,5 @@
+{
+  "detail": "Не удалось прочитать локальную копию репозитория. Если ошибка повторится, перешлите админу поле hint.",
+  "code": "workspace_git_failed",
+  "hint": "git status: fatal: transport 'https' not allowed | fatal: could not fetch 0d20b6487c61e7d1bde93acf4a14b7a89083a16d from promisor remote"
+}

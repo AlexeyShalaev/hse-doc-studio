@@ -1,4 +1,5 @@
-"""Состояние ветки в частичном клоне: только локальные команды и без чтения блобов базы; сбой локального git."""
+"""Состояние ветки в частичном клоне: локальные команды без чтения блобов базы, догрузка недостающего объекта с
+доступом пространства и безопасная подсказка к сбою локального git."""
 
 from __future__ import annotations
 
@@ -17,9 +18,13 @@ from hse_doc_studio.core.pack_studio.git_flow import ChangeStatus
 from hse_doc_studio.core.vcs.entities import VcsAuthor
 from hse_doc_studio.infra.pack_studio.workspace_git import (
     PackWorkspaceGit,
+    _blob_oids,
+    _control_paths,
     _parse_raw,
+    _promised_object,
     _store_config,
     _subcommand,
+    git_hint,
     workspace_dirs,
 )
 
@@ -27,6 +32,9 @@ _BASE_OID = "1" * 40
 _ZERO = "0" * 40
 _HEAD = "a" * 40
 _PATHS = ("packs/demo/edited.tex", "packs/demo/same.tex", "packs/demo/new.tex", "packs/demo/gone.tex")
+_TARGET = RemoteTarget(url=parse_remote_url("https://github.com/acme/packs"))
+_IGNORE_OID = "e" * 40
+_PROMISOR_MISS = f"fatal: transport 'https' not allowed\nfatal: could not fetch {_IGNORE_OID} from promisor remote\n"
 
 
 def _raw(*rows: tuple[str, str, str, str]) -> bytes:
@@ -94,7 +102,7 @@ async def test__status__is_local_and_never_compares_file_contents_with_the_base(
     runner = _status_runner()
     git = PackWorkspaceGit(runner, GitConfig())  # type: ignore[arg-type]
 
-    status = await git.status(workspace_dirs(_tree(tmp_path)), base_branch="main", packs_path="packs")
+    status = await git.status(workspace_dirs(_tree(tmp_path)), _TARGET, base_branch="main", packs_path="packs")
 
     assert runner.network == []
     # Porcelain `git diff <база>` читает блоб базы для правленого файла: в частичном клоне его может не быть.
@@ -119,25 +127,105 @@ async def test__commit__staged_check_is_plumbing_without_rename_detection(tmp_pa
     git = PackWorkspaceGit(runner, GitConfig())  # type: ignore[arg-type]
     author = VcsAuthor(name="Анна", email="anna@example.org")
 
-    sha = await git.commit(workspace_dirs(tmp_path), packs_path="packs", message="m", author=author)
+    sha = await git.commit(workspace_dirs(tmp_path), _TARGET, packs_path="packs", message="m", author=author)
 
     assert sha is None
     assert runner.network == []
     assert any(args[-4:] == ["--cached", "--quiet", "HEAD", "--"] for args in runner.local)
 
 
-async def test__local_failure__is_a_workspace_error_without_git_output(tmp_path: Path) -> None:
-    stderr = "fatal: transport 'https' not allowed\nfatal: could not fetch abc from promisor remote"
+async def test__local_failure__is_a_workspace_error_with_a_safe_hint(tmp_path: Path) -> None:
+    stderr = "fatal: not a git repository: '/data/pack-studio/ws/git'\n"
     runner = _Runner({"rev-parse": lambda _a: GitResult(128, b"", stderr)})
     git = PackWorkspaceGit(runner, GitConfig())  # type: ignore[arg-type]
 
     with pytest.raises(PackStudioError) as caught:
-        await git.status(workspace_dirs(tmp_path), base_branch="main", packs_path="packs")
+        await git.status(workspace_dirs(tmp_path), _TARGET, base_branch="main", packs_path="packs")
 
     assert caught.value.code is PackStudioErrorCode.workspace_git_failed
     assert caught.value.status == 409  # noqa: PLR2004 — не 502: хостинг тут ни при чём
-    assert "promisor" not in caught.value.detail
-    assert "transport" not in caught.value.detail
+    assert "repository" not in caught.value.detail
+    assert caught.value.ctx == {"hint": "git rev-parse: fatal: not a git repository: '<path>'"}
+    assert runner.network == []
+
+
+def _ignore_rules_missing_once() -> _Runner:
+    """Свежий клон: `status` читает корневой `.gitignore` из индекса, а его блоба нет, пока его не догрузили."""
+    fetched: set[str] = set()
+
+    class _Store(_Runner):
+        async def run(self, args: Sequence[str], **kwargs: Any) -> GitResult:
+            fetched.update(arg for arg in args if len(arg) == 40)  # noqa: PLR2004 — идентификатор объекта
+            return await super().run(args, **kwargs)
+
+    def status(_args: list[str]) -> GitResult:
+        if _IGNORE_OID in fetched:
+            return GitResult(0, b" M packs/demo/edited.tex\0", "")
+        return GitResult(128, b"", _PROMISOR_MISS)
+
+    def ls_tree(_args: list[str]) -> GitResult:
+        return GitResult(
+            0, f"100644 blob {_IGNORE_OID}\t.gitignore\0100644 blob {'b' * 40}\tpacks/x.tex\0".encode(), ""
+        )
+
+    def rev_list(args: list[str]) -> GitResult:
+        if "--missing=print" in args:
+            missing = "" if _IGNORE_OID in fetched else f"?{_IGNORE_OID}\n"
+            return GitResult(0, f"{_HEAD}\n{missing}".encode(), "")
+        return GitResult(0, b"0\t0\n", "")
+
+    return _Store(
+        {
+            "rev-parse": lambda _a: GitResult(0, f"{_HEAD}\n".encode(), ""),
+            "symbolic-ref": lambda _a: GitResult(1, b"", ""),
+            "status": status,
+            "diff-index": lambda _a: GitResult(0, b"", ""),
+            "for-each-ref": lambda _a: GitResult(0, b"refs/remotes/origin/main\n", ""),
+            "ls-tree": ls_tree,
+            "rev-list": rev_list,
+        }
+    )
+
+
+async def test__status__missing_ignore_rules_blob__is_fetched_with_access_and_status_repeats(tmp_path: Path) -> None:
+    runner = _ignore_rules_missing_once()
+    git = PackWorkspaceGit(runner, GitConfig())  # type: ignore[arg-type]
+    dirs = workspace_dirs(tmp_path)
+    (dirs.git / "info").mkdir(parents=True)
+    (dirs.git / "info" / "sparse-checkout").write_text("/packs/\n", encoding="utf-8")
+
+    status = await git.status(dirs, _TARGET, base_branch="main", packs_path="packs")
+
+    assert [c.path for c in status.uncommitted] == ["demo/edited.tex"]
+    # Одна выборка по идентификатору: только недостающий блоб, без согласования истории; сам status в сеть не ходил.
+    (fetch,) = runner.network
+    assert fetch[:3] == ["-c", "fetch.negotiationAlgorithm=noop", "fetch"]
+    assert fetch[fetch.index("--") + 1 :] == ["origin", _IGNORE_OID]
+    assert "--filter=blob:none" in fetch
+    statuses = [args for args in runner.local if _subcommand(args) == "status"]
+    assert len(statuses) == 2  # noqa: PLR2004 — упал, догрузил, повторил
+    # Пути для догрузки: папка паков и файлы правил на пути к ней.
+    ls_tree = next(args for args in runner.local if _subcommand(args) == "ls-tree")
+    assert ls_tree[ls_tree.index("--") + 1 :][:3] == ["packs", ".gitignore", ".gitattributes"]
+
+
+async def test__local_failure__object_never_arrives__stops_after_a_few_rounds(tmp_path: Path) -> None:
+    runner = _Runner(
+        {
+            "rev-parse": lambda _a: GitResult(0, f"{_HEAD}\n".encode(), ""),
+            "status": lambda _a: GitResult(128, b"", _PROMISOR_MISS),
+        }
+    )
+    git = PackWorkspaceGit(runner, GitConfig())  # type: ignore[arg-type]
+
+    with pytest.raises(PackStudioError) as caught:
+        await git.status(workspace_dirs(tmp_path), _TARGET, base_branch="main", packs_path="packs")
+
+    assert caught.value.code is PackStudioErrorCode.workspace_git_failed
+    assert len(runner.network) == 3  # noqa: PLR2004 — _LAZY_ROUNDS
+    hint = str(caught.value.ctx["hint"])
+    assert hint.startswith("git status: fatal: transport 'https' not allowed | fatal: could not fetch")
+    assert _IGNORE_OID in hint
 
 
 async def test__local_timeout__keeps_its_own_code(tmp_path: Path) -> None:
@@ -156,9 +244,7 @@ async def test__local_timeout__keeps_its_own_code(tmp_path: Path) -> None:
 async def test__diff__needs_base_contents_and_goes_through_the_network_runner(tmp_path: Path) -> None:
     runner = _Runner()
     git = PackWorkspaceGit(runner, GitConfig())  # type: ignore[arg-type]
-    target = RemoteTarget(url=parse_remote_url("https://github.com/acme/packs"))
-
-    await git.diff(workspace_dirs(tmp_path), target, base_branch="main", packs_path="packs", max_bytes=1000)
+    await git.diff(workspace_dirs(tmp_path), _TARGET, base_branch="main", packs_path="packs", max_bytes=1000)
 
     (network,) = runner.network
     assert _subcommand(network) == "diff"
@@ -199,3 +285,58 @@ def test__parse_raw__reads_oids_status_and_paths_with_spaces() -> None:
 )
 def test__subcommand__skips_global_options_and_their_values(args: list[str], expected: str) -> None:
     assert _subcommand(args) == expected
+
+
+@pytest.mark.parametrize(
+    ("stderr", "expected"),
+    [
+        (
+            "fatal: unable to access 'https://x-access-token:ghp_abcdefghijklmnopqrstuvwxyz0123456789@github.com/a/b.git/'",
+            "git fetch: fatal: unable to access '<url>",
+        ),
+        ("fatal: '/srv/hse/pack-studio/1/git' does not appear to be a git repository", "git fetch: fatal: '<path>'"),
+        ("error: git@github.com:acme/packs.git refused", "git fetch: error: <url> refused"),
+        (
+            "warning: x\nfatal: bad object refs/remotes/origin/main",
+            "git fetch: fatal: bad object refs/remotes/origin/main",
+        ),
+        ("", "git fetch"),
+    ],
+)
+def test__git_hint__no_addresses_tokens_or_server_paths(stderr: str, expected: str) -> None:
+    hint = git_hint("fetch", stderr)
+
+    assert hint.startswith(expected)
+    assert "ghp_" not in hint
+    assert "/srv" not in hint
+    assert "github.com" not in hint
+
+
+def test__git_hint__is_short_and_printable() -> None:
+    hint = git_hint("status", "fatal: " + "x" * 1000 + "\x1b[31m")
+
+    assert len(hint) <= 320  # noqa: PLR2004 — подсказка, а не журнал
+    assert "\x1b" not in hint
+
+
+def test__promised_object__oid_from_the_lazy_fetch_failure() -> None:
+    assert _promised_object(_PROMISOR_MISS) == _IGNORE_OID
+    assert _promised_object("fatal: could not read Username") is None
+
+
+def test__control_paths__root_and_every_folder_above_the_packs() -> None:
+    assert _control_paths("packs") == [".gitignore", ".gitattributes", ".gitmodules"]
+    assert _control_paths("a/b") == [
+        ".gitignore",
+        ".gitattributes",
+        ".gitmodules",
+        "a/.gitignore",
+        "a/.gitattributes",
+        "a/.gitmodules",
+    ]
+
+
+def test__blob_oids__only_blobs_of_ls_tree() -> None:
+    raw = f"100644 blob {'1' * 40}\tpacks/a b.tex\0160000 commit {'2' * 40}\tsub\0".encode()
+
+    assert _blob_oids(raw) == {"1" * 40}

@@ -331,8 +331,8 @@ _TABLE: dict[PackStudioErrorCode, tuple[int, str, str]] = {
     _C.pack_not_found: (404, "Пак не найден в рабочем пространстве.", "Pack not found in the workspace."),
     _C.workspace_git_failed: (
         409,
-        "Не удалось прочитать локальную копию репозитория. Если ошибка повторится, создайте пространство заново.",
-        "The local copy of the repository could not be read. If the error repeats, create the workspace again.",
+        "Не удалось прочитать локальную копию репозитория. Если ошибка повторится, перешлите админу поле hint.",
+        "The local copy of the repository could not be read. If the error repeats, send the hint to the admin.",
     ),
 }
 

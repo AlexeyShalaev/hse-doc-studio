@@ -1,9 +1,9 @@
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  packErrorText,
   useSwitchPackBranch,
   type PackGit,
+  PackErrorText,
 } from "@entities/pack-studio";
 import { toast } from "@shared/lib";
 import { Button, Input, Modal } from "@shared/ui";
@@ -126,7 +126,11 @@ export const BranchDialog = ({
           <Notice tone="info" role="status" text={t("git.branch.dirtyHint")} />
         )}
         {change.isError && (
-          <Notice tone="err" role="alert" text={packErrorText(change.error)} />
+          <Notice
+            tone="err"
+            role="alert"
+            text={<PackErrorText error={change.error} />}
+          />
         )}
       </div>
     </Modal>

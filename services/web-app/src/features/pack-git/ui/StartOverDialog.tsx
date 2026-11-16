@@ -1,9 +1,9 @@
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  packErrorText,
   useStartPackOver,
   type PackGit,
+  PackErrorText,
 } from "@entities/pack-studio";
 import { toast } from "@shared/lib";
 import { Button, Modal } from "@shared/ui";
@@ -108,7 +108,7 @@ export const StartOverDialog = ({
           <Notice
             tone="err"
             role="alert"
-            text={packErrorText(startOver.error)}
+            text={<PackErrorText error={startOver.error} />}
           />
         )}
       </div>

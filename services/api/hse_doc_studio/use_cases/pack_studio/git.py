@@ -313,7 +313,11 @@ class PackGitService:
             report = await asyncio.to_thread(self._checker.check, root, touched_scopes(status.changed), {})
             text = default_commit_message(self._summaries(ws, status, report))
         sha = await self._git.commit(
-            self._workspaces.dirs_of(ws), packs_path=ws.packs_path, message=text, author=self._author.author()
+            self._workspaces.dirs_of(ws),
+            self._workspaces.target_of(ws),
+            packs_path=ws.packs_path,
+            message=text,
+            author=self._author.author(),
         )
         return ws, sha
 
@@ -511,7 +515,10 @@ class PackGitService:
 
     async def _status(self, ws: PackWorkspace) -> WorkGitStatus:
         return await self._git.status(
-            self._workspaces.dirs_of(ws), base_branch=ws.base_branch or "", packs_path=ws.packs_path
+            self._workspaces.dirs_of(ws),
+            self._workspaces.target_of(ws),
+            base_branch=ws.base_branch or "",
+            packs_path=ws.packs_path,
         )
 
     async def _view(self, ws: PackWorkspace) -> GitView:

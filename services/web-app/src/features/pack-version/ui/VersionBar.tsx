@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
-  packErrorText,
   useMovePackVersionEdits,
   usePackVersionState,
   versionDirOf,
@@ -18,6 +17,7 @@ import {
   type PackVersionMoved,
   type PackVersionState,
   type UpdateClass,
+  PackErrorText,
 } from "@entities/pack-studio";
 import { pickLocalized, toast } from "@shared/lib";
 import { Button, Modal, Spinner } from "@shared/ui";
@@ -94,7 +94,11 @@ export const VersionBar = ({
   if (state.isError) {
     return (
       <div className="ps-version-bar" data-testid="version-bar">
-        <Notice tone="err" role="alert" text={packErrorText(state.error)} />
+        <Notice
+          tone="err"
+          role="alert"
+          text={<PackErrorText error={state.error} />}
+        />
       </div>
     );
   }
@@ -203,7 +207,11 @@ export const VersionBar = ({
           }
         >
           {move.isError ? (
-            <Notice tone="err" role="alert" text={packErrorText(move.error)} />
+            <Notice
+              tone="err"
+              role="alert"
+              text={<PackErrorText error={move.error} />}
+            />
           ) : null}
         </Modal>
       </div>
