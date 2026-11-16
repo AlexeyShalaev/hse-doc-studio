@@ -1031,3 +1031,140 @@
   white-space: normal;
   line-height: 1.25;
 }
+
+/* ── секции F5: проверки, ветки и варианты ── */
+.po-part-status {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--fg-2);
+}
+.po-part-status:empty {
+  display: none;
+}
+.po-layer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+}
+.po-layer-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.125rem 0.5rem;
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--fg-1);
+}
+.po-pick-badges .chip svg {
+  flex-shrink: 0;
+}
+.po-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0 0.625rem 0.5rem;
+  min-width: 0;
+}
+.po-alts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.po-alt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  min-width: 0;
+  padding: 0.25rem 0.375rem;
+  border-radius: var(--r-2, 0.375rem);
+  font-size: 0.8125rem;
+}
+.po-alt[data-chosen="true"] {
+  background: var(--bg-2);
+}
+.po-alt-value {
+  min-width: 0;
+  color: var(--fg-0);
+  overflow-wrap: anywhere;
+}
+.po-alt .btn {
+  margin-left: auto;
+}
+.po-deltas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.125rem 0.625rem;
+  min-width: 0;
+}
+.po-delta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+}
+.po-delta-section {
+  color: var(--fg-2);
+}
+.po-delta-part {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.po-delta-part[data-kind="added"] {
+  color: var(--c-ok);
+}
+.po-delta-part[data-kind="changed"] {
+  color: var(--c-info);
+}
+.po-delta-part[data-kind="removed"] {
+  color: var(--c-err);
+}
+.po-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 11rem), 1fr));
+  gap: 0.5rem 0.75rem;
+  margin: 0;
+}
+.po-fact {
+  min-width: 0;
+}
+.po-fact dt {
+  margin: 0;
+}
+.po-fact dd {
+  margin: 0.0625rem 0 0;
+  font-size: 0.8125rem;
+  color: var(--fg-0);
+  overflow-wrap: anywhere;
+}
+.po-prints {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.po-print {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  padding: 0.1875rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  font-size: 0.75rem;
+  color: var(--fg-1);
+}
+.po-print-count {
+  font-weight: 600;
+  color: var(--fg-0);
+  font-variant-numeric: tabular-nums;
+}

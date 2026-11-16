@@ -17,7 +17,6 @@ import {
   usePackOutcomeInputs,
   usePackScenarios,
   usePackTree,
-  type OutcomeElementRef,
   type PackOutcomeRequest,
   type PackTree,
   type PackVersionRef,
@@ -28,7 +27,7 @@ import { EmptyState, ErrorState, Modal, Spinner } from "@shared/ui";
 import { elementKey, linkedElements } from "./lib/inputs";
 import { useLastDefined } from "./lib/lastDefined";
 import { useOutcomePanels } from "./lib/panels";
-import { useOutcomeUrlState } from "./lib/urlState";
+import { useOutcomeUrlState, type OutcomeSelection } from "./lib/urlState";
 import { summarize } from "./lib/summary";
 import { OutcomeModelContext, type OutcomeModel } from "./model";
 import { FilesDrawer } from "./ui/FilesDrawer";
@@ -65,14 +64,14 @@ const findLocation = (
   return null;
 };
 
-const sameElement = (a: OutcomeElementRef | null, b: OutcomeElementRef) =>
+const sameElement = (a: OutcomeSelection | null, b: OutcomeSelection) =>
   a !== null && a.section === b.section && a.id === b.id;
 
 /**
  * Экран «Результат» (template-studio-outcome.md, срез F1): что получит студент при выбранных
  * вводных. Каркас из верхней панели и трёх колонок «Вводные | Результат | Правила и причины».
- * Состояние живёт в адресе, данные приходят хуками контракта (на эталонах, пока нет сервера),
- * наполнение панелей и секций делают срезы F2 до F7. Клиент условий не считает.
+ * Состояние живёт в адресе, данные приходят хуками контракта (с сервера, в dev по переключателю
+ * на эталонах), наполнение панелей и секций делают срезы F2 до F7. Клиент условий не считает.
  */
 export const OutcomeBody = ({ workspace, version }: OutcomeBodyProps) => {
   const { t } = useTranslation("packOutcome");
@@ -125,7 +124,7 @@ export const OutcomeBody = ({ workspace, version }: OutcomeBodyProps) => {
 
   const { update } = url;
   const select = useCallback(
-    (element: OutcomeElementRef | null) => {
+    (element: OutcomeSelection | null) => {
       const next =
         element !== null && sameElement(url.state.selected, element)
           ? null
@@ -154,6 +153,8 @@ export const OutcomeBody = ({ workspace, version }: OutcomeBodyProps) => {
       elements: highlightElements,
       setInput: setHighlightInput,
     },
+    workspaceKind: workspace.kind,
+    git: git.data,
   };
 
   // F6 и Shift+F6 переводят фокус между тремя областями, Alt+Z показывает и прячет «Почему?».

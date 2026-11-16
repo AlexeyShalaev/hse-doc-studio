@@ -68,6 +68,8 @@ export const CapabilitiesSchema = z.strictObject({
   pack_studio: z.boolean(),
   // Профиль deploy/pack-studio (локально): стартовая страница /pack-studio, проекты скрыты.
   pack_studio_standalone: z.boolean(),
+  // Эндпоинты результата версии (срез O2): без них пространство открывается на «Файлах», а не на «Результате».
+  pack_outcome: z.boolean(),
 });
 export type Capabilities = z.infer<typeof CapabilitiesSchema>;
 

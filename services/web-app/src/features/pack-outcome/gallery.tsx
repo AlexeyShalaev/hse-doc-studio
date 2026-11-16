@@ -13,6 +13,8 @@ import {
   COURSEWORK_INPUTS,
   COURSEWORK_OUTCOME,
   COURSEWORK_SCENARIOS,
+  VKR_BRANCHES,
+  VKR_CHECKS,
   VKR_INPUTS,
   VKR_OUTCOME,
 } from "@entities/pack-studio/reference";
@@ -155,6 +157,7 @@ const seedWorkspace = (
   work: Work,
   inputsKind: InputsKind,
   edit?: (outcome: PackOutcome) => void,
+  parts: "ok" | "error" = "ok",
 ) => {
   const ref = refOf(work);
   const url = parseOutcomeSearch(new URLSearchParams(search));
@@ -217,6 +220,33 @@ const seedWorkspace = (
   if (kind === "ready") {
     edit?.(base);
     client.setQueryData(key, base);
+    // Правила проверок и ветки приходят отдельными запросами (`include`) раскрытых разделов.
+    const partKey = (part: "checks" | "branches") =>
+      packOutcomeKeys.result(id, ref, { ...request, include: [part] });
+    if (parts === "error") {
+      for (const part of ["checks", "branches"] as const) {
+        client
+          .getQueryCache()
+          .build(client, { queryKey: partKey(part) })
+          .setState({
+            status: "error",
+            fetchStatus: "idle",
+            data: undefined,
+            error: new ApiError("Внутренняя ошибка.", "internal_error", 500),
+            errorUpdateCount: 1,
+            errorUpdatedAt: Date.now(),
+          });
+      }
+    } else {
+      client.setQueryData(partKey("checks"), {
+        ...base,
+        checks: structuredClone(VKR_CHECKS),
+      });
+      client.setQueryData(partKey("branches"), {
+        ...base,
+        branches: structuredClone(VKR_BRANCHES),
+      });
+    }
   } else if (kind === "empty") {
     client.setQueryData(key, {
       ...base,
@@ -267,6 +297,8 @@ type Spec = {
   inputs?: InputsKind;
   /** Правка эталона под состояние, которого в эталонах нет (команда, руководитель «нет»). */
   edit?: (outcome: PackOutcome) => void;
+  /** Что отвечают запросы правил проверок и веток: данные или сбой. */
+  parts?: "ok" | "error";
 };
 
 /** Команда из двух: личные документы по авторам, у одного нет редакции на язык проекта. */
@@ -379,6 +411,37 @@ const SPECS: Spec[] = [
     edit: noSupervisor,
   },
   {
+    id: "po_checks",
+    title: "Секция «Проверки»",
+    note: "Правила по документам и слоям с движком и серьёзностью, выключенные в свёрнутом блоке, плашка про границы расчёта.",
+    kind: "ready",
+    search: "selected=checks:gost-7.32-2017/line-spacing",
+  },
+  {
+    id: "po_checks_error",
+    title: "Секция «Проверки»: сбой запроса",
+    note: "Правила не получены: плашка с причиной и повтором, остальной экран на месте.",
+    kind: "ready",
+    search: "selected=checks:gost-7.32-2017/line-spacing",
+    parts: "error",
+  },
+  {
+    id: "po_branches",
+    title: "Секция «Ветки и варианты»",
+    note: "Варианты документов, откат языка, что изменится при другом значении вводной, ветка пространства.",
+    kind: "ready",
+    search: "selected=branches:staffing",
+    edit: teamOfTwo,
+  },
+  {
+    id: "po_branches_error",
+    title: "Секция «Ветки и варианты»: сбой запроса",
+    note: "Варианты и язык показаны из основного расчёта, а блок «что изменится» сообщает о сбое.",
+    kind: "ready",
+    search: "selected=branches:staffing",
+    parts: "error",
+  },
+  {
     id: "po_student",
     title: "Режим «Как студент»",
     note: "Правая панель с правилами скрыта, остаётся то, что видит студент.",
@@ -489,6 +552,7 @@ export const getPackOutcomeGallery = (): GalleryGroup[] => [
             spec.work ?? "vkr",
             spec.inputs ?? "ready",
             spec.edit,
+            spec.parts,
           );
         },
         render: () => (

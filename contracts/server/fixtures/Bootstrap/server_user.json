@@ -41,7 +41,8 @@
     "git_remote": true,
     "git_server_login": false,
     "pack_studio": false,
-    "pack_studio_standalone": false
+    "pack_studio_standalone": false,
+    "pack_outcome": false
   },
   "csrf_token": "Wm3x0Qk7bVfN1c8RtYhA4uLsJp2eDg6o",
   "guest": null,

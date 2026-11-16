@@ -95,6 +95,8 @@ class PackStudioErrorCode(StrEnum):
     scenario_taken = "scenario_taken"
     atlas_too_large = "atlas_too_large"
     diff_base_unavailable = "diff_base_unavailable"
+    # Срез O2: расчёт не уложился в предел времени или процесс занят расчётами (503, `Retry-After`)
+    outcome_busy = "outcome_busy"
 
 
 _C = PackStudioErrorCode
@@ -370,6 +372,11 @@ _TABLE: dict[PackStudioErrorCode, tuple[int, str, str]] = {
         409,
         "Сравнивать не с чем: у рабочего пространства нет базовой ветки или нужной версии в ней.",
         "Nothing to compare with: the workspace has no base branch or the version is missing in it.",
+    ),
+    _C.outcome_busy: (
+        503,
+        "Расчёт результата не уложился в отведённое время или сервер занят другими расчётами. Повторите позже.",
+        "The outcome calculation took too long or the server is busy with other calculations. Try again later.",
     ),
 }
 

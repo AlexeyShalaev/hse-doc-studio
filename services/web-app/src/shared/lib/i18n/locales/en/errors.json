@@ -299,6 +299,7 @@
     "scenario_taken": "This template already has a scenario with this id.",
     "atlas_too_large": "The version has too many input combinations for the atlas. Pin some of the inputs.",
     "diff_base_unavailable": "Nothing to compare with: the workspace has no base branch or the version is missing in it.",
+    "outcome_busy": "The outcome calculation took too long or the server is busy with other calculations. Try again later.",
     "source_not_found": "Catalog source not found. Reload the page.",
     "source_busy": "This source is already being checked or applied. Wait for it to finish.",
     "source_kind_not_allowed": "This kind of source is not available here: a folder connects only in the local Studio.",

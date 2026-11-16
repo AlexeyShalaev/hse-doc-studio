@@ -8,6 +8,11 @@ import {
   type PackWorkspace,
 } from "@entities/pack-studio";
 import { i18n } from "@shared/lib";
+import {
+  LOCAL_BOOTSTRAP,
+  sessionKeys,
+  type Bootstrap,
+} from "@entities/session";
 import { loadPackStudioNamespace } from "@shared/lib/i18n/packStudioNamespace";
 import { OutcomeEntry } from "./OutcomeRoute";
 import { WorkspaceEntry } from "./WorkspaceEntry";
@@ -90,10 +95,21 @@ const Probe = () => {
   return <output data-testid="location">{`${pathname}${search}`}</output>;
 };
 
-const open = (url: string, versions = true) => {
+// Сервер, который считает результат, говорит `pack_outcome` в bootstrap (срез O2).
+const bootstrap = (pack_outcome: boolean): Bootstrap => ({
+  ...LOCAL_BOOTSTRAP,
+  capabilities: {
+    ...LOCAL_BOOTSTRAP.capabilities,
+    pack_studio: true,
+    pack_outcome,
+  },
+});
+
+const open = (url: string, versions = true, pack_outcome = true) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   });
+  client.setQueryData(sessionKeys.bootstrap(), bootstrap(pack_outcome));
   client.setQueryData(packStudioKeys.workspace(WS), workspace("ready"));
   client.setQueryData(packStudioKeys.tree(WS), tree(versions));
   render(
@@ -155,6 +171,32 @@ describe("вход в пространство Студии шаблонов", (
   it("?view=files открывает режим «Файлы» без файла", () => {
     open(`/pack-studio/w/${WS}?view=files`);
     expect(screen.getByTestId("files-mode")).toBeInTheDocument();
+  });
+
+  it("без capabilities.pack_outcome корень пространства открывает прежний экран «Файлы»", () => {
+    open(`/pack-studio/w/${WS}`, true, false);
+    expect(screen.getByTestId("files-mode")).toBeInTheDocument();
+    expect(screen.queryByTestId("outcome-page")).not.toBeInTheDocument();
+    expect(screen.getByTestId("location")).toHaveTextContent(
+      `/pack-studio/w/${WS}`,
+    );
+    expect(screen.getByTestId("location")).not.toHaveTextContent("/result");
+  });
+
+  it("без capabilities.pack_outcome ссылка на файл и ?view=files тоже ведут в «Файлы»", () => {
+    open(`/pack-studio/w/${WS}?file=hse-cs-sse/pack.yaml`, true, false);
+    expect(screen.getByTestId("files-mode")).toBeInTheDocument();
+    cleanup();
+    open(`/pack-studio/w/${WS}?view=files`, true, false);
+    expect(screen.getByTestId("files-mode")).toBeInTheDocument();
+  });
+
+  it("с capabilities.pack_outcome корень пространства по-прежнему «Результат»", async () => {
+    open(`/pack-studio/w/${WS}`, true, true);
+    await waitFor(() => {
+      expect(screen.getByTestId("outcome-page")).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId("files-mode")).not.toBeInTheDocument();
   });
 
   it("без версий в дереве: подсказка и переход в режим «Файлы»", async () => {

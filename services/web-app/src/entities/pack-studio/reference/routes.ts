@@ -16,15 +16,18 @@ import {
   COURSEWORK_INPUTS,
   COURSEWORK_OUTCOME,
   COURSEWORK_SCENARIOS,
+  VKR_BRANCHES,
+  VKR_CHECKS,
   VKR_INPUTS,
   VKR_OUTCOME,
 } from "./fixtures";
 
 // Подмена API результата «на эталонах»: тела ответов это эталоны контракта с подставленным
-// адресом (пространство, пак, шаблон, версия) и вводными запроса. Сервер результата пока не
-// готов (срезы O1 и O2), поэтому экран «Результат» разрабатывается и проверяется на них. Когда
-// эндпоинты появятся, переключатель «Сервер» отправляет те же запросы настоящему бэкенду, а
-// вызовы в приложении не меняются: подмена живёт только в транспорте axios.
+// адресом (пространство, пак, шаблон, версия) и вводными запроса. Она нужна только в разработке
+// и тестах: экран разрабатывается и проверяется на эталонах, не поднимая сервер. По умолчанию
+// запросы идут настоящему серверу (эндпоинты `outcome`, срез O2), а «Эталоны» в переключателе
+// dev-экрана включает подмену. Вызовы в приложении от этого не меняются: подмена живёт только в
+// транспорте axios и в рабочую сборку не попадает.
 
 /** Что подмена отвечает: нормальный ответ или состояние экрана, которое нужно увидеть. */
 export type ReferenceBehavior =
@@ -68,7 +71,7 @@ const write = (key: string, value: string): void => {
 };
 
 let source: ReferenceSource =
-  read(SOURCE_KEY) === "server" ? "server" : "reference";
+  read(SOURCE_KEY) === "reference" ? "reference" : "server";
 let behavior: ReferenceBehavior =
   REFERENCE_BEHAVIORS.find((item) => item === read(BEHAVIOR_KEY)) ?? "normal";
 const listeners = new Set<() => void>();
@@ -125,8 +128,13 @@ const outcomeFor = (params: Params, body: PackOutcomeRequest): PackOutcome => {
     ...(body.inputs ?? {}),
   };
   const include = body.include ?? [];
-  if (!include.includes("checks")) out.checks = null;
-  if (!include.includes("branches")) out.branches = null;
+  const vkr = base === VKR_OUTCOME;
+  out.checks = include.includes("checks")
+    ? (out.checks ?? (vkr ? structuredClone(VKR_CHECKS) : null))
+    : null;
+  out.branches = include.includes("branches")
+    ? (out.branches ?? (vkr ? structuredClone(VKR_BRANCHES) : null))
+    : null;
   if (behavior === "empty") {
     out.documents = [];
     out.meta = [];

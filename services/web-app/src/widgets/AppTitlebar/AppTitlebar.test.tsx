@@ -100,6 +100,7 @@ describe("AppTitlebar on a phone", () => {
         ...LOCAL_BOOTSTRAP.capabilities,
         pack_studio: true,
         pack_studio_standalone: true,
+        pack_outcome: true,
       },
     });
     expect(screen.queryByRole("button", { name: "Проекты" })).toBeNull();

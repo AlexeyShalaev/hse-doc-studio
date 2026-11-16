@@ -170,6 +170,8 @@ describe("панель «Вводные»", () => {
     proto.releasePointerCapture ??= () => undefined;
     proto.scrollIntoView ??= () => undefined;
     installOutcomeReference();
+    // Панель проверяется на эталонах: источник по умолчанию это сервер.
+    outcomeReference.setSource("reference");
     await Promise.all([loadPackOutcomeNamespace(), loadPackStudioNamespace()]);
     await i18n.changeLanguage("ru");
   });
@@ -179,6 +181,7 @@ describe("панель «Вводные»", () => {
   });
   afterEach(async () => {
     cleanup();
+    outcomeReference.setSource("reference");
     outcomeReference.setBehavior("normal");
     window.localStorage.clear();
     await i18n.changeLanguage("ru");

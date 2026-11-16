@@ -36,6 +36,7 @@ from hse_doc_studio.core.pack_studio.paths import (
     TEMPLATES_DIR,
     VERSION_MANIFEST,
     VERSIONS_DIR,
+    VersionRef,
     template_key,
 )
 from hse_doc_studio.core.pack_studio.protection import Protection
@@ -197,6 +198,38 @@ class LocalPackWorkspaceFiles:
             total += size
             if files > limits.max_tree_files or total > limits.max_tree_bytes:
                 raise PackStudioError(PackStudioErrorCode.workspace_too_large)
+
+    def version_manifests(self, root: Path, ref: VersionRef, *, max_bytes: int) -> dict[str, bytes]:
+        base = _root_of(root)
+        if not self.is_dir(base, ref.dir):
+            raise PackStudioError(PackStudioErrorCode.version_not_found, version=ref.version)
+        template_dir = f"{ref.pack}/{TEMPLATES_DIR}/{ref.template}"
+        found: dict[str, bytes] = {}
+        wanted = [(VERSION_MANIFEST, f"{ref.dir}/{VERSION_MANIFEST}")]
+        wanted += [
+            (f"files/{name}/doc.yaml", f"{ref.dir}/files/{name}/doc.yaml")
+            for name in self._names(base, f"{ref.dir}/files")
+        ]
+        wanted += [
+            (f"examples/{name}", f"{template_dir}/examples/{name}")
+            for name in self._names(base, f"{template_dir}/examples")
+        ]
+        for key, path in wanted:
+            try:
+                found[key] = self.read(base, path, max_bytes=max_bytes)
+            except PackStudioError:
+                continue
+        return found
+
+    @staticmethod
+    def _names(base: Path, path: str) -> list[str]:
+        """Имена записей папки без ссылок и служебных; нет папки или она ссылка: пусто."""
+        try:
+            folder = _walk_checked(base, path)
+            with os.scandir(folder) as entries:
+                return sorted(e.name for e in entries if e.name not in _SKIP_NAMES and not e.is_symlink())
+        except (PackStudioError, OSError):
+            return []
 
     @staticmethod
     def _make_parents(base: Path, path: str) -> None:

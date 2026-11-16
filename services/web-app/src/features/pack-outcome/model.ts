@@ -2,13 +2,15 @@ import { createContext, useContext } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 import type {
   OutcomeElementRef,
+  PackGit,
   PackOutcome,
   PackOutcomeInputs,
   PackOutcomeRequest,
   PackScenarioList,
   PackVersionRef,
+  PackWorkspace,
 } from "@entities/pack-studio";
-import type { OutcomeUrlControls } from "./lib/urlState";
+import type { OutcomeSelection, OutcomeUrlControls } from "./lib/urlState";
 
 /**
  * Подсветка элементов результата, связанных с вводной (клик по вводной в левой панели). Связи
@@ -50,8 +52,12 @@ export type OutcomeModel = {
   stale: boolean;
   inputs: UseQueryResult<PackOutcomeInputs>;
   scenarios: UseQueryResult<PackScenarioList>;
-  select: (element: OutcomeElementRef | null) => void;
+  select: (element: OutcomeSelection | null) => void;
   highlight: OutcomeHighlight;
+  /** Вид пространства: у папки без git нет веток и состояний `head` и `base`. */
+  workspaceKind: PackWorkspace["kind"];
+  /** Состояние git пространства (ветка, расхождение с базой); пока не пришло или без git пусто. */
+  git: PackGit | undefined;
 };
 
 export const OutcomeModelContext = createContext<OutcomeModel | null>(null);

@@ -30,6 +30,10 @@ describe("галерея экрана «Результат»", () => {
         "po_inputs_coursework",
         "po_inputs_error",
         "po_inputs_none",
+        "po_checks",
+        "po_checks_error",
+        "po_branches",
+        "po_branches_error",
       ]),
     );
   });
@@ -124,4 +128,43 @@ describe("галерея экрана «Результат»", () => {
         ?.getAttribute("aria-checked"),
     ).toBe("true");
   });
+
+  it.each([
+    ["po_checks", "outcome-check-gost-7.32-2017/line-spacing"],
+    ["po_branches", "outcome-branch-staffing"],
+  ])(
+    "запись %s показывает раскрытый раздел с данными из кэша",
+    (id, testId) => {
+      const entry = entries.find((e) => e.id === id);
+      const client = new QueryClient({
+        defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+      });
+      entry?.seed?.(client);
+      const { container } = render(
+        <QueryClientProvider client={client}>
+          <MemoryRouter>{entry?.render()}</MemoryRouter>
+        </QueryClientProvider>,
+      );
+      expect(
+        container.querySelector(`[data-testid="${testId}"]`),
+      ).not.toBeNull();
+    },
+  );
+
+  it.each(["po_checks_error", "po_branches_error"])(
+    "запись %s показывает сбой запроса части",
+    (id) => {
+      const entry = entries.find((e) => e.id === id);
+      const client = new QueryClient({
+        defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+      });
+      entry?.seed?.(client);
+      const { container } = render(
+        <QueryClientProvider client={client}>
+          <MemoryRouter>{entry?.render()}</MemoryRouter>
+        </QueryClientProvider>,
+      );
+      expect(container.querySelector('[role="alert"]')).not.toBeNull();
+    },
+  );
 });
