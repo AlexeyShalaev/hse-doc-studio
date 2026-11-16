@@ -11,7 +11,6 @@ import {
   usePackOutcomeInputs,
   usePackScenarios,
   usePackTree,
-  type OutcomeElementRef,
   type PackOutcomeRequest,
   type PackTree,
   type PackVersionRef,
@@ -21,7 +20,7 @@ import { useIsPhoneWidth } from "@shared/lib";
 import { EmptyState, ErrorState, Modal, Spinner } from "@shared/ui";
 import { useLastDefined } from "./lib/lastDefined";
 import { useOutcomePanels } from "./lib/panels";
-import { useOutcomeUrlState } from "./lib/urlState";
+import { useOutcomeUrlState, type OutcomeSelection } from "./lib/urlState";
 import { summarize } from "./lib/summary";
 import { OutcomeModelContext, type OutcomeModel } from "./model";
 import { FilesDrawer } from "./ui/FilesDrawer";
@@ -58,7 +57,7 @@ const findLocation = (
   return null;
 };
 
-const sameElement = (a: OutcomeElementRef | null, b: OutcomeElementRef) =>
+const sameElement = (a: OutcomeSelection | null, b: OutcomeSelection) =>
   a !== null && a.section === b.section && a.id === b.id;
 
 /**
@@ -106,7 +105,7 @@ export const OutcomeBody = ({ workspace, version }: OutcomeBodyProps) => {
 
   const { update } = url;
   const select = useCallback(
-    (element: OutcomeElementRef | null) => {
+    (element: OutcomeSelection | null) => {
       const next =
         element !== null && sameElement(url.state.selected, element)
           ? null
@@ -130,6 +129,8 @@ export const OutcomeBody = ({ workspace, version }: OutcomeBodyProps) => {
     inputs,
     scenarios,
     select,
+    workspaceKind: workspace.kind,
+    git: git.data,
   };
 
   // F6 и Shift+F6 переводят фокус между тремя областями, Alt+Z показывает и прячет «Почему?».

@@ -1,7 +1,10 @@
 import { useId, type ReactNode } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { useStoredFlag } from "../../lib/panels";
+import {
+  useSectionCollapse,
+  type SectionCollapse,
+} from "../../lib/sectionCollapse";
 
 export type SectionId =
   | "documents"
@@ -14,6 +17,8 @@ export type SectionId =
 
 type SectionShellProps = {
   id: SectionId;
+  /** Состояние свёрнутости снаружи (раздел грузит данные только раскрытым). */
+  collapse?: SectionCollapse;
   title: string;
   /** Счётчик в заголовке («14 из 18 в комплекте»); пусто, пока результата нет. */
   count: string | null;
@@ -28,15 +33,15 @@ type SectionShellProps = {
  */
 export const SectionShell = ({
   id,
+  collapse,
   title,
   count,
   loading,
   children,
 }: SectionShellProps) => {
   const { t } = useTranslation("packOutcome");
-  const [collapsed, setCollapsed] = useStoredFlag(
-    `hse-studio.packOutcome.section.${id}`,
-  );
+  const own = useSectionCollapse(id);
+  const [collapsed, setCollapsed] = collapse ?? own;
   const bodyId = useId();
   const Chevron = collapsed ? ChevronRight : ChevronDown;
   return (
