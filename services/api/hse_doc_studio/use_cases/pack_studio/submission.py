@@ -15,20 +15,16 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime, time
-from pathlib import Path
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.catalog import SlotCondition, SubmissionProfile, TemplateVersion
 from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.file_version import file_etag
 from hse_doc_studio.core.invitations.entities import SUPERVISOR_PERSONAS
-from hse_doc_studio.core.meta_defaults import apply_meta_defaults
 from hse_doc_studio.core.pack_studio.errors import PackStudioError, PackStudioErrorCode
 from hse_doc_studio.core.pack_studio.outcome.predicates import item_skipped, nda_enabled
 from hse_doc_studio.core.pack_studio.paths import VERSION_MANIFEST, VersionRef
-from hse_doc_studio.core.pack_studio.preview import SyntheticProject
 from hse_doc_studio.core.pack_studio.protocols import IPackSubmission
 from hse_doc_studio.core.pack_studio.submission import (
     MAX_SUBMISSION_OPS,
@@ -48,10 +44,9 @@ from hse_doc_studio.core.signatures.plan import AUTHOR_PERSONA, slot_persona
 from hse_doc_studio.core.signatures.route_order import default_route
 from hse_doc_studio.core.signing_route.entities import DocSlot
 from hse_doc_studio.core.team import is_doc_active, split_instance_id
-from hse_doc_studio.core.value_objects import ProjectLock
 from hse_doc_studio.use_cases.pack_studio.files import PackFilesService
 from hse_doc_studio.use_cases.pack_studio.preview import PackPreviewService, version_ref
-from hse_doc_studio.use_cases.projects.create_project import _build_documents
+from hse_doc_studio.use_cases.pack_studio.synthetic_project import synthetic_core_project
 from hse_doc_studio.use_cases.signing_route.point import RoutePoint, build_point
 from hse_doc_studio.use_cases.signing_route.preset import route_preset
 
@@ -135,35 +130,6 @@ class PackSubmissionService:
             return self._editor.describe(text)
         except (TypeError, ValueError) as exc:
             raise PackStudioError(PackStudioErrorCode.version_unreadable, reason=str(exc)[:300]) from None
-
-
-def synthetic_core_project(
-    pack_id: str, template_id: str, version: TemplateVersion, synthetic: SyntheticProject
-) -> Project:
-    """`Project` в памяти из синтетических данных, документы и мета как у `CreateProjectUC` (без папки и файлов)."""
-    authors = list(synthetic.authors)
-    created = datetime.combine(synthetic.today, time(12, 0), tzinfo=UTC)
-    return Project(
-        id=uuid4(),
-        name=synthetic.name,
-        folder=Path(),
-        lock=ProjectLock(
-            pack_id=pack_id, template_id=template_id, version=version.version, engine=version.engine_config.default
-        ),
-        kind=synthetic.kind,
-        staffing=synthetic.staffing,
-        lang=synthetic.lang,
-        authors=authors,
-        meta=apply_meta_defaults(version, dict(synthetic.meta), synthetic.today),
-        supervisor=synthetic.supervisor,
-        co_supervisor=synthetic.co_supervisor,
-        academic_supervisor=synthetic.academic_supervisor,
-        documents=_build_documents(
-            version, None, staffing=synthetic.staffing, authors=authors, shared_enabled=True, kind=synthetic.kind
-        ),
-        created_at=created,
-        updated_at=created,
-    )
 
 
 def _when(condition: SlotCondition | None) -> WhenCondition | None:

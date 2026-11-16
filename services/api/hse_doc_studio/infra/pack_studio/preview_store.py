@@ -257,6 +257,10 @@ def _to_json(build: PreviewBuild) -> dict[str, Any]:
         "has_anchors": build.has_anchors,
         "with_checks": build.with_checks,
         "checks": None if build.checks is None else _checks_json(build.checks),
+        "variant": build.variant,
+        "file_name": build.file_name,
+        "scenario": build.scenario,
+        "scenario_inputs": dict(build.scenario_inputs),
     }
 
 
@@ -317,4 +321,8 @@ def _from_json(raw: dict[str, Any]) -> PreviewBuild:
         has_anchors=bool(raw.get("has_anchors")),
         with_checks=bool(raw.get("with_checks")),
         checks=_checks_of(raw.get("checks")),
+        variant=raw.get("variant"),
+        file_name=raw.get("file_name"),
+        scenario=raw.get("scenario"),
+        scenario_inputs={str(k): str(v) for k, v in dict(raw.get("scenario_inputs") or {}).items()},
     )

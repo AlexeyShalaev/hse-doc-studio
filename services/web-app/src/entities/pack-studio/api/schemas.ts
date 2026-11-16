@@ -432,11 +432,24 @@ export const PackStudioOfficialAdminSchema = z.strictObject({
 });
 
 // Предпросмотр (срез T7): документы версии, переключатели, наборы данных и сборки.
+// Вариант документа для выбора при сборке (срез O9): `langs` пусто, если доступен при любом языке;
+// `pdf: false`, если из него PDF предпросмотра не выходит (RevealJS).
+export const PackPreviewVariantSchema = z.strictObject({
+  id: z.string(),
+  label: LocalizedSchema,
+  langs: z.array(z.string()),
+  pdf: z.boolean(),
+});
+
 export const PackPreviewDocumentSchema = z.strictObject({
   id: z.string(),
   name: LocalizedSchema,
   kinds: z.array(z.string()),
   staffing: z.array(z.string()),
+  // Срез O9: языки редакций, варианты и вариант по умолчанию; у ответа прежнего сервера их нет.
+  langs: z.array(z.string()).optional(),
+  variants: z.array(PackPreviewVariantSchema).optional(),
+  default_variant: z.string().nullish(),
 });
 
 export const PackPreviewSwitchSchema = z.strictObject({
@@ -475,6 +488,10 @@ export const StartPackPreviewRequestSchema = z.strictObject({
   combination: z.record(z.string(), z.string()).optional(),
   // Прогнать правила проверок версии на собранном документе (срез T14).
   checks: z.boolean().optional(),
+  // Вариант документа (срез O9): у запроса с одним документом.
+  variant: z.string().max(255).nullish(),
+  // Сценарий пака (срез O9): вводные и набор данных берутся из него, `combination` ложится поверх.
+  scenario: z.string().max(64).nullish(),
 });
 
 export const PackPreviewCheckSchema = z.strictObject({
@@ -509,6 +526,11 @@ export const PackPreviewBuildSchema = z.strictObject({
   // Сборка с проверками (срез T14); `checks` находки удачной сборки, null: проверок не было.
   with_checks: z.boolean().optional(),
   checks: z.array(PackPreviewCheckSchema).nullish(),
+  // Что вышло из запроса (срез O9): вариант документа, имя файла в пакете, сценарий и его вводные.
+  variant: z.string().nullish(),
+  file_name: z.string().nullish(),
+  scenario: z.string().nullish(),
+  scenario_inputs: z.record(z.string(), z.string()).optional(),
 });
 
 export const PackPreviewStartSchema = z.strictObject({
@@ -928,6 +950,7 @@ export type StartPackPreviewRequest = z.infer<
 export type PackPreviewSwitch = z.infer<typeof PackPreviewSwitchSchema>;
 export type PackPreviewExample = z.infer<typeof PackPreviewExampleSchema>;
 export type PackPreviewDocument = z.infer<typeof PackPreviewDocumentSchema>;
+export type PackPreviewVariant = z.infer<typeof PackPreviewVariantSchema>;
 export type PackFileChange = z.infer<typeof PackFileChangeSchema>;
 export type PackGit = z.infer<typeof PackGitSchema>;
 export type PackCommitResponse = z.infer<typeof PackCommitResponseSchema>;

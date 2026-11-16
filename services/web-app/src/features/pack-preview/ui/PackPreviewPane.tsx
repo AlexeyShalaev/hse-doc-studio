@@ -39,7 +39,9 @@ import { Notice } from "@shared/ui/ConflictKit";
 import {
   documentFits,
   effectiveCombination,
+  effectiveVariant,
   exampleOf,
+  variantFits,
   type Combination,
 } from "../lib/combination";
 import { selectionKey, usePreviewSelection } from "../lib/selection";
@@ -299,6 +301,8 @@ const Controls = ({
   onSwitch,
   document,
   onDocument,
+  variant,
+  onVariant,
 }: {
   options: PackPreviewOptions;
   example: string;
@@ -307,12 +311,18 @@ const Controls = ({
   onSwitch: (id: string, value: string) => void;
   document: string;
   onDocument: (id: string) => void;
+  /** Вариант документа, который уйдёт в сборку (срез O9); null: вариантов нет. */
+  variant: string | null;
+  onVariant: (id: string) => void;
 }) => {
   const { t, i18n } = useTranslation("packStudio");
   const text = useSwitchText();
   const exampleLabel = (id: string, label: Record<string, string> | null) =>
     label ? pickLocalized(label, i18n.language, id) : id;
   const chosen = exampleOf(options, example);
+  const variants =
+    options.documents.find((doc) => doc.id === document)?.variants ?? [];
+  const chosenVariant = variants.find((v) => v.id === variant);
   return (
     <div className="ps-preview-controls">
       <div className="field">
@@ -331,6 +341,32 @@ const Controls = ({
           }))}
         />
       </div>
+      {variants.length > 1 && variant !== null && (
+        <div className="field">
+          <label>{t("preview.variant")}</label>
+          <Select
+            value={variant}
+            onValueChange={onVariant}
+            ariaLabel={t("preview.variant")}
+            options={variants.map((v) => {
+              const name = pickLocalized(v.label, i18n.language, v.id);
+              return {
+                value: v.id,
+                label: variantFits(v, combination.lang)
+                  ? name
+                  : t("preview.variantLangs", {
+                      name,
+                      langs: v.langs.join(", "),
+                    }),
+                isDisabled: !variantFits(v, combination.lang),
+              };
+            })}
+          />
+          {chosenVariant && !chosenVariant.pdf && (
+            <p className="hint">{t("preview.variantNoPdf")}</p>
+          )}
+        </div>
+      )}
       <div className="field">
         <label>{t("preview.example")}</label>
         <Select
@@ -396,9 +432,10 @@ const PreviewForVersion = ({
   const start = useStartPackPreview(workspaceId);
   // Набор и переключатели общие с «Маршрутом в этой комбинации» формы точек (срез T13).
   const {
-    selection: { example, overrides },
+    selection: { example, overrides, variants },
     setExample,
     setSwitch,
+    setVariant,
     reset,
   } = usePreviewSelection(selectionKey(workspaceId, versionRef));
   const [document, setDocument] = useState<string | null>(null);
@@ -462,6 +499,11 @@ const PreviewForVersion = ({
     );
   }
 
+  const documentDef = opts.documents.find((doc) => doc.id === documentId);
+  const variant = documentDef
+    ? effectiveVariant(documentDef, variants[documentId], combination.lang)
+    : null;
+
   const run = () => {
     start.mutate(
       {
@@ -470,6 +512,8 @@ const PreviewForVersion = ({
           documents: [documentId],
           example: exampleId,
           combination,
+          // Только у документа с вариантами; прежний сервер поля не знает и вариантов не отдаёт.
+          ...(variant !== null && { variant }),
         },
       },
       {
@@ -529,6 +573,10 @@ const PreviewForVersion = ({
         onSwitch={setSwitch}
         document={documentId}
         onDocument={setDocument}
+        variant={variant}
+        onVariant={(id) => {
+          setVariant(documentId, id);
+        }}
       />
       <div className="ps-preview-run">
         <Button
@@ -540,7 +588,8 @@ const PreviewForVersion = ({
           {start.isPending ? <Spinner size="sm" /> : <Play size="0.75rem" />}
           {build.data ? t("preview.rebuild") : t("preview.build")}
         </Button>
-        {Object.keys(overrides).length > 0 && (
+        {(Object.keys(overrides).length > 0 ||
+          Object.keys(variants).length > 0) && (
           <Button size="sm" variant="ghost" onClick={reset}>
             <CircleX size="0.75rem" />
             {t("preview.resetSwitches")}
