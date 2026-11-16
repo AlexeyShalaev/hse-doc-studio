@@ -162,6 +162,10 @@ export default defineConfig(({ mode }) => {
             if (id.endsWith("/src/features/pack-outcome/index.ts")) {
               return "assets/pack-outcome-[hash].js";
             }
+            // Режимы «Матрица», «Атлас», «Сравнить» экрана «Результат» (срез F9): открывают реже результата.
+            if (id.endsWith("/src/features/pack-outcome/modes/index.ts")) {
+              return "assets/pack-outcome-modes-[hash].js";
+            }
             // Формы манифестов Студии шаблонов (срезы T11-T14): грузятся вкладкой «Форма».
             if (id.endsWith("/src/features/pack-submission-form/index.ts")) {
               return "assets/pack-submission-form-[hash].js";

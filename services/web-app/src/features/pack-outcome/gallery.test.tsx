@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { i18n } from "@shared/lib";
@@ -63,6 +63,15 @@ describe("галерея экрана «Результат»", () => {
         "po_why_error",
         "po_why_busy",
         "po_why_impact",
+        "po_mode_matrix",
+        "po_mode_matrix_error_row",
+        "po_mode_matrix_empty",
+        "po_mode_atlas",
+        "po_mode_atlas_vkr",
+        "po_mode_atlas_too_large",
+        "po_mode_compare",
+        "po_mode_compare_identical",
+        "po_mode_compare_no_base",
         "po_student",
         "po_student_no_supervisor",
         "po_student_team",
@@ -313,6 +322,40 @@ describe("галерея «Почему?»", () => {
         '[data-testid="outcome-chain-empty"]',
       ),
     ).not.toBeNull();
+  });
+
+  it.each([
+    ["po_mode_matrix", "outcome-matrix-cell-company-supervisor-route"],
+    ["po_mode_matrix_error_row", "outcome-matrix-message-company-supervisor"],
+    ["po_mode_matrix_empty", "outcome-matrix-empty"],
+    ["po_mode_matrix_too_large", "outcome-mode-too-large"],
+    ["po_mode_matrix_loading", "outcome-matrix-loading"],
+    ["po_mode_atlas", "outcome-atlas-detail"],
+    ["po_mode_atlas_vkr", "outcome-atlas-more"],
+    ["po_mode_atlas_pinned", "outcome-atlas-pins"],
+    ["po_mode_atlas_loading", "outcome-atlas-cancel"],
+    ["po_mode_atlas_busy", "outcome-mode-busy"],
+    ["po_mode_atlas_too_large", "outcome-atlas-pinchoose"],
+    ["po_mode_compare", "outcome-compare-section-route"],
+    ["po_mode_compare_identical", "outcome-compare-identical"],
+    ["po_mode_compare_no_base", "outcome-mode-no-base"],
+    ["po_mode_compare_loading", "outcome-compare-loading"],
+  ])("режим «%s» рисуется из кэша без сервера", async (id, testId) => {
+    await i18n.changeLanguage("ru");
+    const entry = getPackOutcomeGallery()
+      .flatMap((g) => g.entries)
+      .find((e) => e.id === id);
+    expect(entry).toBeDefined();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    entry?.seed?.(client);
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>{entry?.render()}</MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByTestId(testId)).toBeInTheDocument();
   });
 });
 

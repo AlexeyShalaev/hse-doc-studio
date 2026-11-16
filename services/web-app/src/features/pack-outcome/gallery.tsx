@@ -32,6 +32,7 @@ import {
   type OutcomeSelection,
 } from "./lib/urlState";
 import { OutcomeBody } from "./OutcomeBody";
+import { seedModes, type ModesSeed } from "./modes/seed";
 import {
   INPUTS_SOURCE,
   filesKeyOf,
@@ -535,6 +536,8 @@ type Spec = {
   run?: RunKind;
   /** Окно сценариев, открытое сразу: список выбора, «Сохранить как сценарий», панель. */
   dialog?: ScenarioDialog;
+  /** Режим центра (`view` в адресе) и состояние его ответа: матрица, атлас, сравнение (срез F9). */
+  modes?: ModesSeed;
   /** Предпросмотр PDF, открытый сразу (срез F12). */
   preview?: PreviewSpec;
 };
@@ -987,6 +990,151 @@ const SPECS: Spec[] = [
     dialog: { kind: "saveInputs", id: "company-supervisor" },
   },
   {
+    id: "po_mode_matrix",
+    title: "Режим «Матрица»",
+    note: "Сценарии на разделы: значок, слово и число в клетке, буква у одинаковых клеток столбца, итог прогона.",
+    kind: "ready",
+    work: "coursework",
+    search: "view=matrix",
+    modes: "ready",
+  },
+  {
+    id: "po_mode_matrix_base",
+    title: "Режим «Матрица»: относительно базы",
+    note: "Пометка «~» у клеток, изменённых против базы (в пространстве с git).",
+    kind: "ready",
+    work: "coursework",
+    search: "view=matrix&against=base",
+    modes: "ready",
+  },
+  {
+    id: "po_mode_matrix_error_row",
+    title: "Режим «Матрица»: строка с ошибкой",
+    note: "Сценарий, чьи вводные не подходят версии: причина в строке, клетки без результата.",
+    kind: "ready",
+    work: "coursework",
+    search: "view=matrix",
+    modes: "error_row",
+  },
+  {
+    id: "po_mode_matrix_empty",
+    title: "Режим «Матрица»: нет сценариев",
+    note: "Подсказка создать сценарий.",
+    kind: "ready",
+    work: "coursework",
+    scenarios: "empty",
+    search: "view=matrix",
+    modes: "empty",
+  },
+  {
+    id: "po_mode_matrix_too_large",
+    title: "Режим «Матрица»: ответ слишком большой",
+    note: "outcome_too_large: числа и кнопка «Показать первые 20».",
+    kind: "ready",
+    work: "coursework",
+    search: "view=matrix",
+    modes: "too_large",
+  },
+  {
+    id: "po_mode_matrix_loading",
+    title: "Режим «Матрица»: загрузка",
+    note: "Скелет, пока сервер считает.",
+    kind: "ready",
+    work: "coursework",
+    search: "view=matrix",
+    modes: "loading",
+  },
+  {
+    id: "po_mode_atlas",
+    title: "Режим «Атлас»: курсовой",
+    note: "12 строк и 12 исходов, измерения с закреплением, не влияющие вводные приглушены.",
+    kind: "ready",
+    work: "coursework",
+    search: "view=atlas&i.supervisor=company&i.co_supervisor=yes",
+    modes: "ready",
+  },
+  {
+    id: "po_mode_atlas_vkr",
+    title: "Режим «Атлас»: ВКР, 864 строки",
+    note: "Строки листаются по 60 кнопкой, поиск и фильтры режут таблицу, исходы сгруппированы.",
+    kind: "ready",
+    work: "vkr",
+    search: "view=atlas",
+    modes: "ready",
+  },
+  {
+    id: "po_mode_atlas_pinned",
+    title: "Режим «Атлас»: закреплена вводная",
+    note: "Таблица порезана закреплением: измерение осталось с одним значением.",
+    kind: "ready",
+    work: "vkr",
+    search: "view=atlas&p.supervisor=company&p.meta.nda=yes",
+    modes: "ready",
+  },
+  {
+    id: "po_mode_atlas_loading",
+    title: "Режим «Атлас»: загрузка",
+    note: "Скелет и «Отмена»: атлас считается секунды.",
+    kind: "ready",
+    work: "vkr",
+    search: "view=atlas",
+    modes: "loading",
+  },
+  {
+    id: "po_mode_atlas_busy",
+    title: "Режим «Атлас»: сервер занят",
+    note: "outcome_busy: повтор через указанное число секунд.",
+    kind: "ready",
+    work: "vkr",
+    search: "view=atlas",
+    modes: "busy",
+  },
+  {
+    id: "po_mode_atlas_too_large",
+    title: "Режим «Атлас»: слишком много комбинаций",
+    note: "atlas_too_large: предел, число строк и выбор вводных, которые закрепить.",
+    kind: "ready",
+    work: "vkr",
+    search: "view=atlas",
+    modes: "too_large",
+  },
+  {
+    id: "po_mode_compare",
+    title: "Режим «Сравнить»: два сценария",
+    note: "Изменения по разделам с «+», «~», «-», словами и «было» и «стало»; причины раскрываются кнопкой «Почему?».",
+    kind: "ready",
+    work: "coursework",
+    search: "view=compare",
+    modes: "ready",
+  },
+  {
+    id: "po_mode_compare_identical",
+    title: "Режим «Сравнить»: различий нет",
+    note: "Результат обеих сторон совпадает по всем разделам.",
+    kind: "ready",
+    work: "coursework",
+    search: "view=compare",
+    modes: "identical",
+  },
+  {
+    id: "po_mode_compare_no_base",
+    title: "Режим «Сравнить»: нет базы",
+    note: "diff_base_unavailable: «Сравнивать не с чем» с причиной и переходом к двум сценариям.",
+    kind: "ready",
+    work: "coursework",
+    search: "view=compare&left=screen@base&right=screen@work_tree",
+    modes: "no_base",
+  },
+  {
+    id: "po_mode_compare_loading",
+    title: "Режим «Сравнить»: загрузка",
+    note: "Скелет, пока сервер сравнивает.",
+    kind: "ready",
+    work: "coursework",
+    search: "view=compare",
+    modes: "loading",
+  },
+  {
     id: "po_preview_ready",
     title: "Предпросмотр PDF: сборка готова",
     note: "Панель справа открыта по кнопке «Предпросмотр PDF» у документа: вводные, вариант и набор данных, переключатель автосборки, «Что собрано» (вариант, итоговое имя файла, набор данных). Сам PDF в галерее не загружается: адрес файла не отвечает.",
@@ -1114,6 +1262,17 @@ export const getPackOutcomeGallery = (): GalleryGroup[] => [
             spec.run,
             spec.preview,
           );
+          if (spec.modes) {
+            seedModes(
+              client,
+              {
+                id,
+                ref: refOf(spec.work ?? "vkr"),
+                search: spec.search ?? "",
+              },
+              spec.modes,
+            );
+          }
         },
         render: () => (
           <GalleryUrl initial={spec.search ?? ""}>

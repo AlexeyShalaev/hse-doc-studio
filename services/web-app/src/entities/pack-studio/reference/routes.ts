@@ -19,6 +19,7 @@ import {
 } from "../api/outcome";
 import type { OutcomeElementRef } from "../api/outcome";
 import { explainFor } from "./explain";
+import { createModesRoutes } from "./modes";
 import { previewReferenceRoutes } from "./previewRoutes";
 import {
   applyReferenceEdits,
@@ -650,6 +651,15 @@ export const outcomeReferenceRoutes: DemoRoute[] = [
             req.headers?.["if-match"] ?? null,
           ),
   },
+  // Режимы «Матрица», «Атлас», «Сравнить» (срез F9): отдельный файл, чтобы не разрастался этот.
+  ...createModesRoutes({
+    source: () => source,
+    gate: async () => {
+      if (behavior === "slow") await sleep(SLOW_MS);
+      return failure();
+    },
+    entries: () => (behavior === "no_scenarios" ? [] : store.entries),
+  }),
 ];
 
 let installed = false;
