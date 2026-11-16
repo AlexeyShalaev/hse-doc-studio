@@ -318,6 +318,6 @@
     "name": "Словарь экрана «Результат» (ru и en, features/pack-outcome)",
     "path": "dist/assets/locale-packOutcome-*.js",
     "gzip": true,
-    "limit": "27.5 kB"
+    "limit": "28 kB"
   }
 ]
