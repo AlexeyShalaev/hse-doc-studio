@@ -99,6 +99,8 @@ class PackStudioErrorCode(StrEnum):
     outcome_busy = "outcome_busy"
     # Срез O5: «Почему?» спросили про элемент, которого нет в результате для этих вводных (404, `section`, `id`)
     outcome_element_not_found = "outcome_element_not_found"
+    # Срез O7: ответ «до и после» или матрицы больше предела размера (413, `limit` и `size` в байтах)
+    outcome_too_large = "outcome_too_large"
 
 
 _C = PackStudioErrorCode
@@ -384,6 +386,11 @@ _TABLE: dict[PackStudioErrorCode, tuple[int, str, str]] = {
         404,
         "Такого элемента нет в результате для этих вводных. Возможно, версия изменилась: обновите результат.",
         "There is no such element in the outcome for these inputs. The version may have changed: refresh the outcome.",
+    ),
+    _C.outcome_too_large: (
+        413,
+        "Ответ слишком большой: выберите меньше сценариев.",
+        "The response is too large: select fewer scenarios.",
     ),
 }
 

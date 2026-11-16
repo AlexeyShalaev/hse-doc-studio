@@ -8,7 +8,8 @@
 с этими моделями, а клиентские схемы zod (`entities/pack-studio/api/outcome.ts`) разбирают те же эталоны. Эндпоинты
 `outcome/inputs` и `outcome` работают (срез O2, `api/routers/v1/pack_studio_outcome.py`, служба
 `use_cases/pack_studio/outcome_service.py`), так же сценарии: список, запись, удаление и прогон (срез O6,
-`api/routers/v1/pack_studio_scenarios.py`, служба `use_cases/pack_studio/scenario_service.py`); остальные приходят со
+`api/routers/v1/pack_studio_scenarios.py`, служба `use_cases/pack_studio/scenario_service.py`), так же сравнения
+`compare`, `impact` и `matrix` (срез O7, служба `use_cases/pack_studio/outcome_compare.py`); остальные приходят со
 своими срезами плана (раздел 7). Ядро расчёта (срез O1) в `core/pack_studio/outcome` и `use_cases/pack_studio/outcome`.
 
 Все значения вводных строки, как в комбинации предпросмотра (`yes` и `no` у логических), чтобы состояние можно было
@@ -95,6 +96,7 @@ ChangeSubjectName = Literal[
     "route_step",
     "route_pair",
     "skipped_pair",
+    "may_add",
     "check_rule",
 ]
 
@@ -653,9 +655,25 @@ class PackScenarioRunRequest(StrictModel):
     version: str | None = Field(default=None, max_length=_ID)
 
 
+class OutcomeChangeReason(StrictModel):
+    """Правило, из-за которого элемент изменился при сравнении двух результатов (трасса решений): исход решения слева
+    (`before`) и справа (`after`; null: у элемента на этой стороне такого решения нет) и фактические значения вводных
+    с каждой стороны (`before_actual`, `after_actual`). Первыми идут решения с другим исходом или значениями."""
+
+    rule: OutcomeRuleRef
+    kind: RuleKindName
+    terms: list[OutcomeTerm] = Field(max_length=8)
+    before: VerdictName | None
+    after: VerdictName | None
+    before_actual: dict[str, str] = Field(max_length=16)
+    after_actual: dict[str, str] = Field(max_length=16)
+
+
 class OutcomeChange(StrictModel):
     """Одно изменение результата: `symbol`, раздел, вид и id элемента, подпись для человека и значения «было» и
-    «стало» (null у появившегося и исчезнувшего)."""
+    «стало» (null у появившегося и исчезнувшего, кроме документов, шагов и пар маршрута, у которых значение
+    показано). `why` это причины из трассы: заполняют сравнения (`compare`, `impact`), у расхождения прогона
+    сценария со снимком оно пустое (снимок трассы не хранит)."""
 
     symbol: ChangeSymbol
     section: SectionName
@@ -664,6 +682,7 @@ class OutcomeChange(StrictModel):
     label: str = Field(max_length=_TEXT)
     before: str | None
     after: str | None
+    why: list[OutcomeChangeReason] = Field(default_factory=list, max_length=6)
 
 
 class ScenarioFailure(StrictModel):
@@ -824,18 +843,30 @@ class PackOutcomeMatrixRequest(StrictModel):
     against: Literal["base"] | None = None
 
 
+# Статус клетки: `matched` ожидание сценария по разделу выполнено, `changed` не выполнено или раздел отличается от базы
+# (`against: base`), `unchecked` ожидания у раздела нет, `error` результата нет (вводные не подходят к версии).
+MatrixCellStatus = Literal["matched", "changed", "unchecked", "error"]
+
+
 class MatrixCell(StrictModel):
     section: SectionName
+    # Отпечаток структуры раздела и число его элементов (у `error` пусто и 0); `checks` по применимости правил.
     fingerprint: str
     count: int = Field(ge=0)
-    # null: сравнения с базой не просили или сценария на базе нет.
+    status: MatrixCellStatus
+    # Отличается ли раздел от базы; null: сравнения с базой не просили или сценария на базе нет.
     changed: bool | None
 
 
 class MatrixRow(StrictModel):
+    """Строка матрицы: сценарий, его полные вводные (у `error` пусто) и клетки по разделам. `status` это итог сценария
+    как у прогона (`passed`, `failed`, `error`, `unchecked`), `message` причина ошибки."""
+
     scenario: str
     name: Localized
     inputs: dict[str, str]
+    status: ScenarioStatusName
+    message: str | None
     cells: list[MatrixCell]
 
 
