@@ -4,7 +4,9 @@ import { describe, expect, it } from "vitest";
 import {
   OutcomeRuleRefSchema,
   PackOutcomeAtlasSchema,
+  PackOutcomeCompareSchema,
   PackOutcomeImpactSchema,
+  PackOutcomeMatrixSchema,
   PackOutcomeRequestSchema,
   PackOutcomeSchema,
   PackScenarioSchema,
@@ -84,6 +86,63 @@ describe("вычислитель результата: связи в этало�
     const changed = impact.scenarios.filter((s) => s.status === "changed");
     expect(impact.summary.scenarios_total).toBe(impact.scenarios.length);
     expect(impact.summary.scenarios_changed).toBe(changed.length);
+  });
+});
+
+describe("сравнения результата: связи в эталонах", () => {
+  const KEY = { "+": "added", "~": "changed", "-": "removed" } as const;
+  const count = (changes: { section: string; symbol: "+" | "~" | "-" }[]) => {
+    const rows = new Map<
+      string,
+      { added: number; changed: number; removed: number }
+    >();
+    for (const change of changes) {
+      const row = rows.get(change.section) ?? {
+        added: 0,
+        changed: 0,
+        removed: 0,
+      };
+      row[KEY[change.symbol]] += 1;
+      rows.set(change.section, row);
+    }
+    return rows;
+  };
+
+  it("сравнение: сводка равна счёту изменений, у изменения есть причины", () => {
+    const compare = PackOutcomeCompareSchema.parse(
+      load("PackOutcomeCompare", "two_scenarios"),
+    );
+    const rows = count(compare.changes);
+    expect(compare.summary).toHaveLength(rows.size);
+    for (const delta of compare.summary) {
+      expect(rows.get(delta.section)).toEqual({
+        added: delta.added,
+        changed: delta.changed,
+        removed: delta.removed,
+      });
+    }
+    expect(compare.identical).toBe(compare.changes.length === 0);
+    const reasons = compare.changes.flatMap((c) => c.why ?? []);
+    expect(reasons.length).toBeGreaterThan(0);
+    for (const reason of reasons) {
+      expect(reason.before !== null || reason.after !== null).toBe(true);
+    }
+  });
+
+  it("матрица: ошибка видна в каждой клетке строки, изменение против базы это changed", () => {
+    const matrix = PackOutcomeMatrixSchema.parse(
+      load("PackOutcomeMatrix", "coursework"),
+    );
+    for (const row of matrix.rows) {
+      expect(row.cells.map((c) => c.section)).toEqual(matrix.columns);
+      if (row.status === "error") {
+        expect(row.message).not.toBeNull();
+        expect(row.cells.every((c) => c.status === "error")).toBe(true);
+      }
+      for (const cell of row.cells) {
+        if (cell.changed) expect(cell.status).toBe("changed");
+      }
+    }
   });
 });
 

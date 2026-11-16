@@ -10,7 +10,11 @@ import type {
   PackVersionRef,
   PackWorkspace,
 } from "@entities/pack-studio";
-import type { OutcomeSelection, OutcomeUrlControls } from "./lib/urlState";
+import type {
+  OutcomeMode,
+  OutcomeSelection,
+  OutcomeUrlControls,
+} from "./lib/urlState";
 
 /**
  * Подсветка элементов результата, связанных с вводной (клик по вводной в левой панели). Связи
@@ -44,6 +48,11 @@ export type OutcomeModel = {
   /** Телефон: колонки уступают место листам и вкладкам. */
   phone: boolean;
   url: OutcomeUrlControls;
+  /**
+   * Что показывать в центре: режим из адреса, но пока удерживается Alt в режиме «Как студент»,
+   * временно «author». Адрес и переключатель в панели хранят выбранный режим, не этот.
+   */
+  view: OutcomeMode;
   /** Запрос расчёта, собранный из адреса. */
   request: PackOutcomeRequest;
   /** Ответ расчёта; при пересчёте остаётся прежний (`isPlaceholderData`). */

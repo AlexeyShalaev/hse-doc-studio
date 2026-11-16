@@ -7,6 +7,7 @@ import { EmptyState } from "@shared/ui";
 import { summarize } from "../lib/summary";
 import { useOutcomeModel } from "../model";
 import { Notice } from "./Notice";
+import { StudentView } from "./student/StudentView";
 import {
   BranchesSection,
   ChecksSection,
@@ -16,6 +17,7 @@ import {
   PointsSection,
   RouteSection,
 } from "./sections";
+import { RowsSkeleton } from "./sections/PartStatus";
 
 /** Причина, по которой лоадер не прочитал версию (`reason` в теле ошибки), если сервер её прислал. */
 const reasonOf = (error: unknown): string | null => {
@@ -32,7 +34,8 @@ const reasonOf = (error: unknown): string | null => {
 export const ResultCenter = () => {
   const { t } = useTranslation("packOutcome");
   const model = useOutcomeModel();
-  const { outcome, shown, workspaceId, ref, url } = model;
+  const { outcome, shown, workspaceId, ref, url, view } = model;
+  const student = view === "student";
   const failed = outcome.isError;
   const error: unknown = failed ? outcome.error : null;
   const unreadable =
@@ -81,7 +84,11 @@ export const ResultCenter = () => {
   return (
     <div className="po-center-body">
       <div className="po-summary" data-testid="outcome-summary">
-        {sum ? (
+        {student ? (
+          <p className="po-summary-text" data-testid="outcome-student-summary">
+            {t("student.summary")}
+          </p>
+        ) : sum ? (
           <p className="po-summary-text">
             {t("result.summary", {
               documents: t("result.documents", { count: sum.documentsActive }),
@@ -142,13 +149,23 @@ export const ResultCenter = () => {
             aria-busy={outcome.isFetching || undefined}
             data-stale={failed || model.stale ? "true" : undefined}
           >
-            <DocumentsSection />
-            <MetaSection />
-            <ParticipantsSection />
-            <PointsSection />
-            <RouteSection />
-            <ChecksSection />
-            <BranchesSection />
+            {student ? (
+              shown ? (
+                <StudentView outcome={shown} />
+              ) : (
+                <RowsSkeleton testId="outcome-student-loading" />
+              )
+            ) : (
+              <>
+                <DocumentsSection />
+                <MetaSection />
+                <ParticipantsSection />
+                <PointsSection />
+                <RouteSection />
+                <ChecksSection />
+                <BranchesSection />
+              </>
+            )}
           </div>
         )
       ) : null}

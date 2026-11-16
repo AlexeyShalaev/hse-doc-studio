@@ -162,12 +162,21 @@ export const PickButton = ({
   );
 };
 
-/** Элемент списка с кнопкой выбора; `muted` приглушает отсутствующий или выключенный. */
+/**
+ * Элемент списка с кнопкой выбора; `muted` приглушает отсутствующий или выключенный, `pale`
+ * помечает бледный слот, `action` стоит под кнопкой выбора (кнопка внутри кнопки недопустима).
+ */
 export const PickItem = ({
   muted = false,
+  pale = false,
+  action,
   testId,
   ...props
-}: PickButtonProps & { muted?: boolean }) => {
+}: PickButtonProps & {
+  muted?: boolean;
+  pale?: boolean;
+  action?: ReactNode;
+}) => {
   const selected = useIsSelected(props.el);
   // Элемент изменился после правки по месту: полоса на несколько секунд.
   const flash = useRuleEdit()?.flashed.has(
@@ -177,11 +186,13 @@ export const PickItem = ({
     <li
       className="po-item"
       data-muted={muted ? "true" : undefined}
+      data-pale={pale ? "true" : undefined}
       data-selected={selected ? "true" : undefined}
       data-flash={flash ? "true" : undefined}
       data-testid={testId}
     >
       <PickButton {...props} />
+      {action}
     </li>
   );
 };

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useId, useState } from "react";
 import { FolderTree, Lock, RefreshCw } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
@@ -33,6 +33,10 @@ type TopBarProps = {
   location: OutcomeLocation;
   /** Правки после последнего коммита (git): «Есть несохранённые правки». */
   dirty: boolean;
+  /** Alt удерживается в режиме «Как студент»: центр временно показывает вид автора. */
+  peek: boolean;
+  /** Режим выбран кнопкой панели: экран объявляет его и переводит фокус в результат. */
+  onModeChange: (mode: OutcomeMode) => void;
   onOpenFiles: () => void;
 };
 
@@ -44,12 +48,20 @@ const MODES: readonly OutcomeMode[] = ["author", "student"];
  * переходы к файлам. Смена шаблона и версии это переход по адресу (в историю), остальное
  * записывается в query текущего адреса.
  */
-export const TopBar = ({ tree, location, dirty, onOpenFiles }: TopBarProps) => {
+export const TopBar = ({
+  tree,
+  location,
+  dirty,
+  peek,
+  onModeChange,
+  onOpenFiles,
+}: TopBarProps) => {
   const { t, i18n } = useTranslation("packOutcome");
   const navigate = useNavigate();
   const model = useOutcomeModel();
   const { workspaceId, url, outcome, ref, released } = model;
   const lang = i18n.language;
+  const hintId = useId();
 
   const nameOf = (
     dict: Record<string, string> | null | undefined,
@@ -163,7 +175,12 @@ export const TopBar = ({ tree, location, dirty, onOpenFiles }: TopBarProps) => {
       </div>
       <div className="po-bar-row">
         <ScenarioPicker />
-        <div className="po-field" role="group" aria-label={t("bar.mode")}>
+        <div
+          className="po-field"
+          role="group"
+          aria-label={t("bar.mode")}
+          aria-describedby={url.state.mode === "student" ? hintId : undefined}
+        >
           <span className="po-field-label" aria-hidden="true">
             {t("bar.mode")}
           </span>
@@ -176,13 +193,25 @@ export const TopBar = ({ tree, location, dirty, onOpenFiles }: TopBarProps) => {
                 aria-pressed={url.state.mode === mode}
                 data-testid={`outcome-mode-${mode}`}
                 onClick={() => {
+                  if (url.state.mode === mode) return;
                   url.update({ mode });
+                  onModeChange(mode);
                 }}
               >
                 {t(mode === "author" ? "bar.modeAuthor" : "bar.modeStudent")}
               </button>
             ))}
           </div>
+          {url.state.mode === "student" && (
+            <span
+              id={hintId}
+              className="po-note po-mode-hint po-hide-phone"
+              data-peek={peek ? "true" : undefined}
+              data-testid="outcome-mode-hint"
+            >
+              {t(peek ? "bar.modePeek" : "bar.modeHint")}
+            </span>
+          )}
         </div>
         <label className="po-field" htmlFor="po-state">
           <span className="po-field-label">{t("bar.state")}</span>

@@ -523,6 +523,11 @@ class PackOutcomeService:
         (дайджест входит в ключ `key_of`)."""
         return await self._prepare(actor, workspace_id, pack, template, version, state, example_id, scenario_id)
 
+    @staticmethod
+    def merged_inputs(prep: PreparedVersion, request_inputs: Mapping[str, str]) -> dict[str, str]:
+        """Вводные запроса поверх вводных сценария: то, что идёт в расчёт и в ключ ответа."""
+        return _merged_inputs(prep, request_inputs)
+
     @classmethod
     def key_of(cls, prep: PreparedVersion, state: str, **extra: Any) -> str:
         """Ключ ответа расчёта по подготовленной версии: общая часть `_key_base` и то, что добавляет расчёт."""
