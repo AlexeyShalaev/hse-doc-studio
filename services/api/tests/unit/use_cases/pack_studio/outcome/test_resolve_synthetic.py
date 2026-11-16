@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from datetime import date
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -626,3 +627,22 @@ def test__branches__kind_branch_counts_added_changed_and_removed_elements(run: A
 
 def test__branches__are_not_computed_unless_asked(run: Any) -> None:
     assert run(PROJECT).branches is None
+
+
+# ── Пустая и минимальная версия ──────────────────────────────────────────────
+
+
+def test__resolve__minimal_version__has_no_points_forms_or_checks_and_still_a_valid_body(tmp_path: Path) -> None:
+    minimal = load_synthetic(
+        tmp_path,
+        version_yaml='id: "1.0.0"\nstatus: beta\ndocuments: []\n',
+        checks_yaml=None,
+    )
+
+    outcome = resolve(minimal, {}, auto_examples(minimal)[0], TODAY, include={"checks", "branches"})
+
+    assert (outcome.documents, outcome.forms, outcome.points, outcome.checks) == ((), (), (), ())
+    # Меняют результат только люди проекта: в нём остались одни участники.
+    assert {b.input for b in outcome.branches or ()} == {"supervisor", "co_supervisor", "academic_supervisor"}
+    assert [p.persona for p in outcome.participants if p.present] == ["author", "supervisor", "academic_supervisor"]
+    assert_contract(outcome)
