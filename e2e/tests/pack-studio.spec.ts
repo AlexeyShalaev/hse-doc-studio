@@ -770,6 +770,24 @@ for (const lang of LANGS) {
       await expect(page.getByTestId("outcome-released-mark")).toBeHidden();
       await expect.poll(() => fake.outcomes.some((call) => call.version === "2026.1.6")).toBe(true);
 
+      // Панель «Вводные» (F2): выбор виден сразу, в адрес и в запрос расчёта попадает по паузе,
+      // «Сбросить всё» возвращает умолчания.
+      await page.getByTestId("outcome-control-staffing-team2").click();
+      await expect(page.getByTestId("outcome-control-staffing-team2")).toHaveAttribute("aria-checked", "true");
+      await expect(page).toHaveURL(/i\.staffing=team2/);
+      await expect
+        .poll(() =>
+          fake.outcomes.some(
+            (call) => (call.body as { inputs?: Record<string, string> }).inputs?.staffing === "team2",
+          ),
+        )
+        .toBe(true);
+      await page.reload();
+      await expect(page.getByTestId("outcome-control-staffing-team2")).toHaveAttribute("aria-checked", "true");
+      await page.getByTestId("outcome-inputs-reset").click();
+      await expect(page).not.toHaveURL(/i\.staffing/);
+      await expect(page.getByTestId("outcome-control-staffing-solo")).toHaveAttribute("aria-checked", "true");
+
       // Режим «Как студент» живёт в адресе: перезагрузка возвращает тот же экран.
       await page.getByTestId("outcome-mode-student").click();
       await expect(page).toHaveURL(/mode=student/);

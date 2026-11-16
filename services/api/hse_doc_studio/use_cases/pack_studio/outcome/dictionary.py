@@ -1,78 +1,34 @@
 """Словарь вводных версии: список для панели с `affects` и числом читающих правил (раздел 2.1 дизайна результата).
 
 Вводные строятся из схемы версии (`core/pack_studio/outcome/inputs.py`). `rules` считается по трассе на умолчаниях:
-сколько решений читают вводную. `affects` это разделы, которые меняются при смене вводной. Здесь он считается по
-соседним комбинациям: умолчания и каждая комбинация, где одна другая вводная сменена; этого хватает панели
-(приглушить вводные, которые ничего не меняют). Точный ответ по всем комбинациям даёт атлас (срез O4).
+сколько правил читают вводную. `affects` это разделы, которые меняются при смене вводной (`impact.py`). По умолчанию
+он считается по соседним комбинациям (умолчания и комбинации, где отличаются от них не больше двух вводных); этого
+хватает панели (приглушить вводные, которые ничего не меняют). Точный ответ по всем комбинациям даёт атлас (срез O4):
+его анализ можно передать сюда готовым (`analysis`).
 """
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from datetime import date
 
 from hse_doc_studio.core.catalog import TemplateVersion
-from hse_doc_studio.core.pack_studio.outcome.inputs import InputSpec, input_specs, normalize_inputs
-from hse_doc_studio.core.pack_studio.outcome.model import (
-    SECTIONS,
-    InputInfo,
-    InputsDictionary,
-    InputValueInfo,
-    Outcome,
-    SectionName,
-)
-from hse_doc_studio.core.pack_studio.outcome.summary import section_prints
+from hse_doc_studio.core.pack_studio.outcome.atlas import reading_rules
+from hse_doc_studio.core.pack_studio.outcome.inputs import input_specs, normalize_inputs
+from hse_doc_studio.core.pack_studio.outcome.model import InputInfo, InputsDictionary, InputValueInfo, Outcome
 from hse_doc_studio.core.pack_studio.preview import PreviewExample
+from hse_doc_studio.use_cases.pack_studio.outcome.impact import (
+    PANEL_STRENGTH,
+    ImpactAnalysis,
+    OutcomeEvaluator,
+    analyze_impact,
+)
 from hse_doc_studio.use_cases.pack_studio.outcome.resolve import resolve
 
 
 def _reads(outcome: Outcome, input_id: str) -> int:
     """Сколько правил читают вводную: условие на ней самой или на её части (`supervisor.role`). Правило одно, сколько
     бы решений по нему ни записано (зашитое `manuals_gate` решает два руководства, но это одно правило)."""
-    return len(
-        {
-            entry.rule
-            for entry in outcome.trace
-            if any(term.subject == input_id or term.subject.startswith(f"{input_id}.") for term in entry.terms)
-        }
-    )
-
-
-def _section_prints(
-    memo: dict[tuple[tuple[str, str], ...], dict[SectionName, str]],
-    version: TemplateVersion,
-    example: PreviewExample,
-    today: date,
-    combo: Mapping[str, str],
-) -> dict[SectionName, str]:
-    key = tuple(sorted(combo.items()))
-    if key not in memo:
-        outcome = resolve(version, combo, example, today, trace=False)
-        memo[key] = {p.section: p.fingerprint for p in section_prints(outcome)}
-    return memo[key]
-
-
-def _affects(
-    specs: tuple[InputSpec, ...],
-    defaults: Mapping[str, str],
-    version: TemplateVersion,
-    example: PreviewExample,
-    today: date,
-) -> dict[str, tuple[SectionName, ...]]:
-    memo: dict[tuple[tuple[str, str], ...], dict[SectionName, str]] = {}
-    contexts: list[dict[str, str]] = [dict(defaults)]
-    for other in specs:
-        contexts.extend({**defaults, other.id: value} for value in other.values if value != defaults[other.id])
-    result: dict[str, tuple[SectionName, ...]] = {}
-    for spec in specs:
-        changed: set[SectionName] = set()
-        for context in contexts:
-            variants = [
-                _section_prints(memo, version, example, today, {**context, spec.id: value}) for value in spec.values
-            ]
-            changed.update(s for s in SECTIONS if len({v[s] for v in variants}) > 1)
-        result[spec.id] = tuple(s for s in SECTIONS if s in changed)
-    return result
+    return len(reading_rules(outcome.trace, input_id))
 
 
 def inputs_dictionary(
@@ -82,14 +38,21 @@ def inputs_dictionary(
     *,
     revision: str = "",
     with_affects: bool = True,
+    analysis: ImpactAnalysis | None = None,
 ) -> InputsDictionary:
     """Вводные версии для панели.
 
-    `with_affects=False` пропускает разбор влияния (`affects` пуст): он дороже остального."""
+    `with_affects=False` пропускает разбор влияния (`affects` пуст): он дороже остального. По умолчанию влияние
+    считается по соседним комбинациям (десятки расчётов, для панели хватает). Точное влияние по перебору даёт
+    `analyze_impact` (его считает и атлас): готовый `analysis` подставляется сюда без пересчёта."""
     specs = input_specs(version)
     defaults = normalize_inputs(specs, {}, dict(example.data.defaults) if example.data is not None else {})
     at_defaults = resolve(version, defaults, example, today)
-    affects = _affects(specs, defaults, version, example, today) if with_affects else {}
+    if analysis is None and with_affects:
+        analysis = analyze_impact(
+            OutcomeEvaluator(version, specs, example, today), specs, defaults, force=False, strength=PANEL_STRENGTH
+        )
+    affects = {input_id: impact.sections for input_id, impact in analysis.impacts.items()} if analysis else {}
     inputs = tuple(
         InputInfo(
             id=spec.id,
