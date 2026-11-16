@@ -146,6 +146,175 @@
     "stale": "The previous outcome is shown: the new one could not be loaded.",
     "updating": "Updating"
   },
+  "filters": {
+    "search": "Search",
+    "searchIn": "Search: {{name}}"
+  },
+  "documents": {
+    "state": {
+      "active": "In the set",
+      "inactive": "Switched off",
+      "absent": "Absent"
+    },
+    "scope": {
+      "shared": "Shared",
+      "personal": "Personal"
+    },
+    "filter": {
+      "all": "All",
+      "personal": "Personal",
+      "shared": "Shared"
+    },
+    "filterScope": "Show",
+    "optional": "Optional",
+    "why": {
+      "inactive": "switched off:",
+      "absent": "absent:"
+    },
+    "whyUnknown": "the reason is not in the response",
+    "noFileName": "no file name",
+    "copies": "{{count}} copies",
+    "variant": "Variant:",
+    "variantOnly": "{{langs}} only",
+    "variantOff": "unavailable",
+    "languages": "Editions:",
+    "fallback": "No {{lang}} edition: the default language is used",
+    "absentBlock": "Not in this combination",
+    "stats": {
+      "active": "In the set",
+      "inactive": "Switched off",
+      "absent": "Not in combination",
+      "shared": "Shared",
+      "personal": "Personal"
+    },
+    "groups": {
+      "none": "No group",
+      "espd": "ESPD",
+      "report": "Report",
+      "pdp": "Practice",
+      "pres": "Presentations",
+      "work": "Thesis",
+      "nda": "NDA",
+      "topic": "Topic"
+    }
+  },
+  "meta": {
+    "stats": {
+      "visible": "Visible",
+      "hidden": "Hidden",
+      "create": "At creation",
+      "finalize": "At finalization",
+      "forms": "Questionnaires"
+    },
+    "empty": "The project has no fields or questionnaires in this combination.",
+    "filterRequired": "Required",
+    "required": {
+      "all": "Any",
+      "create": "At creation",
+      "finalize": "At finalization",
+      "never": "Not required"
+    },
+    "type": {
+      "string": "String",
+      "bool": "Yes or no",
+      "person": "Person",
+      "select": "Choice",
+      "font": "Font"
+    },
+    "scope": {
+      "project": "Project field",
+      "author": "Author field"
+    },
+    "value": "Example:",
+    "noValue": "no value",
+    "options": "Options:",
+    "hiddenWhy": "hidden:",
+    "whyUnknown": "the reason is not in the response",
+    "hiddenBlock": "Hidden in this combination",
+    "groups": {
+      "none": "Other",
+      "study": "Study",
+      "docset": "Document set",
+      "naming": "Titles",
+      "vkr_title": "Title page",
+      "topic": "Topic",
+      "espd": "ESPD"
+    }
+  },
+  "forms": {
+    "required": "Required",
+    "perAuthor": "Per author",
+    "shared": "Shared",
+    "requiredForPack": "Needed for the set",
+    "notApplies": "Does not apply",
+    "notAppliesWhy": "does not apply:",
+    "hiddenWhy": "hidden:",
+    "fieldsOf": "Fields visible: {{visible}} of {{total}}",
+    "hiddenBlock": "Hidden fields",
+    "offBlock": "Do not apply in this combination"
+  },
+  "participants": {
+    "authorN": "Author {{n}}",
+    "role": {
+      "author": "Author",
+      "supervisor": "Supervisor",
+      "co_supervisor": "Co-supervisor",
+      "academic_supervisor": "Academic supervisor"
+    },
+    "org": {
+      "university": "HSE",
+      "company": "Company"
+    },
+    "required": {
+      "create": "Set at creation",
+      "finalize": "Set at finalization",
+      "never": "Not required"
+    },
+    "always": "Always in the project",
+    "absent": "none:",
+    "absentWhy": "not expected in this combination",
+    "byInput": "input \"{{input}}\": {{value}}",
+    "stats": {
+      "authors": "Authors",
+      "supervisors": "Supervisors",
+      "absent": "Not in combination"
+    },
+    "warnTitle": "No person for a route step",
+    "warnStep": "Point \"{{point}}\", step {{step}}: {{who}} is not set",
+    "empty": "No participants in this combination."
+  },
+  "reasons": {
+    "unset": "not set",
+    "op": {
+      "in": "{{subject}}: now {{actual}}, needs {{expected}}",
+      "equals": "{{subject}}: now {{actual}}, needs {{expected}}",
+      "contains_any": "{{subject}}: \"{{actual}}\" has none of {{expected}}",
+      "present": "{{subject}}: not set",
+      "truthy": "{{subject}}: switched off"
+    },
+    "subjects": {
+      "kind": "kind of work",
+      "staffing": "staffing",
+      "lang": "language",
+      "supervisor": "supervisor",
+      "co_supervisor": "co-supervisor",
+      "academic_supervisor": "academic supervisor"
+    },
+    "values": {
+      "project": "project",
+      "research": "research",
+      "solo": "solo",
+      "team2": "team of two",
+      "team3": "team of three",
+      "ru": "Russian",
+      "en": "English",
+      "yes": "yes",
+      "no": "no",
+      "university": "HSE",
+      "company": "company",
+      "none": "none"
+    }
+  },
   "sections": {
     "documents": "Documents",
     "meta": "Project metadata",

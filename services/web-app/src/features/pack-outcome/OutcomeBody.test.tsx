@@ -530,6 +530,70 @@ describe("экран «Результат»: каркас на эталонах"
     });
   });
 
+  describe("секции F3 на экране", () => {
+    it("документы, поля и участники приходят из ответа эталона", async () => {
+      mount();
+      expect(await screen.findByTestId("outcome-doc-thesis")).toHaveTextContent(
+        "Выпускная квалификационная работа.pdf",
+      );
+      expect(screen.getByTestId("outcome-meta-year")).toHaveTextContent(
+        "При создании",
+      );
+      expect(
+        screen.getByTestId("outcome-participant-supervisor"),
+      ).toHaveTextContent("Петров Пётр Петрович");
+    });
+
+    it("клик по документу пишет selected в адрес и открывает правую панель", async () => {
+      mount();
+      const card = await screen.findByTestId("outcome-doc-operator_manual");
+      fireEvent.click(within(card).getByRole("button"));
+      expect(location()).toContain("selected=documents%3Aoperator_manual");
+      expect(screen.getByTestId("outcome-selected")).toHaveTextContent(
+        "operator_manual",
+      );
+      fireEvent.click(within(card).getByRole("button"));
+      expect(location()).not.toContain("selected");
+    });
+
+    it("выбор из адреса подсвечивает карточку", async () => {
+      mount("selected=participants:supervisor");
+      const card = await screen.findByTestId("outcome-participant-supervisor");
+      expect(within(card).getByRole("button")).toHaveAttribute(
+        "aria-current",
+        "true",
+      );
+    });
+
+    it("английский интерфейс: подписи и тексты секций", async () => {
+      await i18n.changeLanguage("en");
+      try {
+        mount();
+        const card = await screen.findByTestId("outcome-doc-operator_manual");
+        expect(card).toHaveTextContent("Switched off");
+        expect(screen.getByTestId("outcome-meta-year")).toHaveTextContent(
+          "At creation",
+        );
+      } finally {
+        await i18n.changeLanguage("ru");
+      }
+    });
+
+    it("пустой результат: секции не рисуются, остаётся пояснение", async () => {
+      outcomeReference.setBehavior("empty");
+      mount();
+      expect(await screen.findByTestId("outcome-empty")).toBeInTheDocument();
+      expect(screen.queryByTestId("outcome-documents")).not.toBeInTheDocument();
+    });
+
+    it("ошибка расчёта: карточек нет, плашка с повтором", async () => {
+      outcomeReference.setBehavior("error");
+      mount();
+      expect(await screen.findByTestId("outcome-error")).toBeInTheDocument();
+      expect(screen.queryByTestId("outcome-documents")).not.toBeInTheDocument();
+    });
+  });
+
   describe("телефон 360 px", () => {
     let viewport: ReturnType<typeof installViewport>;
     beforeEach(() => {
@@ -584,6 +648,14 @@ describe("экран «Результат»: каркас на эталонах"
         "report",
       );
       expect(sheet).toHaveTextContent("Правка доступна на компьютере");
+    });
+
+    it("карточки на телефоне: клик выбирает элемент и открывает «Почему»", async () => {
+      mount();
+      const card = await screen.findByTestId("outcome-doc-thesis");
+      fireEvent.click(within(card).getByRole("button"));
+      expect(location()).toContain("selected=documents%3Athesis");
+      expect(location()).toContain("tab=rules");
     });
 
     it("в режиме «Как студент» вкладки «Почему» нет", async () => {

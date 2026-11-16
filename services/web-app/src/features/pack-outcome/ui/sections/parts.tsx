@@ -1,0 +1,210 @@
+import { useId, useState, type ReactNode } from "react";
+import { ChevronDown, ChevronRight, Search } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import type { OutcomeElementRef } from "@entities/pack-studio";
+import { useOutcomeModel } from "../../model";
+import { useIsSelected } from "./helpers";
+
+/** Строка-счётчик вверху секции: «В комплекте 12», «Выключено 1». Только числа из ответа. */
+export const Stats = ({
+  items,
+  testId,
+}: {
+  items: { id: string; label: string; value: number }[];
+  testId?: string;
+}) => (
+  <ul className="po-stats" data-testid={testId}>
+    {items.map((item) => (
+      <li
+        key={item.id}
+        className="po-stat"
+        data-zero={item.value === 0 ? "true" : undefined}
+        data-testid={`${testId ?? "stat"}-${item.id}`}
+      >
+        <span className="po-stat-value">{item.value}</span>
+        <span className="po-stat-label">{item.label}</span>
+      </li>
+    ))}
+  </ul>
+);
+
+/** Поиск и фильтры секции: список элементов длинный, искать нужно по названию и по id. */
+export const FilterBar = ({
+  label,
+  query,
+  onQuery,
+  testId,
+  children,
+}: {
+  label: string;
+  query: string;
+  onQuery: (next: string) => void;
+  testId: string;
+  children?: ReactNode;
+}) => {
+  const { t } = useTranslation("packOutcome");
+  return (
+    <div className="po-filters" role="search" aria-label={label}>
+      <label className="po-search">
+        <Search size="0.8125rem" aria-hidden="true" />
+        <input
+          type="search"
+          className="input"
+          placeholder={t("filters.search")}
+          aria-label={t("filters.searchIn", { name: label })}
+          value={query}
+          data-testid={`${testId}-search`}
+          onChange={(e) => {
+            onQuery(e.target.value);
+          }}
+        />
+      </label>
+      {children}
+    </div>
+  );
+};
+
+/** Свёрнутый блок («Не в этой комбинации»): состояние локальное, при поиске раскрывается. */
+export const Disclosure = ({
+  label,
+  count,
+  forceOpen = false,
+  testId,
+  children,
+}: {
+  label: string;
+  count: number;
+  forceOpen?: boolean;
+  testId: string;
+  children: ReactNode;
+}) => {
+  const [local, setLocal] = useState(false);
+  const open = local || forceOpen;
+  const id = useId();
+  const Chevron = open ? ChevronDown : ChevronRight;
+  return (
+    <div className="po-disc" data-testid={testId}>
+      <button
+        type="button"
+        className="po-disc-btn"
+        aria-expanded={open}
+        aria-controls={id}
+        data-testid={`${testId}-toggle`}
+        onClick={() => {
+          setLocal(!open);
+        }}
+      >
+        <Chevron size="0.875rem" aria-hidden="true" />
+        <span>{label}</span>
+        <span className="po-disc-count">{count}</span>
+      </button>
+      <div id={id} className="po-disc-body" hidden={!open}>
+        {open && children}
+      </div>
+    </div>
+  );
+};
+
+type PickButtonProps = {
+  el: OutcomeElementRef;
+  /** Заголовок карточки: имя элемента. */
+  title: ReactNode;
+  /** Значки справа от заголовка. */
+  badges?: ReactNode;
+  /** Описание под заголовком: читается программой экрана как пояснение. */
+  children?: ReactNode;
+  testId?: string;
+};
+
+/**
+ * Кнопка выбора элемента результата. Клик пишет `selected=раздел:id` в адрес (повторный снимает);
+ * в кнопке только строчные элементы, поэтому вложенные списки живут снаружи, а имя берётся из
+ * заголовка (`aria-labelledby`), остальное идёт пояснением.
+ */
+export const PickButton = ({
+  el,
+  title,
+  badges,
+  children,
+  testId,
+}: PickButtonProps) => {
+  const { select } = useOutcomeModel();
+  const selected = useIsSelected(el);
+  const uid = useId();
+  return (
+    <button
+      type="button"
+      className="po-pick"
+      data-po-pick="true"
+      aria-pressed={selected}
+      aria-current={selected ? "true" : undefined}
+      aria-labelledby={`${uid}-t`}
+      aria-describedby={children ? `${uid}-d` : undefined}
+      data-testid={testId}
+      onClick={() => {
+        select(el);
+      }}
+    >
+      <span className="po-pick-head">
+        <span className="po-pick-title" id={`${uid}-t`}>
+          {title}
+        </span>
+        {badges && <span className="po-pick-badges">{badges}</span>}
+      </span>
+      {children && (
+        <span className="po-pick-body" id={`${uid}-d`}>
+          {children}
+        </span>
+      )}
+    </button>
+  );
+};
+
+/** Элемент списка с кнопкой выбора; `muted` приглушает отсутствующий или выключенный. */
+export const PickItem = ({
+  muted = false,
+  testId,
+  ...props
+}: PickButtonProps & { muted?: boolean }) => {
+  const selected = useIsSelected(props.el);
+  return (
+    <li
+      className="po-item"
+      data-muted={muted ? "true" : undefined}
+      data-selected={selected ? "true" : undefined}
+      data-testid={testId}
+    >
+      <PickButton {...props} />
+    </li>
+  );
+};
+
+/** Строка причины: «нет: вид работы: сейчас проектный, нужно исследовательский». */
+export const Reason = ({
+  prefix,
+  texts,
+}: {
+  prefix?: string;
+  texts: string[];
+}) => (
+  <span className="po-reason">
+    {prefix && <span className="po-reason-prefix">{prefix}</span>}
+    {texts.join("; ")}
+  </span>
+);
+
+/** Заголовок подгруппы внутри секции. */
+export const GroupTitle = ({
+  id,
+  children,
+  count,
+}: {
+  id: string;
+  children: ReactNode;
+  count?: number;
+}) => (
+  <h4 className="po-group-title" id={id}>
+    {children}
+    {count !== undefined && <span className="po-group-count">{count}</span>}
+  </h4>
+);

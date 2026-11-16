@@ -16,6 +16,12 @@ from typing import Any
 
 from hse_doc_studio.core.entities import Document, Project
 from hse_doc_studio.core.enums import ProjectStaffing
+from hse_doc_studio.core.pack_studio.outcome.predicates import (
+    MANUAL_DEF_IDS,
+    NDA_DOC_ID,
+    manual_selected,
+    nda_enabled,
+)
 from hse_doc_studio.core.value_objects import Author
 
 # Разделитель "{def_id}--{owner}" в id инстанса документа; тот же сепаратор
@@ -175,13 +181,9 @@ def effective_meta(project: Project, author: Author | None) -> dict[str, Any]:
 
 
 # ── Руководства в комплекте (РП/РО) ──────────────────────────────────────────
-# def_id руководств: программиста (rp) и оператора (ro). Выбор «Руководства в
-# комплекте» (мета `manuals`, scope=author) определяет, какие из них входят в
-# комплект автора: только РП, только РО или оба.
-_MANUAL_DEF_IDS: frozenset[str] = frozenset({"programmer_manual", "operator_manual"})
-
-# Расписка NDA как документ: активна только при включённом project.meta.nda.
-_NDA_DEF_ID = "nda"
+# Выбор «Руководства в комплекте» (мета `manuals`, scope=author) определяет, какие из них входят в комплект автора:
+# только РП, только РО или оба. Само правило (подстроки выбора, расписка NDA) живёт в
+# `core/pack_studio/outcome/predicates.py`: его же читает вычислитель результата Студии шаблонов.
 
 
 def active_manuals(project: Project, owner: str | None) -> set[str]:
@@ -191,19 +193,16 @@ def active_manuals(project: Project, owner: str | None) -> set[str]:
     с учётом авторского перекрытия. Не задано → оба (дефолт). Пустой результат
     невозможен (fallback на оба) — «минимум одно» гарантировано.
     """
+    selection = _manuals_selection(project, owner)
+    return {def_id for def_id in MANUAL_DEF_IDS if manual_selected(selection, def_id)}
+
+
+def _manuals_selection(project: Project, owner: str | None) -> str:
     if owner:
         author: Author | None = author_by_slug(project, owner)
     else:
         author = project.authors[0] if project.authors else None
-    selection = str(effective_meta(project, author).get("manuals") or "").lower()
-    if not selection:
-        return set(_MANUAL_DEF_IDS)
-    active: set[str] = set()
-    if "программиста" in selection:
-        active.add("programmer_manual")
-    if "оператора" in selection:
-        active.add("operator_manual")
-    return active or set(_MANUAL_DEF_IDS)
+    return str(effective_meta(project, author).get("manuals") or "")
 
 
 def is_doc_active(project: Project, doc: Document) -> bool:
@@ -218,8 +217,8 @@ def is_doc_active(project: Project, doc: Document) -> bool:
     документов IDE, из пакета сдачи и из агрегированного нормоконтроля; сам файл
     и его содержимое при этом НЕ удаляются — повторное включение всё возвращает.
     """
-    if doc.def_id == _NDA_DEF_ID:
-        return bool(project.meta.get("nda"))
-    if doc.def_id not in _MANUAL_DEF_IDS:
+    if doc.def_id == NDA_DOC_ID:
+        return nda_enabled(project.meta)
+    if doc.def_id not in MANUAL_DEF_IDS:
         return True
-    return doc.def_id in active_manuals(project, doc.owner)
+    return manual_selected(_manuals_selection(project, doc.owner), doc.def_id)

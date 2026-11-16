@@ -160,6 +160,175 @@
     "stale": "Показан прежний результат: новый получить не удалось.",
     "updating": "Обновляю"
   },
+  "filters": {
+    "search": "Поиск",
+    "searchIn": "Поиск: {{name}}"
+  },
+  "documents": {
+    "state": {
+      "active": "В комплекте",
+      "inactive": "Выключен",
+      "absent": "Нет"
+    },
+    "scope": {
+      "shared": "Общий",
+      "personal": "Личный"
+    },
+    "filter": {
+      "all": "Все",
+      "personal": "Личные",
+      "shared": "Общие"
+    },
+    "filterScope": "Показать",
+    "optional": "Необязательный",
+    "why": {
+      "inactive": "выключен:",
+      "absent": "нет:"
+    },
+    "whyUnknown": "причина не указана в ответе",
+    "noFileName": "имя файла не задано",
+    "copies": "{{count}} экз.",
+    "variant": "Вариант:",
+    "variantOnly": "только {{langs}}",
+    "variantOff": "недоступен",
+    "languages": "Редакции:",
+    "fallback": "Нет редакции на {{lang}}: берётся язык по умолчанию",
+    "absentBlock": "Не в этой комбинации",
+    "stats": {
+      "active": "В комплекте",
+      "inactive": "Выключено",
+      "absent": "Нет в комбинации",
+      "shared": "Общих",
+      "personal": "Личных"
+    },
+    "groups": {
+      "none": "Без группы",
+      "espd": "ЕСПД",
+      "report": "Отчёт",
+      "pdp": "ПДП",
+      "pres": "Презентации",
+      "work": "Работа",
+      "nda": "NDA",
+      "topic": "Тема"
+    }
+  },
+  "meta": {
+    "stats": {
+      "visible": "Видимо",
+      "hidden": "Скрыто",
+      "create": "При создании",
+      "finalize": "При финализации",
+      "forms": "Анкет"
+    },
+    "empty": "У проекта нет полей и анкет в этой комбинации.",
+    "filterRequired": "Обязательность",
+    "required": {
+      "all": "Любая",
+      "create": "При создании",
+      "finalize": "При финализации",
+      "never": "Не обязательно"
+    },
+    "type": {
+      "string": "Строка",
+      "bool": "Да или нет",
+      "person": "Человек",
+      "select": "Выбор",
+      "font": "Шрифт"
+    },
+    "scope": {
+      "project": "Поле проекта",
+      "author": "Поле автора"
+    },
+    "value": "Пример:",
+    "noValue": "нет значения",
+    "options": "Варианты:",
+    "hiddenWhy": "скрыто:",
+    "whyUnknown": "причина не указана в ответе",
+    "hiddenBlock": "Скрыты в этой комбинации",
+    "groups": {
+      "none": "Прочее",
+      "study": "Учёба",
+      "docset": "Комплект документов",
+      "naming": "Названия",
+      "vkr_title": "Титульный лист",
+      "topic": "Тема",
+      "espd": "ЕСПД"
+    }
+  },
+  "forms": {
+    "required": "Обязательное",
+    "perAuthor": "На каждого автора",
+    "shared": "Общая",
+    "requiredForPack": "Нужна для комплекта",
+    "notApplies": "Не применяется",
+    "notAppliesWhy": "не применяется:",
+    "hiddenWhy": "скрыто:",
+    "fieldsOf": "Полей видно: {{visible}} из {{total}}",
+    "hiddenBlock": "Скрытые поля",
+    "offBlock": "Не применяются в этой комбинации"
+  },
+  "participants": {
+    "authorN": "Автор {{n}}",
+    "role": {
+      "author": "Автор",
+      "supervisor": "Руководитель",
+      "co_supervisor": "Второй руководитель",
+      "academic_supervisor": "Академический руководитель"
+    },
+    "org": {
+      "university": "ВШЭ",
+      "company": "Компания"
+    },
+    "required": {
+      "create": "Указать при создании",
+      "finalize": "Указать при финализации",
+      "never": "Не обязателен"
+    },
+    "always": "Всегда в проекте",
+    "absent": "нет:",
+    "absentWhy": "в этой комбинации не предусмотрен",
+    "byInput": "вводная «{{input}}»: {{value}}",
+    "stats": {
+      "authors": "Авторов",
+      "supervisors": "Руководителей",
+      "absent": "Нет в комбинации"
+    },
+    "warnTitle": "Нет человека для шага маршрута",
+    "warnStep": "Точка «{{point}}», шаг {{step}}: не указан {{who}}",
+    "empty": "В этой комбинации участников нет."
+  },
+  "reasons": {
+    "unset": "не задано",
+    "op": {
+      "in": "{{subject}}: сейчас {{actual}}, нужно {{expected}}",
+      "equals": "{{subject}}: сейчас {{actual}}, нужно {{expected}}",
+      "contains_any": "{{subject}}: «{{actual}}» не содержит {{expected}}",
+      "present": "{{subject}}: не указано",
+      "truthy": "{{subject}}: выключено"
+    },
+    "subjects": {
+      "kind": "вид работы",
+      "staffing": "состав",
+      "lang": "язык",
+      "supervisor": "руководитель",
+      "co_supervisor": "второй руководитель",
+      "academic_supervisor": "академический руководитель"
+    },
+    "values": {
+      "project": "проектный",
+      "research": "исследовательский",
+      "solo": "один автор",
+      "team2": "команда из двух",
+      "team3": "команда из трёх",
+      "ru": "русский",
+      "en": "английский",
+      "yes": "да",
+      "no": "нет",
+      "university": "ВШЭ",
+      "company": "компания",
+      "none": "нет"
+    }
+  },
   "sections": {
     "documents": "Документы",
     "meta": "Метаданные проекта",

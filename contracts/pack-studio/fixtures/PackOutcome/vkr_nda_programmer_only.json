@@ -796,7 +796,7 @@
           "active": false,
           "off_reason": "absent",
           "signatures": [],
-          "why": ["t5"]
+          "why": ["t5", "t6"]
         },
         {
           "doc_id": "annotation",
@@ -838,7 +838,7 @@
           "active": false,
           "off_reason": "absent",
           "signatures": [],
-          "why": ["t5"]
+          "why": ["t5", "t6"]
         },
         {"doc_id": "thesis", "active": true, "off_reason": null, "signatures": [], "why": ["t67"]},
         {
@@ -873,7 +873,7 @@
           "active": false,
           "off_reason": "absent",
           "signatures": [],
-          "why": ["t5"]
+          "why": ["t5", "t6"]
         },
         {"doc_id": "thesis", "active": true, "off_reason": null, "signatures": [], "why": ["t68"]},
         {
@@ -895,7 +895,7 @@
           "active": false,
           "off_reason": "absent",
           "signatures": [],
-          "why": ["t12"]
+          "why": ["t12", "t13"]
         },
         {"doc_id": "source_listing", "active": true, "off_reason": null, "signatures": [], "why": []},
         {"doc_id": "presentation", "active": true, "off_reason": null, "signatures": [], "why": []}
@@ -1009,7 +1009,7 @@
           "active": false,
           "off_reason": "absent",
           "signatures": ["author", "supervisor"],
-          "why": ["t5"]
+          "why": ["t5", "t6"]
         },
         {
           "doc_id": "thesis",
@@ -1030,7 +1030,7 @@
           "active": false,
           "off_reason": "absent",
           "signatures": ["author", "supervisor"],
-          "why": ["t12"]
+          "why": ["t12", "t13"]
         },
         {
           "doc_id": "source_listing",
@@ -1051,7 +1051,7 @@
           "active": false,
           "off_reason": "inactive",
           "signatures": ["author", "supervisor"],
-          "why": ["t22"]
+          "why": ["t22", "t23", "t24"]
         },
         {"doc_id": "presentation", "active": true, "off_reason": null, "signatures": [], "why": []},
         {
@@ -1247,7 +1247,7 @@
           "active": false,
           "off_reason": "absent",
           "signatures": ["author", "supervisor"],
-          "why": ["t5"]
+          "why": ["t5", "t6"]
         },
         {
           "doc_id": "test_program_and_methodology",
@@ -1261,7 +1261,7 @@
           "active": false,
           "off_reason": "absent",
           "signatures": ["author", "supervisor"],
-          "why": ["t12"]
+          "why": ["t12", "t13"]
         },
         {
           "doc_id": "source_listing",
@@ -1282,7 +1282,7 @@
           "active": false,
           "off_reason": "inactive",
           "signatures": ["author", "supervisor"],
-          "why": ["t22"]
+          "why": ["t22", "t23", "t24"]
         },
         {"doc_id": "nda", "active": true, "off_reason": null, "signatures": [], "why": []}
       ],

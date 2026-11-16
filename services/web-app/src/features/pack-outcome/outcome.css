@@ -704,3 +704,330 @@
     padding: 0.375rem 0.75rem;
   }
 }
+
+/* ── секции F3: документы, метаданные и анкеты, участники ── */
+.po-sec {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.po-sec[data-stale="true"] {
+  opacity: 0.75;
+}
+.po-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.po-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  padding: 0.1875rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--bg-2);
+  font-size: 0.75rem;
+  color: var(--fg-1);
+}
+.po-stat-value {
+  font-weight: 600;
+  color: var(--fg-0);
+  font-variant-numeric: tabular-nums;
+}
+.po-stat[data-zero="true"] {
+  color: var(--fg-3);
+}
+.po-stat[data-zero="true"] .po-stat-value {
+  color: var(--fg-2);
+}
+.po-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+.po-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 12rem;
+  min-width: 0;
+  max-width: 24rem;
+}
+.po-search > svg {
+  position: absolute;
+  left: 0.5rem;
+  color: var(--fg-3);
+  pointer-events: none;
+}
+.po-search .input {
+  width: 100%;
+  padding-left: 1.75rem;
+}
+.po-filter-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+.po-filter-select .input {
+  width: auto;
+  min-width: 0;
+}
+.po-note {
+  font-size: 0.71875rem;
+  color: var(--fg-2);
+}
+.po-mono {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+.po-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+}
+.po-group-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+.po-group-count {
+  font-weight: 500;
+  color: var(--fg-3);
+}
+.po-grid,
+.po-forms,
+.po-fields {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+.po-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+}
+.po-forms {
+  grid-template-columns: minmax(0, 1fr);
+}
+.po-fields {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+  padding: 0 0.5rem 0.5rem;
+}
+.po-item {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-3, 0.5rem);
+  background: var(--bg-0);
+}
+.po-item:hover {
+  border-color: var(--border-strong);
+}
+.po-item[data-muted="true"] {
+  background: transparent;
+  border-style: dashed;
+}
+.po-item[data-muted="true"] .po-pick-title {
+  color: var(--fg-2);
+}
+.po-item[data-selected="true"],
+.po-form[data-selected="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-line);
+  background: var(--accent-soft);
+}
+.po-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.375rem;
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  color: var(--fg-1);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.po-pick:focus-visible {
+  outline-offset: -2px;
+}
+.po-pick-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.25rem 0.5rem;
+}
+.po-pick-title {
+  flex: 1 1 8rem;
+  min-width: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--fg-0);
+  overflow-wrap: anywhere;
+}
+.po-pick-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+.po-pick-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  min-width: 0;
+}
+.po-reason {
+  color: var(--fg-2);
+  overflow-wrap: anywhere;
+}
+.po-reason-prefix {
+  margin-right: 0.25rem;
+  font-weight: 600;
+  color: var(--c-warn);
+}
+.po-files {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+.po-file {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.125rem 0.5rem;
+}
+.po-file-owner {
+  color: var(--fg-1);
+}
+.po-file-name {
+  color: var(--fg-0);
+}
+.po-item[data-muted="true"] .po-file-name {
+  color: var(--fg-2);
+}
+.po-variants,
+.po-langs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+}
+.po-variant-off {
+  margin-left: 0.25rem;
+  opacity: 0.8;
+}
+.po-meta-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.125rem 0.5rem;
+}
+.po-meta-id {
+  color: var(--fg-2);
+}
+.po-meta-value {
+  color: var(--fg-0);
+  overflow-wrap: anywhere;
+}
+.po-person-name {
+  font-size: 0.8125rem;
+  color: var(--fg-0);
+}
+.po-form {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-3, 0.5rem);
+  background: var(--bg-0);
+}
+.po-form[data-muted="true"] {
+  background: transparent;
+  border-style: dashed;
+}
+.po-form .po-item {
+  background: var(--bg-1);
+}
+.po-form .po-disc {
+  padding: 0 0.5rem 0.5rem;
+}
+.po-disc {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+}
+.po-disc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  align-self: flex-start;
+  padding: 0.25rem 0.375rem;
+  border: 0;
+  border-radius: var(--r-2, 0.375rem);
+  background: transparent;
+  color: var(--fg-2);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.po-disc-btn:hover {
+  color: var(--fg-0);
+}
+.po-disc-count {
+  padding: 0 0.375rem;
+  border-radius: var(--r-pill);
+  background: var(--bg-3);
+  font-size: 0.6875rem;
+  font-variant-numeric: tabular-nums;
+}
+.po-warn {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid color-mix(in oklch, var(--c-warn) 45%, transparent);
+  border-radius: var(--r-3, 0.5rem);
+  background: var(--c-warn-soft);
+  font-size: 0.75rem;
+}
+.po-warn-icon {
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+  color: var(--c-warn);
+}
+.po-warn-title {
+  margin: 0;
+  font-weight: 600;
+  color: var(--fg-0);
+}
+.po-warn-list {
+  margin: 0.125rem 0 0;
+  padding-left: 1rem;
+  color: var(--fg-1);
+}
+.po-variants .chip,
+.po-pick-badges .chip {
+  max-width: 100%;
+  height: auto;
+  min-height: 1.25rem;
+  white-space: normal;
+  line-height: 1.25;
+}

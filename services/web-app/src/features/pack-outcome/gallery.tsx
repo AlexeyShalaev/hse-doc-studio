@@ -154,6 +154,7 @@ const seedWorkspace = (
   search: string,
   work: Work,
   inputsKind: InputsKind,
+  edit?: (outcome: PackOutcome) => void,
 ) => {
   const ref = refOf(work);
   const url = parseOutcomeSearch(new URLSearchParams(search));
@@ -214,6 +215,7 @@ const seedWorkspace = (
     inputs: { ...outcome.inputs, ...(scenario?.inputs ?? {}), ...url.inputs },
   };
   if (kind === "ready") {
+    edit?.(base);
     client.setQueryData(key, base);
   } else if (kind === "empty") {
     client.setQueryData(key, {
@@ -263,6 +265,68 @@ type Spec = {
   work?: Work;
   /** Состояние запроса вводных (по умолчанию готов). */
   inputs?: InputsKind;
+  /** Правка эталона под состояние, которого в эталонах нет (команда, руководитель «нет»). */
+  edit?: (outcome: PackOutcome) => void;
+};
+
+/** Команда из двух: личные документы по авторам, у одного нет редакции на язык проекта. */
+const teamOfTwo = (outcome: PackOutcome) => {
+  outcome.participants = [
+    {
+      persona: "author1",
+      role: "author",
+      name: "Иванов Иван Иванович",
+      present: true,
+      org: null,
+      why: [],
+    },
+    {
+      persona: "author2",
+      role: "author",
+      name: "Петрова Анна Сергеевна",
+      present: true,
+      org: null,
+      why: [],
+    },
+    ...outcome.participants.filter((p) => p.role !== "author"),
+  ];
+  for (const doc of outcome.documents) {
+    if (doc.state === "active" && doc.scope === "personal") {
+      doc.instances = [
+        {
+          id: `${doc.id}-1`,
+          owner: "author1",
+          owner_name: "Иванов",
+          file_name: `${doc.name.ru ?? doc.id}_Иванов.pdf`,
+        },
+        {
+          id: `${doc.id}-2`,
+          owner: "author2",
+          owner_name: "Петрова",
+          file_name: `${doc.name.ru ?? doc.id}_Петрова.pdf`,
+        },
+      ];
+    }
+    if (doc.id === "pdp_review") doc.lang_state = "fallback";
+  }
+};
+
+/** Научрук не указан: шаги маршрута с ним остаются без человека. */
+const noSupervisor = (outcome: PackOutcome) => {
+  for (const p of outcome.participants) {
+    if (p.persona === "supervisor") {
+      p.present = false;
+      p.name = "";
+      p.org = null;
+    }
+  }
+  for (const point of outcome.points) {
+    for (const step of point.route.steps) {
+      for (const person of step) {
+        if (person.persona === "supervisor") person.name = "";
+      }
+    }
+  }
 };
 
 const SPECS: Spec[] = [
@@ -297,6 +361,22 @@ const SPECS: Spec[] = [
     kind: "ready",
     search:
       "scenario=company-supervisor&i.kind=research&i.staffing=team2&selected=documents:operator_manual",
+  },
+  {
+    id: "po_sections_team",
+    title: "Секции: команда из двух",
+    note: "Документы с экземплярами по авторам и откатом на другой язык, два автора в участниках.",
+    kind: "ready",
+    search: "selected=documents:pdp_review",
+    edit: teamOfTwo,
+  },
+  {
+    id: "po_sections_no_supervisor",
+    title: "Секции: руководитель не указан",
+    note: "Бледная карточка руководителя и предупреждение о шагах маршрута без человека.",
+    kind: "ready",
+    search: "selected=participants:supervisor",
+    edit: noSupervisor,
   },
   {
     id: "po_student",
@@ -408,6 +488,7 @@ export const getPackOutcomeGallery = (): GalleryGroup[] => [
             spec.search ?? "",
             spec.work ?? "vkr",
             spec.inputs ?? "ready",
+            spec.edit,
           );
         },
         render: () => (
