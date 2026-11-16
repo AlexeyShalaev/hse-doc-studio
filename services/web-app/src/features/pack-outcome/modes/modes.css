@@ -82,7 +82,7 @@
 }
 .cmp-value dt {
   font-size: 0.6875rem;
-  color: var(--fg-3);
+  color: var(--fg-2);
 }
 .cmp-value dd {
   margin: 0;
@@ -231,19 +231,21 @@
   font-size: 0.9375rem;
   font-weight: 600;
 }
+/* Таблица шире узкого центра (три колонки экрана) прокручивается внутри себя, страница не едет. */
 .mx-grid {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--border);
   border-radius: var(--r-3, 0.5rem);
   background: var(--bg-1);
-  overflow: hidden;
+  overflow-x: auto;
 }
 .mx-row {
   display: grid;
   grid-template-columns:
-    minmax(9rem, 1.6fr)
-    repeat(var(--mx-cols, 7), minmax(0, 1fr));
+    minmax(8rem, 1.5fr)
+    repeat(var(--mx-cols, 7), minmax(5.25rem, 1fr));
+  min-width: calc(8rem + var(--mx-cols, 7) * 5.25rem);
 }
 .mx-row + .mx-row {
   border-top: 1px solid var(--border);
@@ -254,10 +256,11 @@
   font-size: 0.75rem;
   font-weight: 600;
 }
+/* Заголовки столбцов переносятся только между словами. */
 .mx-corner,
 .mx-colhead {
-  padding: 0.5rem 0.625rem;
-  overflow-wrap: anywhere;
+  padding: 0.5rem 0.5rem;
+  overflow-wrap: normal;
 }
 .mx-rowhead {
   display: flex;
@@ -325,7 +328,7 @@
   color: var(--c-err);
 }
 .mx-cell[data-status="unchecked"] .mx-cell-main {
-  color: var(--fg-3);
+  color: var(--fg-2);
 }
 .mx-cell-word {
   font-size: 0.6875rem;
@@ -439,6 +442,12 @@
   font-size: 0.875rem;
   font-weight: 600;
 }
+.at-summary-h {
+  cursor: pointer;
+}
+.at-dimblock > :not(summary) {
+  margin-top: 0.5rem;
+}
 .at-dims {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr));
@@ -484,9 +493,13 @@
   margin: 0;
   font-size: 0.8125rem;
 }
+/* Не влияющие вводные приглушены размером и отступом, а не контрастом: текст остаётся читаемым. */
 .at-ignored {
   font-size: 0.8125rem;
-  color: var(--fg-3);
+  color: var(--fg-2);
+}
+.at-ignored .po-mono {
+  color: var(--fg-2);
 }
 .at-ignored summary {
   cursor: pointer;
@@ -579,7 +592,7 @@
 .at-chip[data-default="true"] {
   border-color: var(--border);
   background: transparent;
-  color: var(--fg-3);
+  color: var(--fg-2);
 }
 .at-chip-pin {
   display: inline-flex;
@@ -681,6 +694,10 @@
   }
   .mx-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-width: 0;
+  }
+  .mx-grid {
+    overflow-x: visible;
   }
   .mx-rowhead {
     grid-column: 1 / -1;

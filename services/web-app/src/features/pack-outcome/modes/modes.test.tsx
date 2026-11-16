@@ -522,9 +522,7 @@ describe("режимы центра: Матрица, Атлас, Сравнит�
       expect(summary).toHaveTextContent(
         "12 различных исходов в 12 строках (из 576 комбинаций)",
       );
-      expect(
-        screen.getByRole("heading", { name: "Измерения: 3" }),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Измерения: 3")).toBeInTheDocument();
       const ignored = screen.getByTestId("outcome-atlas-ignored");
       expect(ignored).toHaveTextContent("Не влияют: 6");
       expect(ignored).toHaveTextContent("ничего не меняет");
@@ -953,9 +951,7 @@ describe("режимы центра: Матрица, Атлас, Сравнит�
       await screen.findByTestId("outcome-compare-summary");
       await user.click(screen.getByTestId("outcome-compare-right-freeze"));
       await waitFor(() => {
-        const value = new URLSearchParams((where() ?? "").split("?")[1]).get(
-          "right",
-        );
+        const value = new URLSearchParams(where().split("?")[1]).get("right");
         expect(value).toMatch(/^inputs:/);
         expect(value).toContain("kind=research");
         expect(value).toContain("supervisor=company");

@@ -306,10 +306,15 @@ const AtlasView = ({ atlas, labeler, stale, fetching, shown }: ViewProps) => {
           {t("modes.atlas.noDimensions")}
         </p>
       ) : (
-        <section aria-labelledby={`${searchId}-dims`} className="at-block">
-          <h3 className="at-h" id={`${searchId}-dims`}>
+        // На телефоне восемь карточек занимают экран: блок свёрнут, раскрывается заголовком.
+        <details
+          open={model.phone ? undefined : true}
+          className="at-block at-dimblock"
+          data-testid="outcome-atlas-dimensions"
+        >
+          <summary className="at-h at-summary-h">
             {t("modes.atlas.dimensions", { count: dimensions.length })}
-          </h3>
+          </summary>
           <p className="po-note">{t("modes.atlas.dimensionsLead")}</p>
           <ul className="at-dims">
             {dimensions.map((dim) => (
@@ -325,7 +330,7 @@ const AtlasView = ({ atlas, labeler, stale, fetching, shown }: ViewProps) => {
               />
             ))}
           </ul>
-        </section>
+        </details>
       )}
 
       {pinned.length > 0 && (
