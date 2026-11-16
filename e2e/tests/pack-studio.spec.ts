@@ -850,6 +850,24 @@ for (const lang of LANGS) {
       await page.keyboard.press("Escape");
       await expect(page.getByTestId("scenario-save-dialog")).toBeHidden();
 
+      // Предпросмотр PDF (F12): кнопка у документа открывает панель рядом с результатом и собирает его
+      // с текущими вводными; неудача показана кодом и журналом, закрытие возвращает результат.
+      await page.getByTestId("outcome-doc-report-preview").click();
+      await expect(page.getByTestId("outcome-preview-drawer")).toBeVisible();
+      await expect.poll(() => fake.previews.length).toBe(1);
+      expect(fake.previews[0]).toMatchObject({
+        documents: ["report"],
+        example: "auto:normal",
+        // Вводные результата из эталона: научрук из компании.
+        combination: { lang: "ru", supervisor: "company" },
+      });
+      await expect(page.getByTestId("preview-failed")).toContainText("LaTeX");
+      await expect(page.getByTestId("outcome-preview-auto")).toHaveAttribute("aria-checked", "false");
+      await shot(page, L, "ps-87-outcome-preview");
+      await page.getByTestId("outcome-preview-close").click();
+      await expect(page.getByTestId("outcome-preview-drawer")).toBeHidden();
+      await expect(page.getByTestId("outcome-documents")).toBeVisible();
+
       // Режим «Как студент» живёт в адресе: перезагрузка возвращает тот же экран.
       await page.getByTestId("outcome-mode-student").click();
       await expect(page).toHaveURL(/mode=student/);
