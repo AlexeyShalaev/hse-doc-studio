@@ -342,7 +342,9 @@ class _Service:
             raise self._error
         return OutcomeReply("etag", self._body)
 
-    async def inputs(self, actor: Actor, ws: UUID, pack: str, template: str, version: str, state: str) -> OutcomeReply:
+    async def inputs(
+        self, actor: Actor, ws: UUID, pack: str, template: str, version: str, state: str, *, scenario: str | None = None
+    ) -> OutcomeReply:
         self.calls.append(("inputs", (actor, ws, pack, template, version, state)))
         if self._error is not None:
             raise self._error
