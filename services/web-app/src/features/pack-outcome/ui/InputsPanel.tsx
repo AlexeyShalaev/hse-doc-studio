@@ -30,6 +30,7 @@ import { useDraftInputs } from "../lib/useDraftInputs";
 import { useOutcomeModel } from "../model";
 import { InputRow } from "./inputs/InputRow";
 import { Notice } from "./Notice";
+import { useScenarioUi } from "./scenarios/context";
 
 /** Значение «без сценария»: у выпадающего списка значение не бывает пустым. */
 const NO_SCENARIO = "__none__";
@@ -104,6 +105,7 @@ export const InputsPanel = () => {
     model;
   const { update } = url;
   const urlInputs = url.state.inputs;
+  const scenarioUi = useScenarioUi();
 
   const commit = useCallback(
     (next: Record<string, string>) => {
@@ -328,6 +330,18 @@ export const InputsPanel = () => {
               >
                 {t("inputs.scenario.restore")}
               </button>
+              {scenarioUi?.canWrite && (
+                <button
+                  type="button"
+                  className="po-link"
+                  data-testid="outcome-inputs-save-into"
+                  onClick={() => {
+                    scenarioUi.open({ kind: "saveInputs", id: scenario });
+                  }}
+                >
+                  {t("inputs.scenario.saveInto")}
+                </button>
+              )}
             </p>
           )}
         </div>

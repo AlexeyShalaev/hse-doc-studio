@@ -14,6 +14,7 @@ import { ApiError, apiClient } from "@shared/api";
 import {
   installOutcomeReference,
   outcomeReference,
+  scenarioReference,
   setExplainBehavior,
 } from "../reference";
 import { packOutcomeApi } from "./outcomeApi";
@@ -24,17 +25,26 @@ import {
   normalizeOutcomeRequest,
   packOutcomeKeys,
   retryOutcome,
+  useDeletePackScenario,
   usePackOutcome,
   usePackOutcomeExplain,
   usePackOutcomeInputs,
+  usePackScenarioRun,
   usePackScenarios,
+  useWritePackScenario,
 } from "./outcomeQueries";
+import { PackStaleFileError } from "./packStudioApi";
 
 // Хуки результата на эталонах контракта: запрос уходит в транспорт axios, подмена отвечает
 // эталоном со строгим разбором схемами. Тот же код, который позже получит настоящий сервер.
 
 const REF = { pack: "hse-cs-se", template: "vkr", version: "2026.1.2" };
 const WS = "ws-1";
+const REF2 = {
+  pack: "hse-cs-sse",
+  template: "coursework",
+  version: "2026.1.6",
+};
 
 const wrapper = () => {
   const client = new QueryClient({
@@ -53,10 +63,12 @@ describe("хуки результата на эталонах", () => {
   // По умолчанию запросы идут настоящему серверу; тесты работают на эталонах.
   beforeEach(() => {
     outcomeReference.setSource("reference");
+    scenarioReference.reset();
   });
   afterEach(() => {
     outcomeReference.setSource("reference");
     outcomeReference.setBehavior("normal");
+    scenarioReference.reset();
   });
 
   it("результат несёт адрес запроса и вводные поверх эталона", async () => {
@@ -155,6 +167,164 @@ describe("хуки результата на эталонах", () => {
     expect(retryOutcome(0, api(503))).toBe(true);
     expect(retryOutcome(0, api(422))).toBe(false);
     expect(retryOutcome(1, api(503))).toBe(false);
+  });
+
+  describe("запись, удаление и прогон сценариев", () => {
+    const SCENARIO = {
+      format: 1 as const,
+      name: { ru: "Новый" },
+      inputs: { supervisor: "none" },
+    };
+
+    it("создание без If-Match, правка с If-Match, список обновляется сразу", async () => {
+      const { Wrapper } = wrapper();
+      const { result } = renderHook(
+        () => ({
+          list: usePackScenarios(WS, "hse-cs-sse", "coursework"),
+          write: useWritePackScenario(WS, "hse-cs-sse", "coursework"),
+        }),
+        { wrapper: Wrapper },
+      );
+      await waitFor(() => {
+        expect(result.current.list.isSuccess).toBe(true);
+      });
+      const created = await result.current.write.mutateAsync({
+        scenario: "fresh",
+        body: { scenario: SCENARIO },
+        ifMatch: null,
+      });
+      expect(created.id).toBe("fresh");
+      await waitFor(() => {
+        expect(result.current.list.data?.scenarios.map((s) => s.id)).toContain(
+          "fresh",
+        );
+      });
+      const edited = await result.current.write.mutateAsync({
+        scenario: "fresh",
+        body: { scenario: { ...SCENARIO, name: { ru: "Правка" } } },
+        ifMatch: created.etag,
+      });
+      expect(edited.scenario?.name.ru).toBe("Правка");
+      expect(edited.etag).not.toBe(created.etag);
+    });
+
+    it("запись поверх существующего без If-Match: scenario_taken", async () => {
+      const { Wrapper } = wrapper();
+      const { result } = renderHook(
+        () => useWritePackScenario(WS, "hse-cs-sse", "coursework"),
+        { wrapper: Wrapper },
+      );
+      await expect(
+        result.current.mutateAsync({
+          scenario: "company-supervisor",
+          body: { scenario: SCENARIO },
+          ifMatch: null,
+        }),
+      ).rejects.toMatchObject({ code: "scenario_taken", status: 409 });
+    });
+
+    it("чужая правка: PackStaleFileError с ETag с диска", async () => {
+      const { Wrapper } = wrapper();
+      const { result } = renderHook(
+        () => useWritePackScenario(WS, "hse-cs-sse", "coursework"),
+        { wrapper: Wrapper },
+      );
+      scenarioReference.touch("company-supervisor");
+      const error = await result.current
+        .mutateAsync({
+          scenario: "company-supervisor",
+          body: { scenario: SCENARIO },
+          ifMatch: '"old"',
+        })
+        .catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(PackStaleFileError);
+      expect((error as PackStaleFileError).diskEtag).toBe('"ref-1"');
+    });
+
+    it("record_snapshot заменяет снимок; нет файла при If-Match: scenario_not_found", async () => {
+      const { Wrapper } = wrapper();
+      const { result } = renderHook(
+        () => useWritePackScenario(WS, "hse-cs-sse", "coursework"),
+        { wrapper: Wrapper },
+      );
+      const saved = await result.current.mutateAsync({
+        scenario: "snap",
+        body: { scenario: SCENARIO, record_snapshot: "work_tree" },
+        ifMatch: null,
+      });
+      expect(saved.scenario?.snapshot?.documents).toBeDefined();
+      await expect(
+        result.current.mutateAsync({
+          scenario: "ghost",
+          body: { scenario: SCENARIO },
+          ifMatch: '"x"',
+        }),
+      ).rejects.toMatchObject({ code: "scenario_not_found" });
+    });
+
+    it("удаление убирает запись из списка; отмена пишет те же данные без If-Match", async () => {
+      const { Wrapper } = wrapper();
+      const { result } = renderHook(
+        () => ({
+          list: usePackScenarios(WS, "hse-cs-sse", "coursework"),
+          write: useWritePackScenario(WS, "hse-cs-sse", "coursework"),
+          del: useDeletePackScenario(WS, "hse-cs-sse", "coursework"),
+        }),
+        { wrapper: Wrapper },
+      );
+      await waitFor(() => {
+        expect(result.current.list.isSuccess).toBe(true);
+      });
+      const entry = result.current.list.data?.scenarios.find(
+        (s) => s.id === "no-supervisor",
+      );
+      if (!entry?.scenario) throw new Error("fixture");
+      await result.current.del.mutateAsync({
+        scenario: "no-supervisor",
+        ifMatch: entry.etag,
+      });
+      await waitFor(() => {
+        expect(
+          result.current.list.data?.scenarios.some(
+            (s) => s.id === "no-supervisor",
+          ),
+        ).toBe(false);
+      });
+      const restored = await result.current.write.mutateAsync({
+        scenario: "no-supervisor",
+        body: { scenario: entry.scenario },
+        ifMatch: null,
+      });
+      expect(restored.scenario).toEqual(entry.scenario);
+    });
+
+    it("прогон ждёт revision вводных, потом отдаёт статусы и итог", async () => {
+      const { Wrapper } = wrapper();
+      const { result, rerender } = renderHook(
+        ({ revision }) => usePackScenarioRun(WS, REF2, "work_tree", revision),
+        {
+          wrapper: Wrapper,
+          initialProps: { revision: undefined as string | undefined },
+        },
+      );
+      expect(result.current.fetchStatus).toBe("idle");
+      rerender({ revision: "rev-1" });
+      await waitFor(() => {
+        expect(result.current.isSuccess).toBe(true);
+      });
+      expect(result.current.data?.version).toBe("2026.1.6");
+      expect(result.current.data?.passed).toBe(2);
+      expect(result.current.data?.failed).toBe(1);
+    });
+
+    it("ключ прогона зависит от версии, состояния и ревизии", () => {
+      expect(packOutcomeKeys.scenarioRun(WS, REF2, "head", "a")).not.toEqual(
+        packOutcomeKeys.scenarioRun(WS, REF2, "work_tree", "a"),
+      );
+      expect(packOutcomeKeys.scenarioRun(WS, REF2, "head", "a")).not.toEqual(
+        packOutcomeKeys.scenarioRun(WS, REF2, "head", "b"),
+      );
+    });
   });
 });
 

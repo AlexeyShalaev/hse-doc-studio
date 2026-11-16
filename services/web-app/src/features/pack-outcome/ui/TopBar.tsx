@@ -15,14 +15,12 @@ import { pickLocalized } from "@shared/lib/i18n/pickLocalized";
 import { Select } from "@shared/ui";
 import { writeOutcomeSearch, type OutcomeMode } from "../lib/urlState";
 import { useOutcomeModel } from "../model";
+import { ScenarioPicker } from "./scenarios/ScenarioPicker";
 
 // Переключатель данных только для разработки: в рабочей сборке этой ветки нет.
 const DevSwitch = import.meta.env.DEV
   ? lazy(() => import("./DevSwitch"))
   : null;
-
-/** Значение «без сценария»: у выпадающего списка значение не бывает пустым. */
-const NO_SCENARIO = "__none__";
 
 export type OutcomeLocation = {
   pack: PackTreePack;
@@ -50,7 +48,7 @@ export const TopBar = ({ tree, location, dirty, onOpenFiles }: TopBarProps) => {
   const { t, i18n } = useTranslation("packOutcome");
   const navigate = useNavigate();
   const model = useOutcomeModel();
-  const { workspaceId, url, outcome, scenarios, ref, released } = model;
+  const { workspaceId, url, outcome, ref, released } = model;
   const lang = i18n.language;
 
   const nameOf = (
@@ -100,26 +98,6 @@ export const TopBar = ({ tree, location, dirty, onOpenFiles }: TopBarProps) => {
 
   const versionLabel = (v: PackTreeVersion) =>
     v.status ? `${v.version} (${v.status})` : v.version;
-
-  // Сценарии: выбранный, которого нет в шаблоне (устаревшая ссылка), остаётся виден в списке.
-  const entries = scenarios.data?.scenarios ?? [];
-  const chosen = url.state.scenario;
-  const scenarioOptions = [
-    { value: NO_SCENARIO, label: t("bar.noScenario") },
-    ...entries.map((entry) => {
-      const name = nameOf(entry.scenario?.name, entry.id);
-      return {
-        value: entry.id,
-        label: entry.error ? t("bar.scenarioBroken", { name }) : name,
-        isDisabled: entry.error !== null && entry.id !== chosen,
-      };
-    }),
-    ...(chosen !== null &&
-    scenarios.isSuccess &&
-    !entries.some((entry) => entry.id === chosen)
-      ? [{ value: chosen, label: t("bar.scenarioMissing", { id: chosen }) }]
-      : []),
-  ];
 
   const stateLabel: Record<OutcomeState, string> = {
     work_tree: t("bar.stateWorkTree"),
@@ -184,19 +162,7 @@ export const TopBar = ({ tree, location, dirty, onOpenFiles }: TopBarProps) => {
         </div>
       </div>
       <div className="po-bar-row">
-        <label className="po-field" htmlFor="po-scenario">
-          <span className="po-field-label">{t("bar.scenario")}</span>
-          <Select
-            id="po-scenario"
-            ariaLabel={t("bar.scenario")}
-            className="po-select"
-            value={chosen ?? NO_SCENARIO}
-            options={scenarioOptions}
-            onValueChange={(next) => {
-              url.update({ scenario: next === NO_SCENARIO ? null : next });
-            }}
-          />
-        </label>
+        <ScenarioPicker />
         <div className="po-field" role="group" aria-label={t("bar.mode")}>
           <span className="po-field-label" aria-hidden="true">
             {t("bar.mode")}

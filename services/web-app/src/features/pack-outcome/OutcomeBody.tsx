@@ -30,7 +30,7 @@ import { useLastDefined } from "./lib/lastDefined";
 import { useOutcomePanels } from "./lib/panels";
 import { useOutcomeUrlState, type OutcomeSelection } from "./lib/urlState";
 import { summarize } from "./lib/summary";
-import { OutcomeModelContext, type OutcomeModel } from "./model";
+import { type OutcomeModel } from "./model";
 import { FilesDrawer } from "./ui/FilesDrawer";
 import { Footer } from "./ui/Footer";
 import { InputsPanel } from "./ui/InputsPanel";
@@ -38,6 +38,8 @@ import { Notice } from "./ui/Notice";
 import { PanelShell } from "./ui/PanelShell";
 import { ResultCenter } from "./ui/ResultCenter";
 import { RulesPanel } from "./ui/RulesPanel";
+import type { ScenarioDialog } from "./ui/scenarios/context";
+import { OutcomeProviders } from "./ui/scenarios/OutcomeProviders";
 import { Splitter } from "./ui/Splitter";
 import { TopBar, type OutcomeLocation } from "./ui/TopBar";
 import "./outcome.css";
@@ -46,6 +48,8 @@ export type OutcomeBodyProps = {
   workspace: PackWorkspace;
   /** Версия из адреса экрана: имена папок пака, шаблона и версии. */
   version: PackVersionRef;
+  /** Окно сценариев, открытое сразу (галерея состояний). */
+  scenarioDialog?: ScenarioDialog | null;
 };
 
 const findLocation = (
@@ -74,7 +78,11 @@ const sameElement = (a: OutcomeSelection | null, b: OutcomeSelection) =>
  * Состояние живёт в адресе, данные приходят хуками контракта (с сервера, в dev по переключателю
  * на эталонах), наполнение панелей и секций делают срезы F2 до F7. Клиент условий не считает.
  */
-export const OutcomeBody = ({ workspace, version }: OutcomeBodyProps) => {
+export const OutcomeBody = ({
+  workspace,
+  version,
+  scenarioDialog = null,
+}: OutcomeBodyProps) => {
   const { t } = useTranslation("packOutcome");
   const navigate = useNavigate();
   const phone = useIsPhoneWidth();
@@ -112,6 +120,7 @@ export const OutcomeBody = ({ workspace, version }: OutcomeBodyProps) => {
     version.pack,
     version.template,
     found,
+    url.state.state,
   );
   const shown = useLastDefined(outcome.data);
   const stale = outcome.isPlaceholderData || outcome.isError;
@@ -265,7 +274,7 @@ export const OutcomeBody = ({ workspace, version }: OutcomeBodyProps) => {
   );
 
   return (
-    <OutcomeModelContext.Provider value={model}>
+    <OutcomeProviders model={model} scenarioDialog={scenarioDialog}>
       <div
         className="po-screen"
         data-testid="outcome-screen"
@@ -475,6 +484,6 @@ export const OutcomeBody = ({ workspace, version }: OutcomeBodyProps) => {
           onSelect={openFile}
         />
       </div>
-    </OutcomeModelContext.Provider>
+    </OutcomeProviders>
   );
 };

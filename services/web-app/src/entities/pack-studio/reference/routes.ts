@@ -3,20 +3,26 @@ import {
   createDemoRouter,
   demoError,
   demoJson,
+  demoNoContent,
   installDemoAdapter,
   type DemoRoute,
 } from "@shared/api/demo";
-import type {
-  PackOutcome,
-  PackOutcomeInputs,
-  PackOutcomeRequest,
-  PackScenarioList,
+import {
+  PackScenarioWriteRequestSchema,
+  type PackOutcome,
+  type PackOutcomeInputs,
+  type PackOutcomeRequest,
+  type PackScenarioEntry,
+  type PackScenarioList,
+  type PackScenarioRun,
+  type PackScenarioRunRequest,
 } from "../api/outcome";
 import type { OutcomeElementRef } from "../api/outcome";
 import { explainFor } from "./explain";
 import {
   COURSEWORK_INPUTS,
   COURSEWORK_OUTCOME,
+  COURSEWORK_RUN,
   COURSEWORK_SCENARIOS,
   VKR_BRANCHES,
   VKR_CHECKS,
@@ -37,6 +43,7 @@ export type ReferenceBehavior =
   | "empty"
   | "no_inputs"
   | "no_scenarios"
+  | "run_error"
   | "slow"
   | "error"
   | "unreadable";
@@ -46,6 +53,7 @@ export const REFERENCE_BEHAVIORS: readonly ReferenceBehavior[] = [
   "empty",
   "no_inputs",
   "no_scenarios",
+  "run_error",
   "slow",
   "error",
   "unreadable",
@@ -173,13 +181,183 @@ const inputsFor = (params: Params, state: string | null): PackOutcomeInputs => {
   return out;
 };
 
+// Сценарии «на эталонах» живут в памяти страницы: запись, правка, удаление и прогон работают как
+// у сервера (ETag записи, `scenario_taken`, `stale_file`, `record_snapshot`), чтобы экран и тесты
+// проходили весь путь «создал, увидел в списке, прогнал» без сервера.
+type ScenarioStore = {
+  entries: PackScenarioEntry[];
+  counter: number;
+  /** Сценарии, чей снимок принят после правки правила: на прогоне они совпадают. */
+  accepted: Set<string>;
+};
+
+const freshStore = (): ScenarioStore => ({
+  entries: structuredClone(COURSEWORK_SCENARIOS.scenarios),
+  counter: 0,
+  accepted: new Set(),
+});
+let store = freshStore();
+
+const SCENARIO_ID = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+const byId = (a: PackScenarioEntry, b: PackScenarioEntry) =>
+  a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+
+/** Состояние сценариев подмены: тесты и галерея сбрасывают и подстраивают его. */
+export const scenarioReference = {
+  reset: (): void => {
+    store = freshStore();
+  },
+  entries: (): readonly PackScenarioEntry[] => store.entries,
+  /** Файл изменили снаружи: ETag записи меняется, чужая правка получит `stale_file`. */
+  touch: (id: string): void => {
+    const entry = store.entries.find((item) => item.id === id);
+    if (entry) {
+      store.counter += 1;
+      entry.etag = `"ref-${String(store.counter)}"`;
+    }
+  },
+};
+
 const scenariosFor = (params: Params): PackScenarioList => {
-  const out = structuredClone(COURSEWORK_SCENARIOS);
+  const out = structuredClone({
+    ...COURSEWORK_SCENARIOS,
+    scenarios: store.entries,
+  });
   out.workspace_id = params.id;
   out.pack = params.pack;
   out.template = params.template;
   if (behavior === "no_scenarios") out.scenarios = [];
   return out;
+};
+
+const putScenario = (
+  params: Params & { scenario: string },
+  ifMatch: string | null,
+  body: unknown,
+) => {
+  if (!SCENARIO_ID.test(params.scenario) || params.scenario.length > 64) {
+    return demoError(400, "scenario_invalid", "Сценарий не по формату.", {
+      reason: "id: lowercase latin letters, digits and dashes only",
+    });
+  }
+  const parsed = PackScenarioWriteRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    return demoError(422, "model_invalid", "Тело запроса не по схеме.");
+  }
+  const at = store.entries.findIndex((item) => item.id === params.scenario);
+  const current = at === -1 ? undefined : store.entries[at];
+  if (ifMatch === null && current) {
+    return demoError(409, "scenario_taken", "Сценарий уже есть.", {
+      scenario: params.scenario,
+    });
+  }
+  if (ifMatch !== null && !current) {
+    return demoError(404, "scenario_not_found", "Сценария нет.", {
+      scenario: params.scenario,
+    });
+  }
+  if (ifMatch !== null && current && current.etag !== ifMatch) {
+    return demoError(409, "stale_file", "Файл изменён.", {
+      etag: current.etag,
+      content: "format: 1\n",
+    });
+  }
+  const scenario = structuredClone(parsed.data.scenario);
+  if (parsed.data.record_snapshot) {
+    scenario.snapshot = structuredClone(COURSEWORK_OUTCOME.digest);
+    store.accepted.add(params.scenario);
+  }
+  store.counter += 1;
+  const entry: PackScenarioEntry = {
+    id: params.scenario,
+    path: `${params.pack}/templates/${params.template}/scenarios/${params.scenario}.yaml`,
+    etag: `"ref-${String(store.counter)}"`,
+    scenario,
+    error: null,
+  };
+  store.entries = [
+    ...store.entries.filter((item) => item.id !== entry.id),
+    entry,
+  ].sort(byId);
+  return demoJson(entry, ifMatch === null ? 201 : 200);
+};
+
+const deleteScenario = (
+  params: Params & { scenario: string },
+  ifMatch: string | null,
+) => {
+  const current = store.entries.find((item) => item.id === params.scenario);
+  if (!current) {
+    return demoError(404, "scenario_not_found", "Сценария нет.", {
+      scenario: params.scenario,
+    });
+  }
+  if (ifMatch !== null && current.etag !== ifMatch) {
+    return demoError(409, "stale_file", "Файл изменён.", {
+      etag: current.etag,
+      content: "format: 1\n",
+    });
+  }
+  store.entries = store.entries.filter((item) => item.id !== params.scenario);
+  return demoNoContent();
+};
+
+const runScenarios = (
+  params: Params,
+  body: PackScenarioRunRequest,
+): PackScenarioRun => {
+  const chosen = body.scenarios ?? null;
+  const fixture = new Map(
+    COURSEWORK_RUN.results.map((result) => [result.scenario, result]),
+  );
+  const results = store.entries
+    .filter(
+      (entry) =>
+        entry.scenario !== null &&
+        (chosen === null || chosen.includes(entry.id)),
+    )
+    .map((entry) => {
+      const base = fixture.get(entry.id);
+      const expects =
+        (entry.scenario?.snapshot ?? null) !== null ||
+        (entry.scenario?.assertions?.length ?? 0) > 0;
+      if (!expects) {
+        return {
+          scenario: entry.id,
+          status: "unchecked" as const,
+          fingerprint: COURSEWORK_OUTCOME.fingerprint,
+          failures: [],
+          changes: [],
+          message: null,
+        };
+      }
+      if (base?.status === "failed" && !store.accepted.has(entry.id)) {
+        return structuredClone(base);
+      }
+      return {
+        scenario: entry.id,
+        status: "passed" as const,
+        fingerprint: COURSEWORK_OUTCOME.fingerprint,
+        failures: [],
+        changes: [],
+        message: null,
+      };
+    });
+  const count = (status: string) =>
+    results.filter((result) => result.status === status).length;
+  return {
+    ...structuredClone(COURSEWORK_RUN),
+    workspace_id: params.id,
+    pack: params.pack,
+    template: params.template,
+    version: body.version ?? params.version,
+    state: body.state ?? "work_tree",
+    passed: count("passed"),
+    failed: count("failed"),
+    errors: count("error"),
+    unchecked: count("unchecked"),
+    results,
+  };
 };
 
 /** Сбой, который автор увидит в баннере экрана: код и текст как у настоящего сервера. */
@@ -300,6 +478,65 @@ export const outcomeReferenceRoutes: DemoRoute[] = [
     method: "GET",
     pattern: SCENARIOS,
     handler: guarded((params) => scenariosFor(params)),
+  },
+  {
+    method: "POST",
+    pattern: `${SCENARIOS}/run`,
+    handler: async (req) => {
+      if (source === "server") return (await req.forward()) as never;
+      if (behavior === "slow") await sleep(SLOW_MS);
+      if (behavior === "run_error") {
+        return demoError(503, "outcome_busy", "Сервер занят расчётом.");
+      }
+      const failed = failure();
+      if (failed) return failed;
+      return demoJson(
+        runScenarios(
+          {
+            id: req.params.id ?? "",
+            pack: req.params.pack ?? "",
+            template: req.params.template ?? "",
+            version: "",
+          },
+          req.body as PackScenarioRunRequest,
+        ),
+      );
+    },
+  },
+  {
+    method: "PUT",
+    pattern: `${SCENARIOS}/:scenario`,
+    handler: (req) =>
+      source === "server"
+        ? (req.forward() as never)
+        : putScenario(
+            {
+              id: req.params.id ?? "",
+              pack: req.params.pack ?? "",
+              template: req.params.template ?? "",
+              version: "",
+              scenario: req.params.scenario ?? "",
+            },
+            req.headers?.["if-match"] ?? null,
+            req.body,
+          ),
+  },
+  {
+    method: "DELETE",
+    pattern: `${SCENARIOS}/:scenario`,
+    handler: (req) =>
+      source === "server"
+        ? (req.forward() as never)
+        : deleteScenario(
+            {
+              id: req.params.id ?? "",
+              pack: req.params.pack ?? "",
+              template: req.params.template ?? "",
+              version: "",
+              scenario: req.params.scenario ?? "",
+            },
+            req.headers?.["if-match"] ?? null,
+          ),
   },
 ];
 

@@ -60,6 +60,16 @@ const collectQuery = (
   return result;
 };
 
+const collectHeaders = (
+  config: InternalAxiosRequestConfig,
+): Record<string, string> => {
+  const result: Record<string, string> = {};
+  for (const [key, value] of Object.entries(config.headers.toJSON())) {
+    if (typeof value === "string") result[key.toLowerCase()] = value;
+  }
+  return result;
+};
+
 const parseBody = (data: unknown): unknown => {
   if (typeof data !== "string" || data === "") return data ?? null;
   try {
@@ -156,6 +166,7 @@ export const installDemoAdapter = (
       params: found.params,
       query: collectQuery(config, query),
       body: parseBody(config.data),
+      headers: collectHeaders(config),
       forward: () => fallback(config).then(parseForwarded),
     };
     if (config.signal?.aborted) {

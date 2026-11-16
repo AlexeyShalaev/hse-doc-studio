@@ -110,7 +110,8 @@
       "quick": "Quick scenario choice",
       "changed_one": "{{count}} input changed from the scenario",
       "changed_other": "{{count}} inputs changed from the scenario",
-      "restore": "Restore scenario"
+      "restore": "Restore scenario",
+      "saveInto": "Save into scenario"
     },
     "example": {
       "label": "Dataset",
@@ -589,7 +590,8 @@
       "no_scenarios": "No scenarios",
       "slow": "Slow response",
       "error": "Server error",
-      "unreadable": "Version unreadable"
+      "unreadable": "Version unreadable",
+      "run_error": "Run fails"
     }
   },
   "checks": {
@@ -688,6 +690,195 @@
       "noGit": "Git state not received yet",
       "folder": "A folder workspace without git: there is no branch or base, the result is computed from the working tree.",
       "compareNote": "The same fingerprint on a branch and on the base means the same result. The counts and fingerprints below are per section: compare them by switching \"Outcome from\" at the top."
+    }
+  },
+  "scenarios": {
+    "loading": "Loading scenarios...",
+    "loadFailed": "Could not load the scenarios",
+    "loadFailedShort": "Scenarios did not load",
+    "running": "Running scenarios...",
+    "runAll": "Run all",
+    "runFailed": "Could not run the scenarios",
+    "list": "Template scenarios",
+    "panelLabel": "Scenario picker",
+    "chip": "{{bad}} of {{total}}",
+    "chipTitle": "Not matching expectations: {{bad}} of {{total}}",
+    "saveAs": "Save as scenario",
+    "manage": "Manage",
+    "readOnlyState": "Scenarios can be edited only when the result is read from the working tree",
+    "readOnlyStudent": "Scenarios cannot be edited in the \"As a student\" mode",
+    "save": "Save",
+    "saving": "Saving...",
+    "cancel": "Cancel",
+    "close": "Close",
+    "undo": "Undo",
+    "saved": "Scenario \"{{name}}\" saved",
+    "inputsSaved": "Inputs written to scenario \"{{name}}\"",
+    "deleted": "Scenario \"{{name}}\" deleted",
+    "restored": "Scenario \"{{name}}\" restored",
+    "accepted": "Snapshot of scenario \"{{name}}\" updated",
+    "acceptUndone": "Previous snapshot of scenario \"{{name}}\" restored",
+    "copySuffix": "(copy)",
+    "status": {
+      "passed": "Matches",
+      "failed": "Changed",
+      "error": "Error",
+      "unchecked": "No expectations",
+      "broken": "File unreadable",
+      "pending": "Running...",
+      "unknown": "Not run"
+    },
+    "tally": {
+      "passed": "{{count}} passed",
+      "failed": "{{count}} changed",
+      "errors_one": "{{count}} error",
+      "errors_other": "{{count}} errors",
+      "unchecked": "{{count}} without expectations",
+      "broken_one": "{{count}} broken file",
+      "broken_other": "{{count}} broken files"
+    },
+    "empty": {
+      "title": "Create the first scenario from the current inputs",
+      "lead": "A scenario remembers the inputs and the expected result; after a rule edit you see which scenarios drifted. For example:",
+      "exampleCoursework": "Coursework: \"Company supervisor with a co-supervisor\"",
+      "exampleVkr": "Thesis: \"NDA and only the programmer's manual\""
+    },
+    "dialog": {
+      "createTitle": "Save as scenario",
+      "createLead": "The inputs and the example data set come from the screen.",
+      "duplicateTitle": "Duplicate scenario",
+      "duplicateLead": "The copy gets a new file name and the same inputs, snapshot and assertions.",
+      "inputsNote_one": "{{count}} input goes into the file, the rest use their defaults.",
+      "inputsNote_other": "{{count}} inputs go into the file, the rest use their defaults."
+    },
+    "fields": {
+      "name": "Name ({{lang}})",
+      "nameRequired": "Give a name in at least one language",
+      "description": "Description ({{lang}})",
+      "id": "File name",
+      "idHint": "Latin letters, digits and dashes, for example company-supervisor",
+      "idRequired": "Give a file name",
+      "idFormat": "Lowercase Latin letters and digits with single dashes between them, up to 64 characters",
+      "idTaken": "A scenario with this file name already exists",
+      "versions": "Which versions it applies to"
+    },
+    "versions": {
+      "any": "Any version",
+      "this": "Only version {{version}}",
+      "series": "The {{series}} series",
+      "custom": "Custom version patterns",
+      "customLabel": "Version patterns",
+      "customHint": "Comma separated; an asterisk stands for any ending, for example 2026.1.*"
+    },
+    "expect": {
+      "title": "Expected result",
+      "snapshot": "Remember a snapshot of the result",
+      "snapshotHint": "A run shows any difference from the snapshot: it catches everything but is noisy after every edit.",
+      "refresh": "Record the snapshot again from the current result",
+      "assertions": "Assertions: pointed expectations that survive unrelated edits"
+    },
+    "assertions": {
+      "selected_one": "{{count}} assertion selected",
+      "selected_other": "{{count}} assertions selected",
+      "all": "Assert as is",
+      "none": "Clear all",
+      "noResult": "The result is not loaded yet, so there are no ready assertions.",
+      "groupCount": "{{selected}} of {{total}}"
+    },
+    "kind": {
+      "document_state": "Documents",
+      "document_count": "Document count",
+      "participant_present": "Participants",
+      "item_active": "Submission point items",
+      "route_steps": "Route steps",
+      "route_pair": "Signers in the route",
+      "meta_visible": "Field visibility",
+      "snapshot": "Result snapshot"
+    },
+    "assertion": {
+      "document_state": {
+        "active": "Document \"{{doc}}\" is in the set",
+        "inactive": "Document \"{{doc}}\" is switched off",
+        "absent": "Document \"{{doc}}\" is not in the project"
+      },
+      "document_count": {
+        "active": "Documents in the set: {{count}}",
+        "inactive": "Switched-off documents: {{count}}",
+        "absent": "Documents outside the project: {{count}}"
+      },
+      "meta_visible": {
+        "yes": "Field \"{{field}}\" is visible",
+        "no": "Field \"{{field}}\" is hidden"
+      },
+      "participant_present": {
+        "yes": "Participant \"{{persona}}\" is present",
+        "no": "Participant \"{{persona}}\" is absent"
+      },
+      "item_active": {
+        "yes": "Item \"{{doc}}\" of point \"{{point}}\" is active",
+        "no": "Item \"{{doc}}\" of point \"{{point}}\" is not active"
+      },
+      "route_steps": "Route of point \"{{point}}\": {{steps}}",
+      "noSteps": "no steps",
+      "route_pair": {
+        "yes": "Signer \"{{persona}}\" is in the route: document \"{{doc}}\", slot {{slot}}, point \"{{point}}\"",
+        "no": "Signer \"{{persona}}\" is not in the route: document \"{{doc}}\", slot {{slot}}, point \"{{point}}\""
+      }
+    },
+    "failure": {
+      "title": "Could not write the scenario",
+      "staleTitle": "The scenario file has changed",
+      "staleLead": "It was edited after you opened it. Refresh to see the current version, or save yours over it.",
+      "missingTitle": "The scenario is gone",
+      "missingLead": "The file was deleted. Refresh the list.",
+      "refresh": "Refresh",
+      "overwrite": "Save over it",
+      "invalid": "The server rejected the scenario: {{reason}}",
+      "taken": "A scenario with this file name already exists.",
+      "takeFree": "Use \"{{id}}\"",
+      "offline": "No connection to the server. The scenario was not written.",
+      "server": "The server could not write the scenario.",
+      "busy": "The server is busy calculating, try again in a moment."
+    },
+    "panel": {
+      "properties": "Scenario properties",
+      "result": "Run result",
+      "brokenTitle": "The scenario file cannot be read",
+      "openFile": "Open the file",
+      "passed": "The result matches the snapshot and the assertions.",
+      "unchecked": "The scenario has no snapshot or assertions, it only shows the result.",
+      "errorTitle": "The scenario does not fit this version",
+      "errorLead": "The scenario inputs cannot be read on this version.",
+      "noRun": "The scenario has not been run yet.",
+      "overridden": "Inputs are changed on the screen: the snapshot is taken from the scenario's own inputs, not the changed ones.",
+      "accept": "Accept the current result as expected",
+      "record": "Record a result snapshot",
+      "acceptHint": "The new snapshot replaces the previous one. You can undo it within ten seconds.",
+      "duplicate": "Duplicate",
+      "delete": "Delete"
+    },
+    "diff": {
+      "failures": "Differences",
+      "snapshot": "Difference from the snapshot",
+      "assertion": "Assertion {{n}}: {{kind}}",
+      "expected": "Expected",
+      "actual": "Got",
+      "why": "Decisions: {{rules}}",
+      "added": "Added",
+      "changed": "Changed",
+      "removed": "Removed",
+      "was": "was: {{value}}",
+      "now": "now: {{value}}"
+    },
+    "saveInputs": {
+      "title": "Save the inputs into scenario \"{{name}}\"",
+      "lead": "What is changed on the screen goes into the scenario file.",
+      "list": "What changes in the inputs",
+      "added": "{{input}}: value \"{{value}}\" will be added",
+      "changed": "{{input}}: was \"{{before}}\", will be \"{{after}}\"",
+      "example": "Example data set: {{value}}",
+      "refresh": "Update the snapshot for the new inputs",
+      "assertions": "Assertions stay as they are: the run will show which ones stopped holding."
     }
   }
 }
