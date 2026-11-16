@@ -141,6 +141,8 @@ describe("экран «Результат»: каркас на эталонах"
   });
   beforeEach(() => {
     window.localStorage.clear();
+    // По умолчанию запросы идут настоящему серверу; экран проверяется на эталонах.
+    outcomeReference.setSource("reference");
   });
   afterEach(() => {
     cleanup();
