@@ -11,6 +11,23 @@ import type {
 import type { OutcomeUrlControls } from "./lib/urlState";
 
 /**
+ * Подсветка элементов результата, связанных с вводной (клик по вводной в левой панели). Связи
+ * берутся из трассы ответа, секции спрашивают `isHighlighted` и красят элемент у себя.
+ */
+export type OutcomeHighlight = {
+  /** Вводная, чьи связи подсвечены. */
+  input: string | null;
+  /** Ключи `раздел:id` элементов результата. */
+  elements: ReadonlySet<string>;
+  setInput: (id: string | null) => void;
+};
+
+export const isHighlighted = (
+  highlight: OutcomeHighlight,
+  element: OutcomeElementRef,
+): boolean => highlight.elements.has(`${element.section}:${element.id}`);
+
+/**
  * Всё, что нужно панелям и секциям экрана «Результат»: версия, состояние из адреса, запросы.
  * Срезы F2 (вводные), F3 и F4 (секции), F6 (правила) берут его из контекста и не ходят
  * в адрес и сервер сами: цепочка «адрес, запрос, отрисовка» собрана здесь один раз.
@@ -34,6 +51,7 @@ export type OutcomeModel = {
   inputs: UseQueryResult<PackOutcomeInputs>;
   scenarios: UseQueryResult<PackScenarioList>;
   select: (element: OutcomeElementRef | null) => void;
+  highlight: OutcomeHighlight;
 };
 
 export const OutcomeModelContext = createContext<OutcomeModel | null>(null);

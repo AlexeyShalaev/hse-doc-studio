@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, fireEvent, render } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { i18n } from "@shared/lib";
@@ -24,6 +24,12 @@ describe("галерея экрана «Результат»", () => {
         "po_loading",
         "po_unreadable",
         "po_empty",
+        "po_inputs_vkr",
+        "po_inputs_changed",
+        "po_inputs_scenario",
+        "po_inputs_coursework",
+        "po_inputs_error",
+        "po_inputs_none",
       ]),
     );
   });
@@ -67,8 +73,55 @@ describe("галерея экрана «Результат»", () => {
       container.querySelector('[data-testid="outcome-selected"]')?.textContent,
     ).toContain("operator_manual");
     expect(
-      container.querySelector('[data-testid="outcome-input-kind"]')
-        ?.textContent,
-    ).toContain("research");
+      container
+        .querySelector('[data-testid="outcome-control-kind-research"]')
+        ?.getAttribute("aria-checked"),
+    ).toBe("true");
+  });
+
+  it("запись «Вводные: изменены» подсвечивает три вводные", async () => {
+    await i18n.changeLanguage("ru");
+    const entry = entries.find((e) => e.id === "po_inputs_changed");
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    entry?.seed?.(client);
+    const { container } = render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>{entry?.render()}</MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(container.querySelectorAll('[data-changed="true"]')).toHaveLength(3);
+  });
+
+  it("запись «курсовой проект» строит панель из вводных курсового", async () => {
+    await i18n.changeLanguage("ru");
+    const entry = entries.find((e) => e.id === "po_inputs_coursework");
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    entry?.seed?.(client);
+    const { container } = render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>{entry?.render()}</MemoryRouter>
+      </QueryClientProvider>,
+    );
+    // Поля курсового трасса не читает: они в блоке «Не влияют» (он свёрнут).
+    const toggle = container.querySelector(
+      '[data-testid="outcome-inputs-inert-toggle"]',
+    );
+    expect(toggle?.getAttribute("aria-expanded")).toBe("false");
+    if (!toggle) throw new Error("inert toggle is missing");
+    fireEvent.click(toggle);
+    expect(
+      container.querySelector(
+        '[data-testid="outcome-input-meta.proposal_stage"]',
+      ),
+    ).not.toBeNull();
+    expect(
+      container
+        .querySelector('[data-testid="outcome-control-supervisor-company"]')
+        ?.getAttribute("aria-checked"),
+    ).toBe("true");
   });
 });

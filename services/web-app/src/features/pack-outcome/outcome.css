@@ -362,31 +362,173 @@
 .po-inputs-list {
   display: flex;
   flex-direction: column;
-  gap: 0.125rem;
+  gap: 0.375rem;
   margin: 0;
 }
-.po-inputs-row {
+.po-inputs-list[hidden] {
+  display: none;
+}
+.po-inputs-group-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+.po-inputs-count {
+  margin-left: 0.25rem;
+  font-weight: 400;
+  color: var(--fg-3);
+}
+.po-inputs-inert .po-in-row {
+  opacity: 0.85;
+}
+.po-in-row {
   display: flex;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.25rem 0.375rem;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.375rem 0.5rem;
   border-left: 2px solid transparent;
+  border-radius: var(--r-2, 0.375rem);
   font-size: 0.8125rem;
 }
-.po-inputs-row[data-changed="true"] {
+.po-in-row[data-changed="true"] {
   border-left-color: var(--accent);
   background: var(--accent-soft);
 }
-.po-inputs-row dt {
-  color: var(--fg-2);
+.po-in-row[data-highlighted="true"] {
+  outline: 1px solid var(--accent);
+}
+.po-in-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
   min-width: 0;
+}
+.po-in-label {
+  min-width: 0;
+  color: var(--fg-1, var(--fg-0));
   overflow-wrap: anywhere;
 }
-.po-inputs-row dd {
-  margin: 0;
-  color: var(--fg-0);
-  text-align: right;
+.po-in-head .icon-btn {
+  flex: none;
+  margin-left: auto;
+}
+.po-in-mark {
+  margin-left: auto;
+  flex: none;
+  font-size: 0.6875rem;
+  color: var(--accent);
+}
+.po-in-mark + .icon-btn {
+  margin-left: 0;
+}
+.po-in-mark[data-kind="scenario"] {
+  color: var(--fg-3);
+}
+.po-in-radio {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+.po-in-option {
+  min-width: 0;
+  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-2, 0.375rem);
+  background: transparent;
+  color: var(--fg-2);
+  font: inherit;
+  font-size: 0.8125rem;
+  text-align: left;
   overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.po-in-option[aria-checked="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--fg-0);
+}
+.po-in-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.po-in-state {
+  color: var(--fg-0);
+}
+.po-in-select {
+  width: 100%;
+}
+.po-in-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+.po-in-hint {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 0.6875rem;
+  color: var(--fg-3);
+}
+.po-in-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.375rem;
+}
+.po-in-actions .po-link {
+  margin-right: auto;
+}
+.po-in-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  margin: 0;
+  padding: 0 0 0 0.75rem;
+  list-style: disc;
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+.po-in-more {
+  color: var(--fg-3);
+  list-style: none;
+}
+.po-in-scenario,
+.po-in-example {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.po-in-set-label {
+  font-size: 0.75rem;
+  color: var(--fg-2);
+}
+.po-in-dirty {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.625rem;
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--accent);
+}
+.po-link:disabled {
+  color: var(--fg-3);
+  text-decoration: none;
+  cursor: default;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .po-in-row {
+    transition: background-color 0.15s ease;
+  }
 }
 .po-rules-label {
   margin: 0;

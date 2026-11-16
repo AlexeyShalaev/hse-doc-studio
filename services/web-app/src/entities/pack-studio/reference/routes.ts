@@ -13,6 +13,7 @@ import type {
   PackScenarioList,
 } from "../api/outcome";
 import {
+  COURSEWORK_INPUTS,
   COURSEWORK_OUTCOME,
   COURSEWORK_SCENARIOS,
   VKR_INPUTS,
@@ -145,7 +146,9 @@ const outcomeFor = (params: Params, body: PackOutcomeRequest): PackOutcome => {
 };
 
 const inputsFor = (params: Params, state: string | null): PackOutcomeInputs => {
-  const out = structuredClone(VKR_INPUTS);
+  const out = structuredClone(
+    params.template === "vkr" ? VKR_INPUTS : COURSEWORK_INPUTS,
+  );
   out.workspace_id = params.id;
   out.pack = params.pack;
   out.template = params.template;

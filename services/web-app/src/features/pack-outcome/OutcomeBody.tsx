@@ -1,4 +1,10 @@
-import { useCallback, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useCallback,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import { PanelLeftOpen, PanelRightOpen } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
@@ -19,6 +25,7 @@ import {
 } from "@entities/pack-studio";
 import { useIsPhoneWidth } from "@shared/lib";
 import { EmptyState, ErrorState, Modal, Spinner } from "@shared/ui";
+import { elementKey, linkedElements } from "./lib/inputs";
 import { useLastDefined } from "./lib/lastDefined";
 import { useOutcomePanels } from "./lib/panels";
 import { useOutcomeUrlState } from "./lib/urlState";
@@ -104,6 +111,18 @@ export const OutcomeBody = ({ workspace, version }: OutcomeBodyProps) => {
   const shown = useLastDefined(outcome.data);
   const stale = outcome.isPlaceholderData || outcome.isError;
 
+  // Подсветка связанных с вводной элементов: связи берутся из трассы показанного результата.
+  const [highlightInput, setHighlightInput] = useState<string | null>(null);
+  const highlightElements = useMemo(
+    () =>
+      new Set(
+        highlightInput === null
+          ? []
+          : linkedElements(shown, highlightInput).map(elementKey),
+      ),
+    [shown, highlightInput],
+  );
+
   const { update } = url;
   const select = useCallback(
     (element: OutcomeElementRef | null) => {
@@ -130,6 +149,11 @@ export const OutcomeBody = ({ workspace, version }: OutcomeBodyProps) => {
     inputs,
     scenarios,
     select,
+    highlight: {
+      input: highlightInput,
+      elements: highlightElements,
+      setInput: setHighlightInput,
+    },
   };
 
   // F6 и Shift+F6 переводят фокус между тремя областями, Alt+Z показывает и прячет «Почему?».

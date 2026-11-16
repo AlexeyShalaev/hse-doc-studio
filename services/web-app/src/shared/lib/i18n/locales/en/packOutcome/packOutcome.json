@@ -57,14 +57,79 @@
     "emptyLead": "This version has no inputs that would change the outcome.",
     "total_one": "{{count}} input",
     "total_other": "{{count}} inputs",
-    "reset": "Reset",
-    "pending": "Input controls arrive in the next slice.",
     "groups": {
       "project": "Project",
       "people": "People",
       "meta": "Fields",
       "answers": "Questionnaires",
       "variants": "Variants"
+    },
+    "resetAll": "Reset all",
+    "resetOne": "Reset: {{name}}",
+    "changedMark": "Changed",
+    "fromScenario": "from scenario",
+    "affects": "Affects: {{sections}}",
+    "readers": "Read by {{count}} rules",
+    "allInert": "No input changes the result with the current selection.",
+    "apply": "Show",
+    "recalculating": "The result is being recalculated",
+    "bool": {
+      "yes": "Yes",
+      "no": "No"
+    },
+    "std": {
+      "lang": "Work language",
+      "kind": "Kind of work",
+      "staffing": "Number of authors",
+      "supervisor": "Supervisor",
+      "co_supervisor": "Co-supervisor",
+      "academic_supervisor": "Academic programme supervisor"
+    },
+    "values": {
+      "lang": {
+        "ru": "Russian",
+        "en": "English"
+      },
+      "kind": {
+        "project": "Project",
+        "research": "Research"
+      },
+      "staffing": {
+        "solo": "One author",
+        "team2": "Two authors",
+        "team3": "Three authors"
+      },
+      "supervisor": {
+        "university": "From HSE",
+        "company": "From a company",
+        "none": "None"
+      }
+    },
+    "scenario": {
+      "label": "Scenario",
+      "quick": "Quick scenario choice",
+      "changed_one": "{{count}} input changed from the scenario",
+      "changed_other": "{{count}} inputs changed from the scenario",
+      "restore": "Restore scenario"
+    },
+    "example": {
+      "label": "Dataset",
+      "hint": "Changes the names and field values of the example, not the structure of the result."
+    },
+    "inert": {
+      "title": "No effect",
+      "lead": "With the current selection these inputs do not change the result sections. You can still switch them to check.",
+      "none": "Changes nothing in the result.",
+      "minor": "The result sections stay the same, only details such as file names change. Read by {{count}} rules.",
+      "changed": "Some inputs are changed"
+    },
+    "links": {
+      "show_one": "Highlight {{count}} element",
+      "show_other": "Highlight {{count}} elements",
+      "hide": "Remove highlight",
+      "title": "Result elements linked to the input \"{{name}}\"",
+      "more_one": "and {{count}} more",
+      "more_other": "and {{count}} more"
     }
   },
   "result": {
