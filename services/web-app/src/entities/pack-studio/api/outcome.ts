@@ -580,6 +580,20 @@ export const PackOutcomeLintSchema = z.strictObject({
 
 // ── Изменения, прогон сценариев, сравнения, матрица ──────────────────────────
 
+/**
+ * Правило, из-за которого элемент изменился при сравнении двух результатов: исход решения слева
+ * (`before`) и справа (`after`; null: на этой стороне решения нет) и фактические значения вводных.
+ */
+export const OutcomeChangeReasonSchema = z.strictObject({
+  rule: OutcomeRuleRefSchema,
+  kind: OutcomeRuleKindSchema,
+  terms: z.array(OutcomeTermSchema).max(8),
+  before: z.enum(["held", "not_held", "skipped"]).nullable(),
+  after: z.enum(["held", "not_held", "skipped"]).nullable(),
+  before_actual: z.record(z.string(), z.string()),
+  after_actual: z.record(z.string(), z.string()),
+});
+
 /** `+` появилось, `~` изменилось, `-` исчезло. */
 export const OutcomeChangeSchema = z.strictObject({
   symbol: z.enum(["+", "~", "-"]),
@@ -597,12 +611,15 @@ export const OutcomeChangeSchema = z.strictObject({
     "route_step",
     "route_pair",
     "skipped_pair",
+    "may_add",
     "check_rule",
   ]),
   id: z.string().min(1).max(2000),
   label: z.string().max(2000),
   before: z.string().nullable(),
   after: z.string().nullable(),
+  // Причины из трассы: заполняют сравнения (compare, impact); у расхождения прогона со снимком пусто.
+  why: z.array(OutcomeChangeReasonSchema).max(6).optional(),
 });
 
 export const ScenarioFailureSchema = z.strictObject({
@@ -723,11 +740,24 @@ export const PackOutcomeMatrixRequestSchema = z.strictObject({
   against: z.literal("base").nullish(),
 });
 
+/**
+ * matched: ожидание сценария по разделу выполнено; changed: не выполнено или раздел отличается от базы
+ * (against: base); unchecked: ожидания у раздела нет; error: результата нет (вводные не подходят).
+ */
+export const MatrixCellStatusSchema = z.enum([
+  "matched",
+  "changed",
+  "unchecked",
+  "error",
+]);
+
 export const MatrixCellSchema = z.strictObject({
   section: OutcomeSectionSchema,
+  // Отпечаток структуры раздела и число его элементов (у error пусто и 0).
   fingerprint: z.string(),
   count: z.number().int().min(0),
-  // null: сравнения с базой не просили или сценария на базе нет.
+  status: MatrixCellStatusSchema,
+  // Отличается ли раздел от базы; null: сравнения с базой не просили или сценария на базе нет.
   changed: z.boolean().nullable(),
 });
 
@@ -735,6 +765,9 @@ export const MatrixRowSchema = z.strictObject({
   scenario: z.string(),
   name: LocalizedSchema,
   inputs: InputsSchema,
+  // Итог сценария как у прогона; message: причина ошибки.
+  status: z.enum(["passed", "failed", "error", "unchecked"]),
+  message: z.string().nullable(),
   cells: z.array(MatrixCellSchema),
 });
 
@@ -813,6 +846,8 @@ export type OutcomeCoverage = z.infer<typeof OutcomeCoverageSchema>;
 export type OutcomeFinding = z.infer<typeof OutcomeFindingSchema>;
 export type PackOutcomeLint = z.infer<typeof PackOutcomeLintSchema>;
 export type OutcomeChange = z.infer<typeof OutcomeChangeSchema>;
+export type OutcomeChangeReason = z.infer<typeof OutcomeChangeReasonSchema>;
+export type MatrixCellStatus = z.infer<typeof MatrixCellStatusSchema>;
 export type OutcomeSubject = z.infer<typeof OutcomeSubjectSchema>;
 export type PackOutcomeCompareRequest = z.infer<
   typeof PackOutcomeCompareRequestSchema

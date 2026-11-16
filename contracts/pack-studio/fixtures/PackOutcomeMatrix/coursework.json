@@ -5,11 +5,22 @@
   "version": "2026.1.6",
   "state": "work_tree",
   "revision": "sha256-d85b5ca370523fd0",
-  "columns": ["documents", "meta", "forms", "participants", "points", "route", "checks"],
+  "columns": [
+    "documents",
+    "meta",
+    "forms",
+    "participants",
+    "points",
+    "route",
+    "checks"
+  ],
   "rows": [
     {
       "scenario": "company-supervisor",
-      "name": {"ru": "Научрук из компании, есть консультант", "en": "Company supervisor with a co-supervisor"},
+      "name": {
+        "ru": "Научрук из компании, есть консультант",
+        "en": "Company supervisor with a co-supervisor"
+      },
       "inputs": {
         "lang": "ru",
         "kind": "project",
@@ -21,43 +32,66 @@
         "meta.report_margins": "ГОСТ 7.32 — 30/15/20/20",
         "variant.presentation": "pptx"
       },
+      "status": "passed",
+      "message": null,
       "cells": [
-        {"section": "documents", "fingerprint": "94a80e445490", "count": 4, "changed": false},
-        {"section": "meta", "fingerprint": "2ad6ed600e12", "count": 20, "changed": false},
-        {"section": "forms", "fingerprint": "82107665d317", "count": 1, "changed": false},
-        {"section": "participants", "fingerprint": "03681a49e263", "count": 4, "changed": false},
-        {"section": "points", "fingerprint": "7b23fb4c856d", "count": 9, "changed": false},
-        {"section": "route", "fingerprint": "a39d65532fca", "count": 6, "changed": false},
-        {"section": "checks", "fingerprint": "74234e98afe7", "count": 0, "changed": false}
-      ]
-    },
-    {
-      "scenario": "university-supervisor",
-      "name": {"ru": "Научрук из ВШЭ, без консультанта", "en": "University supervisor, no co-supervisor"},
-      "inputs": {
-        "lang": "ru",
-        "kind": "project",
-        "staffing": "solo",
-        "supervisor": "university",
-        "co_supervisor": "no",
-        "academic_supervisor": "yes",
-        "meta.proposal_stage": "Предварительная",
-        "meta.report_margins": "ГОСТ 7.32 — 30/15/20/20",
-        "variant.presentation": "pptx"
-      },
-      "cells": [
-        {"section": "documents", "fingerprint": "94a80e445490", "count": 4, "changed": false},
-        {"section": "meta", "fingerprint": "2ad6ed600e12", "count": 20, "changed": false},
-        {"section": "forms", "fingerprint": "82107665d317", "count": 1, "changed": false},
-        {"section": "participants", "fingerprint": "880bb0cd5fbd", "count": 3, "changed": false},
-        {"section": "points", "fingerprint": "7b23fb4c856d", "count": 9, "changed": false},
-        {"section": "route", "fingerprint": "47a0733ffa58", "count": 5, "changed": true},
-        {"section": "checks", "fingerprint": "74234e98afe7", "count": 0, "changed": false}
+        {
+          "section": "documents",
+          "fingerprint": "d4f1de863c9a",
+          "count": 4,
+          "status": "matched",
+          "changed": false
+        },
+        {
+          "section": "meta",
+          "fingerprint": "fbefb4d5dc5a",
+          "count": 20,
+          "status": "matched",
+          "changed": false
+        },
+        {
+          "section": "forms",
+          "fingerprint": "7765ca4eb1da",
+          "count": 1,
+          "status": "matched",
+          "changed": false
+        },
+        {
+          "section": "participants",
+          "fingerprint": "308c983085f7",
+          "count": 4,
+          "status": "matched",
+          "changed": false
+        },
+        {
+          "section": "points",
+          "fingerprint": "7d3e860abf2e",
+          "count": 9,
+          "status": "matched",
+          "changed": false
+        },
+        {
+          "section": "route",
+          "fingerprint": "d6afac37abc9",
+          "count": 6,
+          "status": "matched",
+          "changed": false
+        },
+        {
+          "section": "checks",
+          "fingerprint": "5ebff748b124",
+          "count": 39,
+          "status": "unchecked",
+          "changed": false
+        }
       ]
     },
     {
       "scenario": "no-supervisor",
-      "name": {"ru": "Без научного руководителя", "en": "No supervisor"},
+      "name": {
+        "ru": "Без научного руководителя",
+        "en": "No supervisor"
+      },
       "inputs": {
         "lang": "ru",
         "kind": "project",
@@ -69,14 +103,129 @@
         "meta.report_margins": "ГОСТ 7.32 — 30/15/20/20",
         "variant.presentation": "pptx"
       },
+      "status": "passed",
+      "message": null,
       "cells": [
-        {"section": "documents", "fingerprint": "94a80e445490", "count": 4, "changed": false},
-        {"section": "meta", "fingerprint": "2ad6ed600e12", "count": 20, "changed": false},
-        {"section": "forms", "fingerprint": "82107665d317", "count": 1, "changed": false},
-        {"section": "participants", "fingerprint": "16f5f07ca1f4", "count": 1, "changed": false},
-        {"section": "points", "fingerprint": "7b23fb4c856d", "count": 9, "changed": false},
-        {"section": "route", "fingerprint": "eee2fbd16601", "count": 4, "changed": false},
-        {"section": "checks", "fingerprint": "74234e98afe7", "count": 0, "changed": false}
+        {
+          "section": "documents",
+          "fingerprint": "d4f1de863c9a",
+          "count": 4,
+          "status": "matched",
+          "changed": false
+        },
+        {
+          "section": "meta",
+          "fingerprint": "fbefb4d5dc5a",
+          "count": 20,
+          "status": "matched",
+          "changed": false
+        },
+        {
+          "section": "forms",
+          "fingerprint": "7765ca4eb1da",
+          "count": 1,
+          "status": "matched",
+          "changed": false
+        },
+        {
+          "section": "participants",
+          "fingerprint": "63b7c48901d2",
+          "count": 1,
+          "status": "matched",
+          "changed": false
+        },
+        {
+          "section": "points",
+          "fingerprint": "7d3e860abf2e",
+          "count": 9,
+          "status": "matched",
+          "changed": false
+        },
+        {
+          "section": "route",
+          "fingerprint": "07902b4baa2c",
+          "count": 4,
+          "status": "matched",
+          "changed": false
+        },
+        {
+          "section": "checks",
+          "fingerprint": "5ebff748b124",
+          "count": 39,
+          "status": "unchecked",
+          "changed": false
+        }
+      ]
+    },
+    {
+      "scenario": "university-supervisor",
+      "name": {
+        "ru": "Магистрант один, научрук из ВШЭ",
+        "en": "Master's student alone, university supervisor"
+      },
+      "inputs": {
+        "lang": "ru",
+        "kind": "project",
+        "staffing": "solo",
+        "supervisor": "university",
+        "co_supervisor": "no",
+        "academic_supervisor": "yes",
+        "meta.proposal_stage": "Предварительная",
+        "meta.report_margins": "ГОСТ 7.32 — 30/15/20/20",
+        "variant.presentation": "pptx"
+      },
+      "status": "failed",
+      "message": null,
+      "cells": [
+        {
+          "section": "documents",
+          "fingerprint": "d4f1de863c9a",
+          "count": 4,
+          "status": "matched",
+          "changed": false
+        },
+        {
+          "section": "meta",
+          "fingerprint": "fbefb4d5dc5a",
+          "count": 20,
+          "status": "matched",
+          "changed": false
+        },
+        {
+          "section": "forms",
+          "fingerprint": "7765ca4eb1da",
+          "count": 1,
+          "status": "matched",
+          "changed": false
+        },
+        {
+          "section": "participants",
+          "fingerprint": "f1113ea43c16",
+          "count": 3,
+          "status": "matched",
+          "changed": false
+        },
+        {
+          "section": "points",
+          "fingerprint": "7d3e860abf2e",
+          "count": 9,
+          "status": "matched",
+          "changed": false
+        },
+        {
+          "section": "route",
+          "fingerprint": "8fb98a48c529",
+          "count": 5,
+          "status": "changed",
+          "changed": true
+        },
+        {
+          "section": "checks",
+          "fingerprint": "5ebff748b124",
+          "count": 39,
+          "status": "unchecked",
+          "changed": false
+        }
       ]
     }
   ]

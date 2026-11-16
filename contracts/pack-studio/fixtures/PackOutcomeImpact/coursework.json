@@ -11,22 +11,86 @@
     "scenarios_changed": 1,
     "scenarios_unchanged": 2,
     "scenarios_error": 0,
-    "sections": [{"section": "route", "added": 2, "changed": 0, "removed": 1}],
-    "atlas": {"rows_total": 12, "rows_changed": 6, "outcomes_before": 12, "outcomes_after": 8}
+    "sections": [
+      {
+        "section": "route",
+        "added": 2,
+        "changed": 0,
+        "removed": 1
+      }
+    ],
+    "atlas": {
+      "rows_total": 12,
+      "rows_changed": 4,
+      "outcomes_before": 12,
+      "outcomes_after": 8
+    }
   },
   "scenarios": [
     {
       "scenario": "company-supervisor",
-      "name": {"ru": "Научрук из компании, есть консультант", "en": "Company supervisor with a co-supervisor"},
+      "name": {
+        "ru": "Научрук из компании, есть консультант",
+        "en": "Company supervisor with a co-supervisor"
+      },
+      "status": "unchanged",
+      "changes": [],
+      "message": null
+    },
+    {
+      "scenario": "no-supervisor",
+      "name": {
+        "ru": "Без научного руководителя",
+        "en": "No supervisor"
+      },
       "status": "unchanged",
       "changes": [],
       "message": null
     },
     {
       "scenario": "university-supervisor",
-      "name": {"ru": "Научрук из ВШЭ, без консультанта", "en": "University supervisor, no co-supervisor"},
+      "name": {
+        "ru": "Магистрант один, научрук из ВШЭ",
+        "en": "Master's student alone, university supervisor"
+      },
       "status": "changed",
       "changes": [
+        {
+          "symbol": "-",
+          "section": "route",
+          "kind": "skipped_pair",
+          "id": "topic-approval/topic_application/academic_supervisor",
+          "label": "topic-approval: topic_application: academic_supervisor, условие не выполнено",
+          "before": null,
+          "after": null,
+          "why": [
+            {
+              "rule": {
+                "origin": "manifest",
+                "file": "version.yaml",
+                "pointer": "/pack_submission/profiles/0/signing_slots/1/when",
+                "builtin": null
+              },
+              "kind": "slot_when",
+              "terms": [
+                {
+                  "op": "present",
+                  "subject": "supervisor",
+                  "expected": []
+                }
+              ],
+              "before": "not_held",
+              "after": "held",
+              "before_actual": {
+                "supervisor": "yes",
+                "supervisor.role": "university"
+              },
+              "after_actual": {
+                "supervisor": "yes"
+              }
+            }
+          ]
+        },
         {
           "symbol": "+",
           "section": "route",
@@ -34,34 +98,83 @@
           "id": "topic-approval/step/3",
           "label": "topic-approval: шаг 3",
           "before": null,
-          "after": "academic_supervisor"
+          "after": "academic_supervisor",
+          "why": [
+            {
+              "rule": {
+                "origin": "manifest",
+                "file": "version.yaml",
+                "pointer": "/pack_submission/profiles/0/signing_route",
+                "builtin": null
+              },
+              "kind": "route_order",
+              "terms": [],
+              "before": null,
+              "after": "held",
+              "before_actual": {},
+              "after_actual": {}
+            },
+            {
+              "rule": {
+                "origin": "manifest",
+                "file": "version.yaml",
+                "pointer": "/pack_submission/profiles/0/signing_slots/1/when",
+                "builtin": null
+              },
+              "kind": "slot_when",
+              "terms": [
+                {
+                  "op": "present",
+                  "subject": "supervisor",
+                  "expected": []
+                }
+              ],
+              "before": null,
+              "after": "held",
+              "before_actual": {},
+              "after_actual": {
+                "supervisor": "yes"
+              }
+            }
+          ]
         },
         {
           "symbol": "+",
           "section": "route",
           "kind": "route_pair",
           "id": "topic-approval/topic_application/academic_supervisor",
-          "label": "topic_application: academic_supervisor",
+          "label": "topic-approval: topic_application: academic_supervisor",
           "before": null,
-          "after": "academic_supervisor"
-        },
-        {
-          "symbol": "-",
-          "section": "route",
-          "kind": "skipped_pair",
-          "id": "topic-approval/topic_application/academic_supervisor",
-          "label": "topic_application: academic_supervisor",
-          "before": null,
-          "after": null
+          "after": "academic_supervisor (preset)",
+          "why": [
+            {
+              "rule": {
+                "origin": "manifest",
+                "file": "version.yaml",
+                "pointer": "/pack_submission/profiles/0/signing_slots/1/when",
+                "builtin": null
+              },
+              "kind": "slot_when",
+              "terms": [
+                {
+                  "op": "present",
+                  "subject": "supervisor",
+                  "expected": []
+                }
+              ],
+              "before": "not_held",
+              "after": "held",
+              "before_actual": {
+                "supervisor": "yes",
+                "supervisor.role": "university"
+              },
+              "after_actual": {
+                "supervisor": "yes"
+              }
+            }
+          ]
         }
       ],
-      "message": null
-    },
-    {
-      "scenario": "no-supervisor",
-      "name": {"ru": "Без научного руководителя", "en": "No supervisor"},
-      "status": "unchanged",
-      "changes": [],
       "message": null
     }
   ],
