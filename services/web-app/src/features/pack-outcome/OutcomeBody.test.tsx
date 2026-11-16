@@ -141,6 +141,8 @@ describe("экран «Результат»: каркас на эталонах"
   });
   beforeEach(() => {
     window.localStorage.clear();
+    // По умолчанию запросы идут настоящему серверу; экран проверяется на эталонах.
+    outcomeReference.setSource("reference");
   });
   afterEach(() => {
     cleanup();
@@ -164,7 +166,7 @@ describe("экран «Результат»: каркас на эталонах"
       expect(screen.getByTestId("outcome-count-points")).toHaveTextContent("6");
       // Проверки и ветки по запросу: сервер их не считал, экран так и пишет.
       expect(screen.getByTestId("outcome-count-checks")).toHaveTextContent(
-        "Считается по запросу",
+        "Загружается при раскрытии",
       );
     });
 

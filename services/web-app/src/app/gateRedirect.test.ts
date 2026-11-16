@@ -170,6 +170,7 @@ describe("resolveGateRedirect", () => {
         ...LOCAL_BOOTSTRAP.capabilities,
         pack_studio: true,
         pack_studio_standalone: true,
+        pack_outcome: true,
       },
     };
     for (const path of ["/", "/projects/x", "/wizard", "/inbox", "/login"]) {

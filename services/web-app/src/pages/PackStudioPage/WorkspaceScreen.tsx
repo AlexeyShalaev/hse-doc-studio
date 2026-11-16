@@ -41,7 +41,7 @@ import {
   WorkspaceStateBadge,
   workspaceSource,
 } from "@features/pack-workspaces";
-import { useBootstrap } from "@entities/session";
+import { useBootstrap, useCapabilities } from "@entities/session";
 import { useIsPhoneWidth } from "@shared/lib";
 import {
   Button,
@@ -163,6 +163,8 @@ export const WorkspaceScreen = () => {
   // Окно «Подключить к каталогу этой Студии» (только папка в локальной Студии).
   const [catalogOpen, setCatalogOpen] = useState(false);
   const isLocal = useBootstrap().data?.mode === "local";
+  // Кнопка «Результат» есть, только если сервер считает результат (`capabilities.pack_outcome`).
+  const outcomeLacking = useCapabilities().lacks("pack_outcome");
   const client = useQueryClient();
   const dirtyRef = useRef(false);
   const tokenRef = useRef(0);
@@ -322,7 +324,7 @@ export const WorkspaceScreen = () => {
           </div>
         </div>
         <div className="ps-ws-head-actions">
-          {ready && (
+          {ready && !outcomeLacking && (
             <Link
               to={packOutcomePath(ws.id, file ? versionRefOf(file) : null)}
               className="btn sm"

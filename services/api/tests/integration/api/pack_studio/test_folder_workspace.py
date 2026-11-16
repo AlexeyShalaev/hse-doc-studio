@@ -415,6 +415,18 @@ async def test__not_standalone__bootstrap_does_not_say_standalone(stand: Stand) 
     assert boot.json()["capabilities"]["pack_studio_standalone"] is False
 
 
+async def test__bootstrap__pack_outcome_follows_the_pack_studio_section(stand: Stand) -> None:
+    """`pack_outcome`: эндпоинты результата доступны, пока доступна сама Студия шаблонов (срез O2)."""
+    off = await stand.client.get("/api/v1/session/bootstrap")
+    await stand.enable()
+    on = await stand.client.get("/api/v1/session/bootstrap")
+
+    assert off.json()["capabilities"]["pack_studio"] is False
+    assert off.json()["capabilities"]["pack_outcome"] is False
+    assert on.json()["capabilities"]["pack_studio"] is True
+    assert on.json()["capabilities"]["pack_outcome"] is True
+
+
 async def test__ensure_folder__opens_the_profile_folder_once(stand: Stand) -> None:
     root = stand.root / "repo"
     write_pack(root / "packs")

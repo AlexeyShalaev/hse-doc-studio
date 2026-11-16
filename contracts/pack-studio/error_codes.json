@@ -64,5 +64,6 @@
   "scenario_not_found",
   "scenario_taken",
   "atlas_too_large",
-  "diff_base_unavailable"
+  "diff_base_unavailable",
+  "outcome_busy"
 ]

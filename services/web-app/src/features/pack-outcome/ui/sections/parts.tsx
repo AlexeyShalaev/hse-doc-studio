@@ -1,8 +1,8 @@
 import { useId, useState, type ReactNode } from "react";
 import { ChevronDown, ChevronRight, Search, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { OutcomeElementRef } from "@entities/pack-studio";
 import type { EmptyStep } from "../../lib/routeSteps";
+import type { OutcomeSelection } from "../../lib/urlState";
 import { useOutcomeModel } from "../../model";
 import { useIsSelected } from "./helpers";
 
@@ -107,7 +107,7 @@ export const Disclosure = ({
 };
 
 type PickButtonProps = {
-  el: OutcomeElementRef;
+  el: OutcomeSelection;
   /** Заголовок карточки: имя элемента. */
   title: ReactNode;
   /** Значки справа от заголовка. */

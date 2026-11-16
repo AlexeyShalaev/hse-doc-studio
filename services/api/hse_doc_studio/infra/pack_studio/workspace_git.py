@@ -56,7 +56,7 @@ from hse_doc_studio.core.pack_studio.git_flow import (
     WorkGitStatus,
 )
 from hse_doc_studio.core.pack_studio.paths import is_registry_path, template_key
-from hse_doc_studio.core.pack_studio.protocols import WorkspaceDirs, WorkspaceLimits
+from hse_doc_studio.core.pack_studio.protocols import GitRevisionName, WorkspaceDirs, WorkspaceLimits
 from hse_doc_studio.core.vcs.entities import VcsAuthor
 from hse_doc_studio.core.vcs.errors import VcsInvalidRefError
 from hse_doc_studio.core.vcs.refs import validate_ref_name
@@ -79,6 +79,12 @@ _CONTROL_FILES = (".gitignore", ".gitattributes", ".gitmodules")
 _FETCH_BATCH = 200
 # Сколько раз локальная команда может догрузить недостающий объект и повториться.
 _LAZY_ROUNDS = 3
+# Обычные файлы в дереве git: без права исполнения и с ним (ссылки 120000 и подмодули 160000 не читаются).
+_REGULAR_MODES = frozenset({b"100644", b"100755"})
+_PATHSPEC_GLOB = re.compile(r"[*?\[\]]")
+_SHA = re.compile(r"[0-9a-f]{40}(?:[0-9a-f]{24})?")
+# Блобов, которые читаются из хранилища одновременно.
+_READ_PARALLEL = 8
 _PROMISOR_MISS = re.compile(r"could not fetch ([0-9a-f]{40}(?:[0-9a-f]{24})?) from promisor remote")
 # Подсказка к workspace_git_failed: без адресов и путей сервера, не длиннее этого.
 _HINT_LINES = 2
@@ -215,6 +221,18 @@ def _blob_oids(raw: bytes) -> set[str]:
         if len(fields) == 3 and fields[1] == "blob":  # noqa: PLR2004 — три поля формата ls-tree
             oids.add(fields[2])
     return oids
+
+
+def _listed_blobs(raw: bytes) -> list[tuple[str, str, int]]:
+    """`ls-tree -r -z --long`: `mode type oid size\tpath\0`; обычные файлы (не ссылки и не подмодули)."""
+    found: list[tuple[str, str, int]] = []
+    for entry in raw.split(b"\0"):
+        head, _, path = entry.partition(b"\t")
+        fields = head.split()
+        if len(fields) != 4 or fields[0] not in _REGULAR_MODES or fields[1] != b"blob":  # noqa: PLR2004 — поля ls-tree
+            continue
+        found.append((path.decode("utf-8", errors="replace"), fields[2].decode("ascii"), int(fields[3])))
+    return found
 
 
 def _branch(name: str) -> str:
@@ -545,6 +563,49 @@ class PackWorkspaceGit:
         raw = await self._local(dirs, ["diff", "--name-only", "-z", "--no-renames", f"{base}...HEAD"])
         return tuple(name for name in raw.decode("utf-8", errors="replace").split("\0") if name)
 
+    # ── срез O2: чтение версии из коммита без checkout ──
+
+    async def revision_sha(self, dirs: WorkspaceDirs, *, name: GitRevisionName, base_branch: str) -> str | None:
+        spec = "HEAD" if name == "head" else remote_ref(_branch(base_branch))
+        result = await self._run_local(dirs, ["rev-parse", "--verify", "--quiet", f"{spec}^{{commit}}"], check=False)
+        sha = result.stdout.decode("ascii", errors="replace").strip()
+        return sha if result.returncode == 0 and sha else None
+
+    async def revision_files(  # noqa: PLR0913 — коммит, пути и пределы
+        self,
+        dirs: WorkspaceDirs,
+        target: RemoteTarget,
+        *,
+        sha: str,
+        prefixes: Sequence[str],
+        max_files: int,
+        max_bytes: int,
+    ) -> dict[str, bytes]:
+        if not _SHA.fullmatch(sha):
+            raise PackStudioError(PackStudioErrorCode.workspace_git_failed, hint="rev-parse: not a commit id")
+        if any(prefix.startswith(":") or _PATHSPEC_GLOB.search(prefix) for prefix in prefixes):
+            # Имена из адреса запроса идут в `ls-tree` как пути; магия и шаблоны путей git им не нужны.
+            raise PackStudioError(PackStudioErrorCode.path_not_allowed)
+        raw = await self._local(dirs, ["ls-tree", "-r", "-z", "--long", sha, "--", *prefixes], target=target)
+        blobs = _listed_blobs(raw)
+        if len(blobs) > max_files or sum(size for _, _, size in blobs) > max_bytes:
+            raise PackStudioError(PackStudioErrorCode.workspace_too_large)
+        if not blobs:
+            return {}
+        # Недостающие блобы частичного клона берутся одной пачкой, а не по одному на каждый `cat-file`.
+        missing = await self._missing(dirs, [sha])
+        absent = sorted({oid for _, oid, _ in blobs if oid in missing})
+        if absent:
+            await self._fetch_objects(dirs, target, absent)
+        gate = asyncio.Semaphore(_READ_PARALLEL)
+
+        async def read(oid: str) -> bytes:
+            async with gate:
+                return await self._local(dirs, ["cat-file", "blob", oid], target=target)
+
+        contents = await asyncio.gather(*(read(oid) for _, oid, _ in blobs))
+        return {path: data for (path, _, _), data in zip(blobs, contents, strict=True)}
+
     async def _changed_against(
         self, dirs: WorkspaceDirs, target: RemoteTarget, base: str, packs_path: str
     ) -> list[FileChange]:
@@ -696,8 +757,11 @@ class PackWorkspaceGit:
         if not wanted:
             return
         missing = await self._missing(dirs, tips)
-        need = sorted(oid for oid in wanted if oid in missing or oid in extra)
-        for start in range(0, len(need), _FETCH_BATCH):
+        await self._fetch_objects(dirs, target, sorted(oid for oid in wanted if oid in missing or oid in extra))
+
+    async def _fetch_objects(self, dirs: WorkspaceDirs, target: RemoteTarget, oids: Sequence[str]) -> None:
+        """Догрузить объекты по идентификаторам пачками (сеть только через запускатель, с доступом `target`)."""
+        for start in range(0, len(oids), _FETCH_BATCH):
             await self._runner.run(
                 [
                     "-c",
@@ -709,7 +773,7 @@ class PackWorkspaceGit:
                     "--filter=blob:none",
                     "--",
                     _REMOTE,
-                    *need[start : start + _FETCH_BATCH],
+                    *oids[start : start + _FETCH_BATCH],
                 ],
                 op=GitOp.fetch,
                 git_dir=dirs.git,

@@ -69,6 +69,7 @@ export const PACK_STUDIO_ERROR_CODES = [
   "scenario_taken",
   "atlas_too_large",
   "diff_base_unavailable",
+  "outcome_busy",
 ] as const;
 
 export type PackStudioErrorCode = (typeof PACK_STUDIO_ERROR_CODES)[number];

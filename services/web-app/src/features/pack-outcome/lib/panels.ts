@@ -11,18 +11,21 @@ export const RIGHT_PANEL = { default: 344, min: 264, max: 560 };
 /** Шаг кнопок «Шире» и «Уже»: крупнее шага стрелок, это замена перетаскиванию. */
 export const PANEL_STEP = 32;
 
-const readFlag = (key: string): boolean => {
+const readFlag = (key: string, fallback: boolean): boolean => {
   try {
-    return window.localStorage.getItem(key) === "1";
+    const raw = window.localStorage.getItem(key);
+    return raw === null ? fallback : raw === "1";
   } catch {
-    return false;
+    return fallback;
   }
 };
 
+/** Флаг в localStorage; пока выбор не сделан, действует `fallback`. */
 export const useStoredFlag = (
   key: string,
+  fallback = false,
 ): [boolean, (next: boolean) => void] => {
-  const [value, setValue] = useState(() => readFlag(key));
+  const [value, setValue] = useState(() => readFlag(key, fallback));
   const set = useCallback(
     (next: boolean) => {
       setValue(next);

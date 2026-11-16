@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { ApiError } from "@shared/api";
 import { installOutcomeReference, outcomeReference } from "../reference";
 import {
@@ -32,6 +32,10 @@ const wrapper = () => {
 describe("хуки результата на эталонах", () => {
   beforeAll(() => {
     installOutcomeReference();
+  });
+  // По умолчанию запросы идут настоящему серверу; тесты работают на эталонах.
+  beforeEach(() => {
+    outcomeReference.setSource("reference");
   });
   afterEach(() => {
     outcomeReference.setSource("reference");

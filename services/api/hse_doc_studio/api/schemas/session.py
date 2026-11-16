@@ -55,6 +55,9 @@ class Capabilities(StrictModel):
     pack_studio: bool = False
     # Локально, профиль deploy/pack-studio (template-studio.md, D2): стартовая страница `/pack-studio`, проекты скрыты.
     pack_studio_standalone: bool = False
+    # Экран «Результат» Студии шаблонов (template-studio-outcome.md, срез O2): эндпоинты `outcome` доступны.
+    # Включён вместе с `pack_studio`; интерфейс открывает пространство на «Результате» только при нём.
+    pack_outcome: bool = False
 
 
 class OidcProviderOption(StrictModel):
