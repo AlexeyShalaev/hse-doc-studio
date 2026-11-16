@@ -15,6 +15,8 @@ import type {
 import {
   COURSEWORK_OUTCOME,
   COURSEWORK_SCENARIOS,
+  VKR_BRANCHES,
+  VKR_CHECKS,
   VKR_INPUTS,
   VKR_OUTCOME,
 } from "./fixtures";
@@ -125,8 +127,13 @@ const outcomeFor = (params: Params, body: PackOutcomeRequest): PackOutcome => {
     ...(body.inputs ?? {}),
   };
   const include = body.include ?? [];
-  if (!include.includes("checks")) out.checks = null;
-  if (!include.includes("branches")) out.branches = null;
+  const vkr = base === VKR_OUTCOME;
+  out.checks = include.includes("checks")
+    ? (out.checks ?? (vkr ? structuredClone(VKR_CHECKS) : null))
+    : null;
+  out.branches = include.includes("branches")
+    ? (out.branches ?? (vkr ? structuredClone(VKR_BRANCHES) : null))
+    : null;
   if (behavior === "empty") {
     out.documents = [];
     out.meta = [];

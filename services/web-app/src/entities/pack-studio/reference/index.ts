@@ -1,6 +1,8 @@
 export {
   COURSEWORK_OUTCOME,
   COURSEWORK_SCENARIOS,
+  VKR_BRANCHES,
+  VKR_CHECKS,
   VKR_INPUTS,
   VKR_OUTCOME,
 } from "./fixtures";
