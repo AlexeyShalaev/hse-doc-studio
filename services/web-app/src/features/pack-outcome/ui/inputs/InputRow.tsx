@@ -2,6 +2,7 @@ import { memo, useId } from "react";
 import { RotateCcw } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { OutcomeElementRef, OutcomeInput } from "@entities/pack-studio";
+import type { OutcomeSelection } from "../../lib/urlState";
 import {
   DropdownControl,
   RadioControl,
@@ -27,10 +28,12 @@ type InputRowProps = {
   /** Связанные элементы результата из трассы; пусто, если связей нет. */
   linked: OutcomeElementRef[];
   highlighted: boolean;
+  /** Влияние этой вводной открыто в правой панели. */
+  impactOpen: boolean;
   onChange: (id: string, value: string) => void;
   onReset: (id: string) => void;
   onHighlight: (id: string | null) => void;
-  onSelect: (element: OutcomeElementRef) => void;
+  onSelect: (element: OutcomeSelection) => void;
 };
 
 /**
@@ -47,6 +50,7 @@ export const InputRow = memo(
     inert,
     linked,
     highlighted,
+    impactOpen,
     onChange,
     onReset,
     onHighlight,
@@ -185,6 +189,17 @@ export const InputRow = memo(
                 })}
               </button>
             )}
+            <button
+              type="button"
+              className="po-link"
+              aria-pressed={impactOpen}
+              data-testid={`${testId}-impact`}
+              onClick={() => {
+                onSelect({ section: "branches", id: input.id });
+              }}
+            >
+              {t("inputs.impact", { name })}
+            </button>
           </span>
         </div>
         {highlighted && linked.length > 0 && (

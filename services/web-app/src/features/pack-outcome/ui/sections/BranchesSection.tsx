@@ -17,6 +17,7 @@ import { useSectionCollapse } from "../../lib/sectionCollapse";
 import { SectionShell } from "./SectionShell";
 import { FilterBar, GroupTitle, PickButton, Reason, Stats } from "./parts";
 import { matches, onArrowNav, useIsSelected } from "./helpers";
+import { useApplyInput, type ApplyInput } from "../../lib/applyInput";
 import type { Explainer } from "../../lib/explain";
 import { useExplain } from "./useExplain";
 
@@ -85,21 +86,7 @@ const Delta = ({
   );
 };
 
-type Apply = (input: string, value: string) => void;
-
-/** «Показать эти вводные»: записать значение в вводные адреса, результат пересчитается. */
-const useApplyInput = (): Apply => {
-  const { url, inputs } = useOutcomeModel();
-  return (input, value) => {
-    const fallback = inputs.data?.inputs.find((i) => i.id === input)?.default;
-    const rest = Object.fromEntries(
-      Object.entries(url.state.inputs).filter(([key]) => key !== input),
-    );
-    // Умолчание версии отдельно не пишется, но поверх сценария его нужно закрепить.
-    const same = url.state.scenario === null && fallback === value;
-    url.update({ inputs: same ? rest : { ...rest, [input]: value } }, true);
-  };
-};
+type Apply = ApplyInput;
 
 const VariantRow = ({
   doc,

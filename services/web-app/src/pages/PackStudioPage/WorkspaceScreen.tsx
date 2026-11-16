@@ -14,6 +14,7 @@ import {
   PACK_STUDIO_PATH,
   findVersion,
   packOutcomePath,
+  safeOutcomeBack,
   versionRefOf,
   findingTarget,
   packErrorText,
@@ -139,6 +140,10 @@ export const WorkspaceScreen = () => {
   const { workspaceId = "" } = useParams<{ workspaceId: string }>();
   const [params, setParams] = useSearchParams();
   const file = params.get("file");
+  // Переход к правилу из экрана «Результат»: запись манифеста, вкладка и адрес возврата.
+  const at = params.get("at");
+  const pane = params.get("pane");
+  const back = safeOutcomeBack(workspaceId, params.get("from"));
   const workspace = usePackWorkspace(workspaceId);
   const refresh = useRefreshPackWorkspace();
   const phone = useIsPhoneWidth();
@@ -177,6 +182,9 @@ export const WorkspaceScreen = () => {
           (prev) => {
             const next = new URLSearchParams(prev);
             next.set("file", path);
+            // Запись и вкладка относились к прежнему файлу.
+            next.delete("at");
+            next.delete("pane");
             return next;
           },
           { replace: false },
@@ -403,6 +411,16 @@ export const WorkspaceScreen = () => {
           <div className="ps-ws-content">
             {file ? (
               <>
+                {back && (
+                  <Link
+                    to={back}
+                    className="btn sm ps-back-result"
+                    data-testid="ws-back-to-result"
+                  >
+                    <ArrowLeft size="0.75rem" aria-hidden="true" />
+                    {t("workspace.backToResult")}
+                  </Link>
+                )}
                 <FileCrumbs workspaceId={ws.id} path={file} />
                 <VersionBar
                   workspaceId={ws.id}
@@ -432,6 +450,10 @@ export const WorkspaceScreen = () => {
                     });
                   }}
                   onOpenFile={open}
+                  pointer={at}
+                  {...(pane === "form" || pane === "source"
+                    ? { initialView: pane }
+                    : {})}
                   reveal={reveal?.path === file ? reveal : undefined}
                   onDirtyChange={onDirtyChange}
                   gate={gate}
@@ -456,6 +478,7 @@ export const WorkspaceScreen = () => {
                           workspaceId={ws.id}
                           path={file}
                           onSaved={onFormSaved}
+                          at={at}
                           onOpenFile={(target) => {
                             open(target);
                           }}

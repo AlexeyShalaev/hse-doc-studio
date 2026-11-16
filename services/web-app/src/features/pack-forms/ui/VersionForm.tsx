@@ -1,6 +1,7 @@
-import { useState, type ComponentType } from "react";
+import { useRef, useState, type ComponentType } from "react";
 import { clsx } from "clsx";
 import { useTranslation } from "react-i18next";
+import { sectionOfPointer, useRecordFocus } from "../lib/focus";
 import { DocumentsSection } from "./documents/DocumentsSection";
 import { LanguagesSection } from "./documents/LanguagesSection";
 import { FieldsSection } from "./fields/FieldsSection";
@@ -15,6 +16,8 @@ export type VersionSectionProps = {
   onSaved: (changed: string[]) => void;
   /** Открыть файл пространства в редакторе (манифест документа из ростера). */
   onOpenFile?: ((path: string) => void) | undefined;
+  /** Указатель JSON записи, которую нужно показать (переход к правилу): раздел и выделение. */
+  at?: string | null | undefined;
 };
 
 /**
@@ -35,11 +38,15 @@ export const VERSION_SECTIONS: {
 
 export const VersionForm = (props: VersionSectionProps) => {
   const { t } = useTranslation("packForms");
-  const [active, setActive] = useState(VERSION_SECTIONS[0]?.id ?? "");
+  const [active, setActive] = useState(
+    sectionOfPointer(props.at) ?? VERSION_SECTIONS[0]?.id ?? "",
+  );
   const section =
     VERSION_SECTIONS.find((s) => s.id === active) ?? VERSION_SECTIONS[0];
+  const root = useRef<HTMLDivElement>(null);
+  useRecordFocus(root, props.at, section?.id ?? "");
   return (
-    <div className="pf-version">
+    <div className="pf-version" ref={root}>
       <nav className="pf-tabs" role="tablist" aria-label={t("sections")}>
         {VERSION_SECTIONS.map((s) => (
           <button

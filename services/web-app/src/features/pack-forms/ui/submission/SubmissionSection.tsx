@@ -25,6 +25,7 @@ export const SubmissionSection = ({
   workspaceId,
   path,
   onSaved,
+  at,
 }: VersionSectionProps) => {
   const { i18n } = useTranslation();
   const { model } = useModelEditor();
@@ -64,6 +65,7 @@ export const SubmissionSection = ({
         revision={model.manifest.etag}
         docName={docName}
         onSaved={saved}
+        at={at}
       />
     </Suspense>
   );

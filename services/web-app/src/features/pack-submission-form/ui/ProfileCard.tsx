@@ -191,6 +191,7 @@ export const ProfileCard = ({
     <li
       className="psf-profile"
       data-testid={`profile-${String(profile.index)}`}
+      data-pf-at={`/pack_submission/profiles/${String(profile.index)}`}
     >
       <details
         open={open}
@@ -323,6 +324,7 @@ export const ProfileCard = ({
             catalog={catalog}
             slotLabel={ctx.slotLabel}
             disabled={ctx.disabled}
+            at={`/pack_submission/profiles/${String(profile.index)}/signing_route`}
             onSave={(steps) => {
               ctx.apply([
                 { op: "set_profile_route", profile: profile.index, steps },
