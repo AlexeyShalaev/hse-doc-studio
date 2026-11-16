@@ -1,7 +1,7 @@
 export { OutcomeScreen } from "./OutcomeScreen";
 export type { OutcomeBodyProps as OutcomeScreenProps } from "./OutcomeBody";
-export { OutcomeModelContext, useOutcomeModel } from "./model";
-export type { OutcomeModel } from "./model";
+export { OutcomeModelContext, isHighlighted, useOutcomeModel } from "./model";
+export type { OutcomeHighlight, OutcomeModel } from "./model";
 export {
   OUTCOME_DEFAULTS,
   parseOutcomeSearch,
