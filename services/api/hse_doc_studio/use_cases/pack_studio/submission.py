@@ -26,6 +26,7 @@ from hse_doc_studio.core.file_version import file_etag
 from hse_doc_studio.core.invitations.entities import SUPERVISOR_PERSONAS
 from hse_doc_studio.core.meta_defaults import apply_meta_defaults
 from hse_doc_studio.core.pack_studio.errors import PackStudioError, PackStudioErrorCode
+from hse_doc_studio.core.pack_studio.outcome.predicates import item_skipped, nda_enabled
 from hse_doc_studio.core.pack_studio.paths import VERSION_MANIFEST, VersionRef
 from hse_doc_studio.core.pack_studio.preview import SyntheticProject
 from hse_doc_studio.core.pack_studio.protocols import IPackSubmission
@@ -192,11 +193,13 @@ def _catalog_pair(point: RoutePoint, pair: DocSlot) -> tuple[str, str] | None:
 def _items_off(project: Project, profile: SubmissionProfile) -> tuple[str, ...]:
     """Документы пунктов, которые в этой комбинации не сдаются: NDA, вид работы или документа в проекте нет."""
     present = {doc.def_id for doc in project.documents if is_doc_active(project, doc)}
-    nda = bool(project.meta.get("nda"))
+    nda = nda_enabled(project.meta)
+    kind = str(project.kind)
     off = (
         item.doc_id
         for item in profile.items
-        if (item.skip_if_nda and nda) or str(project.kind) not in item.supported_kinds or item.doc_id not in present
+        if item_skipped(skip_if_nda=item.skip_if_nda, item_kinds=item.supported_kinds, kind=kind, nda=nda)
+        or item.doc_id not in present
     )
     return tuple(dict.fromkeys(off))
 

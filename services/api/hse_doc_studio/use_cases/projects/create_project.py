@@ -22,6 +22,13 @@ from hse_doc_studio.core.enums import (
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.meta_defaults import apply_meta_defaults
+from hse_doc_studio.core.pack_studio.outcome.predicates import (
+    STAFFING_SOLO,
+    STAFFING_TEAM,
+    chosen_variant_id,
+    kind_allowed,
+    staffing_allowed,
+)
 from hse_doc_studio.core.projects.lifecycle import ServerProjectStorage
 from hse_doc_studio.core.repositories import (
     IProjectIndexRepository,
@@ -368,14 +375,14 @@ def _build_documents(  # noqa: C901
     team = staffing == ProjectStaffing.team
     documents: list[Document] = []
     for doc_def in template_version.documents:
-        if kind.value not in doc_def.supported_kinds:
+        if not kind_allowed(doc_def.supported_kinds, kind.value):
             continue
         chosen_variant = _resolve_variant(doc_def, pres_variant)
         if not team:
-            if "solo" in doc_def.supported_staffing:
+            if staffing_allowed(doc_def.supported_staffing, STAFFING_SOLO):
                 documents.append(_make_instance(doc_def.id, doc_def.id, None, chosen_variant))
             continue
-        if "team" not in doc_def.supported_staffing:
+        if not staffing_allowed(doc_def.supported_staffing, STAFFING_TEAM):
             continue
         if doc_def.scope == "personal":
             documents.extend(
@@ -389,12 +396,7 @@ def _build_documents(  # noqa: C901
 
 
 def _resolve_variant(doc_def: DocumentDefinition, pres_variant: str | None) -> str | None:
-    if not doc_def.variants:
-        return None
-    if pres_variant and doc_def.id == "presentation":
-        variant_ids = [v.id for v in doc_def.variants]
-        return pres_variant if pres_variant in variant_ids else doc_def.variants[0].id
-    return doc_def.variants[0].id
+    return chosen_variant_id(doc_def, pres_variant)
 
 
 def _make_instance(instance_id: str, def_id: str, owner: str | None, chosen_variant: str | None) -> Document:

@@ -17,6 +17,7 @@ from hse_doc_studio.core.entities import Project
 from hse_doc_studio.core.enums import DateMarkFormat, DetachedVerdict, ProjectStaffing, SignMode
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.invitations.entities import SUPERVISOR_PERSONAS
+from hse_doc_studio.core.pack_studio.outcome.predicates import kind_allowed
 from hse_doc_studio.core.team import split_instance_id
 from hse_doc_studio.core.value_objects import (
     DetachedSignature,
@@ -520,7 +521,7 @@ def profile_restrictions(
     result: list[tuple[str, tuple[str, ...]]] = []
     for profile in profiles:
         for item in profile.items:
-            if base not in item.signatures or str(project.kind) not in item.supported_kinds:
+            if base not in item.signatures or not kind_allowed(item.supported_kinds, str(project.kind)):
                 continue
             name = profile.name.get(lang) or profile.name.get("ru") or profile.id
             result.append((name, item.allowed_methods(base)))

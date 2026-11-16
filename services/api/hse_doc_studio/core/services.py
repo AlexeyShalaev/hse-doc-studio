@@ -32,6 +32,12 @@ from hse_doc_studio.core.enums import (
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import current_interface_language, localized_error
 from hse_doc_studio.core.office import sibling_pdf_path
+from hse_doc_studio.core.pack_studio.outcome.predicates import (
+    item_skipped,
+    kind_allowed,
+    nda_enabled,
+    visible_if_held,
+)
 from hse_doc_studio.core.repositories import ITemplateRepository
 from hse_doc_studio.core.signatures.plan import DocFacts, SlotStatus, reason_hint, slot_state
 from hse_doc_studio.core.team import (
@@ -80,10 +86,7 @@ class FormValidationService:
         return not self.validate(form, answers)
 
     def is_visible(self, fld: FormFieldDef, answers: dict[str, Any]) -> bool:
-        cond = fld.visible_if
-        if cond is None:
-            return True
-        return answers.get(cond.field) == cond.equals
+        return visible_if_held(fld.visible_if, answers)
 
     def _validate_field(self, fld: FormFieldDef, value: Any) -> list[FormValidationError]:
         # Messages follow the request's interface language (independent of the
@@ -527,7 +530,7 @@ def resolve_form_instance(
     form = version.get_form(base_id)
     # Форма другого вида проекта (supported_kinds) для этого проекта не
     # существует — как документ, отфильтрованный по kind.
-    if form is not None and str(project.kind) not in form.supported_kinds:
+    if form is not None and not kind_allowed(form.supported_kinds, str(project.kind)):
         form = None
     if form is None:
         raise NotFoundError(
@@ -737,9 +740,12 @@ class SignatureSlotService:
         Повторяет фильтры `SubmissionService.package_items`: если документа в
         комплекте не будет, то и подпись на нём не обязательна.
         """
-        if item.skip_if_nda and bool(project.meta.get("nda")):
-            return True
-        return str(project.kind) not in item.supported_kinds
+        return item_skipped(
+            skip_if_nda=item.skip_if_nda,
+            item_kinds=item.supported_kinds,
+            kind=str(project.kind),
+            nda=nda_enabled(project.meta),
+        )
 
     @staticmethod
     def _matches(slot: RuntimeSlot, doc: Document, def_ids: tuple[str, ...]) -> bool:
@@ -791,11 +797,14 @@ class SubmissionProfileService:
         for item in profile.items:
             # ЛМС-правило «под NDA документ не сдаётся» (напр. Текст программы
             # на защите: его заменяет расписка NDA).
-            if item.skip_if_nda and bool(project.meta.get("nda")):
-                continue
             # Пункт другого вида проекта (supported_kinds) — пропускается,
             # даже если сам документ существует в обоих видах.
-            if str(project.kind) not in item.supported_kinds:
+            if item_skipped(
+                skip_if_nda=item.skip_if_nda,
+                item_kinds=item.supported_kinds,
+                kind=str(project.kind),
+                nda=nda_enabled(project.meta),
+            ):
                 continue
             instances = self._resolve_profile_instances(item.doc_id, project, version, author_slug=author_slug)
             for doc in instances:
@@ -836,9 +845,12 @@ class SubmissionProfileService:
             )
         result: list[Document] = []
         for item in profile.items:
-            if item.skip_if_nda and bool(project.meta.get("nda")):
-                continue
-            if str(project.kind) not in item.supported_kinds:
+            if item_skipped(
+                skip_if_nda=item.skip_if_nda,
+                item_kinds=item.supported_kinds,
+                kind=str(project.kind),
+                nda=nda_enabled(project.meta),
+            ):
                 continue
             result.extend(self._resolve_profile_instances(item.doc_id, project, version, author_slug=author_slug))
         return result

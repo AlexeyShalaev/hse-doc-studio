@@ -12,6 +12,7 @@ from hse_doc_studio.core.entities import Document, Project
 from hse_doc_studio.core.enums import AnchorState, ProjectStaffing, SignMode
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.pack_studio.outcome.predicates import item_skipped, nda_enabled
 from hse_doc_studio.core.repositories import (
     IProjectIndexRepository,
     IProjectRepository,
@@ -149,9 +150,12 @@ def profile_pairs(  # noqa: C901 — гейты пунктов профиля к
     authors: list[str | None] = [author] if author or not team else [a.slug for a in project.authors if a.slug]
     seen: dict[tuple[str, str], _Pair] = {}
     for item in profile.items:
-        if item.skip_if_nda and bool(project.meta.get("nda")):
-            continue
-        if str(project.kind) not in item.supported_kinds:
+        if item_skipped(
+            skip_if_nda=item.skip_if_nda,
+            item_kinds=item.supported_kinds,
+            kind=str(project.kind),
+            nda=nda_enabled(project.meta),
+        ):
             continue
         for slug in authors:
             for doc in _instances(project, item.doc_id, slug, team=team):

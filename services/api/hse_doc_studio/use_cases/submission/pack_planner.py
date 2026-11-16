@@ -50,6 +50,12 @@ from hse_doc_studio.core.jobs.pack import (
     PackSubmissionPayload,
 )
 from hse_doc_studio.core.office import CONVERTIBLE_OFFICE_EXTS, resolve_custom_doc_decision, sibling_pdf_path
+from hse_doc_studio.core.pack_studio.outcome.predicates import (
+    output_arcname,
+    owner_short_name,
+    resolve_output_names,
+    with_owner_suffix,
+)
 from hse_doc_studio.core.services import ProjectTemplateService, SignatureSlotService
 from hse_doc_studio.core.signatures.dates import display_day, format_moment, format_numeric
 from hse_doc_studio.core.signatures.package_text import (
@@ -135,23 +141,6 @@ class PackPlan:
     notices: tuple[PackNotice, ...] = ()
 
 
-def _resolve_output_name(doc_def: DocumentDefinition, chosen_variant: str | None) -> dict[str, str]:
-    """output_name для arcname: у вариантного дока из ВЫБРАННОГО варианта, иначе с def-уровня."""
-    if doc_def.variants:
-        variant = next((v for v in doc_def.variants if v.id == chosen_variant), doc_def.variants[0])
-        if variant.output_name:
-            return variant.output_name
-    return doc_def.output_name
-
-
-def _with_owner_suffix(arcname: str, owner_name: str | None) -> str:
-    """Личный док в team-пакете несёт фамилию владельца в имени файла."""
-    if not owner_name:
-        return arcname
-    stem, ext = arcname.rsplit(".", 1) if "." in arcname else (arcname, "")
-    return f"{stem} — {owner_name}.{ext}" if ext else f"{stem} — {owner_name}"
-
-
 def _extra_arcname(output_name: str) -> str:
     """Имя extra-артефакта: расширение из output_name уважается, `.md` дописывается только без него."""
     return output_name if PurePosixPath(output_name).suffix else output_name + ".md"
@@ -160,7 +149,7 @@ def _extra_arcname(output_name: str) -> str:
 def _custom_doc_arcname(doc: Document, doc_def: DocumentDefinition | None, lang: str, is_pdf: bool) -> str:
     """Имя в пакете для custom_file-документа, с расширением по фактическому результату."""
     assert doc.custom_file is not None  # noqa: S101 — invariant enforced by caller
-    output_name = _resolve_output_name(doc_def, doc.chosen_variant) if doc_def is not None else {}
+    output_name = resolve_output_names(doc_def, doc.chosen_variant) if doc_def is not None else {}
     fallback_name = Path(doc.custom_file.original_filename).name
     arcname = output_name.get(lang, output_name.get("ru", fallback_name)) if output_name else fallback_name
     if is_pdf and not arcname.lower().endswith(".pdf"):
@@ -400,12 +389,12 @@ class _Run:
             return None
         owner = author_by_slug(project, doc.owner)
         if owner is not None:
-            owner_name = owner.name.split()[0] if owner.name.split() else owner.slug
+            owner_name = owner_short_name(owner.name, owner.slug)
         if doc.custom_file is not None:
             custom = self._resolve_custom_doc_target(doc)
             output_file, is_pdf = custom
             arcname = _custom_doc_arcname(doc, doc_def_map.get(doc.def_id), self.lang, is_pdf)
-            return output_file, _with_owner_suffix(arcname, owner_name), is_pdf
+            return output_file, with_owner_suffix(arcname, owner_name), is_pdf
         doc_def = doc_def_map.get(doc.def_id)
         try:
             _, output_file = self.template_service.resolve_instance_source(project, doc, self.version)
@@ -414,9 +403,9 @@ class _Run:
         if doc_def is None or not output_file:
             self.warn("doc_def/output_file not resolvable", item_doc_id, REASON_DOC_NOT_RESOLVABLE, doc_id=item_doc_id)
             return None
-        output_name = _resolve_output_name(doc_def, doc.chosen_variant)
-        arcname = output_name.get(self.lang, output_name.get("ru", output_file))
-        return output_file, _with_owner_suffix(arcname, owner_name), True
+        output_name = resolve_output_names(doc_def, doc.chosen_variant)
+        arcname = output_arcname(output_name, self.lang, output_file)
+        return output_file, with_owner_suffix(arcname, owner_name), True
 
     def _resolve_custom_doc_target(self, doc: Document) -> tuple[str, bool]:
         """(output_file, is_pdf) для документа с custom_file.
