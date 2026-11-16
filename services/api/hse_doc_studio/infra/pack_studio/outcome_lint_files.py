@@ -61,7 +61,7 @@ from hse_doc_studio.infra.template.yaml_template_repository import (
     parse_pack_manifest,
     parse_template_manifest,
 )
-from hse_doc_studio.use_cases.pack_studio.submission import synthetic_core_project
+from hse_doc_studio.use_cases.pack_studio.synthetic_project import synthetic_core_project
 
 _TEXT_SUFFIXES = frozenset({".tex", ".md", ".html", ".txt", ".cls", ".sty", ".bib", ".j2"})
 _SLIDE_XML = re.compile(r"^ppt/slides/slide\d+\.xml$")
