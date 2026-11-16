@@ -54,6 +54,14 @@ class PackStudioConfig(BaseModel):
     preview_keep_hours: float = Field(
         default=24.0, gt=0, description="How long preview build records, logs and leftover folders are kept."
     )
+    # Результат версии (template-studio-outcome.md, раздел 4.6, срез O2)
+    outcome_timeout_s: float = Field(
+        default=5.0, gt=0, description="Time limit of one outcome calculation (503 outcome_busy after it)."
+    )
+    outcome_max_concurrent: int = Field(
+        default=4, ge=1, description="Outcome calculations running at once in the process."
+    )
+    outcome_cache_entries: int = Field(default=256, ge=1, description="Outcome responses kept by request key.")
     hosting_timeout_s: float = Field(
         default=20.0, gt=0, description="Timeout for one request to the git hosting API (pull request, CI status)."
     )

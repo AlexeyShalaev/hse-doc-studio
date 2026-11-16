@@ -36,6 +36,7 @@ export const LOCAL_BOOTSTRAP: Bootstrap = {
     git_server_login: false,
     pack_studio: false,
     pack_studio_standalone: false,
+    pack_outcome: false,
   },
   csrf_token: null,
 };

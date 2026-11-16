@@ -185,12 +185,18 @@ class PackPreviewService:
         """Разобранная модель версии (в отдельном процессе, кэш по дайджесту входа): её читает и MCP `pack_read`."""
         _ws, root = await self._workspaces.ready(actor, workspace_id)
         ref = version_ref(pack, template, version)
-        return await self._description(root, ref, (await self._renderer.inputs(root, ref)).tree)
+        return (await self.describe_at(root, ref))[0]
+
+    async def describe_at(self, root: Path, ref: VersionRef) -> tuple[VersionDescription, str]:
+        """Модель версии папки паков `root` и дайджест её каталога (по нему кэшируется модель): им пользуется и
+        вычислитель результата, которому нужен тот же разбор в отдельном процессе."""
+        tree = (await self._renderer.inputs(root, ref)).tree
+        return await self._description(root, ref, tree), tree
 
     async def options(self, actor: Actor, workspace_id: UUID, pack: str, template: str, version: str) -> PreviewOptions:
         desc = await self.describe(actor, workspace_id, pack, template, version)
-        examples = _examples(desc)
-        default = _default_example(examples)
+        examples = examples_of(desc)
+        default = default_example_of(examples)
         chosen = next(e for e in examples if e.id == default)
         switches = switches_for(desc.version)
         defaults = chosen.data.defaults if chosen.data is not None else {}
@@ -354,8 +360,8 @@ class PackPreviewService:
     def _project(
         self, desc: VersionDescription, inp: StartPreviewInput
     ) -> tuple[PreviewExample, dict[str, str], SyntheticProject]:
-        examples = _examples(desc)
-        wanted = inp.example or _default_example(examples)
+        examples = examples_of(desc)
+        wanted = inp.example or default_example_of(examples)
         example = next((e for e in examples if e.id == wanted), None)
         if example is None:
             raise PreviewInputError("example", wanted, "unknown example")
@@ -614,7 +620,7 @@ def _spec(actor: Actor, build: PreviewBuild, doc: MaterializedDoc, work: Path, p
     )
 
 
-def _examples(desc: VersionDescription) -> tuple[PreviewExample, ...]:
+def examples_of(desc: VersionDescription) -> tuple[PreviewExample, ...]:
     files: list[PreviewExample] = []
     for raw in desc.examples:
         if raw.error is not None:
@@ -627,7 +633,7 @@ def _examples(desc: VersionDescription) -> tuple[PreviewExample, ...]:
     return (*files, *auto_examples(desc.version))
 
 
-def _default_example(examples: Sequence[PreviewExample]) -> str:
+def default_example_of(examples: Sequence[PreviewExample]) -> str:
     return next((e.id for e in examples if e.source == "file" and e.error is None), AUTO_NORMAL)
 
 

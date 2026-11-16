@@ -16,7 +16,7 @@ from hse_doc_studio.api.route_actions import ROUTE_ACTIONS
 from hse_doc_studio.api.route_scopes import ROUTE_SCOPES
 from hse_doc_studio.core.access.context import set_current_actor
 from hse_doc_studio.core.access.entities import Actor
-from hse_doc_studio.core.rate_limit import COMPILE, RULES, RateRule
+from hse_doc_studio.core.rate_limit import COMPILE, PACK_OUTCOME, RULES, RateRule
 from httpx import ASGITransport, AsyncClient
 
 TIGHT = RateRule("auth_ip", limit=2, window_s=60)
@@ -141,3 +141,13 @@ def test__expensive_routes__are_real_project_or_user_routes() -> None:
     for key in EXPENSIVE_ROUTES:
         assert key in ROUTE_ACTIONS or key in ROUTE_SCOPES, key
     assert {rule.name for rule in EXPENSIVE_ROUTES.values()} <= set(RULES)
+
+
+def test__pack_outcome_routes__share_one_rule_of_20_per_second() -> None:
+    base = "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/outcome"
+
+    rules = {EXPENSIVE_ROUTES[("GET", f"{base}/inputs")], EXPENSIVE_ROUTES[("POST", base)]}
+
+    assert rules == {PACK_OUTCOME}
+    assert (PACK_OUTCOME.limit, PACK_OUTCOME.window_s) == (20, 1)
+    assert RULES["pack_outcome"] is PACK_OUTCOME

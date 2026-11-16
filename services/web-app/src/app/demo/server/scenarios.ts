@@ -76,6 +76,7 @@ const SERVER_CAPABILITIES: Capabilities = {
   git_server_login: false,
   pack_studio: false,
   pack_studio_standalone: false,
+  pack_outcome: false,
 };
 
 export const DEMO_STUDENT: SessionUser = {
@@ -237,6 +238,7 @@ const localBase = (): Bootstrap => ({
     git_server_login: true,
     pack_studio: false,
     pack_studio_standalone: false,
+    pack_outcome: false,
   },
   csrf_token: null,
   guest: null,

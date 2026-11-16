@@ -15,7 +15,9 @@ def pack_studio_error_body(exc: PackStudioError) -> dict[str, object]:
 
 async def _handler(_request: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, PackStudioError)  # noqa: S101 — обработчик зарегистрирован только на этот тип
-    return JSONResponse(status_code=exc.status, content=pack_studio_error_body(exc))
+    retry_after = exc.ctx.get("retry_after_s")
+    headers = {"Retry-After": str(retry_after)} if isinstance(retry_after, int) else None
+    return JSONResponse(status_code=exc.status, content=pack_studio_error_body(exc), headers=headers)
 
 
 def install_pack_studio_error_handlers(app: FastAPI) -> None:

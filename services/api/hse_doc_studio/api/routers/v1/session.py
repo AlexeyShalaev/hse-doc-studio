@@ -95,6 +95,7 @@ async def bootstrap(request: Request, response: Response) -> BootstrapResponse:
         local = _local_bootstrap()
         local.capabilities.pack_studio = await _pack_studio_allowed(request, Actor.local())
         local.capabilities.pack_studio_standalone = local.capabilities.pack_studio and settings.pack_studio.standalone
+        local.capabilities.pack_outcome = local.capabilities.pack_studio
         return local
     uc = await request.state.dishka_container.get(BootstrapUC)
     result = await uc.execute(credentials_from_request(request).session_secret)
@@ -139,6 +140,7 @@ async def bootstrap(request: Request, response: Response) -> BootstrapResponse:
     if result.user is not None:
         user_actor = Actor.user(result.user.id, is_instance_admin=result.user.is_instance_admin)
         response_body.capabilities.pack_studio = await _pack_studio_allowed(request, user_actor)
+        response_body.capabilities.pack_outcome = response_body.capabilities.pack_studio
     if guest is not None:
         # Гостю недоступно ничего из возможностей установки.
         response_body.capabilities = Capabilities(**dict.fromkeys(Capabilities.model_fields, False))
