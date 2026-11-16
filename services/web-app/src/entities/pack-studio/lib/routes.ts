@@ -17,6 +17,16 @@ export const packWorkspacePath = (id: string, file?: string | null): string =>
 export const packFilesPath = (id: string): string =>
   `${workspaceBase(id)}?view=files`;
 
+/**
+ * Мастер «Новая версия» шаблона: режим «Файлы» открывает его сам и убирает параметр. Так
+ * выпущенную версию, которую нельзя править, ведут к новой копии.
+ */
+export const packNewVersionPath = (
+  id: string,
+  ref: { pack: string; template: string },
+): string =>
+  `${workspaceBase(id)}?view=files&newVersion=${encodeURIComponent(`${ref.pack}/${ref.template}`)}`;
+
 /** Экран «Результат» версии; `search` это состояние экрана (адрес хранит его целиком). */
 export const packOutcomePath = (
   id: string,

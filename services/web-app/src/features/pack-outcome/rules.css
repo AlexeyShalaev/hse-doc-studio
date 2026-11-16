@@ -282,3 +282,14 @@
     transition: opacity 0.15s ease;
   }
 }
+
+/* элементы результата, изменившиеся после правки: левая полоса на несколько секунд */
+.po-item[data-flash="true"] {
+  border-left: 3px solid var(--accent);
+  background: var(--accent-soft);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .po-item[data-flash="true"] {
+    transition: background-color 0.4s ease;
+  }
+}
