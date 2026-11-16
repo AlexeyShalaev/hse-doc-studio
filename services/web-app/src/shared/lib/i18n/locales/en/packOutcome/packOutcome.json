@@ -29,7 +29,11 @@
     "filesModeHint": "File tree, editor and preview",
     "released": "The version is released and cannot be edited: create a new one.",
     "releasedMark": "Version released",
-    "reference": "Data from reference fixtures"
+    "reference": "Data from reference fixtures",
+    "modeHint": "Hold Alt to see the author view",
+    "modePeek": "Alt is held: the author view is shown",
+    "modeNoteStudent": "Mode \"As a student\": showing what the student will see.",
+    "modeNoteAuthor": "Mode \"Author\": reasons and rules are shown."
   },
   "status": {
     "saved": "Saved",
@@ -879,6 +883,47 @@
       "example": "Example data set: {{value}}",
       "refresh": "Update the snapshot for the new inputs",
       "assertions": "Assertions stay as they are: the run will show which ones stopped holding."
+    }
+  },
+  "pale": {
+    "add": "Add in inputs",
+    "addLabel": "Add in inputs: {{name}}",
+    "searching": "Looking for an input...",
+    "none": "No single input brings this in",
+    "failed": "Could not find an input, press again"
+  },
+  "student": {
+    "label": "Student view",
+    "summary": "This is how the student's project looks with the chosen inputs.",
+    "optional": "optional",
+    "perAuthor": "each author",
+    "documents": {
+      "title": "Documents",
+      "lead_one": "The student gets {{count}} document.",
+      "lead_other": "The student gets {{count}} documents.",
+      "empty": "There are no documents in this combination.",
+      "other": "Other"
+    },
+    "fields": {
+      "title": "What to fill in",
+      "lead": "Required project fields and questionnaires the student has to fill in.",
+      "create": "When creating the project",
+      "finalize": "At finalization",
+      "empty": "Nothing to fill in."
+    },
+    "forms": {
+      "title": "Questionnaires",
+      "required": "required",
+      "fieldRequired": "required"
+    },
+    "route": {
+      "title": "Who signs",
+      "lead": "Signing order for each submission point.",
+      "step": "Step {{n}}",
+      "parallel": "in parallel",
+      "optional": "optional",
+      "deadline": "Deadline: {{hint}}",
+      "empty": "There are no signatures in this combination."
     }
   }
 }

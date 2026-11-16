@@ -28,7 +28,12 @@ import { EmptyState, ErrorState, Modal, Spinner } from "@shared/ui";
 import { elementKey, linkedElements } from "./lib/inputs";
 import { useLastDefined } from "./lib/lastDefined";
 import { useOutcomePanels } from "./lib/panels";
-import { useOutcomeUrlState, type OutcomeSelection } from "./lib/urlState";
+import { useAltPeek } from "./lib/useAltPeek";
+import {
+  useOutcomeUrlState,
+  type OutcomeMode,
+  type OutcomeSelection,
+} from "./lib/urlState";
 import { summarize } from "./lib/summary";
 import { type OutcomeModel } from "./model";
 import { FilesDrawer } from "./ui/FilesDrawer";
@@ -88,6 +93,11 @@ export const OutcomeBody = ({
   const phone = useIsPhoneWidth();
   const url = useOutcomeUrlState();
   const panels = useOutcomePanels();
+  // «Как студент»: пока удерживается Alt, центр и панели показывают вид автора.
+  const peek = useAltPeek(url.state.mode === "student");
+  const view = peek ? "author" : url.state.mode;
+  // Объявление смены режима для программ экрана: фокус после выбора режима уходит в результат.
+  const [modeNote, setModeNote] = useState("");
   const tree = usePackTree(workspace.id);
   const git = usePackGit(workspace.id, workspace.kind === "git");
   const [filesOpen, setFilesOpen] = useState(false);
@@ -157,6 +167,7 @@ export const OutcomeBody = ({
     released: location?.version.released ?? false,
     phone,
     url,
+    view,
     request,
     outcome,
     shown,
@@ -174,7 +185,22 @@ export const OutcomeBody = ({
   };
 
   // F6 и Shift+F6 переводят фокус между тремя областями, Alt+Z показывает и прячет «Почему?».
-  const student = url.state.mode === "student";
+  const student = view === "student";
+  useEffect(() => {
+    if (modeNote === "") return undefined;
+    const timer = setTimeout(() => {
+      setModeNote("");
+    }, 4000);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [modeNote]);
+  const onModeChange = (mode: OutcomeMode) => {
+    setModeNote(
+      t(mode === "student" ? "bar.modeNoteStudent" : "bar.modeNoteAuthor"),
+    );
+    resultRef.current?.focus();
+  };
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "F6") {
       const regions = [inputsRef, resultRef, rulesRef]
@@ -186,7 +212,11 @@ export const OutcomeBody = ({
       const step = event.shiftKey ? -1 : 1;
       const next = regions[(at + step + regions.length) % regions.length];
       next?.focus();
-    } else if (event.altKey && event.code === "KeyZ" && !student) {
+    } else if (
+      event.altKey &&
+      event.code === "KeyZ" &&
+      url.state.mode === "author"
+    ) {
       event.preventDefault();
       if (phone)
         update({ tab: url.state.tab === "rules" ? "result" : "rules" });
@@ -278,7 +308,8 @@ export const OutcomeBody = ({
       <div
         className="po-screen"
         data-testid="outcome-screen"
-        data-mode={url.state.mode}
+        data-mode={view}
+        data-peek={peek ? "true" : undefined}
         data-phone={phone ? "true" : undefined}
         onKeyDown={onKeyDown}
       >
@@ -296,6 +327,8 @@ export const OutcomeBody = ({
           tree={tree.data}
           location={location}
           dirty={git.data?.dirty ?? false}
+          peek={peek}
+          onModeChange={onModeChange}
           onOpenFiles={() => {
             setFilesOpen(true);
           }}
@@ -473,7 +506,7 @@ export const OutcomeBody = ({
           aria-live="polite"
           data-testid="outcome-live"
         >
-          {announce}
+          {modeNote === "" ? announce : `${modeNote} ${announce}`}
         </div>
         <FilesDrawer
           workspaceId={workspace.id}

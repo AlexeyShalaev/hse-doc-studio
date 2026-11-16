@@ -1,10 +1,11 @@
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { OutcomeDocument, PackOutcome } from "@entities/pack-studio";
 import { Badge, NoResults } from "@shared/ui";
 import { pickLocalized } from "@shared/lib/i18n/pickLocalized";
 import { summarize } from "../../lib/summary";
 import { useOutcomeModel } from "../../model";
+import { PaleSlot } from "./PaleSlot";
 import { SectionShell } from "./SectionShell";
 import {
   Disclosure,
@@ -43,22 +44,31 @@ const DocumentCard = ({
       <Badge variant="subtle">{t("documents.state.absent")}</Badge>
     );
 
-  return (
-    <PickItem
-      el={{ section: "documents", id: doc.id }}
-      muted={doc.state !== "active"}
-      testId={`outcome-doc-${doc.id}`}
-      title={name}
-      badges={
-        <>
-          {stateBadge}
-          <Badge>{t(`documents.scope.${doc.scope}`)}</Badge>
-          {!doc.required && (
-            <Badge variant="subtle">{t("documents.optional")}</Badge>
-          )}
-        </>
-      }
-    >
+  const el = { section: "documents", id: doc.id } as const;
+  const badges = (
+    <>
+      {stateBadge}
+      <Badge>{t(`documents.scope.${doc.scope}`)}</Badge>
+      {!doc.required && (
+        <Badge variant="subtle">{t("documents.optional")}</Badge>
+      )}
+    </>
+  );
+  const testId = `outcome-doc-${doc.id}`;
+  // Документ, которого нет в комплекте, это бледный слот: причина и «Добавить во вводных».
+  const card = (children: ReactNode) =>
+    doc.state === "active" ? (
+      <PickItem el={el} testId={testId} title={name} badges={badges}>
+        {children}
+      </PickItem>
+    ) : (
+      <PaleSlot el={el} name={name} testId={testId} badges={badges}>
+        {children}
+      </PaleSlot>
+    );
+
+  return card(
+    <>
       {doc.state !== "active" && (
         <Reason
           prefix={t(`documents.why.${doc.state}`)}
@@ -132,7 +142,7 @@ const DocumentCard = ({
           )}
         </span>
       )}
-    </PickItem>
+    </>,
   );
 };
 
