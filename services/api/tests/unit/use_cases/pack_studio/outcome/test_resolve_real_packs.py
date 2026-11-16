@@ -24,10 +24,10 @@ from hse_doc_studio.core.catalog import TemplateVersion
 from hse_doc_studio.core.pack_studio.outcome.inputs import input_specs, normalize_inputs
 from hse_doc_studio.core.pack_studio.outcome.model import Outcome
 from hse_doc_studio.core.pack_studio.outcome.payload import to_json
+from hse_doc_studio.core.pack_studio.outcome.predicates import document_in_scope
 from hse_doc_studio.core.pack_studio.preview import (
     PreviewExample,
     auto_examples,
-    document_present,
     resolve_combination,
     switches_for,
     synthetic_project,
@@ -98,7 +98,9 @@ def _engine_states(version: TemplateVersion, combo: Mapping[str, str]) -> tuple[
         else:
             states[doc_def.id] = "active" if any(is_doc_active(project, d) for d in instances) else "inactive"
         # Предикат предпросмотра и экземпляры движка говорят одно и то же.
-        assert document_present(doc_def, synthetic) is bool(instances)
+        assert document_in_scope(
+            doc_def.supported_kinds, doc_def.supported_staffing, str(synthetic.kind), str(synthetic.staffing)
+        ) is bool(instances)
     return states, project, synthetic
 
 

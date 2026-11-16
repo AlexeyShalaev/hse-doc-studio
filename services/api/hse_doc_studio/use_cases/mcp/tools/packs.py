@@ -526,6 +526,9 @@ def _build(build: PreviewBuild) -> dict[str, object]:
         "document": build.document,
         "example": build.example,
         "combination": build.combination,
+        "variant": build.variant,
+        "file_name": build.file_name,
+        "scenario": build.scenario,
         "status": build.status,
         "cached": build.cached,
         "pages": build.pages,
@@ -562,8 +565,10 @@ class PackPreviewBuildTool(PackTool):
             "Студия шаблонов: собрать документы версии на тестовых данных в песочнице раннера и дождаться итога до "
             "wait_s секунд. Без documents собирается первый документ. example: набор данных (по умолчанию первый: "
             "файл examples/*.yaml или auto:normal; ещё auto:long и auto:empty), combination: переключатели "
-            '{"lang": "en", "staffing": "team2", "supervisor": "company", "meta.<поле>": "..."}. Варианты, '
-            "документы и наборы видны в pack_read с version. С build_id тул только ждёт уже начатую сборку. "
+            '{"lang": "en", "staffing": "team2", "supervisor": "company", "meta.<поле>": "..."}. variant: вариант '
+            "документа (у запроса с одним документом, например beamer у презентации), scenario: id сценария пака "
+            "(вводные и набор данных берутся из него, combination ложится поверх). Варианты, документы и наборы "
+            "видны в pack_read с version. С build_id тул только ждёт уже начатую сборку. "
             "Текст PDF и журнал сборки читает pack_preview_read."
         ),
         parameters=_schema(
@@ -573,6 +578,8 @@ class PackPreviewBuildTool(PackTool):
                 "documents": {"type": "array", "items": {"type": "string"}, "description": "Id документов"},
                 "example": {"type": "string", "description": "Набор данных"},
                 "combination": {"type": "object", "description": "Переключатели комбинации"},
+                "variant": {"type": "string", "description": "Вариант документа (один документ в запросе)"},
+                "scenario": {"type": "string", "description": "Id сценария пака"},
                 "build_id": {"type": "string", "description": "Ждать уже начатую сборку"},
                 "wait_s": {
                     "type": "integer",
@@ -604,7 +611,11 @@ class PackPreviewBuildTool(PackTool):
                 ref.template,
                 ref.version,
                 StartPreviewInput(
-                    documents=documents, example=optional_text(args, "example"), combination=_combination(args)
+                    documents=documents,
+                    example=optional_text(args, "example"),
+                    combination=_combination(args),
+                    variant=optional_text(args, "variant"),
+                    scenario=optional_text(args, "scenario"),
                 ),
             )
         deadline = time.monotonic() + wait_s

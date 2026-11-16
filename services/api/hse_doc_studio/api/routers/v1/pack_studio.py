@@ -69,6 +69,7 @@ from hse_doc_studio.api.schemas.pack_studio import (
     PackPreviewOptionsResponse,
     PackPreviewStartResponse,
     PackPreviewSwitch,
+    PackPreviewVariant,
     PackProposeRequest,
     PackProposeResponse,
     PackPullRequest,
@@ -120,7 +121,7 @@ from hse_doc_studio.core.pack_studio.entities import (
 from hse_doc_studio.core.pack_studio.errors import PackStudioError, PackStudioErrorCode
 from hse_doc_studio.core.pack_studio.official import OfficialRepo, official_repo
 from hse_doc_studio.core.pack_studio.paths import VersionRef
-from hse_doc_studio.core.pack_studio.preview import PreviewBuild
+from hse_doc_studio.core.pack_studio.preview import PreviewBuild, document_variants
 from hse_doc_studio.core.pack_studio.scaffold import (
     Maintainer,
     NewPack,
@@ -657,7 +658,16 @@ def preview_options_response(
         version_id=options.version_id,
         documents=[
             PackPreviewDocument(
-                id=doc.id, name=dict(doc.name), kinds=list(doc.supported_kinds), staffing=list(doc.supported_staffing)
+                id=doc.id,
+                name=dict(doc.name),
+                kinds=list(doc.supported_kinds),
+                staffing=list(doc.supported_staffing),
+                langs=list(options.languages.get(doc.id, ())),
+                variants=[
+                    PackPreviewVariant(id=v.id, label=dict(v.label), langs=list(v.langs), pdf=v.pdf)
+                    for v in document_variants(doc)
+                ],
+                default_variant=doc.variants[0].id if doc.variants else None,
             )
             for doc in options.documents
         ],
@@ -709,6 +719,10 @@ def preview_build_response(build: PreviewBuild) -> PackPreviewBuildResponse:
             PackPreviewCheck(rule_id=c.rule_id, severity=c.severity, message=c.message, file=c.file, line=c.line)
             for c in build.checks
         ],
+        variant=build.variant,
+        file_name=build.file_name,
+        scenario=build.scenario,
+        scenario_inputs=dict(build.scenario_inputs),
     )
 
 
@@ -745,7 +759,12 @@ async def start_preview(  # noqa: PLR0913 — путь версии и тело
         template,
         version,
         StartPreviewInput(
-            documents=body.documents, example=body.example, combination=body.combination, checks=body.checks
+            documents=body.documents,
+            example=body.example,
+            combination=body.combination,
+            checks=body.checks,
+            variant=body.variant,
+            scenario=body.scenario,
         ),
     )
     if all(build.status.is_terminal for build in builds):

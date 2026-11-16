@@ -19,7 +19,7 @@ import asyncio
 import time
 from collections import OrderedDict
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from datetime import UTC, date, datetime
 from pathlib import Path
 from uuid import UUID, uuid4
@@ -36,6 +36,21 @@ from hse_doc_studio.core.jobs.entities import CheckPlan, CompileJobPayload, Comp
 from hse_doc_studio.core.jobs.enums import JobKind, JobStatus
 from hse_doc_studio.core.jobs.errors import NoRunnerAvailableError
 from hse_doc_studio.core.pack_studio.errors import PackStudioError, PackStudioErrorCode
+from hse_doc_studio.core.pack_studio.outcome.documents import document_file_name, document_languages
+from hse_doc_studio.core.pack_studio.outcome.inputs import (
+    ANSWER_PREFIX,
+    VARIANT_PREFIX,
+    OutcomeInputError,
+    input_specs,
+    normalize_inputs,
+)
+from hse_doc_studio.core.pack_studio.outcome.scenarios import (
+    SCENARIOS_DIR,
+    Scenario,
+    ScenarioError,
+    parse_scenario,
+    scenario_file_name,
+)
 from hse_doc_studio.core.pack_studio.paths import (
     TEMPLATES_DIR,
     VERSIONS_DIR,
@@ -61,8 +76,8 @@ from hse_doc_studio.core.pack_studio.preview import (
     SyntheticProject,
     VersionDescription,
     auto_examples,
+    check_variant,
     document_digest,
-    document_present,
     example_label,
     parse_example,
     preview_cache_key,
@@ -70,13 +85,19 @@ from hse_doc_studio.core.pack_studio.preview import (
     switches_for,
     synthetic_project,
 )
-from hse_doc_studio.core.pack_studio.protocols import IPackPreviewRenderer, IPreviewDispatcher, IPreviewStore
-from hse_doc_studio.core.services import CheckResolutionService
+from hse_doc_studio.core.pack_studio.protocols import (
+    IPackPreviewRenderer,
+    IPackWorkspaceFiles,
+    IPreviewDispatcher,
+    IPreviewStore,
+)
+from hse_doc_studio.core.services import CheckResolutionService, ProjectTemplateService
 from hse_doc_studio.core.signatures.anchors import BuildAnchors, decode_anchors
 from hse_doc_studio.core.signatures.dates import DISPLAY_ZONE
 from hse_doc_studio.core.uow import spawn_detached
 from hse_doc_studio.core.value_objects import CheckResult, ChecksOverride
 from hse_doc_studio.use_cases.compile.compile_job_hooks import compile_failure
+from hse_doc_studio.use_cases.pack_studio.synthetic_project import synthetic_core_project
 from hse_doc_studio.use_cases.pack_studio.workspaces import PackWorkspaceService, owner_of
 
 logger = structlog.get_logger()
@@ -85,6 +106,9 @@ _NO_CHECKS = CheckPlan(rules_with_severity=(), ignored_rule_ids=frozenset(), nee
 _DESCRIPTIONS_KEPT = 16
 _PRUNE_EVERY_S = 600.0
 MAX_DOCUMENTS_PER_REQUEST = 8
+# Предел файла сценария, как у службы результата (`outcome_service.SCENARIO_MAX_BYTES`): ту службу отсюда не
+# импортировать, она сама зависит от предпросмотра.
+_SCENARIO_MAX_BYTES = 256 * 1024
 
 
 @dataclass(frozen=True)
@@ -105,6 +129,8 @@ class PreviewOptions:
     examples: tuple[PreviewExample, ...]
     default_example: str
     combination: Mapping[str, str]
+    # Языки редакций документов (id документа -> языки): те же, что `languages` документа в результате.
+    languages: Mapping[str, tuple[str, ...]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -114,12 +140,36 @@ class StartPreviewInput:
     combination: Mapping[str, str] | None = None
     # Прогнать правила проверок версии на собранном документе (срез T14, «Проверить на предпросмотре»).
     checks: bool = False
+    # Вариант документа (срез O9) у запроса с одним документом; None: вводная сценария, иначе первый.
+    variant: str | None = None
+    # Сценарий пака (`scenarios/<id>.yaml`): вводные и набор данных берутся из него, `combination` ложится поверх.
+    scenario: str | None = None
 
 
 @dataclass(frozen=True)
 class _Planned:
     build: PreviewBuild
     request: MaterializeRequest | None
+
+
+@dataclass(frozen=True)
+class _Resolved:
+    """Запрос, приведённый к версии: набор, полная комбинация, синтетический проект, варианты из вводных сценария."""
+
+    example: PreviewExample
+    combo: dict[str, str]
+    project: SyntheticProject
+    variants: Mapping[str, str]
+    scenario: Scenario | None = None
+
+
+@dataclass(frozen=True)
+class DocumentTarget:
+    """Что собирается: определение документа, выбранный вариант (None: вариантов нет) и итоговое имя в пакете."""
+
+    doc_def: DocumentDefinition
+    variant: str | None
+    file_name: str | None
 
 
 def _now() -> datetime:
@@ -154,8 +204,11 @@ class PackPreviewService:
         limits: PreviewLimits,
         clock: Callable[[], datetime] = _now,
         today: Callable[[], date] = _today,
+        files: IPackWorkspaceFiles | None = None,
     ) -> None:
         self._workspaces = workspaces
+        # Чтение файлов сценариев шаблона; без него запрос со сценарием это `scenario_not_found`.
+        self._files = files
         self._renderer = renderer
         self._store = store
         self._dispatcher = dispatcher
@@ -209,6 +262,7 @@ class PackPreviewService:
             examples=examples,
             default_example=default,
             combination=resolve_combination(switches, {}, defaults),
+            languages={doc.id: document_languages(desc.version, doc) for doc in desc.version.documents},
         )
 
     # ── сборка ──────────────────────────────────────────────────────────────
@@ -223,20 +277,26 @@ class PackPreviewService:
             raise _invalid(PreviewInputError("documents", str(len(documents)), "1..8 documents"))
         inputs = await self._renderer.inputs(root, ref)
         desc = await self._description(root, ref, inputs.tree)
+        scenario = await self._scenario(root, ref, inp.scenario) if inp.scenario is not None else None
         try:
-            example, combo, project = self._project(desc, inp)
-            defs = [_document(desc, doc_id, project) for doc_id in documents]
+            if inp.variant is not None and len(documents) != 1:
+                raise PreviewInputError("variant", inp.variant, "needs exactly one document")
+            resolved = self._resolve(desc, inp, scenario)
+            targets = document_targets(desc, documents, resolved.project, resolved.variants, inp.variant)
         except PreviewInputError as exc:
             raise _invalid(exc) from exc
+        example, combo, project = resolved.example, resolved.combo, resolved.project
         await self._maybe_prune()
         builds: list[PreviewBuild] = []
-        for doc_def in defs:
+        for target in targets:
+            doc_def = target.doc_def
             key = preview_cache_key(
                 doc_digest=document_digest(inputs.files, desc.version, doc_def.id, inputs.extra),
                 def_id=doc_def.id,
                 project=project,
                 engine=desc.version.engine_config.default.value,
                 checks=inp.checks,
+                variant=target.variant,
             )
             draft = PreviewBuild(
                 id=uuid4(),
@@ -253,10 +313,16 @@ class PackPreviewService:
                 cached=False,
                 created_at=self._clock(),
                 with_checks=inp.checks,
+                variant=target.variant,
+                file_name=target.file_name,
+                scenario=inp.scenario,
+                scenario_inputs=dict(resolved.scenario.inputs) if resolved.scenario is not None else {},
             )
             planned = await self._plan(
                 draft,
-                MaterializeRequest(desc.pack_id, desc.template_id, desc.version.version, doc_def.id, project, draft.id),
+                MaterializeRequest(
+                    desc.pack_id, desc.template_id, desc.version.version, doc_def.id, project, draft.id, target.variant
+                ),
             )
             if planned.request is not None:
                 if inp.checks:
@@ -281,10 +347,10 @@ class PackPreviewService:
         ref = version_ref(pack, template, version)
         desc = await self._description(root, ref, (await self._renderer.inputs(root, ref)).tree)
         try:
-            chosen, combo, project = self._project(desc, StartPreviewInput((), example, combination))
+            resolved = self._resolve(desc, StartPreviewInput((), example, combination), None)
         except PreviewInputError as exc:
             raise _invalid(exc) from exc
-        return desc, chosen, combo, project
+        return desc, resolved.example, resolved.combo, resolved.project
 
     async def wait_launched(self) -> None:
         """Дожидается фоновых рендеров и постановок (тесты и остановка приложения)."""
@@ -357,19 +423,61 @@ class PackPreviewService:
             self._descriptions.popitem(last=False)
         return desc
 
-    def _project(
-        self, desc: VersionDescription, inp: StartPreviewInput
-    ) -> tuple[PreviewExample, dict[str, str], SyntheticProject]:
+    async def _scenario(self, root: Path, ref: VersionRef, scenario_id: str) -> Scenario:
+        """Сценарий пака из рабочего дерева пространства (его же собирает предпросмотр): нет файла это
+        `scenario_not_found`, файл не по формату `scenario_invalid`, как у расчёта результата."""
+        try:
+            name = scenario_file_name(scenario_id)
+        except ScenarioError:
+            raise PackStudioError(PackStudioErrorCode.scenario_not_found, scenario=scenario_id) from None
+        found = (
+            await asyncio.to_thread(
+                self._files.template_files, root, ref.pack, ref.template, SCENARIOS_DIR, max_bytes=_SCENARIO_MAX_BYTES
+            )
+            if self._files is not None
+            else {}
+        )
+        data = found.get(name)
+        if data is None:
+            raise PackStudioError(PackStudioErrorCode.scenario_not_found, scenario=scenario_id)
+        try:
+            return parse_scenario(data.decode("utf-8"))
+        except (ScenarioError, UnicodeDecodeError) as exc:
+            reason = exc.reason if isinstance(exc, ScenarioError) else "the file is not UTF-8"
+            raise PackStudioError(PackStudioErrorCode.scenario_invalid, scenario=scenario_id, reason=reason) from None
+
+    def _resolve(self, desc: VersionDescription, inp: StartPreviewInput, scenario: Scenario | None) -> _Resolved:
+        """Набор, полная комбинация и синтетический проект запроса.
+
+        Без сценария комбинация это переключатели предпросмотра (не больше пяти полей анкеты). Со сценарием вводные
+        считает ядро результата (`normalize_inputs` по всем вводным версии): вводные сценария, поверх них
+        `combination`; так комбинация и варианты документов те же, что у результата по этому сценарию. Вводные
+        ответов анкет на сборку не влияют, `variant.<документ>` становится вариантом документа, остальное это
+        переключатели проекта."""
         examples = examples_of(desc)
-        wanted = inp.example or default_example_of(examples)
+        if inp.example:
+            wanted = inp.example
+        elif scenario is not None:
+            # Как у расчёта результата: набор сценария, без него автонабор «Обычный» (файлы примеров не мешают).
+            wanted = scenario.example or AUTO_NORMAL
+        else:
+            wanted = default_example_of(examples)
         example = next((e for e in examples if e.id == wanted), None)
         if example is None:
             raise PreviewInputError("example", wanted, "unknown example")
         if example.error is not None:
             raise PreviewInputError("example", wanted, example.error)
         defaults = example.data.defaults if example.data is not None else {}
-        combo = resolve_combination(switches_for(desc.version), inp.combination or {}, defaults)
-        return example, combo, synthetic_project(desc.version, example, combo, self._today())
+        if scenario is None:
+            combo = resolve_combination(switches_for(desc.version), inp.combination or {}, defaults)
+            variants: dict[str, str] = {}
+        else:
+            full = _scenario_inputs(desc.version, scenario, inp, defaults)
+            combo = {k: v for k, v in full.items() if not k.startswith((ANSWER_PREFIX, VARIANT_PREFIX))}
+            variants = {k.removeprefix(VARIANT_PREFIX): v for k, v in full.items() if k.startswith(VARIANT_PREFIX)}
+        return _Resolved(
+            example, combo, synthetic_project(desc.version, example, combo, self._today()), variants, scenario
+        )
 
     async def _plan(self, draft: PreviewBuild, request: MaterializeRequest) -> _Planned:
         """Кэш, сборка с тем же ключом, отмена прежней сборки слота и предел идущих: под одним замком."""
@@ -637,10 +745,50 @@ def default_example_of(examples: Sequence[PreviewExample]) -> str:
     return next((e.id for e in examples if e.source == "file" and e.error is None), AUTO_NORMAL)
 
 
-def _document(desc: VersionDescription, doc_id: str, project: SyntheticProject) -> DocumentDefinition:
-    doc_def = next((d for d in desc.version.documents if d.id == doc_id), None)
-    if doc_def is None:
-        raise PreviewInputError("document", doc_id, "unknown document")
-    if not document_present(doc_def, project):
-        raise PreviewInputError("document", doc_id, "not in this combination")
-    return doc_def
+def _scenario_inputs(
+    version: TemplateVersion, scenario: Scenario, inp: StartPreviewInput, defaults: Mapping[str, str]
+) -> dict[str, str]:
+    """Полные вводные результата: вводные сценария, поверх них `combination` запроса (значения вне списка и
+    незнакомые вводные это ошибка запроса, а у вводной сценария ошибка сценария)."""
+    requested = inp.combination or {}
+    try:
+        return normalize_inputs(input_specs(version), {**scenario.inputs, **requested}, defaults)
+    except OutcomeInputError as exc:
+        if exc.field in requested:
+            raise PreviewInputError(f"combination.{exc.field}", exc.value, exc.reason) from None
+        raise PreviewInputError("scenario", inp.scenario or "", f"{exc.field}={exc.value!r}: {exc.reason}") from None
+
+
+def document_targets(
+    desc: VersionDescription,
+    documents: Sequence[str],
+    project: SyntheticProject,
+    variants: Mapping[str, str],
+    variant: str | None = None,
+) -> list[DocumentTarget]:
+    """Документы запроса в проекте комбинации: есть ли документ, какой вариант и как называется файл.
+
+    Документ есть, если движок создал его экземпляр (`_build_documents`, тот же проект, что у результата и у
+    сборки). Вариант из запроса (`variant`) проверяется на язык проекта, иначе берётся вводная сценария (`variants`:
+    документ -> вариант) и затем первый вариант, как `variants_of` результата. Имя файла считает общая функция
+    результата (`document_file_name`). Нет документа или вариант не подходит: `PreviewInputError`."""
+    core = synthetic_core_project(desc.pack_id, desc.template_id, desc.version, project)
+    templates = ProjectTemplateService()
+    targets: list[DocumentTarget] = []
+    for doc_id in documents:
+        doc_def = next((d for d in desc.version.documents if d.id == doc_id), None)
+        if doc_def is None:
+            raise PreviewInputError("document", doc_id, "unknown document")
+        instance = next((d for d in core.documents if d.def_id == doc_id), None)
+        if instance is None:
+            raise PreviewInputError("document", doc_id, "not in this combination")
+        chosen: str | None = None
+        if variant is not None:
+            check_variant(doc_def, variant, project.lang.value)
+            chosen = variant
+        elif doc_def.variants:
+            chosen = variants.get(doc_id) or doc_def.variants[0].id
+        instance.chosen_variant = chosen
+        name = document_file_name(core, doc_def, instance, project.lang.value, templates)
+        targets.append(DocumentTarget(doc_def, chosen, name))
+    return targets

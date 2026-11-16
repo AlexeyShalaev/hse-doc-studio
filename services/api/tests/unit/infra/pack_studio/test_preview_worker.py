@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import sys
+from dataclasses import replace
 from datetime import date
 from pathlib import Path
 from uuid import uuid4
@@ -22,12 +23,17 @@ from hse_doc_studio.core.pack_studio.preview import (
     synthetic_project,
 )
 from hse_doc_studio.infra.pack_studio.preview_renderer import PackPreviewRenderer, PreviewRenderLimits
+from hse_doc_studio.infra.pack_studio.preview_store import FsPreviewStore
 from hse_doc_studio.infra.pack_studio.preview_worker import (
     StageLimits,
     VersionDirs,
     describe_version,
     materialize_preview,
 )
+from hse_doc_studio.infra.pack_studio.workspace_files import LocalPackWorkspaceFiles
+from hse_doc_studio.use_cases.pack_studio.preview import PackPreviewService, PreviewLimits, StartPreviewInput
+
+from tests.unit.use_cases.pack_studio.test_preview_service import ACTOR, WS, FakeDispatcher, FakeWorkspaces
 
 LIMITS = StageLimits(max_bytes=10 * 1024 * 1024, max_files=1000)
 TODAY = date(2026, 11, 15)
@@ -136,6 +142,51 @@ def test__materialize__team_personal_document_lives_in_author_base(tmp_path: Pat
     assert (dest / "shared" / "report" / "report.tex").is_file()
 
 
+_DECK_VERSION = (
+    _VERSION
+    + """\
+  - id: deck
+    name: { ru: "Презентация" }
+    variants:
+      - { id: beamer, label: { ru: "Beamer" }, source_file: deck/beamer/deck.tex, output_file: deck/beamer/deck.pdf,
+          output_name: { ru: "Презентация.pdf" }, engine: xelatex }
+      - { id: pptx, label: { ru: "PowerPoint" }, source_file: deck/pptx/deck.pptx, output_file: deck/pptx/deck.pptx,
+          output_name: { ru: "Презентация.pptx" }, engine: none }
+"""
+)
+
+
+def _deck_pack(root: Path) -> VersionDirs:
+    dirs = _pack(root, version_yaml=_DECK_VERSION)
+    folder = root / "pack-dir" / "templates" / "tpl" / "versions" / "1.0.0" / "files" / "deck"
+    for name, text in {"beamer/deck.tex": "\\documentclass{beamer}\n", "pptx/deck.pptx": "PK"}.items():
+        (folder / name).parent.mkdir(parents=True, exist_ok=True)
+        (folder / name).write_text(text, encoding="utf-8")
+    return dirs
+
+
+@pytest.mark.parametrize(
+    ("variant", "source", "engine", "needs_compile"),
+    [
+        (None, "deck/beamer/deck.tex", "xelatex", True),  # без выбора: первый вариант, как у проекта без выбора
+        ("beamer", "deck/beamer/deck.tex", "xelatex", True),
+        ("pptx", "deck/pptx/deck.pptx", "xelatex", False),  # вариант без движка только копируется, движок не нужен
+    ],
+)
+def test__materialize__chosen_variant__picks_the_source_the_engine_and_whether_to_compile(
+    tmp_path: Path, variant: str | None, source: str, engine: str, needs_compile: bool
+) -> None:
+    dirs = _deck_pack(tmp_path / "packs")
+    request = replace(_request(dirs, tmp_path, "deck"), variant=variant)
+
+    doc = materialize_preview(dirs, str(tmp_path / "stage"), LIMITS, request, str(tmp_path / "work"))
+
+    assert (doc.source_file, doc.engine, doc.needs_compile) == (source, engine, needs_compile)
+    # Каталоги всех вариантов лежат в проекте: выбор влияет на то, что собирать.
+    assert (tmp_path / "work" / "deck" / "beamer" / "deck.tex").is_file()
+    assert (tmp_path / "work" / "deck" / "pptx" / "deck.pptx").is_file()
+
+
 def test__materialize__jinja_error__copied_as_is_with_a_warning(tmp_path: Path) -> None:
     dirs = _pack(tmp_path / "packs")
     report = Path(dirs.version_dir) / "files" / "report" / "report.tex"
@@ -232,3 +283,49 @@ async def test__renderer__inputs__hash_files_and_skip_links(tmp_path: Path) -> N
     assert first.files == second.files
     assert first.tree != second.tree
     assert any(item.startswith("pack.yaml:") for item in first.extra)
+
+
+async def test__service__variant_and_scenario_through_the_isolated_renderer_reach_the_job(tmp_path: Path) -> None:
+    """Срез O9 сквозь настоящий рендер в отдельном процессе: сценарий задаёт вариант, рендер берёт его исходник,
+    в задачу сборки уходит исходник и признак «нужна ли компиляция» выбранного варианта."""
+    root = tmp_path / "packs"
+    _deck_pack(root)
+    scenarios = root / "pack-dir" / "templates" / "tpl" / "scenarios"
+    scenarios.mkdir()
+    (scenarios / "slides.yaml").write_text(
+        'format: 1\nname: { ru: "Слайды" }\ninputs: { lang: en, variant.deck: pptx }\n', encoding="utf-8"
+    )
+    dispatcher = FakeDispatcher()
+    service = PackPreviewService(
+        FakeWorkspaces(root),  # type: ignore[arg-type]
+        _renderer(tmp_path),
+        FsPreviewStore(tmp_path / "previews", max_cache_entries=5, max_age_s=3600),
+        dispatcher,
+        limits=PreviewLimits(max_concurrent=4),
+        today=lambda: TODAY,
+        files=LocalPackWorkspaceFiles(),
+    )
+
+    [by_scenario] = await service.start(
+        ACTOR, WS, "pack-dir", "tpl", "1.0.0", StartPreviewInput(documents=["deck"], scenario="slides")
+    )
+    [explicit] = await service.start(
+        ACTOR,
+        WS,
+        "pack-dir",
+        "tpl",
+        "1.0.0",
+        StartPreviewInput(documents=["deck"], variant="beamer", example="auto:normal"),
+    )
+    await service.wait_launched()
+
+    jobs = {build_id: spec.payload for build_id, (spec, _hooks) in dispatcher.submitted.items()}
+    scenario_job, explicit_job = jobs[by_scenario.id], jobs[explicit.id]
+    assert (scenario_job.source_file, scenario_job.needs_compile) == ("deck/pptx/deck.pptx", False)  # type: ignore[attr-defined]
+    assert (explicit_job.source_file, explicit_job.needs_compile) == ("deck/beamer/deck.tex", True)  # type: ignore[attr-defined]
+    assert (by_scenario.variant, by_scenario.file_name, by_scenario.combination["lang"]) == (
+        "pptx",
+        "Презентация.pptx",
+        "en",
+    )
+    assert by_scenario.key != explicit.key
