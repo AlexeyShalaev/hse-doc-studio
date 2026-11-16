@@ -547,7 +547,8 @@
       "noLinks": "In this combination the input's decisions are tied to no element. It changes the sections: {{sections}}.",
       "rules": "Rules that read it",
       "rulesHere": "{{here}} of {{total}} fired in this combination."
-    }
+    },
+    "editRule": "Edit rule"
   },
   "footer": {
     "note": "A calculation on test data, nothing is sent.",
@@ -924,6 +925,102 @@
       "optional": "optional",
       "deadline": "Deadline: {{hint}}",
       "empty": "There are no signatures in this combination."
+    }
+  },
+  "edit": {
+    "title": "Edit the rule",
+    "close": "Close the editor",
+    "undo": "Undo",
+    "redo": "Redo",
+    "undoHint": "Undo the last edit (Ctrl+Z)",
+    "redoHint": "Redo the undone edit (Ctrl+Shift+Z)",
+    "dismiss": "Got it",
+    "loading": "Loading the manifest record",
+    "loadFailed": "Could not read the manifest",
+    "newVersion": "Create a new version",
+    "blocked": {
+      "released": "The version is released and immutable: editing is off.",
+      "state": "Only the working tree can be edited: switch the state to Working tree.",
+      "registry": "Registry releases are read-only."
+    },
+    "removeCondition": "Remove the condition",
+    "delete": {
+      "slot": "Delete the slot",
+      "item": "Delete the item",
+      "extra": "Delete the point file"
+    },
+    "record": {
+      "slot": "signature slot",
+      "item": "point item",
+      "extra": "extra point file",
+      "condition": "condition"
+    },
+    "removed": {
+      "condition": "Condition removed.",
+      "record": "Deleted: {{what}}."
+    },
+    "confirm": {
+      "condition": "Remove the condition?",
+      "record": "Delete the {{what}}?",
+      "noOutcome": "The outcome is not loaded yet, so the number of affected elements is unknown.",
+      "none": "In the current combination of inputs the rule decides no outcome element.",
+      "count_one": "Affects {{count}} outcome element in the current combination.",
+      "count_other": "Affects {{count}} outcome elements in the current combination.",
+      "more_one": "and {{count}} more",
+      "more_other": "and {{count}} more",
+      "scope": "The number comes from the trace of the shown outcome; the server did not compute other input combinations. A deletion can be undone for 10 seconds, then from the edit history.",
+      "yes": "Yes, remove",
+      "no": "Keep it"
+    },
+    "notice": {
+      "driftTitle": "The record changed after this edit",
+      "driftLead": "It was changed outside this screen or by another edit. Undo or redo will overwrite those changes.",
+      "forceUndo": "Undo anyway",
+      "forceRedo": "Redo anyway",
+      "staleTitle": "The file changed while you were editing",
+      "staleLead": "The record was reread from disk. Check the value and repeat the edit.",
+      "missingTitle": "The record is no longer in the manifest",
+      "missingLead": "The manifest was changed outside this screen. The model was reread; choose the element again.",
+      "errorTitle": "The edit was not saved"
+    },
+    "bar": {
+      "label": "Edits on this screen"
+    },
+    "delta": {
+      "same": "The outcome did not change",
+      "dismiss": "Hide the comparison",
+      "title": {
+        "apply": "The outcome changed",
+        "undo": "After the undo the outcome changed",
+        "redo": "After the redo the outcome changed"
+      },
+      "symbol": {
+        "+": "Added",
+        "~": "Changed",
+        "-": "Removed"
+      },
+      "from": "was {{before}}, now {{after}}"
+    },
+    "history": {
+      "title_one": "Edit history ({{count}})",
+      "title_other": "Edit history ({{count}})",
+      "applied": "in effect",
+      "undone": "undone"
+    },
+    "entry": {
+      "set": "{{rule}}: changed",
+      "setAt": "{{rule}} ({{place}}): changed",
+      "remove": "{{rule}}: removed",
+      "removeAt": "{{rule}} ({{place}}): removed",
+      "delete": "Deleted: {{rule}}",
+      "deleteAt": "Deleted: {{rule}} ({{place}})"
+    },
+    "live": {
+      "saved": "The edit is saved, the outcome is being recalculated.",
+      "undone": "Undone.",
+      "redone": "Redone.",
+      "same": "The outcome did not change.",
+      "delta": "The outcome changed: {{added}} added, {{changed}} changed, {{removed}} removed."
     }
   }
 }

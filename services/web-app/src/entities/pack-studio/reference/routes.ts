@@ -20,6 +20,13 @@ import {
 import type { OutcomeElementRef } from "../api/outcome";
 import { explainFor } from "./explain";
 import {
+  applyReferenceEdits,
+  patchReferenceModel,
+  readReferenceFile,
+  referenceModel,
+  writeReferenceFile,
+} from "./manifests";
+import {
   COURSEWORK_INPUTS,
   COURSEWORK_OUTCOME,
   COURSEWORK_RUN,
@@ -160,7 +167,13 @@ const outcomeFor = (params: Params, body: PackOutcomeRequest): PackOutcome => {
       sections: out.digest.sections.map((print) => ({ ...print, count: 0 })),
     };
   }
-  return out;
+  return applyReferenceEdits(
+    out,
+    params.id,
+    params.pack,
+    params.template,
+    params.version,
+  );
 };
 
 const inputsFor = (params: Params, state: string | null): PackOutcomeInputs => {
@@ -412,7 +425,105 @@ const VERSION =
 const SCENARIOS =
   "/pack-studio/workspaces/:id/templates/:pack/:template/scenarios";
 
+const VERSION_ROOT =
+  "/pack-studio/workspaces/:id/versions/:pack/:template/:version";
+
+// Файлы версии целиком (прежний текст при откате): путь это шесть сегментов у version.yaml и
+// восемь у doc.yaml документа; маршрутизатор подмены знает только одиночные сегменты.
+const FILE_ROOT = "/pack-studio/workspaces/:id/files";
+const SIX = "/:s1/:s2/:s3/:s4/:s5/:s6";
+const EIGHT = `${SIX}/:s7/:s8`;
+const filePathOf = (params: Record<string, string>): string =>
+  ["s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8"]
+    .map((key) => params[key])
+    .filter((part): part is string => part !== undefined)
+    .join("/");
+const fileRoutes = (suffix: string): DemoRoute[] => [
+  {
+    method: "GET",
+    pattern: `${FILE_ROOT}${suffix}`,
+    handler: (req) => {
+      if (source === "server") return req.forward() as never;
+      const found = readReferenceFile(
+        req.params.id ?? "",
+        filePathOf(req.params),
+      );
+      if (!found) return demoError(404, "file_not_found", "Файла нет.");
+      return { status: 200, data: found.text, headers: { etag: found.etag } };
+    },
+  },
+  {
+    method: "PUT",
+    pattern: `${FILE_ROOT}${suffix}`,
+    handler: (req) => {
+      if (source === "server") return req.forward() as never;
+      const done = writeReferenceFile(
+        req.params.id ?? "",
+        filePathOf(req.params),
+        req.body,
+        req.headers?.["if-match"] ?? null,
+      );
+      if (done.status === 404) {
+        return demoError(404, "file_not_found", "Файла нет.");
+      }
+      if (done.status === 409) {
+        return demoError(409, "stale_file", "Файл изменён.", {
+          etag: done.etag,
+          content: "{}",
+        });
+      }
+      return demoJson({
+        path: filePathOf(req.params),
+        etag: done.etag,
+        size: done.size,
+      });
+    },
+  },
+];
+
 export const outcomeReferenceRoutes: DemoRoute[] = [
+  ...fileRoutes(SIX),
+  ...fileRoutes(EIGHT),
+  {
+    method: "GET",
+    pattern: `${VERSION_ROOT}/model`,
+    handler: (req) =>
+      source === "server"
+        ? (req.forward() as never)
+        : demoJson(
+            referenceModel(
+              req.params.id ?? "",
+              req.params.pack ?? "",
+              req.params.template ?? "",
+              req.params.version ?? "",
+            ),
+          ),
+  },
+  {
+    method: "PATCH",
+    pattern: `${VERSION_ROOT}/model`,
+    handler: (req) => {
+      if (source === "server") return req.forward() as never;
+      const done = patchReferenceModel(
+        req.params.id ?? "",
+        req.params.pack ?? "",
+        req.params.template ?? "",
+        req.params.version ?? "",
+        req.body,
+        req.headers?.["if-match"] ?? null,
+      );
+      if (done.status === 200) return demoJson(done.model);
+      if (done.status === 409) {
+        return demoError(409, done.code, "Файл изменён.", {
+          etag: done.etag,
+          content: "langs: [ru]\n",
+        });
+      }
+      return demoError(422, done.code, "Правку нельзя записать.", {
+        reason: done.reason,
+      });
+    },
+  },
   {
     method: "GET",
     pattern: `${VERSION}/inputs`,

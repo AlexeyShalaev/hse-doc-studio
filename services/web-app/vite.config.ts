@@ -166,6 +166,16 @@ export default defineConfig(({ mode }) => {
             if (id.endsWith("/src/features/pack-submission-form/index.ts")) {
               return "assets/pack-submission-form-[hash].js";
             }
+            // Мини-форма правила и полоса правок экрана «Результат» (срез F7): грузятся по требованию.
+            if (
+              id.endsWith("/src/features/pack-outcome/ui/edit/EditPanels.tsx")
+            ) {
+              return "assets/outcome-edit-[hash].js";
+            }
+            // Мини-форма одной записи (правка по месту на экране «Результат», срез F7).
+            if (id.endsWith("/src/features/pack-forms/rule.ts")) {
+              return "assets/pack-rule-form-[hash].js";
+            }
             if (id.endsWith("/src/features/pack-checks-form/index.ts")) {
               return "assets/pack-checks-form-[hash].js";
             }

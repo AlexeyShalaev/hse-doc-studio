@@ -1,4 +1,11 @@
-import { lazy, Suspense, useCallback, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -160,7 +167,13 @@ export const WorkspaceScreen = () => {
   // Операция git поменяла файлы на диске: редактор открывает файл заново.
   const [reload, setReload] = useState(0);
   // Мастер «Новая версия»: шаблон, для которого открыт шаг 1.
-  const [newVersion, setNewVersion] = useState<NewVersionTarget | null>(null);
+  // Экран «Результат» ведёт выпущенную версию к новой копии: мастер открывается сразу.
+  const [newVersion, setNewVersion] = useState<NewVersionTarget | null>(() => {
+    const [pack = "", template = ""] = (params.get("newVersion") ?? "").split(
+      "/",
+    );
+    return pack !== "" && template !== "" ? { pack, template } : null;
+  });
   // «Новый пак» и «Новый шаблон» (срез T15).
   const [newPack, setNewPack] = useState<NewPackTarget | null>(null);
   // Места подписей записаны в манифест версии: проверки заново, PDF при этом не устаревает.
@@ -208,6 +221,20 @@ export const WorkspaceScreen = () => {
     },
     [file, go],
   );
+
+  // Параметр `newVersion` отработал при открытии: убираем, чтобы перезагрузка не повторяла мастер.
+  const newVersionParam = params.get("newVersion");
+  useEffect(() => {
+    if (newVersionParam === null) return;
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("newVersion");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [newVersionParam, setParams]);
 
   const onDirtyChange = useCallback((dirty: boolean) => {
     dirtyRef.current = dirty;
