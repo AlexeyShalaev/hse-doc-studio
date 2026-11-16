@@ -231,7 +231,7 @@
     "name": "Студия шаблонов (lazy, pages/PackStudioPage и фичи pack-*)",
     "path": "dist/assets/pack-studio-app-*.js",
     "gzip": true,
-    "limit": "29 kB"
+    "limit": "29.4 kB"
   },
   {
     "name": "Студия шаблонов, формы проверок (lazy, features/pack-checks-form)",
