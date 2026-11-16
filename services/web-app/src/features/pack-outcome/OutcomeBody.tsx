@@ -56,6 +56,8 @@ export type OutcomeBodyProps = {
   version: PackVersionRef;
   /** Окно сценариев, открытое сразу (галерея состояний). */
   scenarioDialog?: ScenarioDialog | null;
+  /** Документ, чей предпросмотр PDF открыт сразу (галерея состояний). */
+  previewDocument?: string | null;
 };
 
 const findLocation = (
@@ -88,6 +90,7 @@ export const OutcomeBody = ({
   workspace,
   version,
   scenarioDialog = null,
+  previewDocument = null,
 }: OutcomeBodyProps) => {
   const { t } = useTranslation("packOutcome");
   const navigate = useNavigate();
@@ -306,7 +309,11 @@ export const OutcomeBody = ({
   );
 
   return (
-    <OutcomeProviders model={model} scenarioDialog={scenarioDialog}>
+    <OutcomeProviders
+      model={model}
+      scenarioDialog={scenarioDialog}
+      previewDocument={previewDocument}
+    >
       <div
         className="po-screen"
         data-testid="outcome-screen"

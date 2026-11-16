@@ -11,6 +11,8 @@ export {
   VKR_CHECKS,
   VKR_INPUTS,
   VKR_OUTCOME,
+  VKR_PREVIEW_OPTIONS,
+  previewBuildReference,
 } from "./fixtures";
 export {
   buildVkrAtlas,
@@ -33,6 +35,7 @@ export type {
   ReferenceBehavior,
   ReferenceSource,
 } from "./routes";
+export { resetPreviewReference } from "./previewRoutes";
 export {
   patchReferenceModel,
   readReferenceFile,

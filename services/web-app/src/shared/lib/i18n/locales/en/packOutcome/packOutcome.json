@@ -1023,6 +1023,52 @@
       "delta": "The outcome changed: {{added}} added, {{changed}} changed, {{removed}} removed."
     }
   },
+  "preview": {
+    "open": "PDF preview",
+    "openFor": "PDF preview of “{{name}}”",
+    "needWorkTree": "The preview builds the working tree: pick “Working tree” in “Result from”.",
+    "title": "PDF preview",
+    "titleFor": "PDF preview: {{name}}",
+    "close": "Close the preview",
+    "lead": "Built on test data, nothing is sent. The server builds the PDF.",
+    "noDocument": "The preview does not build this document.",
+    "source": "Inputs for the build",
+    "sourceInputs": "Current inputs of the screen",
+    "sourceScenario": "Scenario: {{name}}",
+    "variant": "Document variant",
+    "variantFromInputs": "As in the inputs",
+    "variantFromScenario": "As in the scenario",
+    "variantOnly": "{{name}} (only {{langs}})",
+    "variantLangHint": "Unavailable variants are greyed out: the project language is {{lang}}.",
+    "variantNoPdf": "This variant does not produce a PDF: the build will end without one.",
+    "example": "Data set",
+    "build": "Build",
+    "rebuild": "Rebuild",
+    "auto": "Auto-build",
+    "autoHint": "Rebuild after the inputs, scenario or files change. Off until you turn it on.",
+    "hint": "Press “Build” to see the PDF. Auto-build rebuilds it after edits.",
+    "staleFiles": "Files changed after the build: the PDF may be out of date. Build again.",
+    "staleInputs": "The inputs, scenario or variant changed after the build: the PDF shows the earlier choice.",
+    "quota": "{{limit}} preview builds are already running, no more are allowed.",
+    "quotaRetry": "Retrying in {{seconds}} s.",
+    "retryNow": "Build now",
+    "cachedLead": "From cache: a build with the same data already existed, the document was not built again.",
+    "live": {
+      "running": "The PDF is building",
+      "done_one": "The PDF is ready, {{count}} page",
+      "done_other": "The PDF is ready, {{count}} pages",
+      "failed": "The build failed",
+      "cancelled": "The build was cancelled"
+    },
+    "info": {
+      "variant": "Variant",
+      "file": "File name",
+      "example": "Data set",
+      "scenario": "Scenario",
+      "scenarioInputs": "Scenario inputs",
+      "noInputs": "the scenario sets no inputs"
+    }
+  },
   "modes": {
     "loading": "Loading the view",
     "tabs": {

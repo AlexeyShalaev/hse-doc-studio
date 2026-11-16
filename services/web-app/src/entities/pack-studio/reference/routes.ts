@@ -20,6 +20,7 @@ import {
 import type { OutcomeElementRef } from "../api/outcome";
 import { explainFor } from "./explain";
 import { createModesRoutes } from "./modes";
+import { previewReferenceRoutes } from "./previewRoutes";
 import {
   applyReferenceEdits,
   patchReferenceModel,
@@ -667,5 +668,14 @@ let installed = false;
 export const installOutcomeReference = (): void => {
   if (installed) return;
   installed = true;
-  installDemoAdapter(apiClient, createDemoRouter(outcomeReferenceRoutes));
+  installDemoAdapter(
+    apiClient,
+    createDemoRouter([
+      ...outcomeReferenceRoutes,
+      ...previewReferenceRoutes({
+        server: () => source === "server",
+        failing: () => behavior === "error",
+      }),
+    ]),
+  );
 };

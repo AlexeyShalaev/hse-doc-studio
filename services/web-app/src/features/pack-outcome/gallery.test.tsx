@@ -1,11 +1,19 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { i18n } from "@shared/lib";
 import { loadPackOutcomeNamespace } from "@shared/lib/i18n/packOutcomeNamespace";
 import { loadPackStudioNamespace } from "@shared/lib/i18n/packStudioNamespace";
 import { getPackOutcomeGallery } from "./gallery";
+
+// pdf.js в jsdom не поднимается: просмотрщик подменён адресом файла.
+vi.mock("@shared/ui", async () => ({
+  ...(await vi.importActual<Record<string, unknown>>("@shared/ui")),
+  PdfViewer: ({ url }: { url: string }) => (
+    <div data-testid="pdf-viewer" data-url={url} />
+  ),
+}));
 
 describe("галерея экрана «Результат»", () => {
   beforeAll(async () => {
@@ -70,6 +78,13 @@ describe("галерея экрана «Результат»", () => {
         "po_pale_slots",
         "po_edit_ready",
         "po_edit_released",
+        "po_preview_ready",
+        "po_preview_variant_scenario",
+        "po_preview_running",
+        "po_preview_failed",
+        "po_preview_cached",
+        "po_preview_stale",
+        "po_preview_empty",
       ]),
     );
   });
@@ -442,5 +457,64 @@ describe("галерея: правка по месту", () => {
       "href",
       expect.stringContaining("newVersion=hse-cs-se%2Fvkr"),
     );
+  });
+});
+
+describe("галерея предпросмотра PDF (срез F12)", () => {
+  beforeAll(async () => {
+    await Promise.all([loadPackOutcomeNamespace(), loadPackStudioNamespace()]);
+    await i18n.changeLanguage("ru");
+  });
+  afterEach(cleanup);
+
+  const show = (id: string) => {
+    const entry = getPackOutcomeGallery()
+      .flatMap((g) => g.entries)
+      .find((e) => e.id === id);
+    expect(entry, id).toBeDefined();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    entry?.seed?.(client);
+    return render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>{entry?.render()}</MemoryRouter>
+      </QueryClientProvider>,
+    );
+  };
+  const has = (testId: string) =>
+    document.body.querySelector(`[data-testid="${testId}"]`) !== null;
+
+  it("готовая сборка: PDF и данные сборки без сервера", () => {
+    show("po_preview_ready");
+    expect(has("outcome-preview")).toBe(true);
+    expect(has("pdf-viewer")).toBe(true);
+    expect(has("outcome-preview-info-example")).toBe(true);
+    expect(has("outcome-preview-stale")).toBe(false);
+  });
+
+  it("вариант и сценарий из ответа сборки", () => {
+    show("po_preview_variant_scenario");
+    expect(
+      document.body.querySelector(
+        '[data-testid="outcome-preview-info-scenario"]',
+      )?.textContent,
+    ).toContain("Научрук из компании");
+    expect(has("outcome-preview-info-inputs")).toBe(true);
+    expect(
+      document.body.querySelector('[data-testid="outcome-preview-info-file"]')
+        ?.textContent,
+    ).toContain(".pdf");
+  });
+
+  it.each([
+    ["po_preview_running", "preview-running"],
+    ["po_preview_failed", "preview-failed"],
+    ["po_preview_cached", "outcome-preview-cached"],
+    ["po_preview_stale", "outcome-preview-stale"],
+    ["po_preview_empty", "outcome-preview-hint"],
+  ])("запись %s показывает %s", (id, testId) => {
+    show(id);
+    expect(has(testId)).toBe(true);
   });
 });

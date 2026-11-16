@@ -1,10 +1,12 @@
 import { useId, useState, type ReactNode } from "react";
+import { FileSearch } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { OutcomeDocument, PackOutcome } from "@entities/pack-studio";
 import { Badge, NoResults } from "@shared/ui";
 import { pickLocalized } from "@shared/lib/i18n/pickLocalized";
 import { summarize } from "../../lib/summary";
 import { useOutcomeModel } from "../../model";
+import { usePreviewUi } from "../preview/context";
 import { PaleSlot } from "./PaleSlot";
 import { SectionShell } from "./SectionShell";
 import {
@@ -29,6 +31,7 @@ const DocumentCard = ({
 }) => {
   const { t, i18n } = useTranslation("packOutcome");
   const explain = useExplain(outcome);
+  const preview = usePreviewUi();
   const lang = i18n.language;
   const name = pickLocalized(doc.name, lang, doc.id);
   const projectLang = outcome.inputs.lang ?? "";
@@ -58,7 +61,38 @@ const DocumentCard = ({
   // Документ, которого нет в комплекте, это бледный слот: причина и «Добавить во вводных».
   const card = (children: ReactNode) =>
     doc.state === "active" ? (
-      <PickItem el={el} testId={testId} title={name} badges={badges}>
+      <PickItem
+        el={el}
+        testId={testId}
+        title={name}
+        badges={badges}
+        action={
+          preview && preview.unavailableReason !== "student" ? (
+            <span className="po-item-actions">
+              <button
+                type="button"
+                className="btn sm"
+                disabled={!preview.available}
+                aria-pressed={preview.document === doc.id}
+                aria-label={t("preview.openFor", { name })}
+                title={
+                  preview.unavailableReason === "state"
+                    ? t("preview.needWorkTree")
+                    : undefined
+                }
+                data-testid={`outcome-doc-${doc.id}-preview`}
+                onClick={() => {
+                  if (preview.document === doc.id) preview.close();
+                  else preview.open(doc.id);
+                }}
+              >
+                <FileSearch size="0.8125rem" aria-hidden="true" />
+                {t("preview.open")}
+              </button>
+            </span>
+          ) : undefined
+        }
+      >
         {children}
       </PickItem>
     ) : (
