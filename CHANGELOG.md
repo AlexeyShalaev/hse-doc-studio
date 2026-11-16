@@ -6,6 +6,14 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.35.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.34.1...v0.35.0) - 2026-11-16
+
+- Template Studio: a new Result screen opens by default. Pick the language, kind of work, authors, supervisors and other inputs and see right away what you get: documents with final file names, project metadata fields (visible and required), expected participants, submission points, the signing route with its steps, checks, variants and edition languages. The choice lives in the page address, so a link can be shared. The previous screen with the file tree is still available as the Files mode.
+- Template Studio: every result element has a Why panel. It shows the chain of rules (held, not held, skipped) with the condition in words and the actual values, neighbouring elements and What if: which change of one input would change this element, applied with a click. Open the rule leads to the exact record in the form or to the line in the source, and Back to result returns you to the same place. For an input you can see how many elements and sections it affects.
+- Template Studio: the Inputs panel is built from the version schema (switches, lists, number of authors, supervisor role, pack fields, questionnaire answers, document variants), marks what was changed and resets values. The Not affecting block lists inputs that change nothing for the current choice.
+- Template Studio: scenarios are stored in the pack itself next to the examples. A scenario is a named set of inputs with an expected result (a snapshot and assertions) and can be run on the work tree, the last commit and the base. Starter scenarios were added to the official packs. The atlas shows all distinguishable outcomes of a version (for example, 864 rows and 384 outcomes for a thesis) and the impact analysis of inputs. For now scenarios and the atlas are available through the API and MCP, screens for them come in the next release.
+- MCP: the pack_outcome_inputs and pack_outcome tools give agents what the Result screen shows: the dictionary of inputs and the result for a set of inputs, in three states (work tree, last commit, base), in a compact text form or in full, with a scenario argument. They need the packs token scope and the Template author right.
+
 ## [0.34.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.34.0...v0.34.1) - 2026-11-16
 
 - Fixed: an Official packs workspace showed "Could not read the local repository copy" right after creation. Git looked for .gitignore and .gitattributes rules outside the packs folder, and their files were missing in the partial clone. The workspace now fetches the needed files with its token, and existing workspaces repair themselves when opened.
