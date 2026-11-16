@@ -18,7 +18,7 @@ from hse_doc_studio.core.agent.tools import ToolDefinition
 from hse_doc_studio.core.enums import ToolKind
 from hse_doc_studio.core.mcp.entities import MCP_PACKS_SCOPE, MCP_SIGN_SCOPE, McpToolGroup, McpToolMeta
 from hse_doc_studio.core.mcp.protocols import IDependencyResolver
-from hse_doc_studio.core.rate_limit import COMPILE, GIT_SYNC, INVITE, UPLOAD, RateRule
+from hse_doc_studio.core.rate_limit import COMPILE, GIT_SYNC, INVITE, PACK_OUTCOME, UPLOAD, RateRule
 from hse_doc_studio.use_cases.chat._registry import ToolRegistry
 from hse_doc_studio.use_cases.mcp.tools import access as access_tools
 from hse_doc_studio.use_cases.mcp.tools import (
@@ -28,6 +28,7 @@ from hse_doc_studio.use_cases.mcp.tools import (
     documents,
     files,
     git,
+    pack_outcome,
     packs,
     people,
     projects,
@@ -221,6 +222,10 @@ MCP_TOOL_RULES: tuple[McpToolRule, ...] = (
     _rule("pack_version_notes", _G.packs, _W, scope=MCP_PACKS_SCOPE),
     _rule("pack_release", _G.packs, _W, scope=MCP_PACKS_SCOPE),
     _rule("pack_git_status", _G.packs, _R, scope=MCP_PACKS_SCOPE),
+    # Результат версии без сборки PDF (template-studio-outcome.md, 4.7, срез O3): только чтение, частота как у
+    # эндпоинтов `outcome/inputs` и `outcome` (20 в секунду на человека).
+    _rule("pack_outcome_inputs", _G.packs, _R, rate=PACK_OUTCOME, scope=MCP_PACKS_SCOPE),
+    _rule("pack_outcome", _G.packs, _R, rate=PACK_OUTCOME, scope=MCP_PACKS_SCOPE),
     # Push и PR на хостинге доступом пространства: внешнее действие, как синхронизация проекта с git-remote.
     _rule("pack_propose", _G.packs, _X, dangerous=True, rate=GIT_SYNC, scope=MCP_PACKS_SCOPE),
     # Админка (сценарии сами требуют админа установки)
@@ -296,6 +301,8 @@ MCP_TOOL_CLASSES: tuple[type[McpTool], ...] = (
     packs.PackReleaseTool,
     packs.PackGitStatusTool,
     packs.PackProposeTool,
+    pack_outcome.PackOutcomeInputsTool,
+    pack_outcome.PackOutcomeTool,
     admin.AdminListUsersTool,
     admin.AdminQueueSummaryTool,
     admin.AdminRunnerSummaryTool,
