@@ -1,0 +1,123 @@
+/* Вид «Как студент» (срез F13): упрощённая копия трёх блоков проекта, без служебных меток. */
+.po-student {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.po-st-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.75rem 0.875rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-3, 0.5rem);
+  background: var(--bg-1);
+}
+.po-st-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--fg-0);
+}
+.po-st-lead,
+.po-st-empty,
+.po-st-deadline {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--fg-2);
+}
+.po-st-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+}
+.po-st-sub {
+  margin: 0.25rem 0 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+.po-st-list,
+.po-st-sublist,
+.po-st-steps,
+.po-st-people {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+.po-st-sublist {
+  gap: 0.125rem;
+  padding-left: 0.75rem;
+  font-size: 0.75rem;
+  color: var(--fg-1);
+}
+.po-st-item,
+.po-st-person {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+.po-st-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.125rem 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--fg-0);
+  overflow-wrap: anywhere;
+}
+.po-st-who,
+.po-st-owner {
+  font-weight: 400;
+  color: var(--fg-1);
+}
+.po-st-tag {
+  padding: 0 0.375rem;
+  border-radius: var(--r-pill);
+  background: var(--bg-3);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  color: var(--fg-1);
+}
+.po-st-files {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+.po-st-file {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.125rem 0.5rem;
+  color: var(--fg-1);
+}
+.po-st-step {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-left: 0.625rem;
+  border-left: 2px solid var(--border-strong, var(--border));
+  min-width: 0;
+}
+.po-st-stepno {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}

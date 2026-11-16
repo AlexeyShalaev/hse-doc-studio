@@ -31,7 +31,7 @@ export const PreviewHost = ({
 }: PreviewHostProps) => {
   const { t, i18n } = useTranslation("packOutcome");
   const model = useOutcomeModel();
-  const { workspaceId, ref, phone, url, shown } = model;
+  const { workspaceId, ref, phone, url, shown, view } = model;
   const key = previewMemoryKey(workspaceId, ref);
   const [document, setDocument] = useState<string | null>(
     () => initialDocument ?? (phone ? null : readPreviewMemory(key).document),
@@ -40,7 +40,7 @@ export const PreviewHost = ({
   const [explicit, setExplicit] = useState(false);
 
   // Предпросмотр собирает рабочее дерево и нужен автору, а не студенту.
-  const student = url.state.mode === "student";
+  const student = view === "student";
   const fromWorkTree = url.state.state === "work_tree";
   const available = !student && fromWorkTree;
 

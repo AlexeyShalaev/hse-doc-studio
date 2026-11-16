@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { FileSearch } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { OutcomeDocument, PackOutcome } from "@entities/pack-studio";
@@ -7,6 +7,7 @@ import { pickLocalized } from "@shared/lib/i18n/pickLocalized";
 import { summarize } from "../../lib/summary";
 import { useOutcomeModel } from "../../model";
 import { usePreviewUi } from "../preview/context";
+import { PaleSlot } from "./PaleSlot";
 import { SectionShell } from "./SectionShell";
 import {
   Disclosure,
@@ -30,10 +31,10 @@ const DocumentCard = ({
 }) => {
   const { t, i18n } = useTranslation("packOutcome");
   const explain = useExplain(outcome);
+  const preview = usePreviewUi();
   const lang = i18n.language;
   const name = pickLocalized(doc.name, lang, doc.id);
   const projectLang = outcome.inputs.lang ?? "";
-  const preview = usePreviewUi();
   const reasons = doc.state === "active" ? [] : explain.reasons(doc.why);
   const personal = doc.instances.filter((i) => i.owner !== null);
   const showVariants = doc.variants.length > 0 && doc.state !== "absent";
@@ -46,48 +47,62 @@ const DocumentCard = ({
       <Badge variant="subtle">{t("documents.state.absent")}</Badge>
     );
 
-  return (
-    <PickItem
-      el={{ section: "documents", id: doc.id }}
-      muted={doc.state !== "active"}
-      testId={`outcome-doc-${doc.id}`}
-      title={name}
-      actions={
-        preview &&
-        preview.unavailableReason !== "student" &&
-        doc.state === "active" ? (
-          <button
-            type="button"
-            className="btn sm"
-            disabled={!preview.available}
-            aria-pressed={preview.document === doc.id}
-            aria-label={t("preview.openFor", { name })}
-            title={
-              preview.unavailableReason === "state"
-                ? t("preview.needWorkTree")
-                : undefined
-            }
-            data-testid={`outcome-doc-${doc.id}-preview`}
-            onClick={() => {
-              if (preview.document === doc.id) preview.close();
-              else preview.open(doc.id);
-            }}
-          >
-            <FileSearch size="0.8125rem" aria-hidden="true" />
-            {t("preview.open")}
-          </button>
-        ) : undefined
-      }
-      badges={
-        <>
-          {stateBadge}
-          <Badge>{t(`documents.scope.${doc.scope}`)}</Badge>
-          {!doc.required && (
-            <Badge variant="subtle">{t("documents.optional")}</Badge>
-          )}
-        </>
-      }
-    >
+  const el = { section: "documents", id: doc.id } as const;
+  const badges = (
+    <>
+      {stateBadge}
+      <Badge>{t(`documents.scope.${doc.scope}`)}</Badge>
+      {!doc.required && (
+        <Badge variant="subtle">{t("documents.optional")}</Badge>
+      )}
+    </>
+  );
+  const testId = `outcome-doc-${doc.id}`;
+  // Документ, которого нет в комплекте, это бледный слот: причина и «Добавить во вводных».
+  const card = (children: ReactNode) =>
+    doc.state === "active" ? (
+      <PickItem
+        el={el}
+        testId={testId}
+        title={name}
+        badges={badges}
+        action={
+          preview && preview.unavailableReason !== "student" ? (
+            <span className="po-item-actions">
+              <button
+                type="button"
+                className="btn sm"
+                disabled={!preview.available}
+                aria-pressed={preview.document === doc.id}
+                aria-label={t("preview.openFor", { name })}
+                title={
+                  preview.unavailableReason === "state"
+                    ? t("preview.needWorkTree")
+                    : undefined
+                }
+                data-testid={`outcome-doc-${doc.id}-preview`}
+                onClick={() => {
+                  if (preview.document === doc.id) preview.close();
+                  else preview.open(doc.id);
+                }}
+              >
+                <FileSearch size="0.8125rem" aria-hidden="true" />
+                {t("preview.open")}
+              </button>
+            </span>
+          ) : undefined
+        }
+      >
+        {children}
+      </PickItem>
+    ) : (
+      <PaleSlot el={el} name={name} testId={testId} badges={badges}>
+        {children}
+      </PaleSlot>
+    );
+
+  return card(
+    <>
       {doc.state !== "active" && (
         <Reason
           prefix={t(`documents.why.${doc.state}`)}
@@ -161,7 +176,7 @@ const DocumentCard = ({
           )}
         </span>
       )}
-    </PickItem>
+    </>,
   );
 };
 

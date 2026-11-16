@@ -291,12 +291,12 @@
     "name": "Студия шаблонов, экран «Результат» (lazy, features/pack-outcome)",
     "path": "dist/assets/pack-outcome-*.js",
     "gzip": true,
-    "limit": "39.2 kB"
+    "limit": "41.5 kB"
   },
   {
     "name": "Словарь экрана «Результат» (ru и en, features/pack-outcome)",
     "path": "dist/assets/locale-packOutcome-*.js",
     "gzip": true,
-    "limit": "21.1 kB"
+    "limit": "21.8 kB"
   }
 ]

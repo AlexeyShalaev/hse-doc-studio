@@ -225,7 +225,7 @@ describe("экран «Результат»: каркас на эталонах"
 
     it("режим «Как студент» из адреса прячет правила", async () => {
       mount("mode=student&selected=documents:report");
-      await screen.findByTestId("outcome-count-documents");
+      await screen.findByTestId("outcome-student");
       expect(screen.getByTestId("outcome-mode-student")).toHaveAttribute(
         "aria-pressed",
         "true",
@@ -549,12 +549,15 @@ describe("экран «Результат»: каркас на эталонах"
     it("клик по документу пишет selected в адрес и открывает правую панель", async () => {
       mount();
       const card = await screen.findByTestId("outcome-doc-operator_manual");
-      fireEvent.click(within(card).getByRole("button"));
+      const pick = within(card).getByRole("button", {
+        name: "Руководство оператора",
+      });
+      fireEvent.click(pick);
       expect(location()).toContain("selected=documents%3Aoperator_manual");
       expect(screen.getByTestId("outcome-selected")).toHaveTextContent(
         "operator_manual",
       );
-      fireEvent.click(within(card).getByRole("button"));
+      fireEvent.click(pick);
       expect(location()).not.toContain("selected");
     });
 
@@ -665,7 +668,7 @@ describe("экран «Результат»: каркас на эталонах"
 
     it("в режиме «Как студент» вкладки «Почему» нет", async () => {
       mount("mode=student");
-      await screen.findByTestId("outcome-count-documents");
+      await screen.findByTestId("outcome-student");
       expect(screen.queryByTestId("outcome-tab-rules")).not.toBeInTheDocument();
     });
   });

@@ -63,6 +63,10 @@ describe("галерея экрана «Результат»", () => {
         "po_why_error",
         "po_why_busy",
         "po_why_impact",
+        "po_student",
+        "po_student_no_supervisor",
+        "po_student_team",
+        "po_pale_slots",
         "po_preview_ready",
         "po_preview_variant_scenario",
         "po_preview_running",
@@ -306,6 +310,69 @@ describe("галерея «Почему?»", () => {
       show("po_why_empty_chain").container.querySelector(
         '[data-testid="outcome-chain-empty"]',
       ),
+    ).not.toBeNull();
+  });
+});
+
+describe("галерея режима «Как студент» и бледных слотов", () => {
+  beforeAll(async () => {
+    await Promise.all([loadPackOutcomeNamespace(), loadPackStudioNamespace()]);
+    await i18n.changeLanguage("ru");
+  });
+  afterEach(cleanup);
+
+  const entries = getPackOutcomeGallery().flatMap((g) => g.entries);
+  const draw = (id: string) => {
+    const entry = entries.find((e) => e.id === id);
+    expect(entry).toBeDefined();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    entry?.seed?.(client);
+    return render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>{entry?.render()}</MemoryRouter>
+      </QueryClientProvider>,
+    );
+  };
+  const find = (root: HTMLElement, testId: string) =>
+    root.querySelector(`[data-testid="${testId}"]`);
+
+  it("po_student: три блока, секций автора и правил нет", () => {
+    const { container } = draw("po_student");
+    expect(find(container, "outcome-student")).not.toBeNull();
+    expect(find(container, "outcome-student-route")).not.toBeNull();
+    expect(find(container, "outcome-section-documents")).toBeNull();
+    expect(find(container, "outcome-rules-panel")).toBeNull();
+  });
+
+  it("po_student_no_supervisor: шага отсутствующего руководителя нет", () => {
+    const { container } = draw("po_student_no_supervisor");
+    expect(
+      find(container, "outcome-student-step-pdp-application-1"),
+    ).not.toBeNull();
+    expect(
+      find(container, "outcome-student-step-pdp-application-2"),
+    ).toBeNull();
+    expect(container.querySelector(".po-person-warn")).toBeNull();
+  });
+
+  it("po_student_team: параллельный шаг помечен словами", () => {
+    const { container } = draw("po_student_team");
+    expect(
+      find(container, "outcome-student-step-pdp-application-2")?.textContent,
+    ).toContain("параллельно");
+  });
+
+  it("po_pale_slots: бледный участник и «Добавить во вводных» на месте", () => {
+    const { container } = draw("po_pale_slots");
+    expect(
+      find(container, "outcome-participant-co_supervisor")?.getAttribute(
+        "data-pale",
+      ),
+    ).toBe("true");
+    expect(
+      find(container, "outcome-pale-add-participants-co_supervisor"),
     ).not.toBeNull();
   });
 });

@@ -326,7 +326,8 @@ describe("предпросмотр PDF на экране «Результат»"
       ).not.toBeInTheDocument();
       unmount();
       mount("mode=student");
-      await screen.findByTestId("outcome-doc-technical_specification");
+      // В виде студента карточек документов с действиями автора нет.
+      await screen.findByTestId("outcome-student-documents");
       expect(
         screen.queryByTestId("outcome-doc-technical_specification-preview"),
       ).not.toBeInTheDocument();
