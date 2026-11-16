@@ -1,8 +1,9 @@
 """Атлас результата версии: измерения, таблица исходов, группы одинаковых исходов (раздел 4.4 дизайна результата).
 
-1. Влияние (`impact.py`): перебор всех комбинаций вводных (у ВКР `hse-cs-se` 5184), по нему измерения: вводные, смена
-   значения которых меняет отпечаток хотя бы одного раздела. Остальные в `ignored`: `no_effect` или `cosmetic`
-   (меняют только имена файлов, язык редакции и доступность вариантов, R12).
+1. Влияние (`impact.py`): измерения это вводные, смена значения которых меняет отпечаток хотя бы одного раздела.
+   Считается перебором всех комбинаций, если их не больше 2048, иначе по соседним комбинациям силы 3 (у ВКР
+   `hse-cs-se` 5184 комбинации, 418 расчётов). Остальные вводные в `ignored`: `no_effect` или `cosmetic` (меняют
+   только имена файлов, язык редакции и доступность вариантов, R12).
 2. Таблица: произведение значений измерений при остальных вводных на умолчаниях набора данных, строка `{key, outcome}`.
 3. Исходы: уникальные отпечатки с `digest` и числом строк. Клиент по ключу находит исход и сразу рисует результат.
 
@@ -31,6 +32,7 @@ from hse_doc_studio.core.pack_studio.outcome.inputs import InputSpec, OutcomeInp
 from hse_doc_studio.core.pack_studio.outcome.model import Digest, RuleRef
 from hse_doc_studio.core.pack_studio.preview import PreviewExample
 from hse_doc_studio.use_cases.pack_studio.outcome.impact import (
+    EXHAUSTIVE_LIMIT,
     ImpactAnalysis,
     OutcomeEvaluator,
     analyze_impact,
@@ -86,6 +88,7 @@ def build_atlas(  # noqa: PLR0913 — версия, набор данных, д�
     limit: int = ATLAS_MAX_ROWS,
     analysis: ImpactAnalysis | None = None,
     evaluator: OutcomeEvaluator | None = None,
+    exhaustive_limit: int = EXHAUSTIVE_LIMIT,
     check: Callable[[], None] | None = None,
 ) -> Atlas:
     """Атлас версии. `check` вызывается перед каждым расчётом: пусть бросит, когда срок вышел. `evaluator` с готовыми
@@ -98,7 +101,7 @@ def build_atlas(  # noqa: PLR0913 — версия, набор данных, д�
     context = normalize_inputs(specs, pins, example_defaults(example))
     evaluator = evaluator or OutcomeEvaluator(version, specs, example, today, check=check)
     if analysis is None:
-        analysis = analyze_impact(evaluator, specs, defaults)
+        analysis = analyze_impact(evaluator, specs, defaults, exhaustive_limit=exhaustive_limit)
 
     effective = [spec for spec in specs if analysis.impacts[spec.id].effective]
     ignored = tuple(

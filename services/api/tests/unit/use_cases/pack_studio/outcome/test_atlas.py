@@ -26,7 +26,7 @@ from hse_doc_studio.core.pack_studio.preview import PreviewExample, auto_example
 from hse_doc_studio.infra.template.yaml_template_repository import YamlTemplateRepository
 from hse_doc_studio.use_cases.pack_studio.outcome.atlas import build_atlas, validate_pins
 from hse_doc_studio.use_cases.pack_studio.outcome.dictionary import inputs_dictionary
-from hse_doc_studio.use_cases.pack_studio.outcome.impact import OutcomeEvaluator, analyze_impact
+from hse_doc_studio.use_cases.pack_studio.outcome.impact import ImpactAnalysis, OutcomeEvaluator, analyze_impact
 from hse_doc_studio.use_cases.pack_studio.outcome.resolve import resolve
 
 from tests.unit.use_cases.pack_studio.outcome.synthetic import load_synthetic
@@ -110,7 +110,7 @@ def test__vkr__distinct_outcomes_by_what_they_include(vkr_atlas: Atlas) -> None:
     assert sum(o.rows for o in vkr_atlas.outcomes) == 864
 
 
-def test__vkr__affects_per_dimension_are_exact(vkr_atlas: Atlas) -> None:
+def test__vkr__affects_per_dimension_are_the_expected_sections(vkr_atlas: Atlas) -> None:
     affects = {d.input: set(d.affects) for d in vkr_atlas.dimensions}
 
     assert affects["answer.ai_declaration.used_ai"] == {"forms"}
@@ -374,35 +374,75 @@ def test__impact__elements_changed_by_an_input_are_named_by_the_contract_ids(
         assert {section for section, _, _ in impact.elements} == set(impact.sections)
 
 
-def test__impact__the_neighbour_mode_agrees_with_the_exhaustive_one_on_the_real_versions(
+def _sections(analysis: ImpactAnalysis) -> dict[str, tuple[str, ...]]:
+    return {k: v.sections for k, v in analysis.impacts.items()}
+
+
+def test__impact__the_default_mode_is_exhaustive_for_a_small_space_and_neighbours_for_a_large_one(
     vkr: TemplateVersion, coursework: TemplateVersion
 ) -> None:
-    for version in (vkr, coursework):
-        specs = input_specs(version)
-        defaults = _defaults(version)
-        evaluator = OutcomeEvaluator(version, specs, _example(version), TODAY)
-        near = analyze_impact(evaluator, specs, defaults, force=False)
-        exact = analyze_impact(evaluator, specs, defaults, force=True)
+    small = input_specs(coursework)
+    large = input_specs(vkr)
+
+    exact = analyze_impact(
+        OutcomeEvaluator(coursework, small, _example(coursework), TODAY), small, _defaults(coursework)
+    )
+    near = analyze_impact(OutcomeEvaluator(vkr, large, _example(vkr), TODAY), large, _defaults(vkr))
+
+    assert (exact.exact, exact.strength, exact.combinations) == (True, None, 576)
+    assert (near.exact, near.strength) == (False, 3)
+    assert near.combinations == 418  # от нуля до трёх отклонений от умолчаний у десяти вводных ВКР
+
+
+def test__impact__neighbours_agree_with_the_exhaustive_mode_on_the_coursework(coursework: TemplateVersion) -> None:
+    specs = input_specs(coursework)
+    evaluator = OutcomeEvaluator(coursework, specs, _example(coursework), TODAY)
+    exact = analyze_impact(evaluator, specs, _defaults(coursework), force=True)
+
+    for strength in (1, 2, 3):
+        near = analyze_impact(evaluator, specs, _defaults(coursework), force=False, strength=strength)
 
         assert not near.exact
-        assert exact.exact
-        assert exact.combinations == (5184 if version is vkr else 576)
         assert near.combinations < exact.combinations
-        assert {k: v.sections for k, v in near.impacts.items()} == {k: v.sections for k, v in exact.impacts.items()}
+        assert _sections(near) == _sections(exact)
+        for input_id, impact in near.impacts.items():
+            assert set(impact.elements) <= set(exact.impacts[input_id].elements)
 
 
-def test__impact__the_neighbour_mode_never_invents_an_effect_on_the_synthetic_version(tmp_path: Path) -> None:
+@pytest.mark.timeout(400)
+def test__impact__the_exhaustive_mode_confirms_the_neighbour_answer_on_the_vkr(
+    vkr: TemplateVersion, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Перебор всех 5184 комбинаций ВКР даёт то же влияние на разделы и элементы, что соседи силы 3 и силы 2."""
+    specs = input_specs(vkr)
+    defaults = _defaults(vkr)
+    evaluator = OutcomeEvaluator(vkr, specs, _example(vkr), TODAY)
+    started = time.perf_counter()
+    exact = analyze_impact(evaluator, specs, defaults, force=True)
+    exact_s = time.perf_counter() - started
+    evaluator.forget()
+
+    with capsys.disabled():
+        print(f"\n[impact] vkr exhaustive {exact.combinations} combinations {exact_s:.1f}s")  # noqa: T201
+    assert exact.combinations == 5184
+    for strength in (2, 3):
+        near = analyze_impact(evaluator, specs, defaults, force=False, strength=strength)
+        assert _sections(near) == _sections(exact), strength
+        assert {k: v.elements for k, v in near.impacts.items()} == {k: v.elements for k, v in exact.impacts.items()}
+
+
+def test__impact__a_stronger_neighbourhood_only_adds_effects(tmp_path: Path) -> None:
     version = load_synthetic(tmp_path)
     specs = input_specs(version)
     defaults = _defaults(version)
     evaluator = OutcomeEvaluator(version, specs, _example(version), TODAY)
 
-    near = analyze_impact(evaluator, specs, defaults, force=False)
-    exact = analyze_impact(evaluator, specs, defaults, force=True)
+    weak = analyze_impact(evaluator, specs, defaults, force=False, strength=1)
+    strong = analyze_impact(evaluator, specs, defaults, force=False, strength=2)
 
-    for input_id, impact in near.impacts.items():
-        assert set(impact.sections) <= set(exact.impacts[input_id].sections)
-        assert set(impact.elements) <= set(exact.impacts[input_id].elements)
+    for input_id, impact in weak.impacts.items():
+        assert set(impact.sections) <= set(strong.impacts[input_id].sections)
+        assert set(impact.elements) <= set(strong.impacts[input_id].elements)
 
 
 def test__dictionary__affects_use_the_shared_analysis_and_accept_a_ready_one(coursework: TemplateVersion) -> None:
@@ -480,6 +520,7 @@ def test__performance__real_versions_build_within_the_service_deadline(
             f"\n[atlas] coursework {small.rows_total} rows {small_s:.2f}s; vkr {big.rows_total} rows {big_s:.2f}s, "
             f"json {size / 1024:.0f} KiB"
         )
-    # Предел сервиса 20 с; тест держит запас вдвое: выше значит, что расчёт стал в разы дороже.
-    assert small_s < 5
-    assert big_s < 40
+    # Предел сервиса 20 с; под покрытием кода CI втрое медленнее ноутбука, тест держит запас: выше значит, что
+    # расчёт стал в разы дороже.
+    assert small_s < 4
+    assert big_s < 12

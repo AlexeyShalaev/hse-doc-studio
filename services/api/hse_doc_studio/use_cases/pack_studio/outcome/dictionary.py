@@ -16,7 +16,12 @@ from hse_doc_studio.core.pack_studio.outcome.atlas import reading_rules
 from hse_doc_studio.core.pack_studio.outcome.inputs import input_specs, normalize_inputs
 from hse_doc_studio.core.pack_studio.outcome.model import InputInfo, InputsDictionary, InputValueInfo, Outcome
 from hse_doc_studio.core.pack_studio.preview import PreviewExample
-from hse_doc_studio.use_cases.pack_studio.outcome.impact import ImpactAnalysis, OutcomeEvaluator, analyze_impact
+from hse_doc_studio.use_cases.pack_studio.outcome.impact import (
+    PANEL_STRENGTH,
+    ImpactAnalysis,
+    OutcomeEvaluator,
+    analyze_impact,
+)
 from hse_doc_studio.use_cases.pack_studio.outcome.resolve import resolve
 
 
@@ -44,7 +49,9 @@ def inputs_dictionary(
     defaults = normalize_inputs(specs, {}, dict(example.data.defaults) if example.data is not None else {})
     at_defaults = resolve(version, defaults, example, today)
     if analysis is None and with_affects:
-        analysis = analyze_impact(OutcomeEvaluator(version, specs, example, today), specs, defaults, force=False)
+        analysis = analyze_impact(
+            OutcomeEvaluator(version, specs, example, today), specs, defaults, force=False, strength=PANEL_STRENGTH
+        )
     affects = {input_id: impact.sections for input_id, impact in analysis.impacts.items()} if analysis else {}
     inputs = tuple(
         InputInfo(

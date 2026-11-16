@@ -5,9 +5,11 @@
 (`ImpactAccumulator`). Какие комбинации берутся, определяет режим:
 
 - перебор (`exhaustive`): все комбинации, ответ точный, в том числе для влияния, которое проявляется только при
-  нескольких вводных сразу. Годится, пока комбинаций не больше `EXHAUSTIVE_LIMIT` (ВКР `hse-cs-se`: 5184, около 4 с);
-- соседи (`neighbors`): умолчания и комбинации, где от умолчаний отличается не больше двух вводных. Дёшево
-  (десятки расчётов), для панели вводных; взаимодействие трёх вводных и больше он не видит.
+  нескольких вводных сразу. Годится, пока комбинаций не больше `EXHAUSTIVE_LIMIT`: каждая стоит расчёта
+  (около 0,75 мс на ВКР), перебор 5184 комбинаций ВКР занял бы 6 с и больше 30 с на медленном сервере;
+- соседи (`neighbors`): умолчания и все комбинации, где от умолчаний отличаются не больше `strength` вводных. Сила 2
+  даёт десятки расчётов (панель вводных), сила 3 сотни (атлас). Влияние, которое видно только при отклонении
+  `strength + 1` вводных сразу и больше, такой режим не найдёт; на реальных версиях ответ совпадает с перебором.
 
 Результат комбинации считает `resolve(..., trace=False)`, в память кладётся только `Snapshot` (отпечатки и хэши
 элементов), а не результат целиком.
@@ -33,8 +35,11 @@ from hse_doc_studio.core.pack_studio.outcome.model import Digest
 from hse_doc_studio.core.pack_studio.preview import PreviewExample
 from hse_doc_studio.use_cases.pack_studio.outcome.resolve import resolve
 
-# Предел полного перебора: больше комбинаций анализ идёт по соседям. 8192 расчёта это около 7 с на ВКР.
-EXHAUSTIVE_LIMIT = 8192
+# Предел полного перебора: больше комбинаций анализ идёт по соседям. 2048 расчётов это около 2 с на ВКР.
+EXHAUSTIVE_LIMIT = 2048
+# Сила соседей: сколько вводных одновременно отличается от умолчаний. Атлас берёт 3, словарь вводных (панель) 2.
+ATLAS_STRENGTH = 3
+PANEL_STRENGTH = 2
 
 type Values = tuple[str, ...]
 
@@ -96,10 +101,12 @@ class OutcomeEvaluator:
 
 @dataclass(frozen=True, slots=True)
 class ImpactAnalysis:
-    """Влияние всех вводных версии: по перебору (`exact`) либо по соседним комбинациям."""
+    """Влияние всех вводных версии: по перебору (`exact`) либо по соседним комбинациям силы `strength`."""
 
     impacts: Mapping[str, InputImpact]
     exact: bool
+    # Сила соседей; None у перебора.
+    strength: int | None
     combinations: int
 
     def sections_of(self, input_id: str) -> tuple[str, ...]:
@@ -110,21 +117,17 @@ def _exhaustive(specs: Sequence[InputSpec]) -> Iterator[Values]:
     return itertools.product(*(spec.values for spec in specs))
 
 
-def _neighbors(specs: Sequence[InputSpec], defaults: Mapping[str, str]) -> Iterator[Values]:
-    """Умолчания и все комбинации, где от умолчаний отличаются одна или две вводные."""
+def _neighbors(specs: Sequence[InputSpec], defaults: Mapping[str, str], strength: int) -> Iterator[Values]:
+    """Умолчания и все комбинации, где от умолчаний отличаются от одной до `strength` вводных."""
     base = [defaults[spec.id] for spec in specs]
-    yield tuple(base)
     others = [[v for v in spec.values if v != defaults[spec.id]] for spec in specs]
-    for i, first in enumerate(others):
-        for a in first:
-            one = [*base]
-            one[i] = a
-            yield tuple(one)
-            for j in range(i + 1, len(specs)):
-                for b in others[j]:
-                    two = [*one]
-                    two[j] = b
-                    yield tuple(two)
+    for size in range(strength + 1):
+        for indexes in itertools.combinations(range(len(specs)), size):
+            for chosen in itertools.product(*(others[i] for i in indexes)):
+                combo = [*base]
+                for i, value in zip(indexes, chosen, strict=True):
+                    combo[i] = value
+                yield tuple(combo)
 
 
 def analyze_impact(
@@ -133,12 +136,14 @@ def analyze_impact(
     defaults: Mapping[str, str],
     *,
     exhaustive_limit: int = EXHAUSTIVE_LIMIT,
+    strength: int = ATLAS_STRENGTH,
     force: bool | None = None,
 ) -> ImpactAnalysis:
-    """Влияние каждой вводной на разделы и элементы. `force`: True перебор, False соседи, None по размеру."""
+    """Влияние каждой вводной на разделы и элементы. `force`: True перебор, False соседи силы `strength`, None
+    перебор, если комбинаций не больше `exhaustive_limit`, иначе соседи."""
     total = combinations_count(len(spec.values) for spec in specs)
     exact = total <= exhaustive_limit if force is None else force
-    combos = list(_exhaustive(specs) if exact else _neighbors(specs, defaults))
+    combos = list(_exhaustive(specs) if exact else _neighbors(specs, defaults, strength))
     snapshots = [evaluator.snapshot(values) for values in combos]
     impacts: dict[str, InputImpact] = {}
     for index, spec in enumerate(specs):
@@ -152,4 +157,4 @@ def analyze_impact(
                 head = first.setdefault(rest, snapshot)
                 accumulator.compare(head, snapshot)
         impacts[spec.id] = accumulator.result()
-    return ImpactAnalysis(impacts, exact, len(combos))
+    return ImpactAnalysis(impacts, exact, None if exact else strength, len(combos))
