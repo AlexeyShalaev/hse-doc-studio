@@ -5,6 +5,7 @@ import {
   packStudioKeys,
   type PackOutcome,
   type PackOutcomeInputs,
+  type PackOutcomeRequest,
   type PackTree,
   type PackVersionRef,
   type PackWorkspace,
@@ -17,10 +18,15 @@ import {
   VKR_CHECKS,
   VKR_INPUTS,
   VKR_OUTCOME,
+  explainFor,
 } from "@entities/pack-studio/reference";
 import { ApiError } from "@shared/api";
 import type { GalleryGroup } from "@shared/lib/stateGallery";
-import { OutcomeSearchContext, parseOutcomeSearch } from "./lib/urlState";
+import {
+  OutcomeSearchContext,
+  parseOutcomeSearch,
+  type OutcomeSelection,
+} from "./lib/urlState";
 import { OutcomeBody } from "./OutcomeBody";
 
 // Галерея экрана «Результат» (/dev/server-screens): каркас во всех состояниях на эталонах
@@ -145,8 +151,63 @@ const withIdentity = (id: string, outcome: PackOutcome): PackOutcome => ({
 });
 
 type Kind = "ready" | "loading" | "unreadable" | "empty";
+/** Состояние «Почему?» выбранного элемента: ответ, ожидание, сбой или занятый сервер. */
+type WhyKind = "ready" | "loading" | "error" | "busy";
 /** Состояние панели «Вводные»: у неё свой запрос, и он может быть в любом состоянии. */
 type InputsKind = "ready" | "loading" | "error" | "none";
+
+/**
+ * «Почему?» выбранного элемента: настоящий ответ ядра, если он записан для этого элемента, иначе
+ * ответ, собранный из результата-эталона. У выбранной вводной («Ветки») запроса нет.
+ */
+const seedWhy = (
+  client: QueryClient,
+  id: string,
+  ref: PackVersionRef,
+  request: PackOutcomeRequest,
+  selected: OutcomeSelection | null,
+  outcome: PackOutcome,
+  why: WhyKind,
+) => {
+  if (!selected || selected.section === "branches") return;
+  const element = { section: selected.section, id: selected.id };
+  const key = packOutcomeKeys.explain(id, ref, { ...request, element });
+  if (why === "loading") {
+    void client.prefetchQuery({
+      queryKey: key,
+      queryFn: () => new Promise<never>(() => undefined),
+    });
+    return;
+  }
+  if (why === "error" || why === "busy") {
+    client
+      .getQueryCache()
+      .build(client, { queryKey: key })
+      .setState({
+        status: "error",
+        fetchStatus: "idle",
+        data: undefined,
+        error:
+          why === "busy"
+            ? new ApiError("Сервер занят.", "outcome_busy", 503, {
+                reason: "overloaded",
+                retry_after_s: 2,
+              })
+            : new ApiError("Внутренняя ошибка.", "internal_error", 500),
+        errorUpdateCount: 1,
+        errorUpdatedAt: Date.now(),
+      });
+    return;
+  }
+  const data = explainFor(outcome, element, ref.template) ?? {
+    element,
+    state: "present",
+    chain: [],
+    readers: [],
+    counterfactuals: [],
+  };
+  client.setQueryData(key, { data, etag: null });
+};
 
 /** Заполнить кэш так, чтобы экран видел данные без сервера, и запретить перечитывание. */
 const seedWorkspace = (
@@ -158,6 +219,7 @@ const seedWorkspace = (
   inputsKind: InputsKind,
   edit?: (outcome: PackOutcome) => void,
   parts: "ok" | "error" = "ok",
+  why: WhyKind = "ready",
 ) => {
   const ref = refOf(work);
   const url = parseOutcomeSearch(new URLSearchParams(search));
@@ -221,6 +283,7 @@ const seedWorkspace = (
   if (kind === "ready") {
     edit?.(base);
     client.setQueryData(key, base);
+    seedWhy(client, id, ref, request, url.selected, base, why);
     // Правила проверок и ветки приходят отдельными запросами (`include`) раскрытых разделов.
     const partKey = (part: "checks" | "branches") =>
       packOutcomeKeys.result(id, ref, { ...request, include: [part] });
@@ -300,6 +363,8 @@ type Spec = {
   edit?: (outcome: PackOutcome) => void;
   /** Что отвечают запросы правил проверок и веток: данные или сбой. */
   parts?: "ok" | "error";
+  /** Что отвечает «Почему?» (по умолчанию ответ). */
+  why?: WhyKind;
 };
 
 /** Команда из двух: личные документы по авторам, у одного нет редакции на язык проекта. */
@@ -512,6 +577,88 @@ const SPECS: Spec[] = [
     parts: "error",
   },
   {
+    id: "po_why_document_off",
+    title: "Почему?: документ выключен",
+    note: "Цепочка из четырёх решений на настоящем ответе ядра: правило движка (руководства) не выполнено, у правил манифеста файл, указатель и «Открыть правило», ниже «Что если».",
+    kind: "ready",
+    search: "selected=documents:operator_manual",
+  },
+  {
+    id: "po_why_document_on",
+    title: "Почему?: документ в комплекте",
+    note: "Три выполненных решения, одно «что если»: вид работы исследовательский уберёт документ.",
+    kind: "ready",
+    search: "selected=documents:technical_specification",
+  },
+  {
+    id: "po_why_field_hidden",
+    title: "Почему?: поле анкеты скрыто",
+    note: "Условие visible_if не выполнено: ответ анкеты «использовали ИИ» не равен «да».",
+    kind: "ready",
+    search: "selected=forms:ai_declaration/tools",
+  },
+  {
+    id: "po_why_empty_chain",
+    title: "Почему?: у элемента нет правил",
+    note: "Спокойный текст вместо ошибки: поле проекта не зависит от условий.",
+    kind: "ready",
+    search: "selected=meta:year",
+  },
+  {
+    id: "po_why_participant_absent",
+    title: "Почему?: участника нет в комбинации",
+    note: "Пустая цепочка, но «Что если» объясняет, какая вводная его добавит.",
+    kind: "ready",
+    search: "selected=participants:co_supervisor",
+  },
+  {
+    id: "po_why_route_step",
+    title: "Почему?: шаг маршрута",
+    note: "Цепочка шага это порядок маршрута и решения пар его людей.",
+    kind: "ready",
+    search: "selected=route:pdp-application/step/1",
+  },
+  {
+    id: "po_why_route_skipped",
+    title: "Почему?: пропущенная пара курсовой",
+    note: "Слот консультанта не добавлен: условие when не выполнено, пара absent. Курсовой проект, научрук из ВШЭ.",
+    kind: "ready",
+    work: "coursework",
+    search:
+      "selected=route:topic-approval/topic_application/co_supervisor&i.supervisor=university&i.co_supervisor=no&i.academic_supervisor=yes",
+  },
+  {
+    id: "po_why_loading",
+    title: "Почему?: загрузка",
+    note: "Скелет цепочки, пока сервер не ответил на explain; aria-busy.",
+    kind: "ready",
+    search: "selected=documents:operator_manual",
+    why: "loading",
+  },
+  {
+    id: "po_why_error",
+    title: "Почему?: сбой запроса",
+    note: "Плашка с причиной и «Повторить», остальной экран на месте.",
+    kind: "ready",
+    search: "selected=documents:operator_manual",
+    why: "error",
+  },
+  {
+    id: "po_why_busy",
+    title: "Почему?: сервер занят",
+    note: "503 outcome_busy после повторов: отдельный текст и «Повторить».",
+    kind: "ready",
+    search: "selected=documents:operator_manual",
+    why: "busy",
+  },
+  {
+    id: "po_why_impact",
+    title: "Влияние вводной",
+    note: "У вводной «Вид работы»: сколько элементов в скольких разделах она меняет, сколько правил её читают, списки элементов и правил с переходом к файлу.",
+    kind: "ready",
+    search: "selected=branches:kind",
+  },
+  {
     id: "po_student",
     title: "Режим «Как студент»",
     note: "Правая панель с правилами скрыта, остаётся то, что видит студент.",
@@ -623,6 +770,7 @@ export const getPackOutcomeGallery = (): GalleryGroup[] => [
             spec.inputs ?? "ready",
             spec.edit,
             spec.parts,
+            spec.why,
           );
         },
         render: () => (

@@ -130,7 +130,8 @@
       "title": "Result elements linked to the input \"{{name}}\"",
       "more_one": "and {{count}} more",
       "more_other": "and {{count}} more"
-    }
+    },
+    "impact": "Impact: \"{{name}}\""
   },
   "result": {
     "documents_one": "{{count}} document",
@@ -423,8 +424,125 @@
     "selected": "Selected element",
     "section": "Section",
     "clear": "Clear selection",
-    "pending": "The rule chain, impact and in-place editing arrive in the next slices.",
-    "studentHidden": "Rules are hidden in the \"As a student\" mode."
+    "studentHidden": "Rules are hidden in the \"As a student\" mode.",
+    "kind": {
+      "document": "Document",
+      "meta": "Project field",
+      "form": "Form",
+      "form_field": "Form field",
+      "participant": "Participant",
+      "point": "Submission point",
+      "point_item": "Point item",
+      "point_extra": "Point extra file",
+      "route": "Point route",
+      "route_step": "Route step",
+      "route_pair": "Document and slot pair",
+      "route_skipped": "Skipped pair",
+      "check": "Check rule",
+      "unknown": "Element"
+    },
+    "inPoint": "in point \"{{point}}\"",
+    "stepTitle": "Step {{n}}, {{point}}",
+    "state": {
+      "active": "in the bundle",
+      "inactive": "switched off",
+      "absent": "absent",
+      "present": "present"
+    },
+    "status": {
+      "held": "Held",
+      "not_held": "Not held",
+      "skipped": "Not checked"
+    },
+    "kinds": {
+      "supported_kinds": "Document work kinds",
+      "supported_staffing": "Document team size",
+      "supported_langs": "Document languages",
+      "document_scope": "Document scope",
+      "variant_langs": "Variant languages",
+      "builtin_gate": "Engine rule",
+      "field_kinds": "Field work kinds",
+      "visible_if": "Field visibility condition",
+      "required_at": "When the field is required",
+      "form_kinds": "Form work kinds",
+      "form_per_author": "Form per author",
+      "item_kinds": "Item work kinds",
+      "extra_kinds": "Extra file work kinds",
+      "skip_if_nda": "Skipped under NDA",
+      "item_document": "Item document",
+      "slot_when": "Signature slot condition",
+      "slot_optional": "Slot is optional",
+      "route_order": "Signing order",
+      "check_applies": "Check rule applies",
+      "check_disabled": "Check rule disabled"
+    },
+    "cond": {
+      "in": "{{subject}}: {{expected}}",
+      "equals": "{{subject}}: {{expected}}",
+      "contains_any": "{{subject}} contains one of: {{expected}}",
+      "present": "{{subject}} is set",
+      "truthy": "{{subject}} is on"
+    },
+    "joinAll": ", and ",
+    "joinAny": ", or ",
+    "noTerms": "No conditions: the rule sets an order.",
+    "skippedNote": "Not checked: the outcome was decided earlier.",
+    "now": "Now:",
+    "inEngine": "in the engine",
+    "builtin": {
+      "nda_gate": "The NDA rule is built into the engine: a document is switched off when the project has an NDA. It can be moved to the manifest later.",
+      "manuals_gate": "The manuals rule is built into the engine: it reads the text of the \"Manuals\" field. It can be moved to the manifest later.",
+      "presentation_variant": "The presentation variant choice is built into the engine. It can be moved to the manifest later.",
+      "builtin_route": "The built-in signing order: neither the version nor the point set its own.",
+      "other": "The rule is built into the engine and has no file."
+    },
+    "openRule": "Open rule",
+    "openSource": "Source",
+    "chain": {
+      "title": "Rule chain",
+      "empty": "This element has no rules of its own.",
+      "emptyDepends": "Its state is changed by the inputs under \"What if\".",
+      "emptyStatic": "It does not depend on the inputs."
+    },
+    "stepNote": "A step's chain is the route order and the decisions about the document and slot pairs of its people.",
+    "readers": {
+      "title": "What else this rule decides",
+      "lead": "Other elements the same decisions talk about.",
+      "more_one": "Show {{count}} more",
+      "more_other": "Show {{count}} more",
+      "less": "Collapse"
+    },
+    "whatIf": {
+      "title": "What changes if...",
+      "if": "If \"{{input}}\": {{value}}",
+      "current": "(now {{value}})",
+      "then": "Element:",
+      "applied": "Applied: \"{{input}}\": {{value}}.",
+      "restore": "Undo",
+      "none": "No input changes this element."
+    },
+    "busy_one": "The server is busy, retrying in {{count}} second.",
+    "busy_other": "The server is busy, retrying in {{count}} seconds.",
+    "busyFailed": "The server is busy, the reason did not load",
+    "failed": "Could not load the reason",
+    "announce": {
+      "loaded": "Reason loaded: {{title}}",
+      "failed": "Could not load the reason"
+    },
+    "impact": {
+      "kind": "Input impact",
+      "wait": "Loading inputs and the outcome...",
+      "unknown": "This version has no such input.",
+      "inert": "This input affects nothing: no section of the outcome changes with it.",
+      "elements_one": "Affects {{count}} element",
+      "elements_other": "Affects {{count}} elements",
+      "sections_one": "in {{count}} section",
+      "sections_other": "in {{count}} sections",
+      "rulesRead": "read by {{count}} rules",
+      "noLinks": "In this combination the input's decisions are tied to no element. It changes the sections: {{sections}}.",
+      "rules": "Rules that read it",
+      "rulesHere": "{{here}} of {{total}} fired in this combination."
+    }
   },
   "footer": {
     "note": "A calculation on test data, nothing is sent.",

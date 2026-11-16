@@ -29,3 +29,39 @@ export const packOutcomePath = (
     : base;
   return search ? `${path}?${search.replace(/^\?/, "")}` : path;
 };
+
+/** Как открыть запись манифеста: форма раздела или исходник на строке. */
+export type RulePane = "form" | "source";
+
+/**
+ * Переход к правилу из экрана «Результат»: режим «Файлы» на файле с указателем записи
+ * (`at`, JSON Pointer), вкладкой (`pane`) и адресом возврата (`from`, путь экрана «Результат»
+ * вместе с состоянием). Все три параметра необязательны и обратимы: без них адрес прежний.
+ */
+export const packRulePath = (
+  id: string,
+  file: string,
+  target: { pointer: string | null; pane: RulePane; from: string },
+): string => {
+  const params = new URLSearchParams({ file });
+  if (target.pointer) params.set("at", target.pointer);
+  params.set("pane", target.pane);
+  params.set("from", target.from);
+  return `${workspaceBase(id)}?${params.toString()}`;
+};
+
+/**
+ * Адрес возврата из `from`: только экран «Результат» этого же пространства. Всё остальное
+ * (чужой хост, другой путь, мусор) отбрасывается, чтобы параметр нельзя было использовать
+ * как открытое перенаправление.
+ */
+export const safeOutcomeBack = (
+  id: string,
+  from: string | null,
+): string | null => {
+  if (!from) return null;
+  const base = `${workspaceBase(id)}/result`;
+  const ok =
+    from === base || from.startsWith(`${base}/`) || from.startsWith(`${base}?`);
+  return ok && !from.includes("//", base.length) ? from : null;
+};

@@ -189,6 +189,7 @@ const ItemRow = ({
     <li
       className="psf-row"
       data-testid={`p${String(profile.index)}-item-${String(index)}`}
+      data-pf-at={`/pack_submission/profiles/${String(profile.index)}/items/${String(index)}`}
     >
       <div className="psf-row-head">
         <Select
@@ -408,6 +409,7 @@ const ExtraRow = ({
     <li
       className="psf-row"
       data-testid={`p${String(profile.index)}-extra-${String(index)}`}
+      data-pf-at={`/pack_submission/profiles/${String(profile.index)}/extra_items/${String(index)}`}
     >
       <div className="psf-row-head">
         <span className="psf-row-title">
@@ -619,6 +621,7 @@ const SlotRow = ({
     <li
       className="psf-row psf-slot-row"
       data-testid={`p${String(profile.index)}-preset-${String(index)}`}
+      data-pf-at={`/pack_submission/profiles/${String(profile.index)}/signing_slots/${String(index)}`}
     >
       <div className="psf-row-fields">
         <Select

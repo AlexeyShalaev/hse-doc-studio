@@ -239,6 +239,8 @@ type ChipTogglesProps = {
   disabled?: boolean | undefined;
   hint?: string | undefined;
   testId?: string | undefined;
+  /** Указатель записи манифеста: к ней ведёт «Открыть правило» из экрана «Результат». */
+  at?: string | undefined;
 };
 
 /** Набор значений галочками (виды работы, состав, языки); порядок как у вариантов. */
@@ -250,8 +252,9 @@ export const ChipToggles = ({
   disabled,
   hint,
   testId,
+  at,
 }: ChipTogglesProps) => (
-  <fieldset className="pf-chips" data-testid={testId}>
+  <fieldset className="pf-chips" data-testid={testId} data-pf-at={at}>
     <legend className="pf-label">{label}</legend>
     <div className="pf-chip-row">
       {options.map((option) => {

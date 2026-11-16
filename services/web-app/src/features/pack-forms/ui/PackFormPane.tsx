@@ -22,6 +22,8 @@ export type PackFormPaneProps = {
   onSaved: (changed: string[]) => void;
   /** Открыть файл в редакторе (форма документа из ростера версии). */
   onOpenFile?: ((path: string) => void) | undefined;
+  /** Переход к правилу: указатель JSON записи манифеста, которую форма выделяет. */
+  at?: string | null | undefined;
 };
 
 /** Причина отказа сервера под текстом ошибки (`model_invalid`, `yaml_patch_conflict`). */
@@ -92,6 +94,7 @@ export const PackFormPane = ({
   path,
   onSaved,
   onOpenFile,
+  at,
 }: PackFormPaneProps) => {
   const { t } = useTranslation("packForms");
   const ref = versionRefOf(path);
@@ -130,13 +133,14 @@ export const PackFormPane = ({
             onSaved={onSaved}
           />
         ) : kind === "doc" ? (
-          <DocForm docId={path.split("/").slice(-2)[0] ?? ""} />
+          <DocForm docId={path.split("/").slice(-2)[0] ?? ""} at={at} />
         ) : (
           <VersionForm
             workspaceId={workspaceId}
             path={path}
             onSaved={onSaved}
             onOpenFile={onOpenFile}
+            at={at}
           />
         )}
       </div>

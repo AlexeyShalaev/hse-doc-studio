@@ -36,6 +36,17 @@ describe("галерея экрана «Результат»", () => {
         "po_checks_error",
         "po_branches",
         "po_branches_error",
+        "po_why_document_off",
+        "po_why_document_on",
+        "po_why_field_hidden",
+        "po_why_empty_chain",
+        "po_why_participant_absent",
+        "po_why_route_step",
+        "po_why_route_skipped",
+        "po_why_loading",
+        "po_why_error",
+        "po_why_busy",
+        "po_why_impact",
       ]),
     );
   });
@@ -198,4 +209,75 @@ describe("галерея экрана «Результат»", () => {
       expect(container.querySelector('[role="alert"]')).not.toBeNull();
     },
   );
+});
+
+describe("галерея «Почему?»", () => {
+  beforeAll(async () => {
+    await Promise.all([loadPackOutcomeNamespace(), loadPackStudioNamespace()]);
+    await i18n.changeLanguage("ru");
+  });
+  afterEach(cleanup);
+
+  const show = (id: string) => {
+    const entry = getPackOutcomeGallery()
+      .flatMap((g) => g.entries)
+      .find((e) => e.id === id);
+    expect(entry, id).toBeDefined();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    entry?.seed?.(client);
+    return render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>{entry?.render()}</MemoryRouter>
+      </QueryClientProvider>,
+    );
+  };
+
+  it("документ выключен: цепочка и «что если» из кэша, без сервера", () => {
+    const { container } = show("po_why_document_off");
+    expect(
+      container.querySelector('[data-testid="outcome-chain"]'),
+    ).not.toBeNull();
+    expect(
+      container.querySelectorAll('[data-testid="outcome-chain"] > li'),
+    ).toHaveLength(4);
+    expect(
+      container.querySelector('[data-testid="outcome-whatif"]'),
+    ).not.toBeNull();
+  });
+
+  it("загрузка, сбой и занятый сервер рисуют своё состояние", () => {
+    expect(
+      show("po_why_loading").container.querySelector(
+        '[data-testid="outcome-why-loading"]',
+      ),
+    ).not.toBeNull();
+    cleanup();
+    expect(
+      show("po_why_error").container.querySelector(
+        '[data-testid="outcome-why-error"]',
+      ),
+    ).not.toBeNull();
+    cleanup();
+    expect(
+      show("po_why_busy").container.querySelector(
+        '[data-testid="outcome-why-error"]',
+      )?.textContent,
+    ).toContain("Сервер занят");
+  });
+
+  it("влияние вводной и пустая цепочка", () => {
+    expect(
+      show("po_why_impact").container.querySelector(
+        '[data-testid="outcome-impact-summary"]',
+      ),
+    ).not.toBeNull();
+    cleanup();
+    expect(
+      show("po_why_empty_chain").container.querySelector(
+        '[data-testid="outcome-chain-empty"]',
+      ),
+    ).not.toBeNull();
+  });
 });
