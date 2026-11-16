@@ -3,11 +3,13 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, useLocation } from "react-router";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
-import type { PackOutcome } from "@entities/pack-studio";
+import { packOutcomeKeys, type PackOutcome } from "@entities/pack-studio";
 import {
   COURSEWORK_OUTCOME,
   VKR_INPUTS,
@@ -26,6 +28,10 @@ import { RouteSection } from "./RouteSection";
 // с пресетом, параллельный шаг) и правки под случаи, которых в эталонах нет (пропущенные пары,
 // шаг без человека, команда). Сервер не нужен: модель собрана вручную, адрес в MemoryRouter.
 
+const client = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
+
 const Probe = () => {
   const { search } = useLocation();
   return <output data-testid="search">{search}</output>;
@@ -41,6 +47,7 @@ const Harness = ({
   const url = useOutcomeUrlState();
   const model = {
     workspaceId: "w",
+    request: { state: "work_tree", scenario: null, example: null, inputs: {} },
     ref: { pack: "p", template: "t", version: "v" },
     released: false,
     phone: false,
@@ -57,13 +64,15 @@ const Harness = ({
     },
   } as unknown as OutcomeModel;
   return (
-    <OutcomeModelContext.Provider value={model}>
-      <DocumentsSection />
-      <ParticipantsSection />
-      <PointsSection />
-      <RouteSection />
-      <Probe />
-    </OutcomeModelContext.Provider>
+    <QueryClientProvider client={client}>
+      <OutcomeModelContext.Provider value={model}>
+        <DocumentsSection />
+        <ParticipantsSection />
+        <PointsSection />
+        <RouteSection />
+        <Probe />
+      </OutcomeModelContext.Provider>
+    </QueryClientProvider>
   );
 };
 
@@ -573,6 +582,59 @@ describe("секции F4: точки сдачи и маршрут подпис�
         "selected=route%3Afinal%2Freport%2Fauthor%2Fauthor2",
       );
       expect(second).toHaveTextContent("Автор 2");
+    });
+
+    it("пропущенный слот: «Добавить во вводных» применяет одну вводную из «что если» сервера", async () => {
+      const element = {
+        section: "route",
+        id: "topic-approval/topic_application/academic_supervisor",
+      } as const;
+      client.setQueryData(
+        packOutcomeKeys.explain(
+          "w",
+          { pack: "p", template: "t", version: "v" },
+          {
+            state: "work_tree",
+            scenario: null,
+            example: null,
+            inputs: {},
+            element,
+          },
+        ),
+        {
+          data: {
+            element,
+            state: "absent",
+            chain: [],
+            readers: [],
+            // Первая запись не возвращает слот, вторая возвращает: берётся вторая.
+            counterfactuals: [
+              { input: "academic_supervisor", value: "no", result: "absent" },
+              { input: "supervisor", value: "company", result: "present" },
+            ],
+          },
+          etag: null,
+        },
+      );
+      mount(course(universityCourse));
+      fireEvent.click(
+        screen.getByTestId("outcome-route-topic-approval-skipped-toggle"),
+      );
+      const skipped = screen.getByTestId(
+        "outcome-skipped-topic-approval-topic_application-academic_supervisor",
+      );
+      expect(skipped).toHaveAttribute("data-pale", "true");
+      fireEvent.click(
+        within(skipped).getByTestId(
+          "outcome-pale-add-route-topic-approval/topic_application/academic_supervisor",
+        ),
+      );
+      await waitFor(() => {
+        expect(screen.getByTestId("search")).toHaveTextContent(
+          "?i.supervisor=company",
+        );
+      });
+      client.clear();
     });
 
     it("фильтр по точке и поиск по документу и человеку", () => {
