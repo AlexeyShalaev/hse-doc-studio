@@ -6,14 +6,10 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.34.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.34.0...v0.34.1) (2026-11-16)
+## [0.34.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.34.0...v0.34.1) - 2026-11-16
 
-
-### Bug Fixes
-
-* **pack-studio:** local git reads in a sparse partial clone fetch missing blobs ([0af38c6](https://github.com/AlexeyShalaev/hse-doc-studio/commit/0af38c6b9f6a16b58fd6e0be0f9cb0b77b5e6ae4))
-* **pack-studio:** local git reads in a sparse partial clone fetch missing blobs ([4927bb3](https://github.com/AlexeyShalaev/hse-doc-studio/commit/4927bb3c363e8ef93d4bbce451efba7bd8054f4f))
-* **pack-studio:** workspace_git_failed text without implicit concatenation ([481fa9d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/481fa9df60c285fe2f66270b2d36bf7886a1b65b))
+- Fixed: an Official packs workspace showed "Could not read the local repository copy" right after creation. Git looked for .gitignore and .gitattributes rules outside the packs folder, and their files were missing in the partial clone. The workspace now fetches the needed files with its token, and existing workspaces repair themselves when opened.
+- Template Studio: when git fails, the banner shows collapsed support details with the command and the error line, without URLs or server paths.
 
 ## [0.34.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.33.0...v0.34.0) - 2026-11-15
 
