@@ -41,6 +41,7 @@ from hse_doc_studio.api.routers.v1 import (
     pack_studio_catalog,
     pack_studio_checks,
     pack_studio_model,
+    pack_studio_outcome,
     pack_studio_places,
     pack_studio_submission,
     passkeys,
@@ -159,6 +160,7 @@ api_router.include_router(pack_studio.section_router, tags=["pack-studio"])
 api_router.include_router(pack_studio.router, tags=["pack-studio"])
 api_router.include_router(pack_studio_places.router, tags=["pack-studio"])
 api_router.include_router(pack_studio_model.router, tags=["pack-studio"])
+api_router.include_router(pack_studio_outcome.router, tags=["pack-studio"])
 api_router.include_router(pack_studio_submission.router, tags=["pack-studio"])
 api_router.include_router(pack_studio_checks.router, tags=["pack-studio"])
 api_router.include_router(pack_studio_catalog.router, tags=["pack-studio"])

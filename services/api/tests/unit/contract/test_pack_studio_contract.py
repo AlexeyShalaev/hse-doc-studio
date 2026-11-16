@@ -141,8 +141,13 @@ def test__error_codes__match_the_enum_in_order() -> None:
     assert listed == [code.value for code in PackStudioErrorCode]
 
 
+# Отказы сервера, а не запроса: расчёт не уложился в предел или процесс занят (503 с `Retry-After`).
+_SERVER_SIDE = {PackStudioErrorCode.outcome_busy}
+
+
 def test__error_codes__each_has_an_http_status() -> None:
-    assert all(400 <= status_of(code) < 500 for code in PackStudioErrorCode)  # noqa: PLR2004
+    assert all(400 <= status_of(code) < 500 for code in PackStudioErrorCode if code not in _SERVER_SIDE)  # noqa: PLR2004
+    assert {status_of(code) for code in _SERVER_SIDE} == {503}  # noqa: PLR2004
 
 
 def test__error_bodies__codes_are_from_the_closed_list() -> None:
