@@ -146,6 +146,15 @@ class IPackWorkspaceFiles(Protocol):
         `max_bytes` пропускаются; нет каталога версии: `version_not_found`."""
         ...
 
+    def template_files(self, root: Path, pack: str, template: str, folder: str, *, max_bytes: int) -> dict[str, bytes]:
+        """Обычные файлы папки `folder` шаблона (`scenarios`, `examples`) без вложенных папок и ссылок:
+        имя -> содержимое. Нет папки: пусто; файл больше `max_bytes` пропускается (срез O6)."""
+        ...
+
+    def template_versions(self, root: Path, pack: str, template: str) -> tuple[str, ...]:
+        """Имена каталогов версий шаблона на диске; нет шаблона: `version_not_found` (срез O6)."""
+        ...
+
 
 @dataclass(frozen=True)
 class WorkspaceDirs:

@@ -1,0 +1,92 @@
+format: 1
+name:
+  ru: Команда из трёх, проект под NDA
+  en: Team of three, project under NDA
+description:
+  ru: "Общие документы команды и NDA в финале и при загрузке к ГИА; подписывают все трое авторов."
+  en: "Shared team documents and the NDA in the final and the GIA upload; all three authors sign."
+versions: ["2026.1.*"]
+inputs:
+  kind: project
+  staffing: team3
+  meta.nda: "yes"
+assertions:
+  - { kind: participant_present, persona: author3, present: true }
+  - { kind: document_state, doc: shared_technical_specification, state: active }
+  - { kind: document_state, doc: nda, state: active }
+  - { kind: item_active, point: final, doc: nda, active: true }
+  - { kind: route_steps, point: pdp-application, steps: [[author1, author2, author3], [supervisor]] }
+snapshot:
+  documents:
+    technical_specification: active
+    shared_technical_specification: active
+    test_program_and_methodology: active
+    shared_test_program_and_methodology: active
+    source_listing: active
+    programmer_manual: active
+    operator_manual: active
+    annotation: absent
+    shared_annotation: absent
+    interim_report: absent
+    pdp_assignment: active
+    pdp_work_plan: active
+    pdp_report_title: active
+    pdp_review: active
+    topic_presentation: active
+    presentation: active
+    thesis: active
+    nda: active
+  participants: [author1, author2, author3, supervisor, academic_supervisor]
+  meta_visible:
+    - year
+    - specialization
+    - manuals
+    - name_en
+    - name_short
+    - faculty
+    - city
+    - city_en
+    - udc
+    - program_code
+    - course
+    - academic_supervisor
+    - doc_code_base
+    - font_main
+    - font_sans
+    - font_mono
+    - nda
+    - supervisor
+    - co_supervisor
+  points:
+    - id: checkpoint-1
+      items: [topic_presentation, technical_specification, shared_technical_specification]
+      steps: []
+      pairs: 0
+    - id: checkpoint-2
+      items: [topic_presentation, technical_specification, shared_technical_specification, thesis]
+      steps: []
+      pairs: 0
+    - id: checkpoint-3
+      items: [technical_specification, shared_technical_specification, thesis, test_program_and_methodology, shared_test_program_and_methodology, source_listing, presentation]
+      steps: []
+      pairs: 0
+    - id: pdp-application
+      items: [pdp_assignment, pdp_work_plan]
+      steps: [[author1, author2, author3], [supervisor]]
+      pairs: 8
+    - id: final
+      items: [technical_specification, shared_technical_specification, thesis, test_program_and_methodology, shared_test_program_and_methodology, source_listing, programmer_manual, operator_manual, presentation, pdp_report_title, pdp_review, nda]
+      steps: [[author1, author2, author3], [supervisor]]
+      pairs: 37
+    - id: gia
+      items: [thesis, technical_specification, shared_technical_specification, test_program_and_methodology, shared_test_program_and_methodology, source_listing, programmer_manual, operator_manual, nda]
+      steps: [[author1, author2, author3], [supervisor]]
+      pairs: 32
+  sections:
+    - { section: documents, fingerprint: 190fd403f137, count: 15 }
+    - { section: meta, fingerprint: a1ffc64a0704, count: 19 }
+    - { section: forms, fingerprint: baa9eaef9a4a, count: 2 }
+    - { section: participants, fingerprint: 69e9b6580a38, count: 5 }
+    - { section: points, fingerprint: 1786883de2a9, count: 37 }
+    - { section: route, fingerprint: 97940c525c89, count: 77 }
+    - { section: checks, fingerprint: 4f53cda18c2b, count: 0 }

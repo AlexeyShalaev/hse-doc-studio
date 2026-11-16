@@ -1,0 +1,37 @@
+{
+  "scenario": {
+    "format": 1,
+    "name": {
+      "ru": "Без научного руководителя, снимок с версии",
+      "en": "No supervisor, snapshot of a version"
+    },
+    "description": {
+      "ru": "Крайний случай: в проекте указан только автор.",
+      "en": "An edge case: the project has only the author."
+    },
+    "example": null,
+    "inputs": {
+      "supervisor": "none",
+      "co_supervisor": "no",
+      "academic_supervisor": "no"
+    },
+    "versions": [
+      "2026.1.*"
+    ],
+    "snapshot": null,
+    "assertions": [
+      {
+        "kind": "participant_present",
+        "persona": "supervisor",
+        "present": false
+      },
+      {
+        "kind": "document_count",
+        "state": "active",
+        "count": 4
+      }
+    ]
+  },
+  "record_snapshot": "head",
+  "version": "2026.1.5"
+}

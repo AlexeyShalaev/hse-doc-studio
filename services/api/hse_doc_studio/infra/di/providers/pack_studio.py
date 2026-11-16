@@ -85,6 +85,7 @@ from hse_doc_studio.use_cases.pack_studio.outcome_service import OutcomeLimits, 
 from hse_doc_studio.use_cases.pack_studio.places import PackPlacesService
 from hse_doc_studio.use_cases.pack_studio.preview import PackPreviewService, PreviewLimits
 from hse_doc_studio.use_cases.pack_studio.scaffold import PackScaffoldService
+from hse_doc_studio.use_cases.pack_studio.scenario_service import PackScenarioService
 from hse_doc_studio.use_cases.pack_studio.submission import PackSubmissionService
 from hse_doc_studio.use_cases.pack_studio.versions import PackVersionService
 from hse_doc_studio.use_cases.pack_studio.workspaces import PackWorkspaceService, WorkspaceTasks
@@ -347,6 +348,16 @@ class PackStudioProvider(Provider):
             max_bytes=cfg.max_tree_bytes,
         )
         return PackOutcomeService(workspaces, previews, renderer, files, git, limits=limits)
+
+    @provide
+    def get_scenario_service(
+        self,
+        outcome: PackOutcomeService,
+        files: PackFilesService,
+        workspaces: PackWorkspaceService,
+        port: IPackWorkspaceFiles,
+    ) -> PackScenarioService:
+        return PackScenarioService(outcome, files, workspaces, port)
 
     @provide
     def get_checks_form_service(self, files: PackFilesService) -> PackChecksFormService:

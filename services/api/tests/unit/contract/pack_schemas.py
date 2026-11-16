@@ -47,8 +47,9 @@ def as_json(value: Any) -> Any:
 
 
 def schema_for(path: Path) -> str | None:
-    """Какая схема описывает файл пака; None у правил проверок (`checks/*.yaml`, схема позже)."""
-    if path.parent.name == "checks":
+    """Какая схема описывает файл пака; None у правил проверок (`checks/*.yaml`, схема позже) и у файлов шаблона вне
+    версии, которые не манифесты (сценарии `scenarios/*.yaml`, наборы данных `examples/*.yaml`)."""
+    if path.parent.name in {"checks", "scenarios", "examples"}:
         return None
     if path.name == "doc.yaml":
         return "doc"

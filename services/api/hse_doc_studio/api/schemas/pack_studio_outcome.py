@@ -7,8 +7,9 @@
 Эталоны лежат в `contracts/pack-studio/fixtures`, тест `tests/unit/contract/test_pack_studio_contract.py` сверяет их
 с этими моделями, а клиентские схемы zod (`entities/pack-studio/api/outcome.ts`) разбирают те же эталоны. Эндпоинты
 `outcome/inputs` и `outcome` работают (срез O2, `api/routers/v1/pack_studio_outcome.py`, служба
-`use_cases/pack_studio/outcome_service.py`), остальные приходят со своими срезами плана (раздел 7); ядро расчёта
-(срез O1) в `core/pack_studio/outcome` и `use_cases/pack_studio/outcome`.
+`use_cases/pack_studio/outcome_service.py`), так же сценарии: список, запись, удаление и прогон (срез O6,
+`api/routers/v1/pack_studio_scenarios.py`, служба `use_cases/pack_studio/scenario_service.py`); остальные приходят со
+своими срезами плана (раздел 7). Ядро расчёта (срез O1) в `core/pack_studio/outcome` и `use_cases/pack_studio/outcome`.
 
 Все значения вводных строки, как в комбинации предпросмотра (`yes` и `no` у логических), чтобы состояние можно было
 положить в адрес страницы.
@@ -619,6 +620,8 @@ class PackScenarioWriteRequest(StrictModel):
 
     scenario: PackScenario
     record_snapshot: OutcomeStateName | None = None
+    # Версия, на которой считается снимок; null: старшая версия шаблона на диске, подходящая под `versions` сценария.
+    version: str | None = Field(default=None, max_length=_ID)
 
 
 # ── Покрытие и находки линтера результата ────────────────────────────────────
@@ -645,6 +648,9 @@ class PackScenarioRunRequest(StrictModel):
     state: OutcomeStateName = "work_tree"
     # null: все сценарии шаблона.
     scenarios: list[str] | None = Field(default=None, max_length=200)
+    # Версия, на которой идёт прогон; null: старшая версия шаблона на диске. Сценарий вне своих `versions` на ней
+    # не выполняется (`unchecked` с пояснением в `message`).
+    version: str | None = Field(default=None, max_length=_ID)
 
 
 class OutcomeChange(StrictModel):

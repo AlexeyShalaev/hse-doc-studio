@@ -1,0 +1,92 @@
+format: 1
+name:
+  ru: NDA и только руководство программиста
+  en: NDA and the programmer manual only
+description:
+  ru: "Оператору руководство не нужно: документ неактивен, NDA в комплекте."
+  en: "No operator manual is needed: the document is inactive, the NDA is in the set."
+versions: ["2026.1.*"]
+inputs:
+  kind: project
+  staffing: solo
+  meta.nda: "yes"
+  meta.manuals: Только программиста
+assertions:
+  - { kind: document_state, doc: operator_manual, state: inactive }
+  - { kind: document_state, doc: nda, state: active }
+  - { kind: item_active, point: final, doc: nda, active: true }
+  - { kind: meta_visible, field: manuals, visible: true }
+snapshot:
+  documents:
+    technical_specification: active
+    shared_technical_specification: absent
+    test_program_and_methodology: active
+    shared_test_program_and_methodology: absent
+    source_listing: active
+    programmer_manual: active
+    operator_manual: inactive
+    annotation: absent
+    shared_annotation: absent
+    interim_report: absent
+    pdp_assignment: active
+    pdp_work_plan: active
+    pdp_report_title: active
+    pdp_review: active
+    topic_presentation: active
+    presentation: active
+    thesis: active
+    nda: active
+  participants: [author, supervisor, academic_supervisor]
+  meta_visible:
+    - year
+    - specialization
+    - manuals
+    - name_en
+    - name_short
+    - faculty
+    - city
+    - city_en
+    - udc
+    - program_code
+    - course
+    - academic_supervisor
+    - doc_code_base
+    - font_main
+    - font_sans
+    - font_mono
+    - nda
+    - supervisor
+    - co_supervisor
+  points:
+    - id: checkpoint-1
+      items: [topic_presentation, technical_specification]
+      steps: []
+      pairs: 0
+    - id: checkpoint-2
+      items: [topic_presentation, technical_specification, thesis]
+      steps: []
+      pairs: 0
+    - id: checkpoint-3
+      items: [technical_specification, thesis, test_program_and_methodology, source_listing, presentation]
+      steps: []
+      pairs: 0
+    - id: pdp-application
+      items: [pdp_assignment, pdp_work_plan]
+      steps: [[author], [supervisor]]
+      pairs: 4
+    - id: final
+      items: [technical_specification, thesis, test_program_and_methodology, source_listing, programmer_manual, presentation, pdp_report_title, pdp_review, nda]
+      steps: [[author], [supervisor]]
+      pairs: 13
+    - id: gia
+      items: [thesis, technical_specification, test_program_and_methodology, source_listing, programmer_manual, nda]
+      steps: [[author], [supervisor]]
+      pairs: 10
+  sections:
+    - { section: documents, fingerprint: 42c1608cf261, count: 12 }
+    - { section: meta, fingerprint: a1ffc64a0704, count: 19 }
+    - { section: forms, fingerprint: baa9eaef9a4a, count: 2 }
+    - { section: participants, fingerprint: f1113ea43c16, count: 3 }
+    - { section: points, fingerprint: 83f37932ab29, count: 27 }
+    - { section: route, fingerprint: ede85b60fe1c, count: 27 }
+    - { section: checks, fingerprint: 4f53cda18c2b, count: 0 }

@@ -200,6 +200,37 @@ def test__right__person_without_grant__outcome_endpoints_are_refused_and_capabil
     assert (after["pack_studio"], after["pack_outcome"]) == (True, True)
 
 
+def test__right__person_without_grant__scenario_endpoints_are_refused(server: TestClient) -> None:
+    """Сценарии шаблона (срез O6) под тем же правом «Автор шаблонов», что весь раздел: ни чтения, ни записи, ни
+    удаления, ни прогона без права; с правом запрос доходит до пространства (чужого или несуществующего нет)."""
+    admin = _admin(server)
+    _enable(admin)
+    anna_id, anna = _author(server)
+    base = f"{API}/workspaces/{uuid.uuid4()}/templates/hse-cs-se/vkr/scenarios"
+    body = {"scenario": {"format": 1, "name": {"ru": "А"}, "inputs": {}}}
+
+    refused = [
+        anna.get(base),
+        anna.put(f"{base}/a", json=body),
+        anna.delete(f"{base}/a"),
+        anna.post(f"{base}/run", json={}),
+    ]
+    admin.post(f"{ADMIN_API}/grants", json={"user_id": anna_id})
+    allowed = [
+        anna.get(base),
+        anna.put(f"{base}/a", json=body),
+        anna.delete(f"{base}/a"),
+        anna.post(f"{base}/run", json={}),
+    ]
+
+    for resp in refused:
+        assert resp.status_code == 403
+        assert resp.json()["code"] == "pack_studio_forbidden"
+    for resp in allowed:
+        assert resp.status_code == 404
+        assert resp.json()["code"] == "workspace_not_found"
+
+
 def test__right__granted_to_person_then_revoked(server: TestClient) -> None:
     admin = _admin(server)
     _enable(admin)

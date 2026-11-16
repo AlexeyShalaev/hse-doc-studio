@@ -1,0 +1,46 @@
+format: 1
+name:
+  ru: Руководитель из ВШЭ
+  en: University supervisor
+description:
+  ru: Предложение проекта и презентация защиты, оба документа в комплекте.
+  en: The project proposal and the defence presentation, both documents are in the set.
+versions: ["2026.1.*"]
+inputs:
+  supervisor: university
+assertions:
+  - { kind: document_state, doc: project_proposal, state: active }
+  - { kind: document_state, doc: presentation, state: active }
+  - { kind: item_active, point: defence, doc: presentation, active: true }
+snapshot:
+  documents:
+    project_proposal: active
+    presentation: active
+  participants: [author, supervisor, academic_supervisor]
+  meta_visible:
+    - year
+    - author_name_en
+    - faculty_en
+    - university_en
+    - city_en
+    - font_main
+    - font_sans
+    - font_mono
+    - supervisor
+  points:
+    - id: written-pp
+      items: [project_proposal]
+      steps: []
+      pairs: 0
+    - id: defence
+      items: [project_proposal, presentation]
+      steps: []
+      pairs: 0
+  sections:
+    - { section: documents, fingerprint: 6113acd019b0, count: 2 }
+    - { section: meta, fingerprint: 89c475590c94, count: 9 }
+    - { section: forms, fingerprint: 4f53cda18c2b, count: 0 }
+    - { section: participants, fingerprint: f1113ea43c16, count: 3 }
+    - { section: points, fingerprint: 408a30733cb1, count: 3 }
+    - { section: route, fingerprint: 28a03868c10e, count: 0 }
+    - { section: checks, fingerprint: 4f53cda18c2b, count: 0 }
