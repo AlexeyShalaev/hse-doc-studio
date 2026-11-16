@@ -81,6 +81,7 @@ from hse_doc_studio.use_cases.pack_studio.git import PackGitService
 from hse_doc_studio.use_cases.pack_studio.insight import PackInsightService
 from hse_doc_studio.use_cases.pack_studio.model import PackModelService
 from hse_doc_studio.use_cases.pack_studio.official import OfficialPacks
+from hse_doc_studio.use_cases.pack_studio.outcome_atlas import PackAtlasService
 from hse_doc_studio.use_cases.pack_studio.places import PackPlacesService
 from hse_doc_studio.use_cases.pack_studio.preview import PackPreviewService, PreviewLimits
 from hse_doc_studio.use_cases.pack_studio.scaffold import PackScaffoldService
@@ -314,6 +315,11 @@ class PackStudioProvider(Provider):
     ) -> PackPreviewService:
         limits = PreviewLimits(max_concurrent=settings.pack_studio.preview_max_concurrent)
         return PackPreviewService(workspaces, renderer, store, dispatcher, limits=limits)
+
+    @provide
+    def get_atlas_service(self, previews: PackPreviewService) -> PackAtlasService:
+        # Один на процесс: держит кэш атласов, семафор расчётов и общие расчёты одинаковых запросов.
+        return PackAtlasService(previews)
 
     @provide
     def get_places_service(self, files: PackFilesService, previews: PackPreviewService) -> PackPlacesService:

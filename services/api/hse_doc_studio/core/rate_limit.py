@@ -62,6 +62,9 @@ DEVICE_CODE_LOOKUP = RateRule("device_code_lookup", limit=10, window_s=60)
 # Вызовы тулов MCP по человеку (docs/design/mcp.md, M11); дорогие тулы ещё и под правилами своих маршрутов.
 MCP_CALL = RateRule("mcp_call", limit=120, window_s=60)
 
+# Атлас результата версии шаблона (Студия шаблонов, O4): расчёт тысяч комбинаций, по человеку; кэш и 304 разгружают.
+PACK_ATLAS = RateRule("pack_atlas", limit=6, window_s=60)
+
 # Установка раннера по SSH из админки: попытки подключения по админу и по целевому адресу.
 SSH_ATTEMPT = RateRule("ssh_attempt", limit=10, window_s=60)
 SSH_ATTEMPT_HOST = RateRule("ssh_attempt_host", limit=5, window_s=60)
@@ -86,6 +89,7 @@ RULES: dict[str, RateRule] = {
         GIT_HTTP,
         DEVICE_CODE_LOOKUP,
         MCP_CALL,
+        PACK_ATLAS,
         SSH_ATTEMPT,
         SSH_ATTEMPT_HOST,
     )

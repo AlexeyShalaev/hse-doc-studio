@@ -55,6 +55,7 @@ from hse_doc_studio.core.pack_studio.preview import (
     PreviewError,
     PreviewExample,
     PreviewInputError,
+    PreviewInputs,
     PreviewRenderError,
     PreviewStatus,
     PreviewSwitch,
@@ -105,6 +106,16 @@ class PreviewOptions:
     examples: tuple[PreviewExample, ...]
     default_example: str
     combination: Mapping[str, str]
+
+
+@dataclass(frozen=True)
+class VersionSource:
+    """Что читают расчёты результата (атлас и другие): модель версии, дайджесты файлов и наборы данных."""
+
+    desc: VersionDescription
+    inputs: PreviewInputs
+    examples: tuple[PreviewExample, ...]
+    default_example: str
 
 
 @dataclass(frozen=True)
@@ -186,6 +197,15 @@ class PackPreviewService:
         _ws, root = await self._workspaces.ready(actor, workspace_id)
         ref = version_ref(pack, template, version)
         return await self._description(root, ref, (await self._renderer.inputs(root, ref)).tree)
+
+    async def source(self, actor: Actor, workspace_id: UUID, pack: str, template: str, version: str) -> VersionSource:
+        """Модель версии рабочего дерева с дайджестами входа и наборами данных (тот же разбор и кэш, что у сборки)."""
+        _ws, root = await self._workspaces.ready(actor, workspace_id)
+        ref = version_ref(pack, template, version)
+        inputs = await self._renderer.inputs(root, ref)
+        desc = await self._description(root, ref, inputs.tree)
+        examples = _examples(desc)
+        return VersionSource(desc, inputs, examples, _default_example(examples))
 
     async def options(self, actor: Actor, workspace_id: UUID, pack: str, template: str, version: str) -> PreviewOptions:
         desc = await self.describe(actor, workspace_id, pack, template, version)

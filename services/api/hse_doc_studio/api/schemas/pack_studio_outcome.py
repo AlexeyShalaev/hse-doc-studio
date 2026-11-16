@@ -5,9 +5,9 @@
 объясняет каждое решение цепочкой правил (`trace`). Клиент условий не считает: он показывает то, что вернул сервер.
 
 Эталоны лежат в `contracts/pack-studio/fixtures`, тест `tests/unit/contract/test_pack_studio_contract.py` сверяет их
-с этими моделями, а клиентские схемы zod (`entities/pack-studio/api/outcome.ts`) разбирают те же эталоны. Эндпоинтов у
-этих схем пока нет: срез O2 плана (раздел 7); ядро расчёта (срез O1) в
-`core/pack_studio/outcome` и `use_cases/pack_studio/outcome`.
+с этими моделями, а клиентские схемы zod (`entities/pack-studio/api/outcome.ts`) разбирают те же эталоны. Эндпоинт есть
+у атласа (срез O4, `api/routers/v1/pack_studio_atlas.py`), у остальных схем его пока нет: срез O2 плана (раздел 7) и
+следующие; ядро расчёта (срез O1) в `core/pack_studio/outcome` и `use_cases/pack_studio/outcome`.
 
 Все значения вводных строки, как в комбинации предпросмотра (`yes` и `no` у логических), чтобы состояние можно было
 положить в адрес страницы.
