@@ -358,6 +358,10 @@ const mockWorkspaces = async (page: Page): Promise<Fake> => {
     if (rest === `/${WS}/templates/hse-cs-sse/coursework/scenarios`) {
       return json(route, { ...fixture("PackScenarioList", "coursework"), workspace_id: WS });
     }
+    // Прогон сценариев (F8): два совпали, один изменился, один файл не разобран.
+    if (rest === `/${WS}/templates/hse-cs-sse/coursework/scenarios/run`) {
+      return json(route, { ...fixture("PackScenarioRun", "coursework_after_edit"), workspace_id: WS });
+    }
     if (rest === `/${WS}/versions/hse-cs-sse/coursework/2026.1.6/preview`) {
       if (req.method() === "GET") return json(route, PREVIEW_OPTIONS);
       fake.previews.push(req.postDataJSON());
@@ -788,6 +792,25 @@ for (const lang of LANGS) {
       await expect(page).not.toHaveURL(/i\.staffing/);
       await expect(page.getByTestId("outcome-control-staffing-solo")).toHaveAttribute("aria-checked", "true");
 
+      // Сценарии (F8): список со статусом прогона у каждого и итогом, окно «Сохранить как сценарий».
+      await page.getByTestId("scenario-trigger").click();
+      await expect(page.getByTestId("scenario-summary")).toContainText(
+        text("2 совпало, 1 изменилось", "2 passed, 1 changed"),
+      );
+      await expect(page.getByTestId("scenario-option-university-supervisor")).toContainText(
+        text("Изменилось", "Changed"),
+      );
+      await expect(page.getByTestId("scenario-option-draft")).toContainText(text("Файл не читается", "File unreadable"));
+      await shot(page, L, "ps-82-outcome-scenarios");
+      await page.keyboard.press("Escape");
+      await expect(page.getByTestId("scenario-list")).toBeHidden();
+      await page.getByTestId("scenario-save-as").click();
+      await expect(page.getByTestId("scenario-save-dialog")).toBeVisible();
+      await expect(page.getByTestId("scenario-group-document_state")).toBeAttached();
+      await shot(page, L, "ps-83-outcome-scenario-save");
+      await page.keyboard.press("Escape");
+      await expect(page.getByTestId("scenario-save-dialog")).toBeHidden();
+
       // Режим «Как студент» живёт в адресе: перезагрузка возвращает тот же экран.
       await page.getByTestId("outcome-mode-student").click();
       await expect(page).toHaveURL(/mode=student/);
@@ -848,6 +871,16 @@ for (const lang of LANGS) {
         await expect(page.getByRole("dialog").getByTestId("outcome-inputs")).toBeVisible();
         await expectNoHorizontalScroll(page);
         await shot(page, L, "ps-81-outcome-phone");
+        // Выбор сценария на телефоне: лист со статусами, без горизонтальной прокрутки.
+        await page.keyboard.press("Escape");
+        await expect(page.getByRole("dialog")).toBeHidden();
+        await page.getByTestId("scenario-trigger").click();
+        await expect(page.getByTestId("scenario-list")).toBeVisible();
+        await expect(page.getByTestId("scenario-summary")).toContainText(
+          text("2 совпало, 1 изменилось", "2 passed, 1 changed"),
+        );
+        await expectNoHorizontalScroll(page);
+        await shot(page, L, "ps-84-outcome-scenarios-phone");
       });
     });
   });

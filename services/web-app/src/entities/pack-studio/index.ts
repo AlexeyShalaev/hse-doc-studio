@@ -20,8 +20,15 @@ export {
   packOutcomeKeys,
   retryOutcome,
   usePackOutcome,
+  useDeletePackScenario,
   usePackOutcomeInputs,
+  usePackScenarioRun,
   usePackScenarios,
+  useWritePackScenario,
+} from "./api/outcomeQueries";
+export type {
+  DeletePackScenario,
+  WritePackScenario,
 } from "./api/outcomeQueries";
 // Срез T14: файлы правил проверок и checks_version формой.
 export {

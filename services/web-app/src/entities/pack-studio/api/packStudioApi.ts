@@ -140,7 +140,7 @@ export class PackStaleFileError extends Error {
   }
 }
 
-const rethrowStale = (error: unknown): never => {
+export const rethrowStale = (error: unknown): never => {
   if (error instanceof ApiError && error.code === "stale_file") {
     const etag = error.data?.etag;
     const content = error.data?.content;

@@ -12,6 +12,7 @@ import {
 import {
   COURSEWORK_INPUTS,
   COURSEWORK_OUTCOME,
+  COURSEWORK_RUN,
   COURSEWORK_SCENARIOS,
   VKR_BRANCHES,
   VKR_CHECKS,
@@ -22,6 +23,7 @@ import { ApiError } from "@shared/api";
 import type { GalleryGroup } from "@shared/lib/stateGallery";
 import { OutcomeSearchContext, parseOutcomeSearch } from "./lib/urlState";
 import { OutcomeBody } from "./OutcomeBody";
+import type { ScenarioDialog } from "./ui/scenarios/context";
 
 // Галерея экрана «Результат» (/dev/server-screens): каркас во всех состояниях на эталонах
 // контракта, сервер не нужен. Каждая запись живёт в своём пространстве (свой кэш запросов), а
@@ -147,6 +149,9 @@ const withIdentity = (id: string, outcome: PackOutcome): PackOutcome => ({
 type Kind = "ready" | "loading" | "unreadable" | "empty";
 /** Состояние панели «Вводные»: у неё свой запрос, и он может быть в любом состоянии. */
 type InputsKind = "ready" | "loading" | "error" | "none";
+/** Сценарии шаблона: есть (в эталоне один файл не разобран), нет; прогон: готов, идёт, не удался. */
+type ScenariosKind = "ok" | "empty";
+type RunKind = "ready" | "loading" | "failed";
 
 /** Заполнить кэш так, чтобы экран видел данные без сервера, и запретить перечитывание. */
 const seedWorkspace = (
@@ -158,6 +163,8 @@ const seedWorkspace = (
   inputsKind: InputsKind,
   edit?: (outcome: PackOutcome) => void,
   parts: "ok" | "error" = "ok",
+  scenarioKind: ScenariosKind = "ok",
+  runKind: RunKind = "ready",
 ) => {
   const ref = refOf(work);
   const url = parseOutcomeSearch(new URLSearchParams(search));
@@ -201,12 +208,53 @@ const seedWorkspace = (
         errorUpdatedAt: Date.now(),
       });
   }
-  client.setQueryData(packOutcomeKeys.scenarios(id, ref.pack, ref.template), {
+  const list = structuredClone({
     ...COURSEWORK_SCENARIOS,
     workspace_id: id,
     pack: ref.pack,
     template: ref.template,
   });
+  if (scenarioKind === "empty") list.scenarios = [];
+  client.setQueryData(
+    packOutcomeKeys.scenarios(id, ref.pack, ref.template, url.state),
+    list,
+  );
+  // Прогон сценариев: ждёт `revision` вводных версии, она в эталоне вводных.
+  const runKey = packOutcomeKeys.scenarioRun(
+    id,
+    ref,
+    url.state,
+    inputsBase.revision,
+  );
+  if (scenarioKind === "empty") {
+    // Без сценариев прогона нет.
+  } else if (runKind === "ready") {
+    client.setQueryData(runKey, {
+      ...structuredClone(COURSEWORK_RUN),
+      workspace_id: id,
+      pack: ref.pack,
+      template: ref.template,
+      version: ref.version,
+      state: url.state,
+    });
+  } else if (runKind === "loading") {
+    void client.prefetchQuery({
+      queryKey: runKey,
+      queryFn: () => new Promise<never>(() => undefined),
+    });
+  } else {
+    client
+      .getQueryCache()
+      .build(client, { queryKey: runKey })
+      .setState({
+        status: "error",
+        fetchStatus: "idle",
+        data: undefined,
+        error: new ApiError("Сервер занят расчётом.", "outcome_busy", 503),
+        errorUpdateCount: 1,
+        errorUpdatedAt: Date.now(),
+      });
+  }
   const key = packOutcomeKeys.result(id, ref, request);
   const scenario = COURSEWORK_SCENARIOS.scenarios.find(
     (entry) => entry.id === url.scenario,
@@ -300,6 +348,11 @@ type Spec = {
   edit?: (outcome: PackOutcome) => void;
   /** Что отвечают запросы правил проверок и веток: данные или сбой. */
   parts?: "ok" | "error";
+  /** Сценарии шаблона и их прогон (по умолчанию из эталонов, прогон готов). */
+  scenarios?: ScenariosKind;
+  run?: RunKind;
+  /** Окно сценариев, открытое сразу: список выбора, «Сохранить как сценарий», панель. */
+  dialog?: ScenarioDialog;
 };
 
 /** Команда из двух: личные документы по авторам, у одного нет редакции на язык проекта. */
@@ -555,6 +608,77 @@ const SPECS: Spec[] = [
     search: "scenario=company-supervisor",
   },
   {
+    id: "po_scenarios_picker",
+    title: "Сценарии: выбор, статусы и итог прогона",
+    note: "Список сценариев курсового проекта: значок статуса у каждого, итог «2 совпало, 1 изменилось», «Прогнать все», счётчик «1 из 3» на кнопке.",
+    kind: "ready",
+    work: "coursework",
+    search: "scenario=university-supervisor",
+    dialog: { kind: "picker" },
+  },
+  {
+    id: "po_scenarios_empty",
+    title: "Сценарии: пока нет",
+    note: "Подсказка «Создайте первый сценарий из текущих вводных» с примерами для курсового проекта и ВКР.",
+    kind: "ready",
+    work: "coursework",
+    scenarios: "empty",
+    dialog: { kind: "picker" },
+  },
+  {
+    id: "po_scenarios_broken",
+    title: "Сценарии: сбой прогона",
+    note: "Прогон не удался (сервер занят): плашка с повтором, значки «Не прогнан»; файл draft не разобран и виден с причиной.",
+    kind: "ready",
+    work: "coursework",
+    run: "failed",
+    dialog: { kind: "picker" },
+  },
+  {
+    id: "po_scenarios_running",
+    title: "Сценарии: идёт прогон",
+    note: "Результатов прогона ещё нет: у сценариев «Прогоняю...», кнопка «Прогнать все» отключена.",
+    kind: "ready",
+    work: "coursework",
+    run: "loading",
+    dialog: { kind: "picker" },
+  },
+  {
+    id: "po_scenario_create",
+    title: "Сценарии: «Сохранить как сценарий»",
+    note: "Окно из текущих вводных: название на двух языках, имя файла, версии, снимок и готовые утверждения по результату.",
+    kind: "ready",
+    work: "coursework",
+    search: "i.supervisor=university&i.co_supervisor=no",
+    dialog: { kind: "create" },
+  },
+  {
+    id: "po_scenario_panel_failed",
+    title: "Сценарии: панель, результат изменился",
+    note: "Расхождение по разделам со знаками плюс, тильда, минус, «Принять текущий результат как ожидаемый», правка, дублирование и удаление.",
+    kind: "ready",
+    work: "coursework",
+    search: "scenario=university-supervisor",
+    dialog: { kind: "panel", id: "university-supervisor" },
+  },
+  {
+    id: "po_scenario_panel_broken",
+    title: "Сценарии: панель битого файла",
+    note: "Причина от сервера и переход к файлу.",
+    kind: "ready",
+    work: "coursework",
+    dialog: { kind: "panel", id: "draft" },
+  },
+  {
+    id: "po_scenario_save_inputs",
+    title: "Сценарии: «Сохранить в сценарий»",
+    note: "Что изменится во вводных сценария, снимок обновляется по галочке.",
+    kind: "ready",
+    work: "coursework",
+    search: "scenario=company-supervisor&i.supervisor=university",
+    dialog: { kind: "saveInputs", id: "company-supervisor" },
+  },
+  {
     id: "po_inputs_loading",
     title: "Вводные: загрузка",
     note: "Скелет панели, пока сервер не ответил на inputs.",
@@ -623,6 +747,8 @@ export const getPackOutcomeGallery = (): GalleryGroup[] => [
             spec.inputs ?? "ready",
             spec.edit,
             spec.parts,
+            spec.scenarios,
+            spec.run,
           );
         },
         render: () => (
@@ -631,6 +757,7 @@ export const getPackOutcomeGallery = (): GalleryGroup[] => [
               <OutcomeBody
                 workspace={workspace(id)}
                 version={refOf(spec.work ?? "vkr")}
+                scenarioDialog={spec.dialog ?? null}
               />
             </div>
           </GalleryUrl>

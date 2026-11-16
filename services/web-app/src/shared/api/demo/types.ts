@@ -12,6 +12,8 @@ export type DemoRequest = {
   query: Record<string, string | string[]>;
   // JSON-тело уже разобрано; multipart приходит как FormData.
   body: unknown;
+  // Заголовки запроса с именами в нижнем регистре (`if-match` и другие, что поставил клиент).
+  headers?: Record<string, string>;
   // Отправить запрос настоящему бэкенду: нужно, чтобы дополнить его ответ.
   forward: () => Promise<AxiosResponse>;
 };
