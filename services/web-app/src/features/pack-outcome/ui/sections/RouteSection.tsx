@@ -15,6 +15,7 @@ import { pairId, skippedId, stepId } from "../../lib/routeIds";
 import { summarize } from "../../lib/summary";
 import { useOutcomeModel } from "../../model";
 import "../../outcomeRoute.css";
+import { PaleSlot } from "./PaleSlot";
 import { SectionShell } from "./SectionShell";
 import {
   Disclosure,
@@ -187,21 +188,20 @@ const SkippedCard = ({
   const reasons = explain.reasons(skip.why);
   const when = whenText(t, skip.when);
   return (
-    <PickItem
+    <PaleSlot
       el={{
         section: "route",
         id: skippedId(point.id, skip.doc_id, skip.slot_id),
       }}
-      muted
       testId={`outcome-skipped-${point.id}-${skip.doc_id}-${skip.slot_id}`}
-      title={`${names(skip.doc_id)}: ${personaLabel(t, skip.slot_id)}`}
+      name={`${names(skip.doc_id)}: ${personaLabel(t, skip.slot_id)}`}
     >
       {when && <span className="po-note">{when}</span>}
       <Reason
         prefix={t("route.skippedPrefix")}
         texts={reasons.length > 0 ? reasons : [t("route.skippedUnknown")]}
       />
-    </PickItem>
+    </PaleSlot>
   );
 };
 

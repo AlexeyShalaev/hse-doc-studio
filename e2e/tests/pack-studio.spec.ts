@@ -856,7 +856,19 @@ for (const lang of LANGS) {
       await expect(page.getByTestId("outcome-rules-panel")).toBeHidden();
       await page.reload();
       await expect(page.getByTestId("outcome-mode-student")).toHaveAttribute("aria-pressed", "true");
-      await expect(page.getByTestId("outcome-summary")).toContainText(text("4 документа", "4 documents"));
+      // Срез F13: три упрощённых блока без служебных меток, Alt временно показывает вид автора.
+      await expect(page.getByTestId("outcome-student")).toBeVisible();
+      await expect(page.getByTestId("outcome-student-documents")).toContainText(
+        text("Студент получит 4 документа", "The student gets 4 documents"),
+      );
+      await expect(page.getByTestId("outcome-student-route")).toBeVisible();
+      await expect(page.getByTestId("outcome-section-documents")).toBeHidden();
+      await shot(page, L, "ps-87-outcome-student");
+      await page.keyboard.down("Alt");
+      await expect(page.getByTestId("outcome-section-documents")).toBeVisible();
+      await expect(page).toHaveURL(/mode=student/);
+      await page.keyboard.up("Alt");
+      await expect(page.getByTestId("outcome-student")).toBeVisible();
 
       // Панель «Файлы» с прежним деревом, затем режим «Файлы» целиком.
       await page.getByTestId("outcome-files-open").click();

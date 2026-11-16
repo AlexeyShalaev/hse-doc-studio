@@ -10,6 +10,7 @@ import { useOutcomeModel } from "../model";
 import { Notice } from "./Notice";
 import { VIEW_PANEL_ID, viewTabId } from "./modeIds";
 import { ModeSkeleton } from "./ModeSkeleton";
+import { StudentView } from "./student/StudentView";
 import {
   BranchesSection,
   ChecksSection,
@@ -19,6 +20,7 @@ import {
   PointsSection,
   RouteSection,
 } from "./sections";
+import { RowsSkeleton } from "./sections/PartStatus";
 
 // Режимы «Матрица», «Атлас», «Сравнить» (срез F9) грузятся отдельным чанком: открывают их реже.
 const OutcomeModes = lazy(() =>
@@ -40,19 +42,20 @@ const reasonOf = (error: unknown): string | null => {
 export const ResultCenter = () => {
   const { t } = useTranslation("packOutcome");
   const model = useOutcomeModel();
-  const { outcome, shown, workspaceId, ref, url } = model;
-  const view = url.state.mode === "student" ? "result" : url.state.view;
-  if (view !== "result") {
+  const { outcome, shown, workspaceId, ref, url, view } = model;
+  const student = view === "student";
+  const centerView = student ? "result" : url.state.view;
+  if (centerView !== "result") {
     return (
       <div
         className="po-center-body"
         id={VIEW_PANEL_ID}
         role="tabpanel"
-        aria-labelledby={viewTabId(view)}
-        data-testid={`outcome-view-panel-${view}`}
+        aria-labelledby={viewTabId(centerView)}
+        data-testid={`outcome-view-panel-${centerView}`}
       >
         <Suspense fallback={<ModeSkeleton />}>
-          <OutcomeModes view={view} />
+          <OutcomeModes view={centerView} />
         </Suspense>
       </div>
     );
@@ -106,13 +109,15 @@ export const ResultCenter = () => {
     <div
       className="po-center-body"
       id={VIEW_PANEL_ID}
-      role={url.state.mode === "student" ? undefined : "tabpanel"}
-      aria-labelledby={
-        url.state.mode === "student" ? undefined : viewTabId("result")
-      }
+      role={student ? undefined : "tabpanel"}
+      aria-labelledby={student ? undefined : viewTabId("result")}
     >
       <div className="po-summary" data-testid="outcome-summary">
-        {sum ? (
+        {student ? (
+          <p className="po-summary-text" data-testid="outcome-student-summary">
+            {t("student.summary")}
+          </p>
+        ) : sum ? (
           <p className="po-summary-text">
             {t("result.summary", {
               documents: t("result.documents", { count: sum.documentsActive }),
@@ -173,13 +178,23 @@ export const ResultCenter = () => {
             aria-busy={outcome.isFetching || undefined}
             data-stale={failed || model.stale ? "true" : undefined}
           >
-            <DocumentsSection />
-            <MetaSection />
-            <ParticipantsSection />
-            <PointsSection />
-            <RouteSection />
-            <ChecksSection />
-            <BranchesSection />
+            {student ? (
+              shown ? (
+                <StudentView outcome={shown} />
+              ) : (
+                <RowsSkeleton testId="outcome-student-loading" />
+              )
+            ) : (
+              <>
+                <DocumentsSection />
+                <MetaSection />
+                <ParticipantsSection />
+                <PointsSection />
+                <RouteSection />
+                <ChecksSection />
+                <BranchesSection />
+              </>
+            )}
           </div>
         )
       ) : null}
