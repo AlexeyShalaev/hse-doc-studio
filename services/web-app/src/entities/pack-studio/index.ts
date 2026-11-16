@@ -10,8 +10,19 @@ export {
   PackStaleFileError,
 } from "./api/packStudioApi";
 export type { PackFile, PackVersionRef } from "./api/packStudioApi";
-// Вычислитель результата (docs/design/template-studio-outcome.md): схемы контракта, эндпоинты в срезе O1.
+// Вычислитель результата (docs/design/template-studio-outcome.md): схемы контракта и клиент
+// эндпоинтов (outcomeApi, хуки). Сервер результата приходит срезами O1 и O2; до них клиент
+// живёт на эталонах контракта (reference/, только разработка и тесты).
 export * from "./api/outcome";
+export { packOutcomeApi } from "./api/outcomeApi";
+export {
+  normalizeOutcomeRequest,
+  packOutcomeKeys,
+  retryOutcome,
+  usePackOutcome,
+  usePackOutcomeInputs,
+  usePackScenarios,
+} from "./api/outcomeQueries";
 // Срез T14: файлы правил проверок и checks_version формой.
 export {
   PackChecksConfigRequestSchema,
@@ -144,4 +155,9 @@ export {
   mergeConflictFiles,
 } from "./lib/gitErrors";
 export type { ForkRequired, LintFailure } from "./lib/gitErrors";
-export { PACK_STUDIO_PATH, packWorkspacePath } from "./lib/routes";
+export {
+  PACK_STUDIO_PATH,
+  packFilesPath,
+  packOutcomePath,
+  packWorkspacePath,
+} from "./lib/routes";

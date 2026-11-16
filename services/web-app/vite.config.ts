@@ -100,6 +100,9 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3000,
       host: "0.0.0.0",
+      // Эталоны контракта Студии шаблонов (contracts/pack-studio/fixtures) лежат вне сервиса:
+      // экран «Результат» в разработке отвечает ими, пока сервера результата нет.
+      fs: { allow: [path.resolve(import.meta.dirname, "../..")] },
       proxy:
         mode === "development"
           ? {
@@ -155,6 +158,10 @@ export default defineConfig(({ mode }) => {
             if (id.endsWith("/src/pages/PackStudioPage/index.ts")) {
               return "assets/pack-studio-app-[hash].js";
             }
+            // Экран «Результат» Студии шаблонов (срез F1): грузится с первым входом в пространство.
+            if (id.endsWith("/src/features/pack-outcome/index.ts")) {
+              return "assets/pack-outcome-[hash].js";
+            }
             // Формы манифестов Студии шаблонов (срезы T11-T14): грузятся вкладкой «Форма».
             if (id.endsWith("/src/features/pack-submission-form/index.ts")) {
               return "assets/pack-submission-form-[hash].js";
@@ -186,6 +193,12 @@ export default defineConfig(({ mode }) => {
               /\/locales\/([a-z]{2})\/packStudio\/packStudio\.json$/.exec(id);
             if (packStudio) {
               return `assets/locale-packStudio-${packStudio[1] ?? ""}-[hash].js`;
+            }
+            // Словарь экрана «Результат»: грузится вместе с его чанком.
+            const packOutcome =
+              /\/locales\/([a-z]{2})\/packOutcome\/packOutcome\.json$/.exec(id);
+            if (packOutcome) {
+              return `assets/locale-packOutcome-${packOutcome[1] ?? ""}-[hash].js`;
             }
             // Словарь форм Студии шаблонов: грузится вместе с чанком форм.
             const packForms =

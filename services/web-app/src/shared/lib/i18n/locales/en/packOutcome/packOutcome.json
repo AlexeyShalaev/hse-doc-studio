@@ -1,0 +1,165 @@
+{
+  "title": "Outcome",
+  "skip": "Skip to the outcome",
+  "loading": "Loading the outcome",
+  "regions": {
+    "inputs": "Inputs",
+    "result": "Outcome",
+    "rules": "Rules and reasons"
+  },
+  "bar": {
+    "label": "Outcome settings",
+    "pack": "Pack",
+    "template": "Template",
+    "version": "Version",
+    "scenario": "Scenario",
+    "noScenario": "No scenario (free inputs)",
+    "noScenarios": "No scenarios yet",
+    "scenarioBroken": "{{name}} (invalid inputs)",
+    "scenarioMissing": "{{id}} (not in the template)",
+    "mode": "Mode",
+    "modeAuthor": "Author",
+    "modeStudent": "As a student",
+    "state": "Outcome from",
+    "stateWorkTree": "Working tree",
+    "stateHead": "Last commit",
+    "stateBase": "Base",
+    "files": "Files",
+    "filesMode": "Files mode",
+    "filesModeHint": "File tree, editor and preview",
+    "released": "The version is released and cannot be edited: create a new one.",
+    "releasedMark": "Version released",
+    "reference": "Data from reference fixtures"
+  },
+  "status": {
+    "saved": "Saved",
+    "dirty": "Unsaved changes",
+    "recalculating": "Recalculating...",
+    "slow": "Recalculation is taking long...",
+    "failed": "Could not recalculate",
+    "retry": "Retry"
+  },
+  "panels": {
+    "collapse": "Collapse the \"{{name}}\" panel",
+    "expand": "Expand the \"{{name}}\" panel",
+    "wider": "Wider",
+    "narrower": "Narrower",
+    "resize": "Width of the \"{{name}}\" panel",
+    "resizeHint": "Arrow keys change the width, Home and End set the limit",
+    "changed_one": "{{count}} input changed",
+    "changed_other": "{{count}} inputs changed",
+    "why": "Why?"
+  },
+  "inputs": {
+    "title": "Inputs",
+    "loadFailed": "Could not load the inputs of the version",
+    "emptyTitle": "The outcome does not depend on inputs",
+    "emptyLead": "This version has no inputs that would change the outcome.",
+    "total_one": "{{count}} input",
+    "total_other": "{{count}} inputs",
+    "reset": "Reset",
+    "pending": "Input controls arrive in the next slice.",
+    "groups": {
+      "project": "Project",
+      "people": "People",
+      "meta": "Fields",
+      "answers": "Questionnaires",
+      "variants": "Variants"
+    }
+  },
+  "result": {
+    "documents_one": "{{count}} document",
+    "documents_other": "{{count}} documents",
+    "signers_one": "{{count}} signer",
+    "signers_other": "{{count}} signers",
+    "summary": "In the set: {{documents}}, {{signers}}",
+    "announce": "Documents in the set: {{active}} of {{total}}, signers: {{signers}}",
+    "sections": "Outcome sections",
+    "emptyTitle": "The version has no documents",
+    "emptyLead": "Add a document in the version form and the outcome will appear here.",
+    "emptyAction": "Open the version form",
+    "stale": "The previous outcome is shown: the new one could not be loaded.",
+    "updating": "Updating"
+  },
+  "sections": {
+    "documents": "Documents",
+    "meta": "Project metadata",
+    "forms": "Questionnaires",
+    "participants": "Participants",
+    "points": "Submission points",
+    "route": "Signing route",
+    "checks": "Checks",
+    "branches": "Branches and variants",
+    "expand": "Expand the \"{{name}}\" section",
+    "collapse": "Collapse the \"{{name}}\" section",
+    "stub": "The content of this section arrives in the next slice.",
+    "notRequested": "Calculated on request",
+    "count": {
+      "documents": "{{active}} of {{total}} in the set",
+      "meta": "{{visible}} visible of {{total}}",
+      "participants": "{{present}} of {{total}}",
+      "points": "{{count}}",
+      "route": "{{count}}",
+      "checks": "{{enabled}} of {{total}} enabled",
+      "branches": "{{count}}"
+    }
+  },
+  "rules": {
+    "title": "Rules and reasons",
+    "emptyTitle": "No element selected",
+    "emptyLead": "Pick a document, field, participant, point or route step to see why it is the way it is.",
+    "selected": "Selected element",
+    "section": "Section",
+    "clear": "Clear selection",
+    "pending": "The rule chain, impact and in-place editing arrive in the next slices.",
+    "studentHidden": "Rules are hidden in the \"As a student\" mode."
+  },
+  "footer": {
+    "note": "A calculation on test data, nothing is sent.",
+    "outOfScope": "Not covered: {{items}}",
+    "scope": {
+      "python_checks": "Python checks",
+      "signature_anchors": "signature places by PDF anchors",
+      "tex_content": "TeX content",
+      "jinja_content": "Jinja content"
+    }
+  },
+  "errors": {
+    "title": "Could not get the outcome",
+    "reason": "Reason: {{reason}}",
+    "openSource": "Open the source",
+    "openFiles": "Open files",
+    "workTree": "Back to the working tree",
+    "versionMissingTitle": "Version not found",
+    "versionMissingLead": "The workspace has no version {{version}} of the {{template}} template. Pick another one in the version list.",
+    "treeFailed": "Could not load the workspace tree"
+  },
+  "drawer": {
+    "title": "Files",
+    "lead": "Picking a file opens the Files mode: the editor with the Source and Form tabs.",
+    "close": "Close the files panel"
+  },
+  "phone": {
+    "tabs": "Screen sections",
+    "inputs": "Inputs",
+    "result": "Outcome",
+    "rules": "Why",
+    "readOnly": "Editing is available on a computer."
+  },
+  "dev": {
+    "label": "Outcome data (development only)",
+    "source": "Data",
+    "reference": "Reference",
+    "server": "Server",
+    "behavior": "State",
+    "behaviors": {
+      "normal": "Normal",
+      "empty": "Empty outcome",
+      "no_inputs": "No inputs",
+      "no_scenarios": "No scenarios",
+      "slow": "Slow response",
+      "error": "Server error",
+      "unreadable": "Version unreadable"
+    }
+  }
+}

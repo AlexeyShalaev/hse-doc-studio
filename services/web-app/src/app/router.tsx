@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate, type RouteObject } from "react-router";
 import { i18n, loadAdminNamespaces } from "@shared/lib";
+import { loadPackOutcomeNamespace } from "@shared/lib/i18n/packOutcomeNamespace";
 import { loadPackStudioNamespace } from "@shared/lib/i18n/packStudioNamespace";
 import { loadSigningNamespace } from "@shared/lib/i18n/signingNamespace";
 import { AuthErrorPage } from "@pages/AuthErrorPage";
@@ -64,6 +65,7 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
             { getSigningPageGallery },
             { getCheckpointDeadlineGallery },
             { getPackStudioGallery },
+            { getPackOutcomeGallery },
             demo,
           ] = await Promise.all([
             import("@pages/DevServerScreens"),
@@ -76,9 +78,11 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
             import("@pages/SigningPage/gallery"),
             import("@features/checkpoint-deadline/gallery"),
             import("@pages/PackStudioPage/gallery"),
+            import("@features/pack-outcome/gallery"),
             import("./demo"),
             loadSigningNamespace(),
             loadPackStudioNamespace(),
+            loadPackOutcomeNamespace(),
             loadAdminNamespaces(["packStudio"]),
           ]);
           const extraSections = [
@@ -120,7 +124,7 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
             {
               id: "pack-studio",
               title: "Студия шаблонов",
-              groups: getPackStudioGallery(),
+              groups: [...getPackStudioGallery(), ...getPackOutcomeGallery()],
             },
           ];
           // Серверные записи ходят в демо-мир, даже если приложение запущено без него.

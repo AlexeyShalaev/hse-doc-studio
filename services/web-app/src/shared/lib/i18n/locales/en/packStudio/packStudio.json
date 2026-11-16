@@ -66,6 +66,11 @@
     "cloningLead": "This takes up to a couple of minutes. The page updates by itself.",
     "failedTitle": "Clone failed",
     "failedLead": "Check the address and access, then retry.",
+    "noVersionsTitle": "The workspace has no template versions",
+    "noVersionsLead": "Create a pack and a template in the Files mode and the outcome will appear here.",
+    "openFiles": "Open files",
+    "outcome": "Outcome",
+    "outcomeHint": "What a student gets: documents, fields, participants and route",
     "pickTitle": "Pick a file",
     "pickLead": "Open a file in the tree on the left: a version manifest, a document or a Jinja template."
   },
