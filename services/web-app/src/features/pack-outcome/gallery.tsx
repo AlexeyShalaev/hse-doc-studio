@@ -1,0 +1,293 @@
+import type { QueryClient } from "@tanstack/react-query";
+import { useState, type ReactNode } from "react";
+import {
+  packOutcomeKeys,
+  packStudioKeys,
+  type PackOutcome,
+  type PackTree,
+  type PackVersionRef,
+  type PackWorkspace,
+} from "@entities/pack-studio";
+import {
+  COURSEWORK_SCENARIOS,
+  VKR_INPUTS,
+  VKR_OUTCOME,
+} from "@entities/pack-studio/reference";
+import { ApiError } from "@shared/api";
+import type { GalleryGroup } from "@shared/lib/stateGallery";
+import { OutcomeSearchContext, parseOutcomeSearch } from "./lib/urlState";
+import { OutcomeBody } from "./OutcomeBody";
+
+// Галерея экрана «Результат» (/dev/server-screens): каркас во всех состояниях на эталонах
+// контракта, сервер не нужен. Каждая запись живёт в своём пространстве (свой кэш запросов), а
+// адрес экрана задан в MemoryRouter: состояние в query видно так же, как в настоящем адресе.
+// Телефон (360 px) галерея не показывает, он определяется шириной окна браузера: смотрите
+// страницу в узком окне.
+
+const NOW = "2026-11-16T09:30:00Z";
+const REF: PackVersionRef = {
+  pack: "hse-cs-se",
+  template: "vkr",
+  version: "2026.1.2",
+};
+const VERSION_DIR = "hse-cs-se/templates/vkr/versions";
+
+const workspace = (id: string): PackWorkspace => ({
+  id,
+  kind: "folder",
+  label: "packs",
+  state: "ready",
+  busy: false,
+  packs_path: "packs",
+  url: null,
+  credential_id: null,
+  service_access: false,
+  insecure_http: false,
+  folder: "/work/hse-doc-studio",
+  base_branch: null,
+  base_sha: null,
+  fetched_at: null,
+  work_branch: null,
+  pr_url: null,
+  pr_number: null,
+  ci_status: null,
+  fork_url: null,
+  pushed_sha: null,
+  error: null,
+  created_at: NOW,
+  updated_at: NOW,
+});
+
+const tree = (id: string): PackTree => ({
+  workspace_id: id,
+  base_sha: null,
+  packs: [
+    {
+      id: "hse-cs-se",
+      path: "hse-cs-se",
+      name: {
+        ru: "ФКН, Программная инженерия",
+        en: "CS, Software Engineering",
+      },
+      templates: [
+        {
+          id: "vkr",
+          path: "hse-cs-se/templates/vkr",
+          name: { ru: "ВКР бакалавра", en: "Bachelor thesis" },
+          default_version: "2026.1.1",
+          versions: [
+            {
+              version: "2026.1.1",
+              path: `${VERSION_DIR}/2026.1.1`,
+              status: "stable",
+              released: true,
+              modified: false,
+            },
+            {
+              version: "2026.1.2",
+              path: `${VERSION_DIR}/2026.1.2`,
+              status: "beta",
+              released: false,
+              modified: false,
+            },
+          ],
+        },
+      ],
+    },
+  ],
+  files: [],
+  truncated: false,
+});
+
+const withIdentity = (id: string, outcome: PackOutcome): PackOutcome => ({
+  ...outcome,
+  workspace_id: id,
+});
+
+type Kind = "ready" | "loading" | "unreadable" | "empty";
+
+/** Заполнить кэш так, чтобы экран видел данные без сервера, и запретить перечитывание. */
+const seedWorkspace = (
+  client: QueryClient,
+  id: string,
+  kind: Kind,
+  search: string,
+) => {
+  const url = parseOutcomeSearch(new URLSearchParams(search));
+  const request = {
+    state: url.state,
+    scenario: url.scenario,
+    example: url.example,
+    inputs: url.inputs,
+  };
+  client.setQueryData(packStudioKeys.tree(id), tree(id));
+  client.setQueryData(packStudioKeys.workspace(id), workspace(id));
+  client.setQueryDefaults(packOutcomeKeys.all(id), {
+    retryOnMount: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
+  });
+  client.setQueryData(packOutcomeKeys.inputs(id, REF, url.state), {
+    ...VKR_INPUTS,
+    workspace_id: id,
+  });
+  client.setQueryData(packOutcomeKeys.scenarios(id, REF.pack, REF.template), {
+    ...COURSEWORK_SCENARIOS,
+    workspace_id: id,
+    pack: REF.pack,
+    template: REF.template,
+  });
+  const key = packOutcomeKeys.result(id, REF, request);
+  const base = {
+    ...withIdentity(id, VKR_OUTCOME),
+    state: url.state,
+    inputs: { ...VKR_OUTCOME.inputs, ...url.inputs },
+  };
+  if (kind === "ready") {
+    client.setQueryData(key, base);
+  } else if (kind === "empty") {
+    client.setQueryData(key, {
+      ...base,
+      documents: [],
+      meta: [],
+      forms: [],
+      participants: [],
+      points: [],
+      trace: [],
+    });
+  } else if (kind === "loading") {
+    void client.prefetchQuery({
+      queryKey: key,
+      queryFn: () => new Promise<PackOutcome>(() => undefined),
+    });
+  } else {
+    client
+      .getQueryCache()
+      .build(client, { queryKey: key })
+      .setState({
+        status: "error",
+        fetchStatus: "idle",
+        data: undefined,
+        error: new ApiError(
+          "Версию не удалось разобрать.",
+          "version_unreadable",
+          422,
+          {
+            reason: "version.yaml:12: unknown key `suported_kinds`",
+          },
+        ),
+        errorUpdateCount: 1,
+        errorUpdatedAt: Date.now(),
+      });
+  }
+};
+
+type Spec = {
+  id: string;
+  title: string;
+  note: string;
+  kind: Kind;
+  /** Query адреса экрана. */
+  search?: string;
+};
+
+const SPECS: Spec[] = [
+  {
+    id: "po_result",
+    title: "Результат ВКР на эталоне",
+    note: "Три колонки, верхняя панель, сводка и счётчики секций из ответа сервера.",
+    kind: "ready",
+  },
+  {
+    id: "po_loading",
+    title: "Первая загрузка",
+    note: "Скелет секций и вводных, расчёт ещё идёт.",
+    kind: "loading",
+  },
+  {
+    id: "po_unreadable",
+    title: "Версия не читается",
+    note: "Плашка с причиной от лоадера, переход к исходнику и повтор.",
+    kind: "unreadable",
+  },
+  {
+    id: "po_empty",
+    title: "В версии нет документов",
+    note: "Пустой результат: подсказка и переход к форме версии.",
+    kind: "empty",
+  },
+  {
+    id: "po_state_in_url",
+    title: "Состояние в адресе",
+    note: "Вводные, сценарий и выбранный документ взяты из query: ?scenario=…&i.kind=research&selected=documents:operator_manual.",
+    kind: "ready",
+    search:
+      "scenario=company-supervisor&i.kind=research&i.staffing=team2&selected=documents:operator_manual",
+  },
+  {
+    id: "po_student",
+    title: "Режим «Как студент»",
+    note: "Правая панель с правилами скрыта, остаётся то, что видит студент.",
+    kind: "ready",
+    search: "mode=student",
+  },
+  {
+    id: "po_base",
+    title: "Результат из базы",
+    note: "Состояние «База»: сервер без базы ответил бы diff_base_unavailable, здесь данные есть.",
+    kind: "ready",
+    search: "state=base",
+  },
+];
+
+/** Адрес записи в памяти: запись не трогает адрес страницы галереи. */
+const GalleryUrl = ({
+  initial,
+  children,
+}: {
+  initial: string;
+  children: ReactNode;
+}) => {
+  const [search, setSearch] = useState(initial);
+  return (
+    <OutcomeSearchContext.Provider
+      value={{
+        search,
+        set: (next) => {
+          setSearch(next.toString());
+        },
+      }}
+    >
+      {children}
+    </OutcomeSearchContext.Provider>
+  );
+};
+
+export const getPackOutcomeGallery = (): GalleryGroup[] => [
+  {
+    id: "pack-outcome",
+    title: "Студия шаблонов: экран «Результат»",
+    description:
+      "Каркас экрана на эталонах контракта (contracts/pack-studio/fixtures). Данные в кэше запросов, сервер не нужен.",
+    entries: SPECS.map((spec) => {
+      const id = `gallery-${spec.id}`;
+      return {
+        id: spec.id,
+        title: spec.title,
+        note: spec.note,
+        frame: "screen" as const,
+        seed: (client: QueryClient) => {
+          seedWorkspace(client, id, spec.kind, spec.search ?? "");
+        },
+        render: () => (
+          <GalleryUrl initial={spec.search ?? ""}>
+            <div className="ps-shell ui-console" style={{ minHeight: "40rem" }}>
+              <OutcomeBody workspace={workspace(id)} version={REF} />
+            </div>
+          </GalleryUrl>
+        ),
+      };
+    }),
+  },
+];

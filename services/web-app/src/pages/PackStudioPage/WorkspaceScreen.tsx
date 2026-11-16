@@ -13,6 +13,8 @@ import { useTranslation } from "react-i18next";
 import {
   PACK_STUDIO_PATH,
   findVersion,
+  packOutcomePath,
+  versionRefOf,
   findingTarget,
   packErrorText,
   packFormKind,
@@ -23,7 +25,6 @@ import {
   versionDirOf,
   workspaceErrorText,
   type LintFailure,
-  type PackWorkspace,
 } from "@entities/pack-studio";
 import { PackFileEditor } from "@features/pack-file-editor";
 import { PackGitBar } from "@features/pack-git";
@@ -52,6 +53,7 @@ import {
 } from "@shared/ui";
 import { loadPackFormsNamespace } from "@shared/lib/i18n/packFormsNamespace";
 import { Notice } from "@shared/ui/ConflictKit";
+import { NotReady } from "./NotReady";
 
 // Формы манифестов (срезы T11 и дальше): свой чанк, грузится с первой открытой формой.
 const PackFormPane = lazy(() =>
@@ -121,39 +123,6 @@ const FileCrumbs = ({
         <span className="mono truncate">{path}</span>
       )}
     </nav>
-  );
-};
-
-/** Пространство не готово: клон идёт или не удался. */
-const NotReady = ({ workspace }: { workspace: PackWorkspace }) => {
-  const { t } = useTranslation("packStudio");
-  const refresh = useRefreshPackWorkspace();
-  if (workspace.state === "cloning") {
-    return (
-      <EmptyState
-        framed
-        icon={<Spinner size="md" />}
-        title={t("workspace.cloningTitle")}
-        description={t("workspace.cloningLead")}
-        testId="ws-cloning"
-      />
-    );
-  }
-  return (
-    <ErrorState
-      framed
-      title={t("workspace.failedTitle")}
-      description={
-        workspace.error
-          ? workspaceErrorText(workspace.error)
-          : t("workspace.failedLead")
-      }
-      onRetry={() => {
-        refresh.mutate(workspace.id);
-      }}
-      retrying={refresh.isPending}
-      testId="ws-failed"
-    />
   );
 };
 
@@ -353,6 +322,16 @@ export const WorkspaceScreen = () => {
           </div>
         </div>
         <div className="ps-ws-head-actions">
+          {ready && (
+            <Link
+              to={packOutcomePath(ws.id, file ? versionRefOf(file) : null)}
+              className="btn sm"
+              title={t("workspace.outcomeHint")}
+              data-testid="ws-outcome-link"
+            >
+              {t("workspace.outcome")}
+            </Link>
+          )}
           {phone && ready && (
             <Button
               size="sm"

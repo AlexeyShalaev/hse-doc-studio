@@ -1,0 +1,564 @@
+/* Экран «Результат» Студии шаблонов (features/pack-outcome): едет в своём lazy-чанке.
+   Раскладка на телефоне: хук useIsPhoneWidth и медиазапрос ниже (docs/design/mobile-layout.md). */
+
+.po-screen {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  background: var(--bg-0);
+  color: var(--fg-1, var(--fg-0));
+}
+.po-gate,
+.po-state {
+  display: flex;
+  justify-content: center;
+  padding: 2rem 1.5rem;
+}
+.po-state > * {
+  flex: 1;
+  max-width: 40rem;
+}
+
+/* Ссылка «Перейти к результату»: видна только при фокусе. */
+.po-skip {
+  position: absolute;
+  left: 0.5rem;
+  top: 0.5rem;
+  z-index: 20;
+  padding: 0.375rem 0.625rem;
+  border-radius: var(--r-2, 0.375rem);
+  background: var(--bg-2);
+  color: var(--fg-0);
+  font-size: 0.8125rem;
+  transform: translateY(-200%);
+}
+.po-skip:focus-visible {
+  transform: none;
+}
+
+/* ── верхняя панель ── */
+.po-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-1);
+}
+.po-bar-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.875rem;
+  min-width: 0;
+}
+.po-crumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.po-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-left: auto;
+}
+.po-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.po-field-label {
+  font-size: 0.75rem;
+  color: var(--fg-2);
+  white-space: nowrap;
+}
+.po-select {
+  min-width: 0;
+  max-width: 100%;
+  width: auto;
+}
+.po-crumbs .po-select {
+  flex: 0 1 20rem;
+}
+.po-crumbs #po-version {
+  flex-basis: 11rem;
+}
+.po-field .po-select {
+  flex: 0 1 15rem;
+}
+.po-lock {
+  color: var(--fg-3);
+}
+.po-segmented {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--r-2, 0.375rem);
+  overflow: hidden;
+}
+.po-segment {
+  padding: 0.3125rem 0.75rem;
+  border: 0;
+  background: transparent;
+  color: var(--fg-2);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+.po-segment + .po-segment {
+  border-left: 1px solid var(--border);
+}
+.po-segment[aria-pressed="true"] {
+  background: var(--accent-soft);
+  color: var(--fg-0);
+}
+.po-segment:focus-visible {
+  outline-offset: -2px;
+}
+.po-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--fg-2);
+}
+.po-status[data-state="failed"] {
+  color: var(--c-err);
+}
+.po-status[data-state="dirty"] {
+  color: var(--c-warn);
+}
+.po-spin {
+  animation: po-spin 1s linear infinite;
+}
+@keyframes po-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .po-spin {
+    animation: none;
+  }
+}
+.po-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.75rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.po-dev {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.125rem 0.375rem;
+  border: 1px dashed var(--c-warn);
+  border-radius: var(--r-2, 0.375rem);
+}
+
+/* ── три колонки ── */
+.po-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+.po-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  flex-shrink: 0;
+  background: var(--bg-1);
+}
+.po-panel:focus-visible,
+.po-center:focus-visible {
+  outline-offset: -2px;
+}
+.po-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.po-panel-title {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+.po-panel-tools {
+  display: flex;
+  gap: 0.125rem;
+}
+.po-panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.75rem;
+}
+.po-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  width: 2.5rem;
+  flex-shrink: 0;
+  padding: 0.5rem 0;
+  background: var(--bg-1);
+  border-right: 1px solid var(--border);
+}
+.po-rail[data-side="right"] {
+  border-right: 0;
+  border-left: 1px solid var(--border);
+}
+.po-rail-why {
+  writing-mode: vertical-rl;
+  padding: 0.5rem 0.25rem;
+}
+.po-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  padding: 0 0.25rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--bg-0);
+  font-size: 0.625rem;
+  font-weight: 600;
+}
+.po-center {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  background: var(--bg-0);
+}
+.po-center-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  max-width: 64rem;
+  padding: 1rem 1.25rem 1.5rem;
+}
+.po-summary-text {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--fg-0);
+}
+.po-summary-skel {
+  display: inline-block;
+  width: 14rem;
+  max-width: 100%;
+  height: 1.25rem;
+  border-radius: var(--r-2, 0.375rem);
+}
+
+/* ── секции результата ── */
+.po-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+.po-sections[data-stale="true"] {
+  opacity: 0.6;
+}
+.po-section {
+  border: 1px solid var(--border);
+  border-radius: var(--r-3, 0.5rem);
+  background: var(--bg-1);
+}
+.po-section-head {
+  margin: 0;
+  font-size: inherit;
+}
+.po-section-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  border: 0;
+  background: transparent;
+  color: var(--fg-0);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--r-3, 0.5rem);
+}
+.po-section-toggle:focus-visible {
+  outline-offset: -2px;
+}
+.po-section-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.po-section-count {
+  margin-left: auto;
+  font-size: 0.75rem;
+  color: var(--fg-2);
+}
+.po-section-body {
+  padding: 0 0.75rem 0.75rem;
+}
+.po-stub {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--fg-3);
+}
+.po-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.po-skeleton-row {
+  height: 1rem;
+  border-radius: var(--r-2, 0.375rem);
+}
+.po-skeleton-row[data-short="true"] {
+  width: 60%;
+}
+
+/* ── вводные и правила ── */
+.po-inputs,
+.po-rules {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.po-inputs-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--fg-2);
+}
+.po-inputs-group-title {
+  margin: 0 0 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+.po-inputs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  margin: 0;
+}
+.po-inputs-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.25rem 0.375rem;
+  border-left: 2px solid transparent;
+  font-size: 0.8125rem;
+}
+.po-inputs-row[data-changed="true"] {
+  border-left-color: var(--accent);
+  background: var(--accent-soft);
+}
+.po-inputs-row dt {
+  color: var(--fg-2);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.po-inputs-row dd {
+  margin: 0;
+  color: var(--fg-0);
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.po-rules-label {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--fg-2);
+}
+.po-rules-element {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin: 0;
+}
+.po-rules-id {
+  overflow-wrap: anywhere;
+  font-size: 0.8125rem;
+}
+
+/* ── плашки ── */
+.po-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+  margin: 0.5rem 1rem 0;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-3, 0.5rem);
+  background: var(--bg-1);
+}
+.po-center-body .po-notice,
+.po-panel-body .po-notice {
+  margin: 0;
+}
+.po-notice[data-tone="error"] {
+  border-color: color-mix(in oklch, var(--c-err) 45%, transparent);
+  background: var(--c-err-soft);
+}
+.po-notice-icon {
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+.po-notice-text {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+.po-notice-title {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--fg-0);
+}
+.po-notice-lead {
+  margin: 0.125rem 0 0;
+  font-size: 0.75rem;
+  color: var(--fg-2);
+  overflow-wrap: anywhere;
+}
+.po-notice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+
+/* ── нижняя строка ── */
+.po-footer {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  padding: 0.375rem 1rem;
+  border-top: 1px solid var(--border);
+  background: var(--bg-1);
+  font-size: 0.71875rem;
+  color: var(--fg-2);
+}
+
+/* ── выдвижная панель «Файлы» ── */
+.po-drawer-scrim {
+  z-index: 100;
+}
+.po-drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 101;
+  display: flex;
+  flex-direction: column;
+  width: min(22rem, 100vw);
+  border-right: 1px solid var(--border);
+  background: var(--bg-1);
+  box-shadow: 0 0 2rem rgb(0 0 0 / 0.3);
+}
+.po-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+.po-drawer-title {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--fg-0);
+}
+.po-drawer-lead {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  color: var(--fg-2);
+}
+.po-drawer-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* ── телефон: результат основной колонкой, вводные и правила листами ── */
+.po-body-phone {
+  flex-direction: column;
+}
+.po-tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.375rem 0.5rem;
+  border-top: 1px solid var(--border);
+  background: var(--bg-1);
+}
+.po-tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  flex: 1;
+  min-height: 2.5rem;
+  border: 1px solid transparent;
+  border-radius: var(--r-2, 0.375rem);
+  background: transparent;
+  color: var(--fg-2);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+.po-tab[aria-pressed="true"] {
+  background: var(--accent-soft);
+  color: var(--fg-0);
+}
+@media (max-width: 767.98px) {
+  .po-bar {
+    padding: 0.5rem 0.75rem;
+  }
+  .po-bar-row > .po-field {
+    flex: 1 1 100%;
+  }
+  .po-field .po-select {
+    flex: 1;
+  }
+  .po-status {
+    margin-left: 0;
+  }
+  .po-center-body {
+    padding: 0.75rem;
+  }
+  .po-notice {
+    margin: 0.5rem 0.75rem 0;
+  }
+  .po-hide-phone {
+    display: none;
+  }
+  .po-footer {
+    padding: 0.375rem 0.75rem;
+  }
+}

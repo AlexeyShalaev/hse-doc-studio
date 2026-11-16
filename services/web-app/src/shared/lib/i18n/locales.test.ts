@@ -74,6 +74,15 @@ describe("locale parity", () => {
     expect(rare.filter((key) => page.has(key))).toEqual([]);
   });
 
+  it("outcome screen dictionary has the same keys in ru and en", () => {
+    expect(keysOf("en", "packOutcome/packOutcome.json")).toEqual(
+      keysOf("ru", "packOutcome/packOutcome.json"),
+    );
+    expect(keysOf("ru", "packOutcome/packOutcome.json").length).toBeGreaterThan(
+      60,
+    );
+  });
+
   it.each(NEW_NAMESPACES)("%s exists and is not empty", (ns) => {
     expect(namespaces).toContain(`${ns}.json`);
     expect(keysOf("ru", `${ns}.json`).length).toBeGreaterThan(5);
