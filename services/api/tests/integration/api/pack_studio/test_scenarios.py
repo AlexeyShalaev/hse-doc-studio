@@ -536,6 +536,82 @@ async def test__outcome__etag_follows_the_scenario_file_and_gives_304_when_nothi
     assert (await post_outcome(stand, ws, VKR, **{"If-None-Match": bare.headers["ETag"]})).status_code == 304
 
 
+async def test__explain__scenario_inputs_are_applied_and_an_unknown_scenario_is_404(
+    stand: Stand, service: PackOutcomeService
+) -> None:
+    ws = await folder_with_real_packs(stand)
+    await put_scenario(
+        stand,
+        ws,
+        COURSEWORK_TEMPLATE,
+        "company",
+        scenario_body("Компания", {"supervisor": "company", "co_supervisor": "yes"}),
+    )
+    url = outcome_url(ws, COURSEWORK, "/explain")
+    element = {"section": "participants", "id": "co_supervisor"}
+
+    plain = await stand.client.post(url, json={"element": element})
+    scenario = await stand.client.post(url, json={"element": element, "scenario": "company"})
+    ghost = await stand.client.post(url, json={"element": element, "scenario": "ghost"})
+    over = await stand.client.post(
+        url, json={"element": element, "scenario": "company", "inputs": {"co_supervisor": "no"}}
+    )
+
+    assert plain.status_code == scenario.status_code == over.status_code == 200, scenario.text
+    assert scenario.headers["ETag"] not in {plain.headers["ETag"], over.headers["ETag"]}
+    assert scenario.json() != plain.json()
+    assert over.json() == plain.json(), "вводная запроса сильнее сценария"
+    assert (ghost.status_code, ghost.json()["code"]) == (404, "scenario_not_found")
+
+
+async def test__atlas__scenario_is_the_base_of_the_table_and_its_digest_is_in_the_etag(
+    stand: Stand, service: PackOutcomeService
+) -> None:
+    ws = await folder_with_real_packs(stand)
+    entry = parse_entry(
+        await put_scenario(
+            stand, ws, COURSEWORK_TEMPLATE, "company", scenario_body("Компания", {"supervisor": "company"})
+        )
+    )
+    url = outcome_url(ws, COURSEWORK, "/atlas")
+
+    plain = await stand.client.get(url)
+    scenario = await stand.client.get(url, params={"scenario": "company"})
+    again = await stand.client.get(
+        url, params={"scenario": "company"}, headers={"If-None-Match": scenario.headers["ETag"]}
+    )
+    renamed = await put_scenario(
+        stand,
+        ws,
+        COURSEWORK_TEMPLATE,
+        "company",
+        scenario_body("Компания, другое имя", {"supervisor": "company"}),
+        if_match=entry.etag,
+    )
+    after = await stand.client.get(
+        url, params={"scenario": "company"}, headers={"If-None-Match": scenario.headers["ETag"]}
+    )
+    ghost = await stand.client.get(url, params={"scenario": "ghost"})
+    bad = await put_scenario(
+        stand, ws, COURSEWORK_TEMPLATE, "stale", scenario_body("Устарела", {"supervisor": "martian"})
+    )
+    stale = await stand.client.get(url, params={"scenario": "stale"})
+
+    def default_of(resp: Any, name: str) -> str:
+        return next(d["default"] for d in resp.json()["dimensions"] if d["input"] == name)
+
+    assert plain.status_code == scenario.status_code == 200, scenario.text
+    assert default_of(plain, "supervisor") == "university"
+    assert default_of(scenario, "supervisor") == "company"
+    assert plain.headers["ETag"] != scenario.headers["ETag"]
+    assert again.status_code == 304
+    assert renamed.status_code == 200
+    assert after.status_code == 200, "правка файла сценария меняет ETag"
+    assert (ghost.status_code, ghost.json()["code"]) == (404, "scenario_not_found")
+    assert bad.status_code == 200
+    assert (stale.status_code, stale.json()["code"], stale.json()["field"]) == (400, "inputs_invalid", "supervisor")
+
+
 async def test__inputs__scenario_selects_its_example_and_an_unknown_scenario_is_404(
     stand: Stand, service: PackOutcomeService
 ) -> None:

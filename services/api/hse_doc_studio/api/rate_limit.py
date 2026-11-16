@@ -45,6 +45,10 @@ EXPENSIVE_ROUTES: Mapping[RouteKey, RateRule] = {
     ("POST", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/outcome"): PACK_OUTCOME,
     # Прогон сценариев шаблона (срез O6) считает результат по каждому сценарию: то же правило.
     ("POST", "/pack-studio/workspaces/{workspace_id}/templates/{pack}/{template}/scenarios/run"): PACK_OUTCOME,
+    (
+        "POST",
+        "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/outcome/explain",
+    ): PACK_OUTCOME,
     ("POST", "/git/clone"): GIT_SYNC,
     ("POST", "/git/clone/bundle"): GIT_SYNC,
     ("POST", "/projects/{project_id}/git/sync"): GIT_SYNC,

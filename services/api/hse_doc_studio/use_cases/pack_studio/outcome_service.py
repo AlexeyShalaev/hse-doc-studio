@@ -43,8 +43,9 @@ import structlog
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.pack_studio.entities import PackWorkspace, WorkspaceKind
 from hse_doc_studio.core.pack_studio.errors import PackStudioError, PackStudioErrorCode
+from hse_doc_studio.core.pack_studio.outcome.explain import Neighbor, explain_element, find_element
 from hse_doc_studio.core.pack_studio.outcome.inputs import OutcomeInputError
-from hse_doc_studio.core.pack_studio.outcome.model import IncludeName
+from hse_doc_studio.core.pack_studio.outcome.model import ElementRef, IncludeName, Outcome
 from hse_doc_studio.core.pack_studio.outcome.payload import to_json
 from hse_doc_studio.core.pack_studio.outcome.revision import example_file_names, is_manifest_path, revision_of
 from hse_doc_studio.core.pack_studio.outcome.scenarios import (
@@ -68,6 +69,7 @@ from hse_doc_studio.core.signatures.dates import DISPLAY_ZONE
 from hse_doc_studio.core.template_versions import parse_version_key
 from hse_doc_studio.core.uow import spawn_detached
 from hse_doc_studio.use_cases.pack_studio.outcome.dictionary import inputs_dictionary
+from hse_doc_studio.use_cases.pack_studio.outcome.explain import EXPLAIN_INCLUDE, neighbors_of
 from hse_doc_studio.use_cases.pack_studio.outcome.resolve import resolve
 from hse_doc_studio.use_cases.pack_studio.preview import (
     PackPreviewService,
@@ -101,6 +103,8 @@ class OutcomeLimits:
     cache_bytes: int = _RESULT_CACHE_BYTES
     dictionary_entries: int = 32
     snapshot_entries: int = 16
+    # Результаты с трассой и соседние комбинации для «Почему?» (по одному на набор вводных).
+    explain_entries: int = 16
     # Пределы чтения версии из коммита (как у рабочего дерева).
     max_files: int = 20_000
     max_bytes: int = 268_435_456
@@ -115,6 +119,17 @@ class OutcomeRequest:
     example: str | None = None
     inputs: Mapping[str, str] = field(default_factory=dict)
     include: frozenset[IncludeName] = frozenset()
+
+
+@dataclass(frozen=True)
+class ExplainRequest:
+    """Запрос объяснения одного элемента: вводные как у расчёта, `element` из результата (раздел 4.6 дизайна)."""
+
+    element: ElementRef
+    state: OutcomeState = "work_tree"
+    scenario: str | None = None
+    example: str | None = None
+    inputs: Mapping[str, str] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -228,6 +243,8 @@ class PackOutcomeService:
         )
         self._dictionaries: LruCache[dict[str, Any]] = LruCache(self._limits.dictionary_entries)
         self._snapshots: LruCache[_Source] = LruCache(self._limits.snapshot_entries)
+        self._explained: LruCache[Outcome] = LruCache(self._limits.explain_entries)
+        self._neighbors: LruCache[tuple[Neighbor, ...]] = LruCache(self._limits.explain_entries)
         self._reading: dict[str, asyncio.Task[_Source]] = {}
 
     def close(self) -> None:
@@ -377,12 +394,74 @@ class PackOutcomeService:
                 PackStudioErrorCode.version_unreadable, reason=f"{type(exc).__name__}: {str(exc)[:200]}"
             ) from None
 
+    async def explain(  # noqa: PLR0913 — путь версии, запрос и условный запрос
+        self,
+        actor: Actor,
+        workspace_id: UUID,
+        pack: str,
+        template: str,
+        version: str,
+        request: ExplainRequest,
+        *,
+        if_none_match: str | None = None,
+    ) -> OutcomeReply:
+        """«Почему?» элемента результата: цепочка решений, соседи по правилам, «что если» (`PackOutcomeExplain`)."""
+        started = self._clock()
+        prep = await self._prepare(
+            actor, workspace_id, pack, template, version, request.state, request.example, request.scenario
+        )
+        base = {**self._key_base(prep, request.state), "inputs": _merged_inputs(prep, request.inputs)}
+        element = {"section": request.element.section, "id": request.element.id}
+        key = request_key({**base, "kind": "explain", "element": element})
+        etag = etag_of(key)
+        if etag_matches(if_none_match, etag):
+            return OutcomeReply(etag, None)
+        cached = self._results.get(key)
+        if cached is not None:
+            return OutcomeReply(etag, cached)
+        outcome_key = request_key({**base, "kind": "explain-outcome"})
+        outcome = self._explained.get(outcome_key)
+        if outcome is None:
+            outcome = await self._resolve(prep, request.inputs, EXPLAIN_INCLUDE)
+            self._explained.put(outcome_key, outcome)
+        if find_element(outcome, request.element) is None:
+            raise PackStudioError(
+                PackStudioErrorCode.outcome_element_not_found,
+                section=request.element.section,
+                id=request.element.id,
+            )
+        neighbors = self._neighbors.get(outcome_key)
+        if neighbors is None:
+            neighbors = await self._run(
+                lambda: neighbors_of(prep.source.desc.version, outcome, prep.example, prep.today)
+            )
+            self._neighbors.put(outcome_key, neighbors)
+        explanation = explain_element(outcome, request.element, neighbors)
+        assert explanation is not None  # noqa: S101 — наличие элемента проверено выше
+        body = to_json(explanation)
+        self._results.put(key, body, cost=len(json.dumps(body, ensure_ascii=False)))
+        logger.debug("pack studio outcome explain", section=request.element.section, ms=_ms(self._clock() - started))
+        return OutcomeReply(etag, body)
+
     # ── расчёт ───────────────────────────────────────────────────────────────
 
     async def _calculate(self, prep: _Prepared, request: OutcomeRequest) -> dict[str, Any]:
+        outcome = await self._resolve(prep, request.inputs, request.include)
+        return {
+            "workspace_id": str(prep.ws.id),
+            "pack": prep.ref.pack,
+            "template": prep.ref.template,
+            "version": prep.ref.version,
+            "state": request.state,
+            **to_json(outcome),
+        }
+
+    async def _resolve(
+        self, prep: _Prepared, request_inputs: Mapping[str, str], include: frozenset[IncludeName]
+    ) -> Outcome:
+        """Результат ядра в потоке с пределом времени; ошибки вводных и манифеста становятся ошибками Студии."""
         version, example, today, revision = prep.source.desc.version, prep.example, prep.today, prep.revision
-        include = request.include
-        inputs = _merged_inputs(prep, request.inputs)
+        inputs = _merged_inputs(prep, request_inputs)
 
         def work() -> Any:
             try:
@@ -404,14 +483,7 @@ class PackOutcomeService:
             raise PackStudioError(
                 PackStudioErrorCode.inputs_invalid, field=outcome.field, value=outcome.value, reason=outcome.reason
             )
-        return {
-            "workspace_id": str(prep.ws.id),
-            "pack": prep.ref.pack,
-            "template": prep.ref.template,
-            "version": prep.ref.version,
-            "state": request.state,
-            **to_json(outcome),
-        }
+        return outcome
 
     async def _run[T](self, work: Callable[[], T]) -> T:
         """Расчёт в потоке с пределом времени. Занято или не уложился: `outcome_busy`."""
@@ -443,10 +515,13 @@ class PackOutcomeService:
         version: str,
         state: OutcomeState,
         example_id: str | None,
+        scenario_id: str | None = None,
     ) -> PreparedVersion:
         """Версия в выбранном состоянии, набор данных, `revision` и день: то, из чего расчёты результата строят ключ
-        и считают. Читает так же, как `inputs` и `outcome` (права, `head` и `base` из git, `diff_base_unavailable`)."""
-        return await self._prepare(actor, workspace_id, pack, template, version, state, example_id)
+        и считают. Читает так же, как `inputs` и `outcome` (права, `head` и `base` из git, `diff_base_unavailable`).
+        С `scenario_id` набор данных берётся у сценария, `scenario` в результате несёт его вводные и дайджест файла
+        (дайджест входит в ключ `key_of`)."""
+        return await self._prepare(actor, workspace_id, pack, template, version, state, example_id, scenario_id)
 
     @classmethod
     def key_of(cls, prep: PreparedVersion, state: str, **extra: Any) -> str:

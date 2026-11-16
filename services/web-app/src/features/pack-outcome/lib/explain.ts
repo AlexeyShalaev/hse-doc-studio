@@ -40,6 +40,11 @@ export const makeExplainer = (
   const input = (id: string) => inputs?.find((i) => i.id === id);
 
   const subject = (id: string): string => {
+    // `supervisor.role`: организация человека, подпись строится от подписи самого человека.
+    const org = /^(.+)\.role$/.exec(id)?.[1];
+    if (org && !input(id)) {
+      return t("reasons.orgOf", { subject: subject(org) });
+    }
     const found = input(id);
     if (found?.label) return pickLocalized(found.label, lang, id);
     return lookup(t, "subjects", id) ?? id;

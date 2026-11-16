@@ -97,6 +97,8 @@ class PackStudioErrorCode(StrEnum):
     diff_base_unavailable = "diff_base_unavailable"
     # Срез O2: расчёт не уложился в предел времени или процесс занят расчётами (503, `Retry-After`)
     outcome_busy = "outcome_busy"
+    # Срез O5: «Почему?» спросили про элемент, которого нет в результате для этих вводных (404, `section`, `id`)
+    outcome_element_not_found = "outcome_element_not_found"
 
 
 _C = PackStudioErrorCode
@@ -377,6 +379,11 @@ _TABLE: dict[PackStudioErrorCode, tuple[int, str, str]] = {
         503,
         "Расчёт результата не уложился в отведённое время или сервер занят другими расчётами. Повторите позже.",
         "The outcome calculation took too long or the server is busy with other calculations. Try again later.",
+    ),
+    _C.outcome_element_not_found: (
+        404,
+        "Такого элемента нет в результате для этих вводных. Возможно, версия изменилась: обновите результат.",
+        "There is no such element in the outcome for these inputs. The version may have changed: refresh the outcome.",
     ),
 }
 

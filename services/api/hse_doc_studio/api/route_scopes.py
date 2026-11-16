@@ -313,6 +313,8 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("PUT", "/pack-studio/workspaces/{workspace_id}/templates/{pack}/{template}/scenarios/{scenario_id}"): _A,
     ("DELETE", "/pack-studio/workspaces/{workspace_id}/templates/{pack}/{template}/scenarios/{scenario_id}"): _A,
     ("POST", "/pack-studio/workspaces/{workspace_id}/templates/{pack}/{template}/scenarios/run"): _A,
+    # Срез O5: «Почему?» одного элемента результата (только чтение)
+    ("POST", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/outcome/explain"): _A,
     # Срез T14: файлы правил проверок и `checks_version` формой
     ("GET", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/checks"): _A,
     ("PATCH", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/checks/files/{name}"): _A,

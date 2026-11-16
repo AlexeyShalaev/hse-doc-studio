@@ -51,7 +51,7 @@
     "name": "Словарь админки: audit",
     "path": "dist/assets/locale-admin-audit-*.js",
     "gzip": true,
-    "limit": "11.4 kB"
+    "limit": "12.5 kB"
   },
   {
     "name": "Словарь админки: mail",
@@ -291,12 +291,12 @@
     "name": "Студия шаблонов, экран «Результат» (lazy, features/pack-outcome)",
     "path": "dist/assets/pack-outcome-*.js",
     "gzip": true,
-    "limit": "19.7 kB"
+    "limit": "22.6 kB"
   },
   {
     "name": "Словарь экрана «Результат» (ru и en, features/pack-outcome)",
     "path": "dist/assets/locale-packOutcome-*.js",
     "gzip": true,
-    "limit": "11.2 kB"
+    "limit": "12.5 kB"
   }
 ]

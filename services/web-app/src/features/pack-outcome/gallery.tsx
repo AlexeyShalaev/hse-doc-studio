@@ -212,8 +212,9 @@ const seedWorkspace = (
     (entry) => entry.id === url.scenario,
   )?.scenario;
   const outcome = work === "vkr" ? VKR_OUTCOME : COURSEWORK_OUTCOME;
-  const base = {
-    ...withIdentity(id, outcome),
+  // Копия целиком: правки записей (`edit`) не должны просачиваться в общий эталон.
+  const base: PackOutcome = {
+    ...withIdentity(id, structuredClone(outcome)),
     state: url.state,
     inputs: { ...outcome.inputs, ...(scenario?.inputs ?? {}), ...url.inputs },
   };
@@ -361,6 +362,60 @@ const noSupervisor = (outcome: PackOutcome) => {
   }
 };
 
+/**
+ * Маршрут с пресетом: консультант подписывает параллельно с научруком, слот академрука пропущен
+ * условием, порядок идёт из профиля точки.
+ */
+const presetRoute = (outcome: PackOutcome) => {
+  const pdp = outcome.points.find((p) => p.id === "pdp-application");
+  if (!pdp) return;
+  const co = outcome.participants.find((x) => x.persona === "co_supervisor");
+  if (co) {
+    co.present = true;
+    co.name = "Сидорова Анна Викторовна";
+    co.org = "university";
+  }
+  const route = pdp.route;
+  route.order_source = "profile";
+  route.preset = true;
+  route.steps = [
+    [{ persona: "author", role: "author", name: "Иванов Иван Иванович" }],
+    [
+      {
+        persona: "supervisor",
+        role: "supervisor",
+        name: "Петров Пётр Петрович",
+      },
+      {
+        persona: "co_supervisor",
+        role: "co_supervisor",
+        name: "Сидорова Анна Викторовна",
+      },
+    ],
+  ];
+  const doc = route.pairs[0]?.doc_id ?? "pdp_assignment";
+  route.pairs.push({
+    doc_id: doc,
+    slot_id: "co_supervisor",
+    persona: "co_supervisor",
+    source: "preset",
+    optional: true,
+    when: { person: "co_supervisor", role: null },
+    why: [],
+  });
+  route.may_add = route.may_add.filter(
+    (m) => !(m.doc_id === doc && m.slot_id === "co_supervisor"),
+  );
+  route.skipped = [
+    {
+      doc_id: doc,
+      slot_id: "academic_supervisor",
+      when: { person: "supervisor", role: "company" },
+      why: [],
+    },
+  ];
+};
+
 const SPECS: Spec[] = [
   {
     id: "po_result",
@@ -409,6 +464,21 @@ const SPECS: Spec[] = [
     kind: "ready",
     search: "selected=participants:supervisor",
     edit: noSupervisor,
+  },
+  {
+    id: "po_sections_points",
+    title: "Секции: точки сдачи",
+    note: "Карточки точек с пунктами, выключенными пунктами в свёрнутом блоке, дополнительными файлами и ссылкой «К документу».",
+    kind: "ready",
+    search: "selected=points:final",
+  },
+  {
+    id: "po_sections_route",
+    title: "Секции: маршрут с пресетом",
+    note: "Дорожка шагов с параллельным шагом, пары с источником и условием, пропущенные и «можно добавить».",
+    kind: "ready",
+    search: "selected=route:pdp-application/step/2",
+    edit: presetRoute,
   },
   {
     id: "po_checks",
