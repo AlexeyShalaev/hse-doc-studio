@@ -26,6 +26,7 @@ from hse_doc_studio.core.rate_limit import (
     GUEST,
     LINK_TOKEN,
     PACK_ATLAS,
+    PACK_IMPACT,
     PACK_OUTCOME,
     UPLOAD,
     IRateLimiter,
@@ -56,6 +57,20 @@ EXPENSIVE_ROUTES: Mapping[RouteKey, RateRule] = {
     ("POST", "/projects/{project_id}/git/bundle/import"): GIT_SYNC,
     # Студия шаблонов: таблица исходов считает тысячи комбинаций (кэш и 304 дёшевы, но попадают в тот же счёт).
     ("GET", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/outcome/atlas"): PACK_ATLAS,
+    # Сравнение двух сторон считает два результата: правило расчёта; «до и после» и матрица считают каждый сценарий
+    # на базе и в рабочем дереве (срез O7).
+    (
+        "POST",
+        "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/outcome/compare",
+    ): PACK_OUTCOME,
+    (
+        "POST",
+        "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/outcome/impact",
+    ): PACK_IMPACT,
+    (
+        "POST",
+        "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/outcome/matrix",
+    ): PACK_IMPACT,
 }
 
 

@@ -16,7 +16,7 @@ from hse_doc_studio.api.route_actions import ROUTE_ACTIONS
 from hse_doc_studio.api.route_scopes import ROUTE_SCOPES
 from hse_doc_studio.core.access.context import set_current_actor
 from hse_doc_studio.core.access.entities import Actor
-from hse_doc_studio.core.rate_limit import COMPILE, PACK_OUTCOME, RULES, RateRule
+from hse_doc_studio.core.rate_limit import COMPILE, PACK_IMPACT, PACK_OUTCOME, RULES, RateRule
 from httpx import ASGITransport, AsyncClient
 
 TIGHT = RateRule("auth_ip", limit=2, window_s=60)
@@ -155,3 +155,13 @@ def test__pack_outcome_routes__share_one_rule_of_20_per_second() -> None:
     assert rules == {PACK_OUTCOME}
     assert (PACK_OUTCOME.limit, PACK_OUTCOME.window_s) == (20, 1)
     assert RULES["pack_outcome"] is PACK_OUTCOME
+
+
+def test__outcome_compare_routes__compare_follows_the_calculation_rule_impact_and_matrix_the_heavy_one() -> None:
+    base = "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/outcome"
+
+    assert EXPENSIVE_ROUTES[("POST", f"{base}/compare")] is PACK_OUTCOME
+    assert EXPENSIVE_ROUTES[("POST", f"{base}/impact")] is PACK_IMPACT
+    assert EXPENSIVE_ROUTES[("POST", f"{base}/matrix")] is PACK_IMPACT
+    assert (PACK_IMPACT.limit, PACK_IMPACT.window_s) == (6, 60)
+    assert RULES["pack_impact"] is PACK_IMPACT
