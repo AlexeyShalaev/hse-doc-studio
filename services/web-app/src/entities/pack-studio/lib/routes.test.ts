@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { packOutcomePath, packRulePath, safeOutcomeBack } from "./routes";
+import {
+  packNewVersionPath,
+  packOutcomePath,
+  packRulePath,
+  safeOutcomeBack,
+} from "./routes";
 
 const REF = { pack: "hse-cs-se", template: "vkr", version: "2026.1.2" };
 
@@ -59,5 +64,14 @@ describe("переход к правилу: адреса", () => {
     ).toBeNull();
     expect(safeOutcomeBack("w1", "/pack-studio/w/w1?file=x")).toBeNull();
     expect(safeOutcomeBack("w1", "/pack-studio/w/w1/resultx")).toBeNull();
+  });
+
+  it("packNewVersionPath ведёт в «Файлы» и несёт пак и шаблон для мастера новой версии", () => {
+    const url = packNewVersionPath("w1", REF);
+    const [path, query = ""] = url.split("?");
+    expect(path).toBe("/pack-studio/w/w1");
+    const params = new URLSearchParams(query);
+    expect(params.get("view")).toBe("files");
+    expect(params.get("newVersion")).toBe("hse-cs-se/vkr");
   });
 });

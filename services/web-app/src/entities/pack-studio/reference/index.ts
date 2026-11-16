@@ -25,3 +25,12 @@ export type {
   ReferenceSource,
 } from "./routes";
 export { resetPreviewReference } from "./previewRoutes";
+export {
+  patchReferenceModel,
+  readReferenceFile,
+  referenceManifest,
+  referenceModel,
+  resetReferenceManifests,
+  touchReferenceManifest,
+  writeReferenceFile,
+} from "./manifests";

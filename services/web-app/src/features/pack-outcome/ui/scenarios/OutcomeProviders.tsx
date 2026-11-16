@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { OutcomeModelContext, type OutcomeModel } from "../../model";
 import type { ScenarioDialog } from "./context";
+import { RuleEditHost } from "../edit/RuleEditHost";
 import { PreviewHost } from "../preview/PreviewHost";
 import { ScenariosHost } from "./ScenariosHost";
 
@@ -13,7 +14,7 @@ type OutcomeProvidersProps = {
   children: ReactNode;
 };
 
-/** Модель экрана и сценарии над ней: оба контекста одним узлом, чтобы разметка экрана не сдвигалась. */
+/** Модель экрана, сценарии, правка по месту и предпросмотр PDF над ней: контексты одним узлом, чтобы разметка экрана не сдвигалась. */
 export const OutcomeProviders = ({
   model,
   scenarioDialog,
@@ -22,7 +23,9 @@ export const OutcomeProviders = ({
 }: OutcomeProvidersProps) => (
   <OutcomeModelContext.Provider value={model}>
     <ScenariosHost initialDialog={scenarioDialog}>
-      <PreviewHost initialDocument={previewDocument}>{children}</PreviewHost>
+      <RuleEditHost>
+        <PreviewHost initialDocument={previewDocument}>{children}</PreviewHost>
+      </RuleEditHost>
     </ScenariosHost>
   </OutcomeModelContext.Provider>
 );

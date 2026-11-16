@@ -62,9 +62,14 @@ const COURSEWORK_REF: PackVersionRef = {
 const VERSION_DIR = "hse-cs-se/templates/vkr/versions";
 
 /** Что показывает запись: ВКР бакалавра или курсовой проект магистратуры (эталоны контракта). */
-type Work = "vkr" | "coursework";
+type Work = "vkr" | "coursework" | "vkr_released";
+const VKR_RELEASED_REF: PackVersionRef = { ...VKR_REF, version: "2026.1.1" };
 const refOf = (work: Work): PackVersionRef =>
-  work === "vkr" ? VKR_REF : COURSEWORK_REF;
+  work === "vkr"
+    ? VKR_REF
+    : work === "vkr_released"
+      ? VKR_RELEASED_REF
+      : COURSEWORK_REF;
 
 const workspace = (id: string): PackWorkspace => ({
   id,
@@ -356,7 +361,7 @@ const seedWorkspace = (
     refetchOnWindowFocus: false,
   });
   const inputsKey = packOutcomeKeys.inputs(id, ref, url.state);
-  const inputsBase = work === "vkr" ? VKR_INPUTS : COURSEWORK_INPUTS;
+  const inputsBase = work === "coursework" ? COURSEWORK_INPUTS : VKR_INPUTS;
   if (inputsKind === "ready" || inputsKind === "none") {
     client.setQueryData(inputsKey, {
       ...inputsBase,
@@ -432,7 +437,7 @@ const seedWorkspace = (
   const scenario = COURSEWORK_SCENARIOS.scenarios.find(
     (entry) => entry.id === url.scenario,
   )?.scenario;
-  const outcome = work === "vkr" ? VKR_OUTCOME : COURSEWORK_OUTCOME;
+  const outcome = work === "coursework" ? COURSEWORK_OUTCOME : VKR_OUTCOME;
   // Копия целиком: правки записей (`edit`) не должны просачиваться в общий эталон.
   const base: PackOutcome = {
     ...withIdentity(id, structuredClone(outcome)),
@@ -824,6 +829,22 @@ const SPECS: Spec[] = [
     note: "У вводной «Вид работы»: сколько элементов в скольких разделах она меняет, сколько правил её читают, списки элементов и правил с переходом к файлу.",
     kind: "ready",
     search: "selected=branches:kind",
+  },
+  {
+    id: "po_edit_ready",
+    title: "Правка по месту: курсовой проект, рабочее дерево",
+    note: "У правила слота подписи есть «Править правило». Нажмите: мини-форма, затем смените условие, и результат пересчитается с дельтой; Ctrl+Z и Ctrl+Shift+Z отменяют и повторяют (манифесты эталона живут в памяти страницы).",
+    kind: "ready",
+    work: "coursework",
+    search: "selected=route:topic-approval/step/2",
+  },
+  {
+    id: "po_edit_released",
+    title: "Правка по месту: выпущенная версия",
+    note: "Версия выпущена: «Править правило» неактивна, рядом объяснение и ссылка на мастер новой версии.",
+    kind: "ready",
+    work: "vkr_released",
+    search: "selected=documents:technical_specification",
   },
   {
     id: "po_student",
