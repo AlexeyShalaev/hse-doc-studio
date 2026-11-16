@@ -6,46 +6,13 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.35.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.34.1...v0.35.0) (2026-11-16)
+## [0.35.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.34.1...v0.35.0) - 2026-11-16
 
-
-### Features
-
-* **pack-studio:** checkpoints and signing route sections (F4) ([eec4742](https://github.com/AlexeyShalaev/hse-doc-studio/commit/eec4742053da44b409e1c5c5748ae8c69b41947e))
-* **pack-studio:** checkpoints and signing route sections (F4) ([7d84eaa](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7d84eaa49a87e831bd2d225883473db6080c40b1))
-* **pack-studio:** checks and branches sections (F5) ([4092864](https://github.com/AlexeyShalaev/hse-doc-studio/commit/4092864d79eae91601e3d598689ee9e56ab602e4))
-* **pack-studio:** checks and branches sections (F5) ([6f5908b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/6f5908b0df9d75e1ccdd56f1fa2590611f66fcd7))
-* **pack-studio:** contract of the outcome resolver ([af52c06](https://github.com/AlexeyShalaev/hse-doc-studio/commit/af52c0690180fd8c410242733fbff8280cdf69e8))
-* **pack-studio:** documents, metadata and participants sections (F3) ([90a59b4](https://github.com/AlexeyShalaev/hse-doc-studio/commit/90a59b42ff1ff2b0798d339306342d884882bd90))
-* **pack-studio:** documents, metadata and participants sections (F3) ([9a0c470](https://github.com/AlexeyShalaev/hse-doc-studio/commit/9a0c47073791eeb275bbb565c782bd5f4546772f))
-* **pack-studio:** impact analysis and atlas core of the outcome (O4) ([0c96123](https://github.com/AlexeyShalaev/hse-doc-studio/commit/0c9612391a5300d5f3796144db7c42788363bc51))
-* **pack-studio:** inputs panel for the outcome view (F2) ([84e538c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/84e538ce11cf8bf1a48aaecfb4e2104436d85af3))
-* **pack-studio:** inputs panel for the outcome view (F2) ([a8f430c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/a8f430c62da02c68f5e065210e6ec95ed507dc5a))
-* **pack-studio:** MCP tools for the outcome view (O3) ([c347ae6](https://github.com/AlexeyShalaev/hse-doc-studio/commit/c347ae6ab60742cb7f96d6cf55faa50c71459d96))
-* **pack-studio:** MCP tools for the outcome view (O3) ([7dd84a5](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7dd84a57be7505d647cece9724f03db481fdd39d))
-* **pack-studio:** open the outcome screen only with the pack_outcome capability ([b9b8c65](https://github.com/AlexeyShalaev/hse-doc-studio/commit/b9b8c653a00ce6d3b3182c363c0deb7ed5685a46))
-* **pack-studio:** outcome atlas and impact analysis (O4) ([cfe49be](https://github.com/AlexeyShalaev/hse-doc-studio/commit/cfe49be94b27dedb1e6efbea8ee507b379178338))
-* **pack-studio:** outcome atlas endpoint with cache, ETag and limits (O4) ([724221b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/724221b5248d0a7c46a2e47ca9293d5d6ea78761))
-* **pack-studio:** outcome endpoints and capability gating (O2) ([dc4a4bc](https://github.com/AlexeyShalaev/hse-doc-studio/commit/dc4a4bc68b9eb2eb6c5ebdff85be0f1e2a4474d4))
-* **pack-studio:** outcome endpoints inputs and outcome (O2) ([12175b8](https://github.com/AlexeyShalaev/hse-doc-studio/commit/12175b8bdc25218f93daa53bc7d75d376eee1a40))
-* **pack-studio:** outcome explain endpoint (O5) ([c6784a3](https://github.com/AlexeyShalaev/hse-doc-studio/commit/c6784a3595b9fed631e5f20a9a9fdc02a0a800ca))
-* **pack-studio:** outcome explain endpoint (O5) ([d316fb6](https://github.com/AlexeyShalaev/hse-doc-studio/commit/d316fb6ff80b001529d2e1209ae522149dea7baa))
-* **pack-studio:** outcome scenarios (O6) ([275444a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/275444a2b6cb40d714c0dece70e733cdbadf28fc))
-* **pack-studio:** outcome scenarios (O6) ([3ca83af](https://github.com/AlexeyShalaev/hse-doc-studio/commit/3ca83af21707d97c65dda589a043018e351f98ef))
-* **pack-studio:** outcome screen shell (F1) ([86db2d0](https://github.com/AlexeyShalaev/hse-doc-studio/commit/86db2d0efedc0877285b8d19b988bdb2c4240daa))
-* **pack-studio:** outcome screen shell (F1) ([a937855](https://github.com/AlexeyShalaev/hse-doc-studio/commit/a93785503b1aece567e6f8265112cbe5dd4d2ec7))
-* **pack-studio:** resolve core for the outcome view (O1) ([f84f256](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f84f256a167053d00c1b8e3a651c00168c9dc0d5))
-* **pack-studio:** resolve core for the outcome view (O1) ([eb4f39e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/eb4f39e12feaff00c8ab632f9fdb848fd11e6c34))
-* **pack-studio:** scenario argument of the MCP outcome tools (O6) ([c0df1c4](https://github.com/AlexeyShalaev/hse-doc-studio/commit/c0df1c4bb250e2187b927100ac098a1a4564f58f))
-* **pack-studio:** strict Jinja rendering mode for resolve ([98409f5](https://github.com/AlexeyShalaev/hse-doc-studio/commit/98409f51c9ebfb2837942c71569669b080053501))
-* **pack-studio:** why panel e2e step, condition wording, focus after Alt+Z (F6) ([606a83d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/606a83dcab9d451c6f7862cbdb5ce7a7ac7de684))
-* **pack-studio:** why panel with rule navigation (F6) ([3ee44fa](https://github.com/AlexeyShalaev/hse-doc-studio/commit/3ee44fa5f8df3dd1886dcc2904f9a15401a09b26))
-* **pack-studio:** why panel with rule navigation (F6) ([4fff055](https://github.com/AlexeyShalaev/hse-doc-studio/commit/4fff055a77e3ac7ea0eba67afdd0b1e3fe8c0af0))
-
-
-### Performance Improvements
-
-* **pack-studio:** atlas impact by neighbours of strength 3 above 2048 combinations (O4) ([9bc943e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/9bc943e185c36cc0b4d1a0ab2a81c57b8c7e04e8))
+- Template Studio: a new Result screen opens by default. Pick the language, kind of work, authors, supervisors and other inputs and see right away what you get: documents with final file names, project metadata fields (visible and required), expected participants, submission points, the signing route with its steps, checks, variants and edition languages. The choice lives in the page address, so a link can be shared. The previous screen with the file tree is still available as the Files mode.
+- Template Studio: every result element has a Why panel. It shows the chain of rules (held, not held, skipped) with the condition in words and the actual values, neighbouring elements and What if: which change of one input would change this element, applied with a click. Open the rule leads to the exact record in the form or to the line in the source, and Back to result returns you to the same place. For an input you can see how many elements and sections it affects.
+- Template Studio: the Inputs panel is built from the version schema (switches, lists, number of authors, supervisor role, pack fields, questionnaire answers, document variants), marks what was changed and resets values. The Not affecting block lists inputs that change nothing for the current choice.
+- Template Studio: scenarios are stored in the pack itself next to the examples. A scenario is a named set of inputs with an expected result (a snapshot and assertions) and can be run on the work tree, the last commit and the base. Starter scenarios were added to the official packs. The atlas shows all distinguishable outcomes of a version (for example, 864 rows and 384 outcomes for a thesis) and the impact analysis of inputs. For now scenarios and the atlas are available through the API and MCP, screens for them come in the next release.
+- MCP: the pack_outcome_inputs and pack_outcome tools give agents what the Result screen shows: the dictionary of inputs and the result for a set of inputs, in three states (work tree, last commit, base), in a compact text form or in full, with a scenario argument. They need the packs token scope and the Template author right.
 
 ## [0.34.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.34.0...v0.34.1) - 2026-11-16
 
