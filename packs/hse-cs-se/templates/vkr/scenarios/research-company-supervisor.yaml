@@ -1,0 +1,92 @@
+format: 1
+name:
+  ru: Исследовательская ВКР, руководитель из компании
+  en: Research thesis, company supervisor
+description:
+  ru: "Вместо ТЗ аннотация и промежуточный отчёт; руководитель подписывает уже на КТ1."
+  en: "An annotation and an interim report instead of the SoW; the supervisor signs from CP1."
+versions: ["2026.1.*"]
+inputs:
+  kind: research
+  staffing: solo
+  supervisor: company
+assertions:
+  - { kind: document_state, doc: annotation, state: active }
+  - { kind: document_state, doc: technical_specification, state: absent }
+  - { kind: document_state, doc: interim_report, state: active }
+  - { kind: item_active, point: checkpoint-1, doc: annotation, active: true }
+  - { kind: route_steps, point: checkpoint-1, steps: [[author], [supervisor]] }
+  - { kind: meta_visible, field: manuals, visible: false }
+snapshot:
+  documents:
+    technical_specification: absent
+    shared_technical_specification: absent
+    test_program_and_methodology: absent
+    shared_test_program_and_methodology: absent
+    source_listing: absent
+    programmer_manual: absent
+    operator_manual: absent
+    annotation: active
+    shared_annotation: absent
+    interim_report: active
+    pdp_assignment: active
+    pdp_work_plan: active
+    pdp_report_title: active
+    pdp_review: active
+    topic_presentation: active
+    presentation: active
+    thesis: active
+    nda: inactive
+  participants: [author, supervisor, academic_supervisor]
+  meta_visible:
+    - year
+    - specialization
+    - name_en
+    - name_short
+    - faculty
+    - city
+    - city_en
+    - udc
+    - program_code
+    - course
+    - academic_supervisor
+    - doc_code_base
+    - font_main
+    - font_sans
+    - font_mono
+    - nda
+    - supervisor
+    - co_supervisor
+  points:
+    - id: checkpoint-1
+      items: [topic_presentation, annotation]
+      steps: [[author], [supervisor]]
+      pairs: 2
+    - id: checkpoint-2
+      items: [topic_presentation, interim_report]
+      steps: [[author], [supervisor]]
+      pairs: 2
+    - id: checkpoint-3
+      items: [interim_report, presentation]
+      steps: []
+      pairs: 0
+    - id: pdp-application
+      items: [pdp_assignment, pdp_work_plan]
+      steps: [[author], [supervisor]]
+      pairs: 4
+    - id: final
+      items: [thesis, presentation, pdp_report_title, pdp_review]
+      steps: [[author], [supervisor]]
+      pairs: 5
+    - id: gia
+      items: [thesis]
+      steps: [[author], [supervisor]]
+      pairs: 2
+  sections:
+    - { section: documents, fingerprint: a71ea5ec0876, count: 9 }
+    - { section: meta, fingerprint: a2b376148c8c, count: 18 }
+    - { section: forms, fingerprint: baa9eaef9a4a, count: 2 }
+    - { section: participants, fingerprint: f1113ea43c16, count: 3 }
+    - { section: points, fingerprint: 3e3a81e67948, count: 13 }
+    - { section: route, fingerprint: 871eaa5f4ea6, count: 15 }
+    - { section: checks, fingerprint: 4f53cda18c2b, count: 0 }

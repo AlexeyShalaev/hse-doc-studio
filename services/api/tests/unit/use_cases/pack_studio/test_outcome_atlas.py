@@ -36,6 +36,7 @@ def _prepared(revision: str = "sha256-one", token: str = "tree:1", example: int 
         example=auto_examples(version)[example],
         revision=revision,
         today=TODAY,
+        scenario=None,
     )
 
 
@@ -46,7 +47,9 @@ class _Outcomes:
         self.current = prepared
         self.states: list[str] = []
 
-    async def prepare(self, _actor: object, _ws: object, _pack: str, _tpl: str, _ver: str, state: str, _ex: Any) -> Any:
+    async def prepare(
+        self, _actor: object, _ws: object, _pack: str, _tpl: str, _ver: str, state: str, _ex: Any, _scenario: Any = None
+    ) -> Any:
         self.states.append(state)
         return self.current
 

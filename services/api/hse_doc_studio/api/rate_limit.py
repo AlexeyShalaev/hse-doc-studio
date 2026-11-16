@@ -43,6 +43,8 @@ EXPENSIVE_ROUTES: Mapping[RouteKey, RateRule] = {
     # Результат версии Студии шаблонов: вводные и расчёт под одним правилом (экран шлёт их по debounce).
     ("GET", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/outcome/inputs"): PACK_OUTCOME,
     ("POST", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/outcome"): PACK_OUTCOME,
+    # Прогон сценариев шаблона (срез O6) считает результат по каждому сценарию: то же правило.
+    ("POST", "/pack-studio/workspaces/{workspace_id}/templates/{pack}/{template}/scenarios/run"): PACK_OUTCOME,
     (
         "POST",
         "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/outcome/explain",

@@ -104,6 +104,31 @@ class PackFilesService:
             await asyncio.to_thread(self._files.write, root, path, content)
         return WrittenFile(path, file_etag(content), len(content))
 
+    async def put(  # noqa: PLR0913 — путь, содержимое, условие записи и ошибки создания и правки
+        self,
+        actor: Actor,
+        workspace_id: UUID,
+        raw_path: str,
+        content: bytes,
+        if_match: str | None,
+        *,
+        taken: PackStudioError,
+        missing: PackStudioError,
+    ) -> WrittenFile:
+        """Запись «создать или поправить» под замком пространства (сценарии, срез O6). Без `If-Match` файла быть не
+        должно (`taken` иначе: запись не затирает чужой файл молча), с `If-Match` он должен быть (`missing` иначе) и
+        совпасть по версии (`stale_file`)."""
+        path = validate_rel_path(raw_path)
+        ws, root = await self._workspaces.ready(actor, workspace_id)
+        self._check_size(len(content))
+        async with self._lock(ws.id):
+            (await self._workspaces.protection(ws, root)).check_write(path)
+            current = await self._read_or_none(root, path)
+            _check_put(current, if_match, taken, missing)
+            if content != current:
+                await asyncio.to_thread(self._files.write, root, path, content)
+        return WrittenFile(path, file_etag(content), len(content))
+
     async def patch_yaml(
         self, actor: Actor, workspace_id: UUID, raw_path: str, ops: Sequence[YamlOp], if_match: str | None
     ) -> WrittenFile:
@@ -187,6 +212,16 @@ class PackFilesService:
                     raise PackStudioError(PackStudioErrorCode.file_not_found, path=path)
             await asyncio.to_thread(self._files.delete, root, path)
 
+    async def _read_or_none(self, root: Path, path: str) -> bytes | None:
+        try:
+            return await asyncio.to_thread(
+                self._files.read, root, path, max_bytes=self._workspaces.limits.max_read_bytes
+            )
+        except PackStudioError as exc:
+            if exc.code is not PackStudioErrorCode.file_not_found:
+                raise
+            return None
+
     async def _check_version(self, root: Path, path: str, if_match: str | None) -> bytes | None:
         """Текущее содержимое (None: файла нет); `stale_file`, если клиент опирался на другую версию."""
         limit = self._workspaces.limits.max_read_bytes
@@ -220,6 +255,22 @@ class PackFilesService:
             lock = asyncio.Lock()
             self._locks[workspace_id] = lock
         return lock
+
+
+def _check_put(current: bytes | None, if_match: str | None, taken: PackStudioError, missing: PackStudioError) -> None:
+    """Условие записи «создать или поправить» (`PackFilesService.put`)."""
+    if if_match is None:
+        if current is not None:
+            raise taken
+        return
+    if current is None:
+        raise missing
+    if not etag_matches(if_match, current):
+        raise PackStudioError(
+            PackStudioErrorCode.stale_file,
+            etag=file_etag(current),
+            content=current.decode("utf-8", errors="replace"),
+        )
 
 
 def apply_yaml_ops(editor: IYamlEditor, text: str, ops: Sequence[YamlOp]) -> str:

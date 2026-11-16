@@ -48,6 +48,14 @@ _STATES: Final = ("work_tree", "head", "base")
 _YES, _NO = "yes", "no"
 _MAX_VALUES_LISTED: Final = 40
 
+_SCENARIO = {
+    "type": "string",
+    "description": (
+        "Сценарий шаблона (id файла scenarios/<id>.yaml): его вводные ложатся между умолчаниями и inputs, "
+        "набор данных берётся у сценария (иначе auto:normal). Читается из того же state"
+    ),
+}
+
 _STATE = {
     "type": "string",
     "enum": list(_STATES),
@@ -176,6 +184,13 @@ def outcome_hint(exc: PackStudioError) -> str | None:
                 "The version is new: it does not exist in this state yet. Use state=work_tree.",
             ),
         }.get(str(reason))
+    if code in {PackStudioErrorCode.scenario_not_found, PackStudioErrorCode.scenario_invalid}:
+        return localized_error(
+            "Сценарии шаблона лежат в <пак>/templates/<шаблон>/scenarios/<id>.yaml (id: строчная латиница, цифры, "
+            "дефис); без аргумента scenario результат считается по умолчаниям и inputs.",
+            "Template scenarios live in <pack>/templates/<template>/scenarios/<id>.yaml (id: lowercase Latin "
+            "letters, digits, hyphens); without the scenario argument the outcome uses the defaults and inputs.",
+        )
     if code is PackStudioErrorCode.outcome_busy:
         seconds = exc.ctx.get("retry_after_s")
         return localized_error(
@@ -201,7 +216,8 @@ class PackOutcomeInputsTool(PackTool):
             '{"workspace_id": "<uuid>", "version": "hse-cs-se/vkr/2026.1.2"}.'
         ),
         parameters=_schema(
-            {"workspace_id": _WORKSPACE_ID, "version": _VERSION, "state": _STATE}, ("workspace_id", "version")
+            {"workspace_id": _WORKSPACE_ID, "version": _VERSION, "state": _STATE, "scenario": _SCENARIO},
+            ("workspace_id", "version"),
         ),
     )
     kind = ToolKind.read
@@ -212,7 +228,13 @@ class PackOutcomeInputsTool(PackTool):
         service = await self._deps.get(PackOutcomeService)
         try:
             reply = await service.inputs(
-                actor, uuid_arg(args, "workspace_id"), ref.pack, ref.template, ref.version, state
+                actor,
+                uuid_arg(args, "workspace_id"),
+                ref.pack,
+                ref.template,
+                ref.version,
+                state,
+                scenario=optional_text(args, "scenario"),
             )
         except PackStudioError as exc:
             return refusal(exc, hint=outcome_hint(exc))
@@ -264,7 +286,8 @@ class PackOutcomeTool(PackTool):
         description=(
             "Студия шаблонов: что получится у версии шаблона при заданных вводных, без сборки PDF: документы в "
             "комплекте с итоговыми именами файлов (и почему остальных нет), участники, пункты точек сдачи, шаги и пары "
-            "подписей маршрута, предупреждения. Вводные inputs поверх умолчаний (список в pack_outcome_inputs): "
+            "подписей маршрута, предупреждения. Вводные inputs поверх умолчаний и сценария scenario (список в "
+            "pack_outcome_inputs): "
             '{"kind": "research", "staffing": "team2", "nda": true}. state: work_tree (с несохранёнными '
             "правками, по умолчанию), head или base для сравнения «до» (читаются из git). include: нужные разделы "
             f"({', '.join(SECTIONS)}; all для всех), по умолчанию {', '.join(DEFAULT_SECTIONS)}; checks и branches "
@@ -277,6 +300,7 @@ class PackOutcomeTool(PackTool):
                 "workspace_id": _WORKSPACE_ID,
                 "version": _VERSION,
                 "state": _STATE,
+                "scenario": _SCENARIO,
                 "example": {
                     "type": "string",
                     "description": "Набор данных из pack_outcome_inputs (по умолчанию первый)",
@@ -309,6 +333,7 @@ class PackOutcomeTool(PackTool):
         wanted = frozenset(name for name in sections if name in EXPENSIVE)
         request = OutcomeRequest(
             state=state,
+            scenario=optional_text(args, "scenario"),
             example=optional_text(args, "example"),
             inputs=inputs,
             include=wanted,  # type: ignore[arg-type]  # checks и branches: имена из EXPENSIVE

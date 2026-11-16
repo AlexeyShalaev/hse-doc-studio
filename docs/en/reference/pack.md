@@ -66,12 +66,14 @@ A pack is a folder; in the Studio repository the packs live in `packs/`. The eas
 <pack>/templates/<template>/template.yaml              the template outside versions: names, icon, colour, default_version, group hint
 <pack>/templates/<template>/releases.yaml              the release registry: version number, folder digest, class
 <pack>/templates/<template>/examples/<name>.yaml       preview sample data, not part of a version
+<pack>/templates/<template>/scenarios/<id>.yaml         scenarios: inputs and the expected outcome, not part of a version
 <pack>/templates/<template>/versions/<version>/version.yaml   the version manifest
 <pack>/templates/<template>/versions/<version>/files/  documents: doc.yaml, LaTeX sources, Jinja templates, common/
 <pack>/templates/<template>/versions/<version>/checks/ check rules
 ```
 
 - The ids of the pack, the template and the version match their folder names: the Studio catalog finds a version by the path built from the ids.
+- `scenarios/*.yaml` lie next to `examples/`, outside the version folder: they do not change the digest of a released version, the catalog loader does not read them and projects do not receive them. The format and the run: [Scenarios in Template Studio](../pack-studio/index.md#scenarios).
 - `template.yaml` is outside versions: the group hint or the icon can change without a release. `default_version` is the version the project wizard offers to new projects.
 - `version.yaml` declares the documents, fields and field groups, questionnaires, signatures, submission profiles, languages and the engine. Service keys: `status` (`beta`, `stable`, `deprecated`), `released_at`, `release.kind` (the release class), `release.note` (the class explanation, the Studio does not show it), `changes` and `breaking_changes` (release notes, ru and en in pairs), `min_studio` (the lowest Studio version that understands the template version), `manifest_format` (the Studio hides a version with a newer format than its own).
 - `releases.yaml` is written by a release (`pack freeze` or the "New version" wizard), nobody edits it by hand. The folder of a released version is immutable: `pack check` recounts the digest and fails on any edit.

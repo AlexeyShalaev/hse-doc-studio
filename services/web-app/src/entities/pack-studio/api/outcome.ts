@@ -521,12 +521,16 @@ export const PackScenarioWriteRequestSchema = z.strictObject({
   scenario: PackScenarioSchema,
   // Заменить `snapshot` текущим результатом сценария на выбранном состоянии.
   record_snapshot: OutcomeStateSchema.nullish(),
+  // Версия, на которой считается снимок; null: старшая версия шаблона, подходящая под `versions` сценария.
+  version: z.string().max(128).nullish(),
 });
 
 export const PackScenarioRunRequestSchema = z.strictObject({
   state: OutcomeStateSchema.optional(),
   // null: все сценарии шаблона.
   scenarios: z.array(z.string()).max(200).nullish(),
+  // Версия прогона; null: старшая версия шаблона на диске.
+  version: z.string().max(128).nullish(),
 });
 
 // ── Покрытие и находки линтера результата ────────────────────────────────────

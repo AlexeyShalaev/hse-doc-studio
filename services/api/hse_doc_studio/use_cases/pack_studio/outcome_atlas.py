@@ -101,13 +101,17 @@ class PackAtlasService:
         state: OutcomeState,
         *,
         example: str | None = None,
+        scenario: str | None = None,
         pins: Mapping[str, str] | None = None,
         if_none_match: str | None = None,
     ) -> OutcomeReply:
-        """Таблица исходов версии (`PackOutcomeAtlas`); `body` None, если `If-None-Match` совпал с ключом."""
+        """Таблица исходов версии (`PackOutcomeAtlas`); `body` None, если `If-None-Match` совпал с ключом. С `scenario`
+        набор данных берётся у сценария, а его вводные становятся основой таблицы: у измерений `default` и остальные
+        вводные это значения сценария, а не умолчания набора. Дайджест файла сценария входит в ключ и ETag."""
         started = self._clock()
         pins = dict(pins or {})
-        prep = await self._outcomes.prepare(actor, workspace_id, pack, template, version, state, example)
+        prep = await self._outcomes.prepare(actor, workspace_id, pack, template, version, state, example, scenario)
+        prep = self._on_scenario(prep)
         key = self._outcomes.key_of(prep, state, kind="atlas", pins=sorted(pins.items()))
         etag = etag_of(key)
         if etag_matches(if_none_match, etag):
@@ -126,6 +130,23 @@ class PackAtlasService:
             }
             self._atlases.put(key, body, cost=len(json.dumps(body, ensure_ascii=False)))
         return OutcomeReply(etag, {**body, "elapsed_ms": max(0, round((self._clock() - started) * 1000))})
+
+    @staticmethod
+    def _on_scenario(prep: PreparedVersion) -> PreparedVersion:
+        """Вводные сценария как умолчания набора данных расчёта; не подходящие версии это `inputs_invalid`."""
+        if prep.scenario is None:
+            return prep
+        try:
+            normalize_inputs(input_specs(prep.source.desc.version), prep.scenario.inputs)
+        except OutcomeInputError as exc:
+            raise PackStudioError(
+                PackStudioErrorCode.inputs_invalid, field=exc.field, value=exc.value, reason=exc.reason
+            ) from None
+        data = prep.example.data
+        if data is None:
+            return prep
+        merged = replace(data, defaults={**data.defaults, **prep.scenario.inputs})
+        return replace(prep, example=replace(prep.example, data=merged))
 
     @staticmethod
     def _validate(prep: PreparedVersion, pins: Mapping[str, str]) -> None:

@@ -17,11 +17,17 @@
   перегрузки: рабочих потоков конечное число, очередь ограничена. Таймаут и переполнение это `outcome_busy` (503 с
   `Retry-After`). Поток, который не уложился, нельзя прервать: он занимает место до конца, поэтому следующие расчёты
   при залипшем не копятся, а получают отказ сразу.
+- **Сценарии (срез O6).** Файлы `scenarios/*` шаблона читаются вместе с версией из того же состояния
+  (`_Source.scenarios`: диск у `work_tree`, коммит у `head` и `base`). `scenario` запроса кладёт вводные сценария
+  между умолчаниями и вводными запроса, дайджест файла входит в ключ и ETag. Список, запись и прогон сценариев:
+  `scenario_service.py`, он берёт отсюда версию (`scenario_context`), чтение файлов (`read_scenarios`) и расчёт под
+  тем же пределом (`compute`).
 """
 
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import time
 from collections.abc import Callable, Mapping, Sequence
@@ -42,9 +48,17 @@ from hse_doc_studio.core.pack_studio.outcome.inputs import OutcomeInputError
 from hse_doc_studio.core.pack_studio.outcome.model import ElementRef, IncludeName, Outcome
 from hse_doc_studio.core.pack_studio.outcome.payload import to_json
 from hse_doc_studio.core.pack_studio.outcome.revision import example_file_names, is_manifest_path, revision_of
+from hse_doc_studio.core.pack_studio.outcome.scenarios import (
+    SCENARIOS_DIR,
+    Scenario,
+    ScenarioError,
+    parse_scenario,
+    scenario_file_name,
+    version_matches,
+)
 from hse_doc_studio.core.pack_studio.outcome.serving import LruCache, etag_matches, etag_of, request_key
 from hse_doc_studio.core.pack_studio.paths import TEMPLATES_DIR, VersionRef
-from hse_doc_studio.core.pack_studio.preview import PreviewExample, VersionDescription
+from hse_doc_studio.core.pack_studio.preview import AUTO_NORMAL, PreviewExample, VersionDescription
 from hse_doc_studio.core.pack_studio.protocols import (
     GitRevisionName,
     IPackPreviewRenderer,
@@ -52,6 +66,7 @@ from hse_doc_studio.core.pack_studio.protocols import (
     IPackWorkspaceGit,
 )
 from hse_doc_studio.core.signatures.dates import DISPLAY_ZONE
+from hse_doc_studio.core.template_versions import parse_version_key
 from hse_doc_studio.core.uow import spawn_detached
 from hse_doc_studio.use_cases.pack_studio.outcome.dictionary import inputs_dictionary
 from hse_doc_studio.use_cases.pack_studio.outcome.explain import EXPLAIN_INCLUDE, neighbors_of
@@ -73,6 +88,8 @@ RETRY_AFTER_S = 2
 # Манифест версии и файл набора данных больше этого в `revision` не идут (как манифесты дерева).
 _MANIFEST_MAX_BYTES = 512 * 1024
 _RESULT_CACHE_BYTES = 96 * 1024 * 1024
+# Файл сценария больше этого не читается (запись сценария ограничена тем же).
+SCENARIO_MAX_BYTES = 256 * 1024
 
 
 @dataclass(frozen=True)
@@ -131,6 +148,18 @@ class _Source:
     desc: VersionDescription
     # Манифесты и наборы данных: `version.yaml`, `files/<документ>/doc.yaml`, `examples/<имя>`.
     texts: Mapping[str, bytes]
+    # Файлы сценариев шаблона (`scenarios/<имя>`), вне каталога версии: имя файла -> содержимое (срез O6).
+    scenarios: Mapping[str, bytes] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ScenarioUse:
+    """Сценарий, вводные которого лежат между умолчаниями и вводными запроса: id, вводные и дайджест файла (он входит
+    в ключ кэша и ETag, правка сценария меняет ответ)."""
+
+    id: str
+    inputs: Mapping[str, str]
+    digest: str
 
 
 @dataclass(frozen=True)
@@ -141,6 +170,32 @@ class _Prepared:
     example: PreviewExample
     revision: str
     today: date
+    scenario: ScenarioUse | None = None
+
+
+@dataclass(frozen=True)
+class ScenarioContext:
+    """Версия шаблона в выбранном состоянии для прогона сценариев и записи снимка."""
+
+    ws: PackWorkspace
+    ref: VersionRef
+    state: OutcomeState
+    source: _Source
+    today: date
+
+    @property
+    def revision(self) -> str:
+        """Ревизия манифестов версии и всех наборов данных шаблона: сценарии выбирают наборы по-разному."""
+        texts = {p: t for p, t in self.source.texts.items() if is_manifest_path(p) or p.startswith("examples/")}
+        return revision_of(texts)
+
+    @property
+    def examples(self) -> tuple[PreviewExample, ...]:
+        return examples_of(self.source.desc)
+
+    @property
+    def version(self) -> str:
+        return self.ref.version
 
 
 type PreparedVersion = _Prepared
@@ -206,11 +261,14 @@ class PackOutcomeService:
         version: str,
         state: OutcomeState,
         *,
+        scenario: str | None = None,
         if_none_match: str | None = None,
     ) -> OutcomeReply:
-        """Вводные версии, наборы данных и умолчания (`PackOutcomeInputs`)."""
+        """Вводные версии, наборы данных и умолчания (`PackOutcomeInputs`). С `scenario` словарь считается на
+        наборе данных сценария (умолчания вводных зависят от набора); вводные сценария в словарь не входят, они
+        приходят в `inputs` результата."""
         started = self._clock()
-        prep = await self._prepare(actor, workspace_id, pack, template, version, state, None)
+        prep = await self._prepare(actor, workspace_id, pack, template, version, state, None, scenario)
         key = request_key({**self._key_base(prep, state), "kind": "inputs"})
         etag = etag_of(key)
         if etag_matches(if_none_match, etag):
@@ -248,15 +306,14 @@ class PackOutcomeService:
     ) -> OutcomeReply:
         """Результат версии для вводных: разделы, трасса, отпечатки (`PackOutcome`)."""
         started = self._clock()
-        if request.scenario is not None:
-            # Сценарии это срез O6: до него файлов сценариев у шаблона нет.
-            raise PackStudioError(PackStudioErrorCode.scenario_not_found, scenario=request.scenario)
-        prep = await self._prepare(actor, workspace_id, pack, template, version, request.state, request.example)
+        prep = await self._prepare(
+            actor, workspace_id, pack, template, version, request.state, request.example, request.scenario
+        )
         key = request_key(
             {
                 **self._key_base(prep, request.state),
                 "kind": "outcome",
-                "inputs": dict(request.inputs),
+                "inputs": _merged_inputs(prep, request.inputs),
                 "include": sorted(request.include),
             }
         )
@@ -269,6 +326,73 @@ class PackOutcomeService:
         body = await self._calculate(prep, request)
         self._results.put(key, body, cost=len(json.dumps(body, ensure_ascii=False)))
         return OutcomeReply(etag, {**body, "elapsed_ms": _ms(self._clock() - started)})
+
+    # ── сценарии (срез O6) ───────────────────────────────────────────────────
+
+    async def read_scenarios(
+        self, actor: Actor, workspace_id: UUID, pack: str, template: str, state: OutcomeState
+    ) -> tuple[PackWorkspace, dict[str, bytes]]:
+        """Файлы сценариев шаблона в состоянии версии: имя файла -> содержимое. `work_tree` читает диск, `head` и `base`
+        коммит (версия для этого не нужна). Нет шаблона на диске: `version_not_found`."""
+        ws, root = await self._workspaces.ready(actor, workspace_id)
+        version_ref(pack, template, "0")  # имена пака и шаблона проходят ту же проверку пути
+        template_dir = f"{pack}/{TEMPLATES_DIR}/{template}"
+        if state == "work_tree":
+            if not await asyncio.to_thread(self._files.is_dir, root, template_dir):
+                raise PackStudioError(PackStudioErrorCode.version_not_found, version="")
+            found = await asyncio.to_thread(
+                self._files.template_files, root, pack, template, SCENARIOS_DIR, max_bytes=SCENARIO_MAX_BYTES
+            )
+            return ws, found
+        sha = await self._revision_sha(ws, state)
+        prefix = "" if ws.packs_path == "." else f"{ws.packs_path}/"
+        files = await self._git.revision_files(
+            self._workspaces.dirs_of(ws),
+            self._workspaces.target_of(ws),
+            sha=sha,
+            prefixes=(f"{prefix}{template_dir}/{SCENARIOS_DIR}",),
+            max_files=self._limits.max_files,
+            max_bytes=self._limits.max_bytes,
+        )
+        unprefixed = {path.removeprefix(prefix): data for path, data in files.items() if path.startswith(prefix)}
+        return ws, _scenario_texts(unprefixed, template_dir)
+
+    async def scenario_context(  # noqa: PLR0913 — путь шаблона, состояние и выбор версии
+        self,
+        actor: Actor,
+        workspace_id: UUID,
+        pack: str,
+        template: str,
+        state: OutcomeState,
+        version: str | None = None,
+        patterns: Sequence[str] = (),
+    ) -> ScenarioContext:
+        """Версия шаблона для прогона сценариев. Без `version` берётся старшая версия на диске пространства (подходящая
+        под `patterns`, если они есть); в `head` и `base` она читается из коммита, там её может не быть
+        (`diff_base_unavailable`, `new_version`)."""
+        ws, root = await self._workspaces.ready(actor, workspace_id)
+        if version is None:
+            names = await asyncio.to_thread(self._files.template_versions, root, pack, template)
+            candidates = [v for v in names if version_matches(patterns, v)]
+            version = newest_version(candidates)
+            if version is None:
+                raise PackStudioError(PackStudioErrorCode.version_not_found, version="")
+        ref = version_ref(pack, template, version)
+        source = await self._source(ws, root, ref, state)
+        return ScenarioContext(ws, ref, state, source, self._today())
+
+    async def compute[T](self, work: Callable[[], T]) -> T:
+        """Расчёт для сценариев тем же пределом времени и пулом, что результат; исключение вычислителя на манифесте,
+        который лоадер принял, это `version_unreadable`, а не 500."""
+        try:
+            return await self._run(work)
+        except PackStudioError:
+            raise
+        except Exception as exc:
+            logger.warning("pack studio scenario calculation failed", exc_info=True)
+            raise PackStudioError(
+                PackStudioErrorCode.version_unreadable, reason=f"{type(exc).__name__}: {str(exc)[:200]}"
+            ) from None
 
     async def explain(  # noqa: PLR0913 — путь версии, запрос и условный запрос
         self,
@@ -283,11 +407,10 @@ class PackOutcomeService:
     ) -> OutcomeReply:
         """«Почему?» элемента результата: цепочка решений, соседи по правилам, «что если» (`PackOutcomeExplain`)."""
         started = self._clock()
-        if request.scenario is not None:
-            # Сценарии это срез O6: до него файлов сценариев у шаблона нет.
-            raise PackStudioError(PackStudioErrorCode.scenario_not_found, scenario=request.scenario)
-        prep = await self._prepare(actor, workspace_id, pack, template, version, request.state, request.example)
-        base = {**self._key_base(prep, request.state), "inputs": dict(request.inputs)}
+        prep = await self._prepare(
+            actor, workspace_id, pack, template, version, request.state, request.example, request.scenario
+        )
+        base = {**self._key_base(prep, request.state), "inputs": _merged_inputs(prep, request.inputs)}
         element = {"section": request.element.section, "id": request.element.id}
         key = request_key({**base, "kind": "explain", "element": element})
         etag = etag_of(key)
@@ -338,7 +461,7 @@ class PackOutcomeService:
     ) -> Outcome:
         """Результат ядра в потоке с пределом времени; ошибки вводных и манифеста становятся ошибками Студии."""
         version, example, today, revision = prep.source.desc.version, prep.example, prep.today, prep.revision
-        inputs = dict(request_inputs)
+        inputs = _merged_inputs(prep, request_inputs)
 
         def work() -> Any:
             try:
@@ -392,10 +515,13 @@ class PackOutcomeService:
         version: str,
         state: OutcomeState,
         example_id: str | None,
+        scenario_id: str | None = None,
     ) -> PreparedVersion:
         """Версия в выбранном состоянии, набор данных, `revision` и день: то, из чего расчёты результата строят ключ
-        и считают. Читает так же, как `inputs` и `outcome` (права, `head` и `base` из git, `diff_base_unavailable`)."""
-        return await self._prepare(actor, workspace_id, pack, template, version, state, example_id)
+        и считают. Читает так же, как `inputs` и `outcome` (права, `head` и `base` из git, `diff_base_unavailable`).
+        С `scenario_id` набор данных берётся у сценария, `scenario` в результате несёт его вводные и дайджест файла
+        (дайджест входит в ключ `key_of`)."""
+        return await self._prepare(actor, workspace_id, pack, template, version, state, example_id, scenario_id)
 
     @classmethod
     def key_of(cls, prep: PreparedVersion, state: str, **extra: Any) -> str:
@@ -413,15 +539,20 @@ class PackOutcomeService:
         version: str,
         state: OutcomeState,
         example_id: str | None,
+        scenario_id: str | None = None,
     ) -> _Prepared:
         ws, root = await self._workspaces.ready(actor, workspace_id)
         ref = version_ref(pack, template, version)
-        if state == "work_tree":
-            source = await self._work_tree(root, ref)
-        else:
-            source = await self._revision(ws, ref, state)
+        source = await self._source(ws, root, ref, state)
+        parsed = _read_scenario(source, scenario_id) if scenario_id is not None else None
         examples = examples_of(source.desc)
-        wanted = example_id or default_example_of(examples)
+        if example_id:
+            wanted = example_id
+        elif parsed is not None:
+            # Набор данных сценария; без него автонабор «Обычный»: результат сценария не зависит от файлов примеров.
+            wanted = parsed[0].example or AUTO_NORMAL
+        else:
+            wanted = default_example_of(examples)
         example = next((e for e in examples if e.id == wanted), None)
         if example is None:
             raise PackStudioError(
@@ -435,11 +566,11 @@ class PackOutcomeService:
         manifests = {
             path: text for path, text in source.texts.items() if is_manifest_path(path) or path in wanted_files
         }
-        return _Prepared(ws, ref, source, example, revision_of(manifests), self._today())
+        return _Prepared(ws, ref, source, example, revision_of(manifests), self._today(), parsed[1] if parsed else None)
 
     @staticmethod
     def _key_base(prep: _Prepared, state: str) -> dict[str, Any]:
-        return {
+        key: dict[str, Any] = {
             "workspace": str(prep.ws.id),
             "version": prep.ref.dir,
             "state": state,
@@ -448,23 +579,28 @@ class PackOutcomeService:
             "today": prep.today.isoformat(),
             "example": prep.example.id,
         }
+        if prep.scenario is not None:
+            # Правка файла сценария меняет ответ, хотя манифесты и каталог версии те же.
+            key["scenario"] = [prep.scenario.id, prep.scenario.digest]
+        return key
 
     async def _work_tree(self, root: Path, ref: VersionRef) -> _Source:
         # Манифесты читаются первыми: нет каталога версии это `version_not_found`, а не сбой разбора.
         texts = await asyncio.to_thread(self._files.version_manifests, root, ref, max_bytes=_MANIFEST_MAX_BYTES)
+        scenarios = await asyncio.to_thread(
+            self._files.template_files, root, ref.pack, ref.template, SCENARIOS_DIR, max_bytes=SCENARIO_MAX_BYTES
+        )
         desc, tree = await self._previews.describe_at(root, ref)
-        return _Source(f"tree:{tree}", desc, texts)
+        return _Source(f"tree:{tree}", desc, texts, scenarios)
+
+    async def _source(self, ws: PackWorkspace, root: Path, ref: VersionRef, state: OutcomeState) -> _Source:
+        if state == "work_tree":
+            return await self._work_tree(root, ref)
+        return await self._revision(ws, ref, state)
 
     async def _revision(self, ws: PackWorkspace, ref: VersionRef, name: GitRevisionName) -> _Source:
         """`head` или `base`: коммит из git пространства, версия читается из его дерева."""
-        if ws.kind is not WorkspaceKind.git:
-            raise _base_unavailable("no_git")
-        if name == "base" and not ws.base_branch:
-            raise _base_unavailable("no_base")
-        dirs = self._workspaces.dirs_of(ws)
-        sha = await self._git.revision_sha(dirs, name=name, base_branch=ws.base_branch or "")
-        if sha is None:
-            raise _base_unavailable("no_base" if name == "base" else "no_git")
+        sha = await self._revision_sha(ws, name)
         key = f"{ws.id}\0{sha}\0{ref.dir}"
         found = self._snapshots.get(key)
         if found is not None:
@@ -477,6 +613,17 @@ class PackOutcomeService:
         source = await asyncio.shield(task)
         self._snapshots.put(key, source)
         return source
+
+    async def _revision_sha(self, ws: PackWorkspace, name: GitRevisionName) -> str:
+        """Коммит состояния `head` или `base`; папка без git и пространство без базы это `diff_base_unavailable`."""
+        if ws.kind is not WorkspaceKind.git:
+            raise _base_unavailable("no_git")
+        if name == "base" and not ws.base_branch:
+            raise _base_unavailable("no_base")
+        sha = await self._git.revision_sha(self._workspaces.dirs_of(ws), name=name, base_branch=ws.base_branch or "")
+        if sha is None:
+            raise _base_unavailable("no_base" if name == "base" else "no_git")
+        return sha
 
     def _read_done(self, key: str, done: asyncio.Task[_Source]) -> None:
         self._reading.pop(key, None)
@@ -492,6 +639,7 @@ class PackOutcomeService:
             f"{prefix}{template_dir}/template.yaml",
             f"{prefix}{template_dir}/releases.yaml",
             f"{prefix}{template_dir}/examples",
+            f"{prefix}{template_dir}/{SCENARIOS_DIR}",
         )
         found = await self._git.revision_files(
             self._workspaces.dirs_of(ws),
@@ -505,7 +653,9 @@ class PackOutcomeService:
         if f"{ref.dir}/version.yaml" not in files:
             raise _base_unavailable("new_version")
         desc = await self._renderer.describe_files(files, ref)
-        return _Source(f"git:{sha}", desc, _manifest_texts(files, ref, template_dir))
+        return _Source(
+            f"git:{sha}", desc, _manifest_texts(files, ref, template_dir), _scenario_texts(files, template_dir)
+        )
 
 
 def _manifest_texts(files: Mapping[str, bytes], ref: VersionRef, template_dir: str) -> dict[str, bytes]:
@@ -521,6 +671,48 @@ def _manifest_texts(files: Mapping[str, bytes], ref: VersionRef, template_dir: s
         elif path.startswith(f"{template_dir}/examples/") and path.count("/") == template_dir.count("/") + 2:
             texts[path.removeprefix(f"{template_dir}/")] = data
     return texts
+
+
+def _scenario_texts(files: Mapping[str, bytes], template_dir: str) -> dict[str, bytes]:
+    """Файлы сценариев шаблона из файлов коммита: имя файла -> содержимое (вложенные папки не читаются)."""
+    folder = f"{template_dir}/{SCENARIOS_DIR}/"
+    return {
+        path.removeprefix(folder): data
+        for path, data in files.items()
+        if path.startswith(folder) and "/" not in path.removeprefix(folder) and len(data) <= SCENARIO_MAX_BYTES
+    }
+
+
+def _read_scenario(source: _Source, scenario_id: str) -> tuple[Scenario, ScenarioUse]:
+    """Сценарий из файлов источника: нет файла `scenario_not_found`, файл не по формату `scenario_invalid`."""
+    try:
+        name = scenario_file_name(scenario_id)
+    except ScenarioError:
+        raise PackStudioError(PackStudioErrorCode.scenario_not_found, scenario=scenario_id) from None
+    data = source.scenarios.get(name)
+    if data is None:
+        raise PackStudioError(PackStudioErrorCode.scenario_not_found, scenario=scenario_id)
+    try:
+        scenario = parse_scenario(data.decode("utf-8"))
+    except (ScenarioError, UnicodeDecodeError) as exc:
+        reason = exc.reason if isinstance(exc, ScenarioError) else "the file is not UTF-8"
+        raise PackStudioError(PackStudioErrorCode.scenario_invalid, scenario=scenario_id, reason=reason) from None
+    return scenario, ScenarioUse(scenario_id, dict(scenario.inputs), hashlib.sha256(data).hexdigest()[:16])
+
+
+def _merged_inputs(prep: _Prepared, request_inputs: Mapping[str, str]) -> dict[str, str]:
+    """Вводные запроса поверх вводных сценария (умолчания версии и набора лежат под ними)."""
+    scenario = dict(prep.scenario.inputs) if prep.scenario is not None else {}
+    return {**scenario, **request_inputs}
+
+
+def newest_version(versions: Sequence[str]) -> str | None:
+    """Старшая версия по номеру (`2026.1.10` старше `2026.1.9`); номера не по схеме идут после разобранных."""
+    keyed = [(parse_version_key(v), v) for v in versions]
+    parsed = [(k, v) for k, v in keyed if k is not None]
+    if parsed:
+        return max(parsed)[1]
+    return max(versions, default=None)
 
 
 def _example_json(example: PreviewExample) -> dict[str, Any]:

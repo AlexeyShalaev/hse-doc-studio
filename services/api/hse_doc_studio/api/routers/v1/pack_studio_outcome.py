@@ -71,11 +71,13 @@ async def get_outcome_inputs(  # noqa: PLR0913 — путь версии, сос
     version: str,
     outcome: FromDishka[PackOutcomeService],
     state: OutcomeStateName = "work_tree",
+    scenario: Annotated[str | None, Query(max_length=128)] = None,
     if_none_match: IfNoneMatch = None,
 ) -> Response:
-    """Вводные версии (из схемы версии), наборы данных и умолчания для панели «Вводные»."""
+    """Вводные версии (из схемы версии), наборы данных и умолчания для панели «Вводные». С `scenario` словарь
+    считается на наборе данных сценария (неизвестный сценарий: `scenario_not_found`)."""
     reply = await outcome.inputs(
-        require_actor(), workspace_id, pack, template, version, state, if_none_match=if_none_match
+        require_actor(), workspace_id, pack, template, version, state, scenario=scenario, if_none_match=if_none_match
     )
     return _respond(reply)
 
@@ -114,9 +116,11 @@ async def get_outcome_atlas(  # noqa: PLR0913 — путь версии, пар�
     state: OutcomeStateName = "work_tree",
     pin: Annotated[list[str] | None, Query(description="<вводная>:<значение>, повторяемый")] = None,
     example: Annotated[str | None, Query(max_length=255)] = None,
+    scenario: Annotated[str | None, Query(max_length=128)] = None,
     if_none_match: IfNoneMatch = None,
 ) -> Response:
-    """Измерения, исходы и таблица `{key, outcome}`: клиент по ключу находит исход, не считая условий."""
+    """Измерения, исходы и таблица `{key, outcome}`: клиент по ключу находит исход, не считая условий. С `scenario`
+    набор данных и основа таблицы берутся у сценария (неизвестный: `scenario_not_found`)."""
     reply = await atlas.atlas(
         require_actor(),
         workspace_id,
@@ -125,6 +129,7 @@ async def get_outcome_atlas(  # noqa: PLR0913 — путь версии, пар�
         version,
         state,
         example=example,
+        scenario=scenario,
         pins=parse_pins(pin or []),
         if_none_match=if_none_match,
     )

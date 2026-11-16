@@ -265,6 +265,37 @@ async def test__outcome__inputs_change_the_result_and_are_echoed(studio: Studio)
     assert "author2:" in text
 
 
+async def test__outcome__scenario_argument_puts_its_inputs_between_the_defaults_and_inputs(studio: Studio) -> None:
+    ws = await _folder(studio)
+    folder = studio.stand.root / "packs" / "hse-cs-se" / "templates" / "vkr" / "scenarios"
+    folder.mkdir()
+    (folder / "research-team.yaml").write_text(
+        "format: 1\nname:\n  ru: Команда, исследование\ninputs:\n  kind: research\n  staffing: team2\n",
+        encoding="utf-8",
+    )
+
+    async with _client(studio) as client:
+        plain = json.loads(await _outcome(client, ws, VKR, format="json"))
+        scenario = json.loads(await _outcome(client, ws, VKR, scenario="research-team", format="json"))
+        over = json.loads(
+            await _outcome(client, ws, VKR, scenario="research-team", inputs={"staffing": "solo"}, format="json")
+        )
+        listed = await _json(
+            client, "pack_outcome_inputs", {"workspace_id": ws, "version": _ref(VKR), "scenario": "research-team"}
+        )
+        ghost = await _text(
+            client, "pack_outcome", {"workspace_id": ws, "version": _ref(VKR), "scenario": "ghost"}, ok=False
+        )
+
+    assert (plain["inputs"]["kind"], plain["inputs"]["staffing"]) == ("project", "solo")
+    assert (scenario["inputs"]["kind"], scenario["inputs"]["staffing"]) == ("research", "team2")
+    assert (over["inputs"]["kind"], over["inputs"]["staffing"]) == ("research", "solo")
+    expected = _core(VKR, {"kind": "research", "staffing": "team2"})
+    assert scenario["fingerprint"] == expected["fingerprint"]
+    assert listed["inputs"]
+    assert "scenarios/<id>.yaml" in ghost or "scenario" in ghost
+
+
 async def test__outcome__inactive_documents_come_with_the_reason(studio: Studio) -> None:
     ws = await _folder(studio)
 

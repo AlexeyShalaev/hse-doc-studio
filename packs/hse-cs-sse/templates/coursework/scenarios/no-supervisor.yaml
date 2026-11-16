@@ -1,0 +1,69 @@
+format: 1
+name:
+  ru: Без научного руководителя
+  en: No supervisor
+description:
+  ru: "Крайний случай: в проекте указан только автор, шаг руководителя остаётся без человека."
+  en: "An edge case: the project has only the author, the supervisor step stays without a person."
+versions: ["2026.1.*"]
+inputs:
+  supervisor: none
+  co_supervisor: "no"
+  academic_supervisor: "no"
+assertions:
+  - { kind: participant_present, persona: supervisor, present: false }
+  - { kind: participant_present, persona: academic_supervisor, present: false }
+  - { kind: document_state, doc: report, state: active }
+snapshot:
+  documents:
+    project_proposal: active
+    topic_application: active
+    report: active
+    presentation: active
+  participants: [author]
+  meta_visible:
+    - year
+    - name_en
+    - name_ru
+    - proposal_stage
+    - specialization
+    - program_code
+    - department
+    - supervisor_department
+    - faculty
+    - city
+    - city_en
+    - form_year
+    - udc
+    - report_margins
+    - font_main
+    - font_sans
+    - font_mono
+    - supervisor
+    - co_supervisor
+    - academic_supervisor
+  points:
+    - id: topic-approval
+      items: [project_proposal, topic_application]
+      steps: [[author], [supervisor]]
+      pairs: 3
+    - id: extended-proposal
+      items: [project_proposal, presentation]
+      steps: []
+      pairs: 0
+    - id: pre-defence
+      items: [report, presentation]
+      steps: []
+      pairs: 0
+    - id: final
+      items: [report, presentation, project_proposal]
+      steps: [[author]]
+      pairs: 1
+  sections:
+    - { section: documents, fingerprint: d4f1de863c9a, count: 4 }
+    - { section: meta, fingerprint: fbefb4d5dc5a, count: 20 }
+    - { section: forms, fingerprint: 7765ca4eb1da, count: 1 }
+    - { section: participants, fingerprint: 63b7c48901d2, count: 1 }
+    - { section: points, fingerprint: 7d3e860abf2e, count: 9 }
+    - { section: route, fingerprint: 07902b4baa2c, count: 4 }
+    - { section: checks, fingerprint: 4f53cda18c2b, count: 0 }

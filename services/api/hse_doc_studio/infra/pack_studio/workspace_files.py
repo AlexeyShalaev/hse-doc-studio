@@ -81,6 +81,18 @@ def _walk_checked(root: Path, path: str) -> Path:
     return current
 
 
+def _check_not_a_folder(target: Path, path: str) -> None:
+    """Папка читается как «нет файла»: `os.fdopen` на ней падает `IsADirectoryError`, а не `PackStudioError`."""
+    try:
+        is_folder = stat.S_ISDIR(os.lstat(target).st_mode)
+    except FileNotFoundError:
+        raise _not_found(path) from None
+    except OSError:
+        raise _not_allowed() from None
+    if is_folder:
+        raise _not_found(path)
+
+
 def _root_of(root: Path) -> Path:
     if root.is_symlink():
         raise _not_allowed()
@@ -90,6 +102,7 @@ def _root_of(root: Path) -> Path:
 class LocalPackWorkspaceFiles:
     def read(self, root: Path, path: str, *, max_bytes: int) -> bytes:
         target = _walk_checked(_root_of(root), path)
+        _check_not_a_folder(target, path)
         try:
             fd = os.open(target, os.O_RDONLY | _NOFOLLOW)
         except FileNotFoundError:
@@ -220,6 +233,29 @@ class LocalPackWorkspaceFiles:
             except PackStudioError:
                 continue
         return found
+
+    def template_files(self, root: Path, pack: str, template: str, folder: str, *, max_bytes: int) -> dict[str, bytes]:
+        base = _root_of(root)
+        template_dir = f"{pack}/{TEMPLATES_DIR}/{template}"
+        found: dict[str, bytes] = {}
+        for name in self._names(base, f"{template_dir}/{folder}"):
+            try:
+                found[name] = self.read(base, f"{template_dir}/{folder}/{name}", max_bytes=max_bytes)
+            except PackStudioError:
+                continue
+        return found
+
+    def template_versions(self, root: Path, pack: str, template: str) -> tuple[str, ...]:
+        base = _root_of(root)
+        template_dir = f"{pack}/{TEMPLATES_DIR}/{template}"
+        if not self.is_dir(base, template_dir):
+            raise PackStudioError(PackStudioErrorCode.version_not_found, version="")
+        names = [
+            n
+            for n in self._names(base, f"{template_dir}/{VERSIONS_DIR}")
+            if self.is_dir(base, f"{template_dir}/{VERSIONS_DIR}/{n}")
+        ]
+        return tuple(sorted(names))
 
     @staticmethod
     def _names(base: Path, path: str) -> list[str]:

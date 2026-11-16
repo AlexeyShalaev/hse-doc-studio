@@ -50,6 +50,33 @@ A workspace opens on the **Outcome** screen: what a student gets for the chosen 
 - **"Why?"**: for any element of the outcome (a document, a field, a submission point item, a participant, a route step or slot, a check rule) the server returns the chain of decisions from the conditions to the result: each rule has a status (held, not held, skipped), its place in the manifest (file and path), the condition and the actual input values; the neighbouring elements the same rules concern; and "What if": which single input to set to another value to change the state of the element. The answer is cached like the calculation; nothing is written.
 - The screen needs the same "Template author" right as the whole section. If the server does not support it (an older server, the `pack_outcome` flag in `bootstrap`), the workspace opens on "Files": the tree, the editor, the preview. "Files" can also be opened when supported: `?view=files`.
 
+## Scenarios { #scenarios }
+
+A scenario is a named point in the space of inputs, for example "one master's student, a university supervisor" or "a team of three with an NDA", with an optional expectation. Scenarios work as regression tests of a pack: after a rule edit you see which of them moved.
+
+A scenario is the file `<pack>/templates/<template>/scenarios/<id>.yaml` next to `examples/`, outside the version folder. Editing it does not change a released version, needs no new release and is not copied into projects. The file lives in git and is reviewed like the rest; the Studio writes it itself (canonical YAML, an edit goes by `If-Match` like any file) and writes nothing else when you work with scenarios: no emails, no signatures, no invitations.
+
+```yaml
+format: 1
+name:
+  ru: Научрук из компании, есть консультант
+  en: Company supervisor with a co-supervisor
+example: auto:normal          # the data set; without the key the "Typical" auto set
+versions: ["2026.1.*"]        # which versions it is for; empty: any
+inputs:                       # partial, the rest is the defaults
+  supervisor: company
+  co_supervisor: "yes"
+assertions:                   # optional: point expectations
+  - { kind: route_steps, point: topic-approval, steps: [[author], [supervisor, co_supervisor], [academic_supervisor]] }
+snapshot: { ... }             # optional: the compact outcome, written by the button
+```
+
+- **Inputs** lie between the version defaults and the request inputs: first the defaults (and the data set), then the scenario, then what is chosen on the screen. An input that the version does not have, or a value outside the list, makes the scenario an `error` instead of refusing the write: a scenario outlives versions.
+- **The expectation** is assertions (`document_state`, `document_count`, `meta_visible`, `participant_present`, `item_active`, `route_steps`, `route_pair`) and/or a snapshot. Assertions are robust against unrelated edits, a snapshot catches everything and is noisy, so it is updated on purpose.
+- **A run** calculates the outcome for the scenario inputs on the chosen version and state (working tree, last commit, base; scenarios are read from the same state) and gives a status: `passed`, `failed` (a list of mismatches "expected, got" and of `+`, `~`, `-` changes against the snapshot), `error` (the inputs do not fit the version or the file cannot be read) and `unchecked` (no assertions and no snapshot, or the version is outside `versions`). The coverage comes with it: which rules of the version saw both outcomes (held and not held), which saw one.
+- **Delete** is soft: the file is removed, git keeps it in history, and writing the scenario again (without `If-Match`) brings the same bytes back.
+- Up to 200 scenarios per template, up to 64 assertions per scenario, an `id` is lowercase Latin letters, digits and hyphens. The calculation has the same five-second limit and the same rate as the version outcome.
+
 ## Official packs
 
 The **Official packs** card on the section's main screen opens the packs from the Studio's own repository. You need no repository of your own: edits go to your fork on GitHub and the PR is opened from your account. More: [Propose changes](propose.md#official).
