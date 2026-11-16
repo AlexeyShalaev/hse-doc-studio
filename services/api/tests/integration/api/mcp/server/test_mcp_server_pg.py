@@ -385,9 +385,15 @@ async def test__pack_tools__need_the_packs_scope_and_the_pack_author_right(stand
     no_scope = _call(stand, admin_mcp, "pack_list_workspaces", {})
     listed = _call(stand, admin_packs, "pack_list_workspaces", {})
     no_right = _call(stand, person_packs, "pack_list_workspaces", {})
+    outcome_args = {"workspace_id": "00000000-0000-0000-0000-000000000000", "version": "hse-cs-se/vkr/2026.1.2"}
+    outcome_no_scope = _call(stand, admin_mcp, "pack_outcome", outcome_args)
+    outcome_no_right = _call(stand, person_packs, "pack_outcome_inputs", outcome_args)
 
     assert not [n for n in names(admin_mcp) if n.startswith("pack_")]
     assert "pack_list_workspaces" in names(admin_packs)
+    assert {"pack_outcome", "pack_outcome_inputs"} <= names(admin_packs)
+    assert outcome_no_scope["_meta"]["code"] == "forbidden"
+    assert json.loads(outcome_no_right["content"][0]["text"])["code"] == "pack_studio_forbidden"
     assert not [n for n in names(person_packs) if n.startswith("pack_")]
     assert no_scope["_meta"]["code"] == "forbidden"
     assert listed["isError"] is False, listed
