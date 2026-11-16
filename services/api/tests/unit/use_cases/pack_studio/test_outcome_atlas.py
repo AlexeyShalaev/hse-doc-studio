@@ -36,6 +36,7 @@ def _prepared(revision: str = "sha256-one", token: str = "tree:1", example: int 
         example=auto_examples(version)[example],
         revision=revision,
         today=TODAY,
+        scenario=None,
     )
 
 
