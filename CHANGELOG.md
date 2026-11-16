@@ -6,6 +6,15 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.34.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.34.0...v0.34.1) (2026-11-16)
+
+
+### Bug Fixes
+
+* **pack-studio:** local git reads in a sparse partial clone fetch missing blobs ([0af38c6](https://github.com/AlexeyShalaev/hse-doc-studio/commit/0af38c6b9f6a16b58fd6e0be0f9cb0b77b5e6ae4))
+* **pack-studio:** local git reads in a sparse partial clone fetch missing blobs ([4927bb3](https://github.com/AlexeyShalaev/hse-doc-studio/commit/4927bb3c363e8ef93d4bbce451efba7bd8054f4f))
+* **pack-studio:** workspace_git_failed text without implicit concatenation ([481fa9d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/481fa9df60c285fe2f66270b2d36bf7886a1b65b))
+
 ## [0.34.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.33.0...v0.34.0) - 2026-11-15
 
 - Files: upload your own files into a project from the browser. Upload files and Upload folder buttons, folder menu items and drag and drop from the computer into the tree. On a name clash you can replace, keep both or skip. Progress is shown, one file is up to 50 MiB.
