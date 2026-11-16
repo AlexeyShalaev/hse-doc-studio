@@ -17,6 +17,7 @@ import {
   safeOutcomeBack,
   versionRefOf,
   findingTarget,
+  notifyPackFilesSaved,
   packErrorText,
   packFormKind,
   packStudioKeys,
@@ -249,6 +250,7 @@ export const WorkspaceScreen = () => {
   // Форма записала файлы версии: как сохранение в редакторе, плюс места подписей и класс версии.
   const onFormSaved = useCallback(() => {
     setEpoch((n) => n + 1);
+    notifyPackFilesSaved(workspaceId);
     void client.invalidateQueries({
       queryKey: packStudioKeys.git(workspaceId),
     });
@@ -262,7 +264,8 @@ export const WorkspaceScreen = () => {
     setEditorDirty(false);
     setReload((n) => n + 1);
     setEpoch((n) => n + 1);
-  }, []);
+    notifyPackFilesSaved(workspaceId);
+  }, [workspaceId]);
 
   if (workspace.isPending) {
     return (

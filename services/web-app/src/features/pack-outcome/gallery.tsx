@@ -6,6 +6,7 @@ import {
   type PackOutcome,
   type PackOutcomeInputs,
   type PackOutcomeRequest,
+  type PackScenarioList,
   type PackTree,
   type PackVersionRef,
   type PackWorkspace,
@@ -19,7 +20,9 @@ import {
   VKR_CHECKS,
   VKR_INPUTS,
   VKR_OUTCOME,
+  VKR_PREVIEW_OPTIONS,
   explainFor,
+  previewBuildReference,
 } from "@entities/pack-studio/reference";
 import { ApiError } from "@shared/api";
 import type { GalleryGroup } from "@shared/lib/stateGallery";
@@ -29,6 +32,14 @@ import {
   type OutcomeSelection,
 } from "./lib/urlState";
 import { OutcomeBody } from "./OutcomeBody";
+import {
+  INPUTS_SOURCE,
+  filesKeyOf,
+  previewTarget,
+  runKeyOf,
+  type PreviewSource,
+} from "./lib/previewRequest";
+import { previewMemoryKey, writePreviewMemory } from "./lib/previewStore";
 import type { ScenarioDialog } from "./ui/scenarios/context";
 
 // Галерея экрана «Результат» (/dev/server-screens): каркас во всех состояниях на эталонах
@@ -214,6 +225,105 @@ const seedWhy = (
   client.setQueryData(key, { data, etag: null });
 };
 
+/** Предпросмотр PDF, открытый сразу: документ, сценарий как источник и состояние сборки. */
+type PreviewSpec = {
+  document: string;
+  /** Сценарий как источник вводных; без него текущие вводные экрана. */
+  scenario?: string;
+  /**
+   * Сборка из эталонов контракта: нет, готова, готова с вариантом, со сценарием, из кэша, идёт,
+   * не удалась, готова, но файлы менялись после неё.
+   */
+  build?:
+    | "none"
+    | "succeeded"
+    | "variant"
+    | "scenario"
+    | "cached"
+    | "running"
+    | "failed"
+    | "stale";
+};
+
+const PREVIEW_BUILDS = {
+  succeeded: "succeeded",
+  variant: "with_variant",
+  scenario: "with_variant_and_scenario",
+  cached: "cached",
+  running: "running",
+  failed: "build_failed",
+  stale: "succeeded",
+} as const;
+
+/** Опции и сборка предпросмотра в кэше, а память экрана как будто сборка стартовала по этим вводным. */
+const seedPreview = (
+  client: QueryClient,
+  id: string,
+  ref: PackVersionRef,
+  outcome: PackOutcome,
+  list: PackScenarioList,
+  example: string | null,
+  spec: PreviewSpec,
+) => {
+  const options = { ...VKR_PREVIEW_OPTIONS, workspace_id: id };
+  const optionsKey = packStudioKeys.previewOptions(id, ref);
+  client.setQueryData(optionsKey, options);
+  client.setQueryDefaults(optionsKey, {
+    retryOnMount: false,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  });
+  const source: PreviewSource = spec.scenario
+    ? { kind: "scenario", id: spec.scenario }
+    : INPUTS_SOURCE;
+  const kind = spec.build ?? "succeeded";
+  let built: { buildId: string; key: string } | null = null;
+  if (kind !== "none") {
+    const entry = list.scenarios.find((e) => e.id === spec.scenario);
+    const build = {
+      ...previewBuildReference(PREVIEW_BUILDS[kind]),
+      workspace_id: id,
+      document: spec.document,
+      // Сценарий сборки из эталона заменён сценарием записи: имя и вводные берутся из списка.
+      ...(kind === "scenario" && entry
+        ? {
+            scenario: entry.id,
+            scenario_inputs: entry.scenario?.inputs ?? {},
+          }
+        : {}),
+    };
+    client.setQueryData(packStudioKeys.previewBuild(id, build.id), build);
+    const target = previewTarget({
+      options,
+      document: spec.document,
+      source,
+      variantPick: null,
+      inputs: outcome.inputs,
+      example,
+      shownExample: outcome.example,
+      scenarioLang: undefined,
+    });
+    const etag = entry?.etag ?? "";
+    const files = (n: number) =>
+      filesKeyOf({
+        revision: outcome.revision,
+        scenarioEtag: etag,
+        filesRevision: n,
+      });
+    // Устаревшая сборка стартовала до записи файла: счётчик записей тогда был на единицу меньше.
+    built = {
+      buildId: build.id,
+      key: runKeyOf(target, files(kind === "stale" ? -1 : 0)),
+    };
+  }
+  writePreviewMemory(previewMemoryKey(id, ref), {
+    document: spec.document,
+    source,
+    variants: {},
+    built,
+  });
+};
+
 /** Заполнить кэш так, чтобы экран видел данные без сервера, и запретить перечитывание. */
 const seedWorkspace = (
   client: QueryClient,
@@ -227,6 +337,7 @@ const seedWorkspace = (
   why: WhyKind = "ready",
   scenarioKind: ScenariosKind = "ok",
   runKind: RunKind = "ready",
+  preview?: PreviewSpec,
 ) => {
   const ref = refOf(work);
   const url = parseOutcomeSearch(new URLSearchParams(search));
@@ -332,6 +443,7 @@ const seedWorkspace = (
     edit?.(base);
     client.setQueryData(key, base);
     seedWhy(client, id, ref, request, url.selected, base, why);
+    if (preview) seedPreview(client, id, ref, base, list, url.example, preview);
     // Правила проверок и ветки приходят отдельными запросами (`include`) раскрытых разделов.
     const partKey = (part: "checks" | "branches") =>
       packOutcomeKeys.result(id, ref, { ...request, include: [part] });
@@ -418,6 +530,8 @@ type Spec = {
   run?: RunKind;
   /** Окно сценариев, открытое сразу: список выбора, «Сохранить как сценарий», панель. */
   dialog?: ScenarioDialog;
+  /** Предпросмотр PDF, открытый сразу (срез F12). */
+  preview?: PreviewSpec;
 };
 
 /** Команда из двух: личные документы по авторам, у одного нет редакции на язык проекта. */
@@ -826,6 +940,60 @@ const SPECS: Spec[] = [
     dialog: { kind: "saveInputs", id: "company-supervisor" },
   },
   {
+    id: "po_preview_ready",
+    title: "Предпросмотр PDF: сборка готова",
+    note: "Панель справа открыта по кнопке «Предпросмотр PDF» у документа: вводные, вариант и набор данных, переключатель автосборки, «Что собрано» (вариант, итоговое имя файла, набор данных). Сам PDF в галерее не загружается: адрес файла не отвечает.",
+    kind: "ready",
+    preview: { document: "technical_specification", build: "succeeded" },
+  },
+  {
+    id: "po_preview_variant_scenario",
+    title: "Предпросмотр PDF: вариант и сценарий",
+    note: "Источник вводных «Сценарий», в ответе сборки вариант SRS, итоговое имя файла, сценарий и его вводные. Язык en: вариант SRS доступен только при нём.",
+    kind: "ready",
+    search: "i.lang=en",
+    preview: {
+      document: "technical_specification",
+      scenario: "company-supervisor",
+      build: "scenario",
+    },
+  },
+  {
+    id: "po_preview_running",
+    title: "Предпросмотр PDF: сборка идёт",
+    note: "Статус «Собирается» и «Отменить»; «Собрать» отключена, пока сборка не кончилась или не устарела.",
+    kind: "ready",
+    preview: { document: "technical_specification", build: "running" },
+  },
+  {
+    id: "po_preview_failed",
+    title: "Предпросмотр PDF: сборка не удалась",
+    note: "Код и причина из ответа, кнопка «Журнал».",
+    kind: "ready",
+    preview: { document: "technical_specification", build: "failed" },
+  },
+  {
+    id: "po_preview_cached",
+    title: "Предпросмотр PDF: из кэша",
+    note: "Сборка с такими же данными уже была: пометка «из кэша» и пояснение.",
+    kind: "ready",
+    preview: { document: "technical_specification", build: "cached" },
+  },
+  {
+    id: "po_preview_stale",
+    title: "Предпросмотр PDF: файлы менялись после сборки",
+    note: "PDF готов, но после сборки записан файл версии: плашка «Файлы менялись после сборки» и «Пересобрать».",
+    kind: "ready",
+    preview: { document: "technical_specification", build: "stale" },
+  },
+  {
+    id: "po_preview_empty",
+    title: "Предпросмотр PDF: сборки ещё не было",
+    note: "Автосборка выключена: подсказка «Нажмите «Собрать»». Документ с четырьмя вариантами презентации, вариант без PDF (Reveal) предупреждает.",
+    kind: "ready",
+    preview: { document: "presentation", build: "none" },
+  },
+  {
     id: "po_inputs_loading",
     title: "Вводные: загрузка",
     note: "Скелет панели, пока сервер не ответил на inputs.",
@@ -897,6 +1065,7 @@ export const getPackOutcomeGallery = (): GalleryGroup[] => [
             spec.why,
             spec.scenarios,
             spec.run,
+            spec.preview,
           );
         },
         render: () => (
@@ -906,6 +1075,7 @@ export const getPackOutcomeGallery = (): GalleryGroup[] => [
                 workspace={workspace(id)}
                 version={refOf(spec.work ?? "vkr")}
                 scenarioDialog={spec.dialog ?? null}
+                previewDocument={spec.preview?.document ?? null}
               />
             </div>
           </GalleryUrl>

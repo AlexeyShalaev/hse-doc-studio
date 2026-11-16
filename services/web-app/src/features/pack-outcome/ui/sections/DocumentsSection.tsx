@@ -1,10 +1,12 @@
 import { useId, useState } from "react";
+import { FileSearch } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { OutcomeDocument, PackOutcome } from "@entities/pack-studio";
 import { Badge, NoResults } from "@shared/ui";
 import { pickLocalized } from "@shared/lib/i18n/pickLocalized";
 import { summarize } from "../../lib/summary";
 import { useOutcomeModel } from "../../model";
+import { usePreviewUi } from "../preview/context";
 import { SectionShell } from "./SectionShell";
 import {
   Disclosure,
@@ -31,6 +33,7 @@ const DocumentCard = ({
   const lang = i18n.language;
   const name = pickLocalized(doc.name, lang, doc.id);
   const projectLang = outcome.inputs.lang ?? "";
+  const preview = usePreviewUi();
   const reasons = doc.state === "active" ? [] : explain.reasons(doc.why);
   const personal = doc.instances.filter((i) => i.owner !== null);
   const showVariants = doc.variants.length > 0 && doc.state !== "absent";
@@ -49,6 +52,32 @@ const DocumentCard = ({
       muted={doc.state !== "active"}
       testId={`outcome-doc-${doc.id}`}
       title={name}
+      actions={
+        preview &&
+        preview.unavailableReason !== "student" &&
+        doc.state === "active" ? (
+          <button
+            type="button"
+            className="btn sm"
+            disabled={!preview.available}
+            aria-pressed={preview.document === doc.id}
+            aria-label={t("preview.openFor", { name })}
+            title={
+              preview.unavailableReason === "state"
+                ? t("preview.needWorkTree")
+                : undefined
+            }
+            data-testid={`outcome-doc-${doc.id}-preview`}
+            onClick={() => {
+              if (preview.document === doc.id) preview.close();
+              else preview.open(doc.id);
+            }}
+          >
+            <FileSearch size="0.8125rem" aria-hidden="true" />
+            {t("preview.open")}
+          </button>
+        ) : undefined
+      }
       badges={
         <>
           {stateBadge}

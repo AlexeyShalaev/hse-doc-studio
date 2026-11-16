@@ -7,6 +7,8 @@ export {
   VKR_CHECKS,
   VKR_INPUTS,
   VKR_OUTCOME,
+  VKR_PREVIEW_OPTIONS,
+  previewBuildReference,
 } from "./fixtures";
 export { elementInfos, explainFor, realExplains } from "./explain";
 export {
@@ -22,3 +24,4 @@ export type {
   ReferenceBehavior,
   ReferenceSource,
 } from "./routes";
+export { resetPreviewReference } from "./previewRoutes";

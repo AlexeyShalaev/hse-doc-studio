@@ -655,7 +655,10 @@ describe("экран «Результат»: каркас на эталонах"
     it("карточки на телефоне: клик выбирает элемент и открывает «Почему»", async () => {
       mount();
       const card = await screen.findByTestId("outcome-doc-thesis");
-      fireEvent.click(within(card).getByRole("button"));
+      // Первая кнопка карточки выбирает элемент, вторая открывает предпросмотр PDF.
+      const [pick] = within(card).getAllByRole("button");
+      if (!pick) throw new Error("the pick button is missing");
+      fireEvent.click(pick);
       expect(location()).toContain("selected=documents%3Athesis");
       expect(location()).toContain("tab=rules");
     });

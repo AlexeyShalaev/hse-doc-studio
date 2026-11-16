@@ -13,6 +13,12 @@ import {
   type PackScenarioList,
   type PackScenarioRun,
 } from "../api/outcome";
+import {
+  PackPreviewBuildSchema,
+  PackPreviewOptionsSchema,
+  type PackPreviewBuild,
+  type PackPreviewOptions,
+} from "../api/schemas";
 
 // Эталоны контракта вычислителя (contracts/pack-studio/fixtures), собранные в браузере. Модуль
 // только для разработки и тестов: в рабочую сборку не попадает (его подключают динамическим
@@ -366,3 +372,25 @@ export const VKR_BRANCHES: OutcomeBranch[] = z
       ],
     },
   ]);
+
+// Эталоны предпросмотра PDF (срез F12): опции версии с вариантами документов и сборки в разных
+// состояниях. Опции у ВКР с теми же документами, что в результате `VKR_OUTCOME`.
+const previewOptionsFiles = import.meta.glob<unknown>(
+  "../../../../../../contracts/pack-studio/fixtures/PackPreviewOptions/*.json",
+  { eager: true, import: "default" },
+);
+const previewBuildFiles = import.meta.glob<unknown>(
+  "../../../../../../contracts/pack-studio/fixtures/PackPreviewBuild/*.json",
+  { eager: true, import: "default" },
+);
+
+export const VKR_PREVIEW_OPTIONS: PackPreviewOptions =
+  PackPreviewOptionsSchema.parse(
+    load(previewOptionsFiles, "PackPreviewOptions", "with_variants"),
+  );
+
+/** Сборка предпросмотра из эталона: `queued`, `running`, `succeeded`, `cached`, `build_failed`... */
+export const previewBuildReference = (name: string): PackPreviewBuild =>
+  PackPreviewBuildSchema.parse(
+    load(previewBuildFiles, "PackPreviewBuild", name),
+  );

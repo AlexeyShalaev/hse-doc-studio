@@ -159,6 +159,10 @@ export type {
   VersionLocation,
 } from "./lib/packPaths";
 export { packErrorText, workspaceErrorText } from "./lib/errorText";
+export {
+  notifyPackFilesSaved,
+  usePackFilesRevision,
+} from "./lib/filesRevision";
 export { PackErrorText } from "./ui/PackErrorText";
 export {
   errorNumber,

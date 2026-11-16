@@ -161,12 +161,16 @@ export const PickButton = ({
   );
 };
 
-/** Элемент списка с кнопкой выбора; `muted` приглушает отсутствующий или выключенный. */
+/**
+ * Элемент списка с кнопкой выбора; `muted` приглушает отсутствующий или выключенный. `actions`
+ * кнопки действий под карточкой: вкладывать кнопку в кнопку выбора нельзя.
+ */
 export const PickItem = ({
   muted = false,
   testId,
+  actions,
   ...props
-}: PickButtonProps & { muted?: boolean }) => {
+}: PickButtonProps & { muted?: boolean; actions?: ReactNode }) => {
   const selected = useIsSelected(props.el);
   return (
     <li
@@ -176,6 +180,7 @@ export const PickItem = ({
       data-testid={testId}
     >
       <PickButton {...props} />
+      {actions && <div className="po-item-actions">{actions}</div>}
     </li>
   );
 };
