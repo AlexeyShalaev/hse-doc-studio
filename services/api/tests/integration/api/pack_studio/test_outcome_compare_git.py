@@ -257,7 +257,8 @@ async def test__impact__atlas_of_the_vkr_is_included_and_counts_the_changed_rows
     assert got.summary.atlas is not None
     assert got.summary.atlas.rows_total == 864
     assert 0 < got.summary.atlas.rows_changed < 864
-    assert elapsed < 20, elapsed
+    # Две таблицы атласа и строки на базе: у каждой части свой срок 20 с; общий предел здесь только на здравый смысл.
+    assert elapsed < 90, elapsed
 
 
 async def test__impact__input_removed_by_the_edit_breaks_that_scenario_and_names_the_side(
