@@ -54,7 +54,8 @@ Check findings about a checkpoint are shown right in its card. What the keys mea
 
 The **Problems** panel shows the findings of the linter and the schemas for the saved files of the version: errors and warnings with the file and the line. A click opens the line. Blocks: **This file**, **Other files of the version**, **Whole version**. **Check again** reruns the check.
 
-- The version files and the pack manifests (`pack.yaml`, `template.yaml`) are checked. Other files are not.
+- The version files, the pack manifests (`pack.yaml`, `template.yaml`) and the scenario files (`scenarios/<id>.yaml`, schema) are checked. Other files are not.
+- Findings tagged "outcome" are the static rules of the outcome linter (a slot outside every route, `visible_if` on a value that does not exist, a missing translation and others): [Outcome linter and coverage](index.md#outcome-lint). The calculated rules and the scenario coverage come from a separate request.
 - What the linter checks: [Packs and templates](../reference/pack.md#pack-cli) and the sections for pack authors there.
 - The **Checks before sending** block appears when "Propose changes" stopped on errors in the pack: fix them and propose again.
 

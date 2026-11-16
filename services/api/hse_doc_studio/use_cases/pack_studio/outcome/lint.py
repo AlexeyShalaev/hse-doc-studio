@@ -81,12 +81,14 @@ def scan_atlas(  # noqa: PLR0913 — версия, набор, день, пре�
     limit: int = ATLAS_MAX_ROWS,
     analysis: ImpactAnalysis | None = None,
     check: Callable[[], None] | None = None,
+    texts: Mapping[str, str] | None = None,
 ) -> AtlasScan:
-    """Атлас версии и результат с трассой в каждой его строке. `AtlasTooLarge`, если строк больше `limit`."""
+    """Атлас версии и результат с трассой в каждой его строке. `AtlasTooLarge`, если строк больше `limit`. `texts`
+    тексты манифестов (где лежат документы), без них места документов берутся из `files/<id>/doc.yaml`."""
     atlas = build_atlas(version, example, today, limit=limit, analysis=analysis, check=check)
     base = normalize_inputs(input_specs(version), {}, example_defaults(example))
     names = [dimension.input for dimension in atlas.dimensions]
-    observer = AtlasObserver(version, names)
+    observer = AtlasObserver(LintSources(version, texts or {}), names)
     for values in itertools.product(*(dimension.values for dimension in atlas.dimensions)):
         if check is not None:
             check()
@@ -175,7 +177,7 @@ def lint_outcome(  # noqa: PLR0913 — версия, тексты, набор д
     sources = LintSources(version, texts)
     static = static_findings(sources)
     try:
-        scan = scan or scan_atlas(version, example, today, limit=limit, check=check)
+        scan = scan or scan_atlas(version, example, today, limit=limit, check=check, texts=texts)
     except AtlasTooLarge as exc:
         return OutcomeLint(order_findings((*static, _skipped(exc.rows, exc.limit))), None, 0, atlas_skipped=True)
     # Находка по атласу точнее статической с тем же правилом и местом: идёт первой, повтор склеивается.

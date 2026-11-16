@@ -20,7 +20,7 @@ from hse_doc_studio.core.pack_studio.outcome.lint import (
     LintFinding,
     LintSources,
     Witness,
-    doc_manifest,
+    doc_site,
     finding,
     limit_per_rule,
     with_lines,
@@ -157,6 +157,7 @@ def _lang_rules(sources: LintSources) -> Iterable[LintFinding]:
         return
     for doc in version.documents:
         element = ElementRef("documents", doc.id)
+        file, base = doc_site(sources, doc.id)
         outside = [lang for lang in doc.supported_langs if lang not in langs]
         if outside:
             yield finding(
@@ -165,8 +166,8 @@ def _lang_rules(sources: LintSources) -> Iterable[LintFinding]:
                 f"Документ «{doc.id}»: supported_langs называет {', '.join(outside)}, а языки версии "
                 f"{', '.join(version.langs)}: для этих языков документ недоступен.",
                 "Добавьте язык в langs версии (и файлы редакции) или уберите его из supported_langs.",
-                doc_manifest(doc.id),
-                "/supported_langs",
+                file,
+                f"{base}/supported_langs",
                 element,
             )
         for index, variant in enumerate(doc.variants):
@@ -178,8 +179,8 @@ def _lang_rules(sources: LintSources) -> Iterable[LintFinding]:
                     f"Вариант «{variant.id}» документа «{doc.id}»: supported_langs называет {', '.join(outside)}, а "
                     f"языки версии {', '.join(version.langs)}: вариант не станет доступен ни на одном языке.",
                     "Добавьте язык в langs версии или уберите его из supported_langs варианта.",
-                    doc_manifest(doc.id),
-                    f"/variants/{index}/supported_langs",
+                    file,
+                    f"{base}/variants/{index}/supported_langs",
                     element,
                 )
 
@@ -214,32 +215,37 @@ def _nda_rules(sources: LintSources) -> Iterable[LintFinding]:
                 )
 
 
-def _manual_problem(version: TemplateVersion, def_id: str, marker: str) -> LintFinding | None:
+def _manual_problem(version: TemplateVersion, defs: dict[str, str]) -> LintFinding | None:
+    """Руководства версии (id документа -> слово выбора), которых движок не сможет включать и выключать полем
+    `manuals`: поля нет или ни один его вариант не называет руководство. Одна находка на все такие документы."""
     manuals = version.meta_fields.get("manuals")
-    element = ElementRef("documents", def_id)
+    elements = tuple(ElementRef("documents", def_id) for def_id in defs)
     if manuals is None:
         return finding(
             "builtin-gate-mismatch",
             "warning",
-            f"Документ «{def_id}» в версии есть, а поля проекта manuals нет: правило движка manuals_gate читает его, "
-            "выбирать руководства будет нечем, документ всегда в комплекте.",
-            "Объявите поле manuals (select) в meta_fields или уберите документ.",
+            f"Документы {', '.join(defs)} в версии есть, а поля проекта manuals нет: правило движка manuals_gate "
+            "читает его, выбирать руководства будет нечем, документы всегда в комплекте.",
+            "Объявите поле manuals (select) в meta_fields или уберите документы.",
             VERSION_MANIFEST,
             "/meta_fields",
-            element,
+            *elements,
         )
-    if manuals.options and not any(marker in str(option).lower() for option in manuals.options):
-        return finding(
-            "builtin-gate-mismatch",
-            "warning",
-            f"Ни один вариант поля manuals ({', '.join(map(str, manuals.options))}) не содержит слова «{marker}», по "
-            f"которому движок включает документ «{def_id}»: выбор не сможет его выключить.",
-            f"Назовите вариант так, чтобы в нём встречалось «{marker}» (регистр не важен).",
-            VERSION_MANIFEST,
-            "/meta_fields/manuals/options",
-            element,
-        )
-    return None
+    options = [str(option).lower() for option in manuals.options]
+    blind = {def_id: marker for def_id, marker in defs.items() if options and not any(marker in o for o in options)}
+    if not blind:
+        return None
+    return finding(
+        "builtin-gate-mismatch",
+        "warning",
+        f"Ни один вариант поля manuals ({', '.join(map(str, manuals.options))}) не содержит слов "
+        f"({', '.join(f'«{m}»' for m in blind.values())}), по которым движок включает документы "
+        f"{', '.join(blind)}: выбор не сможет их выключить.",
+        "Назовите варианты так, чтобы в них встречалось слово руководства (регистр не важен).",
+        VERSION_MANIFEST,
+        "/meta_fields/manuals/options",
+        *(ElementRef("documents", def_id) for def_id in blind),
+    )
 
 
 def _nda_gate_problem(version: TemplateVersion) -> LintFinding | None:
@@ -274,10 +280,10 @@ def _builtin_rules(sources: LintSources) -> Iterable[LintFinding]:
     """Зашитые правила движка (NDA, руководства) должны совпадать с манифестом: иначе документ тихо не работает."""
     version = sources.version
     doc_ids = {doc.id for doc in version.documents}
-    for def_id, marker in MANUAL_MARKERS.items():
-        problem = _manual_problem(version, def_id, marker) if def_id in doc_ids else None
-        if problem is not None:
-            yield problem
+    defs = {def_id: marker for def_id, marker in MANUAL_MARKERS.items() if def_id in doc_ids}
+    manuals = _manual_problem(version, defs) if defs else None
+    if manuals is not None:
+        yield manuals
     nda = _nda_gate_problem(version)
     if nda is not None:
         yield nda
@@ -363,7 +369,8 @@ class _Text:
     element: ElementRef | None
 
 
-def _texts(version: TemplateVersion) -> Iterable[_Text]:
+def _texts(sources: LintSources) -> Iterable[_Text]:
+    version = sources.version
     for key, meta in version.meta_fields.items():
         element, where = ElementRef("meta", key), f"поля проекта «{key}»"
         base = f"/meta_fields/{key}"
@@ -381,21 +388,22 @@ def _texts(version: TemplateVersion) -> Iterable[_Text]:
                 if item.type is not FormFieldType.markdown:
                     yield _Text(item.label, where, "названия label", VERSION_MANIFEST, f"{base}/label", element)
                 yield _Text(item.help, where, "подсказки help", VERSION_MANIFEST, f"{base}/help", element)
-    yield from _document_texts(version)
+    yield from _document_texts(sources)
     for index, slot in enumerate(version.signatures_config.slots):
         what = f"слота подписи «{slot.id}»"
         pointer = f"/signatures/slots/{index}/label"
         yield _Text(slot.label, what, "названия label", VERSION_MANIFEST, pointer, None)
 
 
-def _document_texts(version: TemplateVersion) -> Iterable[_Text]:
-    for doc in version.documents:
+def _document_texts(sources: LintSources) -> Iterable[_Text]:
+    for doc in sources.version.documents:
         element = ElementRef("documents", doc.id)
-        yield _Text(doc.name, f"документа «{doc.id}»", "названия name", doc_manifest(doc.id), "/name", element)
+        file, base = doc_site(sources, doc.id)
+        yield _Text(doc.name, f"документа «{doc.id}»", "названия name", file, f"{base}/name", element)
         for index, variant in enumerate(doc.variants):
             what = f"варианта «{variant.id}» документа «{doc.id}»"
-            pointer = f"/variants/{index}/label"
-            yield _Text(variant.label, what, "названия label", doc_manifest(doc.id), pointer, element)
+            pointer = f"{base}/variants/{index}/label"
+            yield _Text(variant.label, what, "названия label", file, pointer, element)
 
 
 def _missing_langs(item: _Text, langs: tuple[str, ...]) -> list[str]:
@@ -408,7 +416,7 @@ def _missing_langs(item: _Text, langs: tuple[str, ...]) -> list[str]:
 
 def _translation_rules(sources: LintSources) -> Iterable[LintFinding]:
     langs = sources.version.langs
-    for item in _texts(sources.version):
+    for item in _texts(sources):
         missing = _missing_langs(item, langs)
         if missing:
             yield finding(

@@ -545,3 +545,64 @@ async def test__states__head_and_base_equal_work_tree_on_a_clean_clone(studio: S
             ]
             assert [d["state"] for d in data] == ["work_tree", "head", "base"]
             assert data[0]["sections"] == data[1]["sections"] == data[2]["sections"]
+
+
+# ── линтер результата (срез O8) ──────────────────────────────────────────────
+
+
+async def test__lint_tool__is_listed_read_only_with_the_section_and_refused_when_it_is_closed(studio: Studio) -> None:
+    async with _client(studio) as client:
+        closed = {t.name for t in (await client.list_tools()).tools}
+        refused = await _json(
+            client,
+            "pack_outcome_lint",
+            {"workspace_id": "00000000-0000-0000-0000-000000000000", "version": "a/b/c"},
+            ok=False,
+        )
+    await studio.stand.enable()
+    async with _client(studio) as client:
+        tools = {t.name: t for t in (await client.list_tools()).tools}
+
+    assert "pack_outcome_lint" not in closed
+    assert refused["code"] == "pack_studio_disabled"
+    assert tools["pack_outcome_lint"].annotations is not None
+    assert tools["pack_outcome_lint"].annotations.read_only_hint is True
+    assert {"workspace_id", "version", "state", "jinja", "severity", "limit", "format"} <= set(
+        tools["pack_outcome_lint"].input_schema["properties"]
+    )
+
+
+async def test__lint_tool__real_vkr_text_and_json_agree(studio: Studio) -> None:
+    ws = await _folder(studio)
+
+    async with _client(studio) as client:
+        text = await _text(client, "pack_outcome_lint", {"workspace_id": ws, "version": _ref(VKR)})
+        data = await _json(client, "pack_outcome_lint", {"workspace_id": ws, "version": _ref(VKR), "format": "json"})
+
+    assert (
+        text.splitlines()[0]
+        == "Линтер результата hse-cs-se/vkr/2026.1.2 (work_tree): ошибок 0, предупреждений 12, информации 0."
+    )
+    assert "slot-never-routed" in text
+    assert "route-step-without-person" in text
+    assert "как исправить:" in text
+    assert "Покрытие правил сценариями:" in text
+    assert (data["errors"], data["warnings"]) == (0, 12)
+    assert data["coverage"]["rows_total"] == 864
+
+
+async def test__lint_tool__a_draft_edit_shows_up_and_head_has_no_jinja(studio: Studio) -> None:
+    ws = await _git(studio)
+    await edit_manifest(studio.stand, ws, 'equals: "yes"', 'equals: "maybe"')
+
+    async with _client(studio) as client:
+        work = await _text(client, "pack_outcome_lint", {"workspace_id": ws, "version": _ref(DRAFT_VKR)})
+        head = await _text(
+            client,
+            "pack_outcome_lint",
+            {"workspace_id": ws, "version": _ref(DRAFT_VKR), "state": "head", "jinja": True},
+        )
+
+    assert "visible-if-value-not-in-options" in work
+    assert "visible-if-value-not-in-options" not in head
+    assert "Правила Jinja только на рабочем дереве" in head

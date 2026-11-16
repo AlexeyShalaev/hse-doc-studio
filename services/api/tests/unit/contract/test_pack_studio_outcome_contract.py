@@ -231,7 +231,28 @@ def test__lint__counts_agree_with_findings() -> None:
 
     assert body["errors"] == severities["error"]
     assert body["warnings"] == severities["warning"]
+    assert body["infos"] == severities["info"]
     assert {f["rule_id"] for f in body["findings"]} >= {"slot-never-routed", "translation-missing"}
+    assert [f["severity"] for f in body["findings"]] == sorted(
+        (f["severity"] for f in body["findings"]), key=["error", "warning", "info"].index
+    )
+    assert all(f["hint"] and f["file"] and f["pointer"] for f in body["findings"])
+    assert all(len(f["witnesses"]) <= 3 and len(f["elements"]) <= 16 for f in body["findings"])
+
+
+def test__lint__coverage_counts_percent_and_rows_agree() -> None:
+    cov = _load("PackOutcomeLint", "vkr")["coverage"]
+
+    assert cov["rules_total"] == cov["rules_covered"] + cov["rules_half"] + cov["rules_uncovered"]
+    assert len(cov["rules"]) + cov["rules_omitted"] == cov["rules_half"] + cov["rules_uncovered"]
+    assert 0 <= cov["percent"] <= 100
+    assert 0 <= cov["rows_touched"] <= cov["rows_total"]
+    assert len(cov["uncovered_rows"]) <= 10
+    for rule in cov["rules"]:
+        assert set(rule["seen"]) <= set(rule["possible"])
+        assert set(rule["seen"]) != set(rule["possible"])
+    gains = [row["gain"] for row in cov["uncovered_rows"]]
+    assert gains == sorted(gains, reverse=True)
 
 
 def test__matrix__every_row_has_one_cell_per_column() -> None:

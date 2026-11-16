@@ -132,6 +132,16 @@ def doc_manifest(doc_id: str) -> str:
     return f"files/{doc_id}/doc.yaml"
 
 
+def doc_site(sources: LintSources, doc_id: str) -> tuple[str, str]:
+    """Файл и указатель документа в манифесте: `files/<id>/doc.yaml` (корень) или запись в `documents` версии (шаблон
+    старого вида, где документ описан прямо в `version.yaml`)."""
+    manifest = doc_manifest(doc_id)
+    if manifest in sources.texts or not sources.texts:
+        return manifest, ""
+    index = next((i for i, doc in enumerate(sources.version.documents) if doc.id == doc_id), 0)
+    return VERSION_MANIFEST, f"/documents/{index}"
+
+
 class _Lines:
     """Строка (с единицы) узла по файлу и JSON Pointer; тексты разбираются один раз."""
 

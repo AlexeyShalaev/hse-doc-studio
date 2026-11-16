@@ -15,14 +15,15 @@ from collections import defaultdict
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 
-from hse_doc_studio.core.catalog import SubmissionProfile, TemplateVersion
+from hse_doc_studio.core.catalog import SubmissionProfile
 from hse_doc_studio.core.pack_studio.outcome.coverage import OUTCOMES, RuleUniverse, UniverseRule
 from hse_doc_studio.core.pack_studio.outcome.lint import (
     MAX_WITNESSES,
     VERSION_MANIFEST,
     LintFinding,
+    LintSources,
     Witness,
-    doc_manifest,
+    doc_site,
     finding,
 )
 from hse_doc_studio.core.pack_studio.outcome.lint_static import named_slots, slot_never_routed
@@ -67,8 +68,9 @@ class AtlasObservation:
 
 
 class AtlasObserver:
-    def __init__(self, version: TemplateVersion, dimensions: Sequence[str]) -> None:
-        self._version = version
+    def __init__(self, sources: LintSources, dimensions: Sequence[str]) -> None:
+        self._sources = sources
+        self._version = sources.version
         self._dimensions = tuple(dimensions)
         self._rows: list[RowKey] = []
         self._cells: list[frozenset[int]] = []
@@ -235,14 +237,15 @@ class AtlasObserver:
             if doc.id in self._docs_active:
                 continue
             blockers = self._blockers(ElementRef("documents", doc.id))
+            file, base = doc_site(self._sources, doc.id)
             yield finding(
                 "document-never-active",
                 "warning",
                 f"Документ «{doc.id}» не активен ни в одной комбинации вводных" + _because(blockers),
                 "Проверьте supported_kinds и supported_staffing документа (их пересечение пусто?) и условия NDA и "
                 "руководств, либо удалите документ из ростера.",
-                doc_manifest(doc.id),
-                blockers[0][1] if blockers else "/supported_kinds",
+                file,
+                base + (blockers[0][1] if blockers else "/supported_kinds"),
                 ElementRef("documents", doc.id),
             )
 
