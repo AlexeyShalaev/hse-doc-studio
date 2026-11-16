@@ -163,6 +163,8 @@
 | packs | `pack_new_template` | W | раздел, область `packs` | новый (M26, T15): шаблон с нуля |
 | packs | `pack_preview_build` | X | раздел, область `packs`; квота предпросмотра | новый (M26) |
 | packs | `pack_preview_read` | R | раздел, область `packs` | новый (M26): текст PDF или журнал |
+| packs | `pack_outcome_inputs` | R | раздел, область `packs`; частота `pack_outcome` | новый (O3): вводные версии, умолчания, наборы данных |
+| packs | `pack_outcome` | R | раздел, область `packs`; частота `pack_outcome` | новый (O3): результат версии для вводных, `state`, `include`, `trace`, компактный и подробный вид |
 | packs | `pack_set_placement` | W | раздел, область `packs` | новый (M26) |
 | packs | `pack_new_version` | W | раздел, область `packs` | новый (M26) |
 | packs | `pack_version_notes` | W | раздел, область `packs` | новый (M26) |
