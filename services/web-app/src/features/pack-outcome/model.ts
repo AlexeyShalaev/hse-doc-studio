@@ -1,6 +1,7 @@
 import { createContext, useContext } from "react";
 import type { UseQueryResult } from "@tanstack/react-query";
 import type {
+  OutcomeElementRef,
   PackGit,
   PackOutcome,
   PackOutcomeInputs,
@@ -10,6 +11,23 @@ import type {
   PackWorkspace,
 } from "@entities/pack-studio";
 import type { OutcomeSelection, OutcomeUrlControls } from "./lib/urlState";
+
+/**
+ * Подсветка элементов результата, связанных с вводной (клик по вводной в левой панели). Связи
+ * берутся из трассы ответа, секции спрашивают `isHighlighted` и красят элемент у себя.
+ */
+export type OutcomeHighlight = {
+  /** Вводная, чьи связи подсвечены. */
+  input: string | null;
+  /** Ключи `раздел:id` элементов результата. */
+  elements: ReadonlySet<string>;
+  setInput: (id: string | null) => void;
+};
+
+export const isHighlighted = (
+  highlight: OutcomeHighlight,
+  element: OutcomeElementRef,
+): boolean => highlight.elements.has(`${element.section}:${element.id}`);
 
 /**
  * Всё, что нужно панелям и секциям экрана «Результат»: версия, состояние из адреса, запросы.
@@ -35,6 +53,7 @@ export type OutcomeModel = {
   inputs: UseQueryResult<PackOutcomeInputs>;
   scenarios: UseQueryResult<PackScenarioList>;
   select: (element: OutcomeSelection | null) => void;
+  highlight: OutcomeHighlight;
   /** Вид пространства: у папки без git нет веток и состояний `head` и `base`. */
   workspaceKind: PackWorkspace["kind"];
   /** Состояние git пространства (ветка, расхождение с базой); пока не пришло или без git пусто. */

@@ -114,13 +114,15 @@ def _clip(value: object) -> object:
     return value
 
 
-def refusal(exc: PackStudioError | GitSyncError) -> ToolResult:
-    """Отказ сценария: код, текст на языке интерфейса и поля по коду (длинные строки обрезаны)."""
+def refusal(exc: PackStudioError | GitSyncError, *, hint: str | None = None) -> ToolResult:
+    """Отказ сценария: код, текст на языке интерфейса и поля по коду (длинные строки обрезаны); `hint` что делать."""
     if isinstance(exc, GitSyncError):
         body: dict[str, object] = {"code": exc.code.value, "detail": exc.detail}
     else:
         body = {"code": exc.code.value, "detail": exc.detail}
         body.update({str(k): _clip(jsonable(v)) for k, v in exc.ctx.items()})
+    if hint:
+        body["hint"] = hint
     return ToolResult.error(json.dumps(body, ensure_ascii=False, indent=1))
 
 

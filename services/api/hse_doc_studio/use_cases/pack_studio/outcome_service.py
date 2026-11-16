@@ -143,6 +143,9 @@ class _Prepared:
     today: date
 
 
+type PreparedVersion = _Prepared
+
+
 def _now_today() -> date:
     return datetime.now(DISPLAY_ZONE).date()
 
@@ -377,6 +380,27 @@ class PackOutcomeService:
         self._pending -= 1
         if not future.cancelled():
             future.exception()
+
+    # ── для других расчётов результата (атлас, срез O4) ──────────────────────
+
+    async def prepare(  # noqa: PLR0913 — путь версии, состояние и набор данных
+        self,
+        actor: Actor,
+        workspace_id: UUID,
+        pack: str,
+        template: str,
+        version: str,
+        state: OutcomeState,
+        example_id: str | None,
+    ) -> PreparedVersion:
+        """Версия в выбранном состоянии, набор данных, `revision` и день: то, из чего расчёты результата строят ключ
+        и считают. Читает так же, как `inputs` и `outcome` (права, `head` и `base` из git, `diff_base_unavailable`)."""
+        return await self._prepare(actor, workspace_id, pack, template, version, state, example_id)
+
+    @classmethod
+    def key_of(cls, prep: PreparedVersion, state: str, **extra: Any) -> str:
+        """Ключ ответа расчёта по подготовленной версии: общая часть `_key_base` и то, что добавляет расчёт."""
+        return request_key({**cls._key_base(prep, state), **extra})
 
     # ── источник версии ──────────────────────────────────────────────────────
 

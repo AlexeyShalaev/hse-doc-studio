@@ -304,6 +304,7 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("GET", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/submission"): _A,
     ("PATCH", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/submission"): _A,
     ("POST", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/submission/routes"): _A,
+    ("GET", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/outcome/atlas"): _A,
     # Срез O2: результат версии (вводные и расчёт; только чтение, POST из-за тела запроса)
     ("GET", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/outcome/inputs"): _A,
     ("POST", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/outcome"): _A,

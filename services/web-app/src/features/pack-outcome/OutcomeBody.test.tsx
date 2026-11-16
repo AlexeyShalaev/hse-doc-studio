@@ -211,7 +211,9 @@ describe("экран «Результат»: каркас на эталонах"
       mount("i.kind=research&selected=documents:operator_manual");
       const row = await screen.findByTestId("outcome-input-kind");
       expect(row).toHaveAttribute("data-changed", "true");
-      expect(within(row).getByText("research")).toBeInTheDocument();
+      expect(
+        within(row).getByRole("radio", { name: "Исследовательская" }),
+      ).toBeChecked();
       expect(screen.getByTestId("outcome-selected")).toHaveTextContent(
         "operator_manual",
       );
@@ -257,9 +259,7 @@ describe("экран «Результат»: каркас на эталонах"
       expect(location()).toBe(
         `/pack-studio/w/${WS}/result/hse-cs-se/vkr/2026.1.2?state=head`,
       );
-      expect(
-        screen.queryByTestId("outcome-inputs-reset"),
-      ).not.toBeInTheDocument();
+      expect(screen.getByTestId("outcome-inputs-reset")).toBeDisabled();
     });
 
     it("«Снять выбор» убирает выбранный элемент из адреса", async () => {
@@ -274,7 +274,9 @@ describe("экран «Результат»: каркас на эталонах"
       await screen.findByTestId("outcome-count-documents");
       // Запрос с вводными тот же, что у хука: ответ эталона несёт их в `inputs`.
       const input = await screen.findByTestId("outcome-input-staffing");
-      expect(within(input).getByText("team2")).toBeInTheDocument();
+      expect(
+        within(input).getByRole("radio", { name: "Два автора" }),
+      ).toBeChecked();
     });
   });
 
