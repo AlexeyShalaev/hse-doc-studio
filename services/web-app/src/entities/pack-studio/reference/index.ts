@@ -22,3 +22,10 @@ export type {
   ReferenceBehavior,
   ReferenceSource,
 } from "./routes";
+export {
+  patchReferenceModel,
+  referenceManifest,
+  referenceModel,
+  resetReferenceManifests,
+  touchReferenceManifest,
+} from "./manifests";

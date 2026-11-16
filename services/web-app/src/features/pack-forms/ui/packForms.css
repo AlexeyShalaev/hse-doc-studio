@@ -459,3 +459,11 @@
   outline-offset: 2px;
   border-radius: var(--r-2, 0.375rem);
 }
+
+/* Мини-форма одной записи манифеста (правка по месту на экране «Результат») */
+.pf-rule {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}

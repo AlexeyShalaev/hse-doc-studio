@@ -20,6 +20,11 @@ import {
 import type { OutcomeElementRef } from "../api/outcome";
 import { explainFor } from "./explain";
 import {
+  applyReferenceEdits,
+  patchReferenceModel,
+  referenceModel,
+} from "./manifests";
+import {
   COURSEWORK_INPUTS,
   COURSEWORK_OUTCOME,
   COURSEWORK_RUN,
@@ -160,7 +165,13 @@ const outcomeFor = (params: Params, body: PackOutcomeRequest): PackOutcome => {
       sections: out.digest.sections.map((print) => ({ ...print, count: 0 })),
     };
   }
-  return out;
+  return applyReferenceEdits(
+    out,
+    params.id,
+    params.pack,
+    params.template,
+    params.version,
+  );
 };
 
 const inputsFor = (params: Params, state: string | null): PackOutcomeInputs => {
@@ -412,7 +423,50 @@ const VERSION =
 const SCENARIOS =
   "/pack-studio/workspaces/:id/templates/:pack/:template/scenarios";
 
+const VERSION_ROOT =
+  "/pack-studio/workspaces/:id/versions/:pack/:template/:version";
+
 export const outcomeReferenceRoutes: DemoRoute[] = [
+  {
+    method: "GET",
+    pattern: `${VERSION_ROOT}/model`,
+    handler: (req) =>
+      source === "server"
+        ? (req.forward() as never)
+        : demoJson(
+            referenceModel(
+              req.params.id ?? "",
+              req.params.pack ?? "",
+              req.params.template ?? "",
+              req.params.version ?? "",
+            ),
+          ),
+  },
+  {
+    method: "PATCH",
+    pattern: `${VERSION_ROOT}/model`,
+    handler: (req) => {
+      if (source === "server") return req.forward() as never;
+      const done = patchReferenceModel(
+        req.params.id ?? "",
+        req.params.pack ?? "",
+        req.params.template ?? "",
+        req.params.version ?? "",
+        req.body,
+        req.headers?.["if-match"] ?? null,
+      );
+      if (done.status === 200) return demoJson(done.model);
+      if (done.status === 409) {
+        return demoError(409, done.code, "Файл изменён.", {
+          etag: done.etag,
+          content: "langs: [ru]\n",
+        });
+      }
+      return demoError(422, done.code, "Правку нельзя записать.", {
+        reason: done.reason,
+      });
+    },
+  },
   {
     method: "GET",
     pattern: `${VERSION}/inputs`,

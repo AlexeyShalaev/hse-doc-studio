@@ -1,8 +1,14 @@
-import { Cpu, ExternalLink, FileCode } from "lucide-react";
+import { Suspense, useState } from "react";
+import { Cpu, ExternalLink, FileCode, Pencil } from "lucide-react";
+import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
-import type { OutcomeTrace } from "@entities/pack-studio";
+import { packNewVersionPath, type OutcomeTrace } from "@entities/pack-studio";
 import { Badge } from "@shared/ui";
+import { isEditableShape, shapeOf } from "../../lib/edit/shape";
 import type { TraceText } from "../../lib/explain";
+import { useOutcomeModel } from "../../model";
+import { useRuleEdit } from "../edit/context";
+import { LazyRuleEditor } from "../edit/lazy";
 import { useOpenRule } from "./useOpenRule";
 import { DecisionStatus } from "./StateChip";
 
@@ -16,6 +22,9 @@ type ChainProps = {
 const Origin = ({ trace, phone }: { trace: OutcomeTrace; phone: boolean }) => {
   const { t } = useTranslation("packOutcome");
   const rules = useOpenRule();
+  const edit = useRuleEdit();
+  const model = useOutcomeModel();
+  const [editing, setEditing] = useState(false);
   const { rule } = trace;
   if (rule.origin === "builtin") {
     const name = rule.builtin ?? "";
@@ -40,6 +49,12 @@ const Origin = ({ trace, phone }: { trace: OutcomeTrace; phone: boolean }) => {
     );
   }
   const where = rules.locate(rule);
+  const shape = shapeOf(rule.pointer ?? "");
+  const editable =
+    where !== null &&
+    !phone &&
+    edit?.available === true &&
+    isEditableShape(shape);
   return (
     <div
       className="po-chain-origin"
@@ -54,6 +69,25 @@ const Origin = ({ trace, phone }: { trace: OutcomeTrace; phone: boolean }) => {
       </p>
       {where && !phone && (
         <span className="po-chain-actions">
+          {editable && edit && (
+            <button
+              type="button"
+              className="btn sm"
+              aria-expanded={editing}
+              aria-describedby={
+                edit.blocked ? `po-edit-why-${trace.id}` : undefined
+              }
+              disabled={edit.blocked !== null}
+              data-testid={`outcome-chain-${trace.id}-edit`}
+              onClick={() => {
+                edit.begin();
+                setEditing((open) => !open);
+              }}
+            >
+              <Pencil size="0.75rem" aria-hidden="true" />
+              {t("rules.editRule")}
+            </button>
+          )}
           <button
             type="button"
             className="btn sm"
@@ -78,6 +112,46 @@ const Origin = ({ trace, phone }: { trace: OutcomeTrace; phone: boolean }) => {
             </button>
           )}
         </span>
+      )}
+      {editable && edit?.blocked && (
+        <p
+          className="po-note"
+          id={`po-edit-why-${trace.id}`}
+          data-testid={`outcome-chain-${trace.id}-edit-why`}
+        >
+          {t(`edit.blocked.${edit.blocked}`)}{" "}
+          {edit.blocked === "released" && (
+            <Link
+              className="po-edit-link"
+              data-testid={`outcome-chain-${trace.id}-new-version`}
+              to={packNewVersionPath(model.workspaceId, model.ref)}
+            >
+              {t("edit.newVersion")}
+            </Link>
+          )}
+        </p>
+      )}
+      {editable && shape && where && editing && !edit.blocked && (
+        <Suspense
+          fallback={
+            <p className="po-note" role="status">
+              {t("edit.loading")}
+            </p>
+          }
+        >
+          <LazyRuleEditor
+            trace={trace}
+            target={{
+              file: rule.file ?? "",
+              pointer: rule.pointer ?? "",
+              shape,
+              kind: trace.kind,
+            }}
+            onClose={() => {
+              setEditing(false);
+            }}
+          />
+        </Suspense>
       )}
     </div>
   );

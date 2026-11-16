@@ -231,7 +231,7 @@
     "name": "Студия шаблонов (lazy, pages/PackStudioPage и фичи pack-*)",
     "path": "dist/assets/pack-studio-app-*.js",
     "gzip": true,
-    "limit": "29.9 kB"
+    "limit": "30.3 kB"
   },
   {
     "name": "Студия шаблонов, формы проверок (lazy, features/pack-checks-form)",
@@ -264,10 +264,22 @@
     "limit": "15.2 kB"
   },
   {
+    "name": "Студия шаблонов, мини-форма правила (lazy, features/pack-forms/rule, правка по месту)",
+    "path": "dist/assets/pack-rule-form-*.js",
+    "gzip": true,
+    "limit": "1.8 kB"
+  },
+  {
+    "name": "Студия шаблонов, правка по месту на экране «Результат» (lazy, ui/edit)",
+    "path": "dist/assets/outcome-edit-*.js",
+    "gzip": true,
+    "limit": "3.6 kB"
+  },
+  {
     "name": "Словарь форм Студии шаблонов (ru и en, features/pack-forms)",
     "path": "dist/assets/locale-packForms-*.js",
     "gzip": true,
-    "limit": "9 kB"
+    "limit": "9.4 kB"
   },
   {
     "name": "Студия шаблонов, «Подключить к каталогу этой Студии» (lazy, features/pack-catalog-connect)",
@@ -291,12 +303,12 @@
     "name": "Студия шаблонов, экран «Результат» (lazy, features/pack-outcome)",
     "path": "dist/assets/pack-outcome-*.js",
     "gzip": true,
-    "limit": "35.8 kB"
+    "limit": "41 kB"
   },
   {
     "name": "Словарь экрана «Результат» (ru и en, features/pack-outcome)",
     "path": "dist/assets/locale-packOutcome-*.js",
     "gzip": true,
-    "limit": "19.8 kB"
+    "limit": "22 kB"
   }
 ]

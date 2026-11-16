@@ -9,6 +9,7 @@ import {
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   PackStaleFileError,
+  cacheModelResult,
   packStudioApi,
   packStudioKeys,
   type PackModelActionRequest,
@@ -89,30 +90,11 @@ export const ModelEditorProvider = ({
 
   const apply = useCallback(
     (next: PackVersionModel) => {
-      client.setQueryData(key, next);
-      for (const path of next.changed) {
-        void client.invalidateQueries({
-          queryKey: packStudioKeys.file(workspaceId, path),
-        });
-      }
-      const created = next.changed.some(
-        (path) => !path.endsWith("version.yaml") && !path.endsWith("doc.yaml"),
-      );
-      if (created) {
-        void client.invalidateQueries({
-          queryKey: packStudioKeys.tree(workspaceId),
-        });
-      }
-      void client.invalidateQueries({
-        queryKey: packStudioKeys.hints(
-          workspaceId,
-          next.manifest.path.replace(/\/version\.yaml$/, ""),
-        ),
-      });
+      cacheModelResult(client, workspaceId, { pack, template, version }, next);
       setStale(false);
       onSaved(next.changed);
     },
-    [client, key, workspaceId, onSaved],
+    [client, workspaceId, pack, template, version, onSaved],
   );
 
   const onError = useCallback(

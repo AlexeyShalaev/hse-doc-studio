@@ -10,6 +10,7 @@ export {
   PackStaleFileError,
 } from "./api/packStudioApi";
 export type { PackFile, PackVersionRef } from "./api/packStudioApi";
+export { cacheModelResult } from "./lib/modelCache";
 // Вычислитель результата (docs/design/template-studio-outcome.md): схемы контракта и клиент
 // эндпоинтов (outcomeApi, хуки). Сервер результата приходит срезами O1 и O2; до них клиент
 // живёт на эталонах контракта (reference/, только разработка и тесты).
@@ -171,6 +172,7 @@ export type { ForkRequired, LintFailure } from "./lib/gitErrors";
 export {
   PACK_STUDIO_PATH,
   packFilesPath,
+  packNewVersionPath,
   packOutcomePath,
   packRulePath,
   packWorkspacePath,
