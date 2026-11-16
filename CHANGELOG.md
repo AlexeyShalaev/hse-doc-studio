@@ -6,6 +6,11 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.34.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.34.0...v0.34.1) - 2026-11-16
+
+- Fixed: an Official packs workspace showed "Could not read the local repository copy" right after creation. Git looked for .gitignore and .gitattributes rules outside the packs folder, and their files were missing in the partial clone. The workspace now fetches the needed files with its token, and existing workspaces repair themselves when opened.
+- Template Studio: when git fails, the banner shows collapsed support details with the command and the error line, without URLs or server paths.
+
 ## [0.34.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.33.0...v0.34.0) - 2026-11-15
 
 - Files: upload your own files into a project from the browser. Upload files and Upload folder buttons, folder menu items and drag and drop from the computer into the tree. On a name clash you can replace, keep both or skip. Progress is shown, one file is up to 50 MiB.

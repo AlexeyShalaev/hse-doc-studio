@@ -1,6 +1,20 @@
 {
   "releases": [
     {
+      "version": "0.34.1",
+      "date": "2026-11-16",
+      "notes": [
+        {
+          "ru": "Исправлено: пространство «Официальные паки» сразу после создания показывало «Не удалось прочитать локальную копию репозитория». Git искал правила .gitignore и .gitattributes вне папки паков, а их файлов в частичном клоне не было. Теперь пространство само догружает нужные файлы с токеном пространства, уже созданные пространства чинятся при открытии.",
+          "en": "Fixed: an Official packs workspace showed \"Could not read the local repository copy\" right after creation. Git looked for .gitignore and .gitattributes rules outside the packs folder, and their files were missing in the partial clone. The workspace now fetches the needed files with its token, and existing workspaces repair themselves when opened."
+        },
+        {
+          "ru": "Студия шаблонов: при сбое git баннер показывает свёрнутые «Подробности для поддержки» с командой и строкой ошибки без адресов и путей сервера.",
+          "en": "Template Studio: when git fails, the banner shows collapsed support details with the command and the error line, without URLs or server paths."
+        }
+      ]
+    },
+    {
       "version": "0.34.0",
       "date": "2026-11-15",
       "notes": [
