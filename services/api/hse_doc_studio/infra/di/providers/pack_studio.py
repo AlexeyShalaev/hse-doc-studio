@@ -82,6 +82,7 @@ from hse_doc_studio.use_cases.pack_studio.insight import PackInsightService
 from hse_doc_studio.use_cases.pack_studio.model import PackModelService
 from hse_doc_studio.use_cases.pack_studio.official import OfficialPacks
 from hse_doc_studio.use_cases.pack_studio.outcome_atlas import PackAtlasService
+from hse_doc_studio.use_cases.pack_studio.outcome_service import OutcomeLimits, PackOutcomeService
 from hse_doc_studio.use_cases.pack_studio.places import PackPlacesService
 from hse_doc_studio.use_cases.pack_studio.preview import PackPreviewService, PreviewLimits
 from hse_doc_studio.use_cases.pack_studio.scaffold import PackScaffoldService
@@ -317,11 +318,6 @@ class PackStudioProvider(Provider):
         return PackPreviewService(workspaces, renderer, store, dispatcher, limits=limits)
 
     @provide
-    def get_atlas_service(self, previews: PackPreviewService) -> PackAtlasService:
-        # Один на процесс: держит кэш атласов, семафор расчётов и общие расчёты одинаковых запросов.
-        return PackAtlasService(previews)
-
-    @provide
     def get_places_service(self, files: PackFilesService, previews: PackPreviewService) -> PackPlacesService:
         return PackPlacesService(files, previews, PackPlacesEditor())
 
@@ -332,6 +328,31 @@ class PackStudioProvider(Provider):
     @provide
     def get_submission_service(self, files: PackFilesService, previews: PackPreviewService) -> PackSubmissionService:
         return PackSubmissionService(files, previews, PackSubmissionEditor())
+
+    @provide
+    def get_outcome_service(  # noqa: PLR0913 — порты сценария
+        self,
+        workspaces: PackWorkspaceService,
+        previews: PackPreviewService,
+        renderer: IPackPreviewRenderer,
+        files: IPackWorkspaceFiles,
+        git: IPackWorkspaceGit,
+    ) -> PackOutcomeService:
+        cfg = settings.pack_studio
+        limits = OutcomeLimits(
+            timeout_s=cfg.outcome_timeout_s,
+            max_concurrent=cfg.outcome_max_concurrent,
+            max_pending=cfg.outcome_max_concurrent * 2,
+            cache_entries=cfg.outcome_cache_entries,
+            max_files=cfg.max_tree_files,
+            max_bytes=cfg.max_tree_bytes,
+        )
+        return PackOutcomeService(workspaces, previews, renderer, files, git, limits=limits)
+
+    @provide
+    def get_atlas_service(self, outcome: PackOutcomeService) -> PackAtlasService:
+        # Один на процесс: держит кэш атласов, семафор расчётов и общие расчёты одинаковых запросов.
+        return PackAtlasService(outcome)
 
     @provide
     def get_checks_form_service(self, files: PackFilesService) -> PackChecksFormService:

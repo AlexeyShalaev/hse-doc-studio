@@ -112,4 +112,24 @@ describe("состояние экрана в адресе", () => {
     expect(parseOutcomeSearch(params)).toEqual(state);
     expect(formatSelected(state.selected)).toBe("route:final/step/1");
   });
+
+  it("ветки выбираются как branches:<вводная>, проверки как checks:<правило>", () => {
+    const branches = parseOutcomeSearch(
+      new URLSearchParams("selected=branches:meta.nda"),
+    );
+    expect(branches.selected).toEqual({ section: "branches", id: "meta.nda" });
+    expect(
+      writeOutcomeSearch(new URLSearchParams(), branches).get("selected"),
+    ).toBe("branches:meta.nda");
+    const check = parseOutcomeSearch(
+      new URLSearchParams("selected=checks:gost-7.32-2017/line-spacing"),
+    );
+    expect(check.selected).toEqual({
+      section: "checks",
+      id: "gost-7.32-2017/line-spacing",
+    });
+    expect(
+      parseOutcomeSearch(new URLSearchParams("selected=branches:")).selected,
+    ).toBeNull();
+  });
 });

@@ -81,6 +81,175 @@
     "stale": "The previous outcome is shown: the new one could not be loaded.",
     "updating": "Updating"
   },
+  "filters": {
+    "search": "Search",
+    "searchIn": "Search: {{name}}"
+  },
+  "documents": {
+    "state": {
+      "active": "In the set",
+      "inactive": "Switched off",
+      "absent": "Absent"
+    },
+    "scope": {
+      "shared": "Shared",
+      "personal": "Personal"
+    },
+    "filter": {
+      "all": "All",
+      "personal": "Personal",
+      "shared": "Shared"
+    },
+    "filterScope": "Show",
+    "optional": "Optional",
+    "why": {
+      "inactive": "switched off:",
+      "absent": "absent:"
+    },
+    "whyUnknown": "the reason is not in the response",
+    "noFileName": "no file name",
+    "copies": "{{count}} copies",
+    "variant": "Variant:",
+    "variantOnly": "{{langs}} only",
+    "variantOff": "unavailable",
+    "languages": "Editions:",
+    "fallback": "No {{lang}} edition: the default language is used",
+    "absentBlock": "Not in this combination",
+    "stats": {
+      "active": "In the set",
+      "inactive": "Switched off",
+      "absent": "Not in combination",
+      "shared": "Shared",
+      "personal": "Personal"
+    },
+    "groups": {
+      "none": "No group",
+      "espd": "ESPD",
+      "report": "Report",
+      "pdp": "Practice",
+      "pres": "Presentations",
+      "work": "Thesis",
+      "nda": "NDA",
+      "topic": "Topic"
+    }
+  },
+  "meta": {
+    "stats": {
+      "visible": "Visible",
+      "hidden": "Hidden",
+      "create": "At creation",
+      "finalize": "At finalization",
+      "forms": "Questionnaires"
+    },
+    "empty": "The project has no fields or questionnaires in this combination.",
+    "filterRequired": "Required",
+    "required": {
+      "all": "Any",
+      "create": "At creation",
+      "finalize": "At finalization",
+      "never": "Not required"
+    },
+    "type": {
+      "string": "String",
+      "bool": "Yes or no",
+      "person": "Person",
+      "select": "Choice",
+      "font": "Font"
+    },
+    "scope": {
+      "project": "Project field",
+      "author": "Author field"
+    },
+    "value": "Example:",
+    "noValue": "no value",
+    "options": "Options:",
+    "hiddenWhy": "hidden:",
+    "whyUnknown": "the reason is not in the response",
+    "hiddenBlock": "Hidden in this combination",
+    "groups": {
+      "none": "Other",
+      "study": "Study",
+      "docset": "Document set",
+      "naming": "Titles",
+      "vkr_title": "Title page",
+      "topic": "Topic",
+      "espd": "ESPD"
+    }
+  },
+  "forms": {
+    "required": "Required",
+    "perAuthor": "Per author",
+    "shared": "Shared",
+    "requiredForPack": "Needed for the set",
+    "notApplies": "Does not apply",
+    "notAppliesWhy": "does not apply:",
+    "hiddenWhy": "hidden:",
+    "fieldsOf": "Fields visible: {{visible}} of {{total}}",
+    "hiddenBlock": "Hidden fields",
+    "offBlock": "Do not apply in this combination"
+  },
+  "participants": {
+    "authorN": "Author {{n}}",
+    "role": {
+      "author": "Author",
+      "supervisor": "Supervisor",
+      "co_supervisor": "Co-supervisor",
+      "academic_supervisor": "Academic supervisor"
+    },
+    "org": {
+      "university": "HSE",
+      "company": "Company"
+    },
+    "required": {
+      "create": "Set at creation",
+      "finalize": "Set at finalization",
+      "never": "Not required"
+    },
+    "always": "Always in the project",
+    "absent": "none:",
+    "absentWhy": "not expected in this combination",
+    "byInput": "input \"{{input}}\": {{value}}",
+    "stats": {
+      "authors": "Authors",
+      "supervisors": "Supervisors",
+      "absent": "Not in combination"
+    },
+    "warnTitle": "No person for a route step",
+    "warnStep": "Point \"{{point}}\", step {{step}}: {{who}} is not set",
+    "empty": "No participants in this combination."
+  },
+  "reasons": {
+    "unset": "not set",
+    "op": {
+      "in": "{{subject}}: now {{actual}}, needs {{expected}}",
+      "equals": "{{subject}}: now {{actual}}, needs {{expected}}",
+      "contains_any": "{{subject}}: \"{{actual}}\" has none of {{expected}}",
+      "present": "{{subject}}: not set",
+      "truthy": "{{subject}}: switched off"
+    },
+    "subjects": {
+      "kind": "kind of work",
+      "staffing": "staffing",
+      "lang": "language",
+      "supervisor": "supervisor",
+      "co_supervisor": "co-supervisor",
+      "academic_supervisor": "academic supervisor"
+    },
+    "values": {
+      "project": "project",
+      "research": "research",
+      "solo": "solo",
+      "team2": "team of two",
+      "team3": "team of three",
+      "ru": "Russian",
+      "en": "English",
+      "yes": "yes",
+      "no": "no",
+      "university": "HSE",
+      "company": "company",
+      "none": "none"
+    }
+  },
   "sections": {
     "documents": "Documents",
     "meta": "Project metadata",
@@ -93,14 +262,14 @@
     "expand": "Expand the \"{{name}}\" section",
     "collapse": "Collapse the \"{{name}}\" section",
     "stub": "The content of this section arrives in the next slice.",
-    "notRequested": "Calculated on request",
+    "notRequested": "Loads when expanded",
     "count": {
       "documents": "{{active}} of {{total}} in the set",
       "meta": "{{visible}} visible of {{total}}",
       "participants": "{{present}} of {{total}}",
       "points": "{{count}}",
       "route": "{{count}}",
-      "checks": "{{enabled}} of {{total}} enabled",
+      "checks": "{{enabled}} of {{total}} apply",
       "branches": "{{count}}"
     }
   },
@@ -160,6 +329,104 @@
       "slow": "Slow response",
       "error": "Server error",
       "unreadable": "Version unreadable"
+    }
+  },
+  "checks": {
+    "scopeTitle": "Only which rules apply, not their results",
+    "scopeLead": "Check results (findings) are not part of the instant calculation: this shows which rules apply to the documents of the set. Findings are visible in the preview.",
+    "scopeMissing": "Not counted here: {{items}}.",
+    "pythonHint": "Python rule: runs only at build time, not part of the instant calculation",
+    "engine": "Engine:",
+    "severity": {
+      "err": "Error",
+      "warn": "Warning",
+      "info": "Notice"
+    },
+    "off": {
+      "prefix": "not applied:",
+      "disabled": "the rule is turned off in the check settings",
+      "category_disabled": "category \"{{category}}\" is turned off",
+      "no_active_document": "no such document in the set ({{documents}})"
+    },
+    "offGroup": {
+      "disabled": "Turned off in settings",
+      "category_disabled": "Category turned off",
+      "no_active_document": "Document not in the set"
+    },
+    "offBlock": "Not applied in this combination",
+    "layer": "Layer:",
+    "layerNone": "no layer",
+    "noDocument": "No document given",
+    "stats": {
+      "enabled": "Apply",
+      "off": "Not applied",
+      "python": "Python"
+    },
+    "filterSeverity": "Severity",
+    "filterEngine": "Engine",
+    "filter": {
+      "all": "All"
+    },
+    "noneApplicable": "No rule applies to the documents of this combination.",
+    "unavailableTitle": "The server returned no rules",
+    "unavailableLead": "The response came without check rules. Recalculate.",
+    "emptyTitle": "The version has no check rules",
+    "emptyLead": "Add check rules in the version's checks form."
+  },
+  "part": {
+    "failed": "Could not load the \"{{name}}\" section",
+    "failedStale": "Could not refresh the \"{{name}}\" section: showing the previous data"
+  },
+  "branches": {
+    "variantsTitle": "Document variants",
+    "variantsEmpty": "The documents of this combination have no variants.",
+    "variantChosen": "chosen",
+    "variantLang": "Unavailable variants exist only for a language other than {{lang}}.",
+    "showThis": "Show: {{label}}",
+    "showVariant": "Show the result with variant \"{{label}}\" for \"{{name}}\"",
+    "languageTitle": "Edition language and fallbacks",
+    "languageLead": "Project language: {{lang}}. A document with no edition in it uses the template's default language.",
+    "fallbackBadge": "falls back to another language",
+    "fallbackEmpty": "Every document has an edition in the project language.",
+    "whatIfTitle": "What changes with another choice",
+    "alternatives": "Values of the input \"{{name}}\"",
+    "current": "current",
+    "noChange": "no change",
+    "show": "Show these inputs",
+    "showInput": "Show the result where \"{{name}}\" is \"{{value}}\"",
+    "delta": {
+      "added": "added: {{count}}",
+      "changed": "changed: {{count}}",
+      "removed": "removed: {{count}}"
+    },
+    "unavailableTitle": "The server returned no branches",
+    "unavailableLead": "The response came without input details. Recalculate.",
+    "emptyTitle": "The result does not depend on the inputs",
+    "emptyLead": "No input changes the set, the participants, the points or the route.",
+    "filterAffects": "Changes",
+    "filter": {
+      "all": "All sections"
+    },
+    "stats": {
+      "inputs": "Inputs that change the result",
+      "alternatives": "Other values",
+      "same": "No change",
+      "variants": "Documents with variants",
+      "fallback": "Language fallbacks"
+    },
+    "workspace": {
+      "title": "Workspace branch",
+      "branch": "Work branch",
+      "base": "Base",
+      "drift": "Relative to base",
+      "driftValue": "ahead by {{ahead}}, behind by {{behind}}",
+      "uncommitted": "Unsaved edits",
+      "state": "Result computed from",
+      "fingerprint": "Result fingerprint",
+      "noBranch": "none",
+      "noGit": "Git state not received yet",
+      "folder": "A folder workspace without git: there is no branch or base, the result is computed from the working tree.",
+      "compareNote": "The same fingerprint on a branch and on the base means the same result. The counts and fingerprints below are per section: compare them by switching \"Outcome from\" at the top."
     }
   }
 }

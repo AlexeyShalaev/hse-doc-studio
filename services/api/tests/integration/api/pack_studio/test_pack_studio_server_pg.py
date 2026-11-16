@@ -176,6 +176,30 @@ def test__right__person_without_grant__is_403_and_sees_why(server: TestClient) -
     assert boot["capabilities"]["pack_studio"] is False
 
 
+def test__right__person_without_grant__outcome_endpoints_are_refused_and_capability_is_off(server: TestClient) -> None:
+    """Результат версии (срез O2) под тем же правом «Автор шаблонов», что весь раздел."""
+    admin = _admin(server)
+    _enable(admin)
+    anna_id, anna = _author(server)
+    outcome = f"{API}/workspaces/{uuid.uuid4()}/versions/hse-cs-se/vkr/2026.1.2/outcome"
+
+    inputs = anna.get(f"{outcome}/inputs")
+    result = anna.post(outcome, json={})
+    before = anna.get("/api/v1/session/bootstrap").json()["capabilities"]
+    admin.post(f"{ADMIN_API}/grants", json={"user_id": anna_id})
+    allowed = anna.post(outcome, json={})
+    after = anna.get("/api/v1/session/bootstrap").json()["capabilities"]
+
+    for resp in (inputs, result):
+        assert resp.status_code == 403
+        assert resp.json()["code"] == "pack_studio_forbidden"
+    assert (before["pack_studio"], before["pack_outcome"]) == (False, False)
+    # С правом доходит до пространства: чужого или несуществующего у человека нет.
+    assert allowed.status_code == 404
+    assert allowed.json()["code"] == "workspace_not_found"
+    assert (after["pack_studio"], after["pack_outcome"]) == (True, True)
+
+
 def test__right__granted_to_person_then_revoked(server: TestClient) -> None:
     admin = _admin(server)
     _enable(admin)

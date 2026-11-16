@@ -13,10 +13,8 @@ import time
 from datetime import date
 from pathlib import Path
 from typing import Any
-from uuid import UUID
 
 import pytest
-from hse_doc_studio.api.routers.v1.pack_studio_atlas import atlas_response
 from hse_doc_studio.api.schemas.pack_studio_outcome import PackOutcomeAtlasResponse
 from hse_doc_studio.core.catalog import TemplateVersion
 from hse_doc_studio.core.pack_studio.outcome.atlas import Atlas, AtlasCancelled, AtlasTooLarge, encode_key
@@ -462,10 +460,18 @@ def test__dictionary__affects_use_the_shared_analysis_and_accept_a_ready_one(cou
 
 
 def _body(atlas: Atlas) -> dict[str, Any]:
+    """Тело ответа так, как его собирает служба: поля границы запроса и атлас ядра."""
     return json.loads(
-        atlas_response(
-            UUID("6f1c1c8e-1b7a-4d51-9a43-0a5b2f3c4d10"), "p", "t", "1.0.0", "work_tree", atlas
-        ).model_dump_json()
+        json.dumps(
+            {
+                "workspace_id": "6f1c1c8e-1b7a-4d51-9a43-0a5b2f3c4d10",
+                "pack": "p",
+                "template": "t",
+                "version": "1.0.0",
+                "state": "work_tree",
+                **to_json(atlas),
+            }
+        )
     )
 
 

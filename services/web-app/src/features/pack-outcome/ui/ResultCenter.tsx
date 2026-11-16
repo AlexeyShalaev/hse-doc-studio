@@ -140,7 +140,7 @@ export const ResultCenter = () => {
             role="group"
             aria-label={t("result.sections")}
             aria-busy={outcome.isFetching || undefined}
-            data-stale={failed ? "true" : undefined}
+            data-stale={failed || model.stale ? "true" : undefined}
           >
             <DocumentsSection />
             <MetaSection />

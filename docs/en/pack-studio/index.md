@@ -40,6 +40,15 @@ The workspace menu:
 - **Update base**: fetch the fresh base branch and recount the released versions.
 - **Delete**: removes the clone in the Studio (the repository on the hosting stays as is) or only the record of a folder (the folder on disk stays).
 
+## Version outcome { #outcome }
+
+A workspace opens on the **Outcome** screen: what a student gets for the chosen inputs (language, work kind, staffing, supervisors, NDA, fields, questionnaire answers, document variants). That is the documents and file names, the project fields, the participants, the submission points and the signing route. The server calculates it with the same code that creates projects; the screen evaluates no conditions and writes or sends nothing.
+
+- **Outcome from**: the working tree (the default, with unsaved edits), the last commit of the branch or the base (the tip of the base branch). The commit and the base are read from the workspace git without switching branches. A folder on disk has neither, and neither has a new version that is not in the commit or in the base: the screen answers "Nothing to compare with".
+- While the version manifests (`version.yaml`, the `doc.yaml` of the documents, the data set file) are unchanged, a repeated request returns the stored answer and is not recalculated.
+- The calculation is limited to five seconds. If the version is too heavy or the server is busy with other calculations, you get "Try again later" (503 with `Retry-After`); the rate is limited to 20 calculations per second per person.
+- The screen needs the same "Template author" right as the whole section. If the server does not support it (an older server, the `pack_outcome` flag in `bootstrap`), the workspace opens on "Files": the tree, the editor, the preview. "Files" can also be opened when supported: `?view=files`.
+
 ## Official packs
 
 The **Official packs** card on the section's main screen opens the packs from the Studio's own repository. You need no repository of your own: edits go to your fork on GitHub and the PR is opened from your account. More: [Propose changes](propose.md#official).

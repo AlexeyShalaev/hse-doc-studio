@@ -6,7 +6,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 from uuid import UUID
 
 from hse_doc_studio.core.enums import TemplateUpdateClass
@@ -140,6 +140,12 @@ class IPackWorkspaceFiles(Protocol):
         """`workspace_too_large`, если под папкой паков больше файлов или байт, чем позволено."""
         ...
 
+    def version_manifests(self, root: Path, ref: VersionRef, *, max_bytes: int) -> dict[str, bytes]:
+        """Тексты манифестов версии для `revision` результата (срез O2): `version.yaml` и `files/<документ>/doc.yaml`
+        (пути от каталога версии), файлы наборов данных `examples/<имя>` (от каталога шаблона). Ссылки и файлы больше
+        `max_bytes` пропускаются; нет каталога версии: `version_not_found`."""
+        ...
+
 
 @dataclass(frozen=True)
 class WorkspaceDirs:
@@ -245,6 +251,31 @@ class IPackWorkspaceGit(Protocol):
         (`base...HEAD`), без фильтра по папке паков: так сервер видит правки вне неё."""
         ...
 
+    # ── срез O2: чтение версии из коммита без checkout ──
+
+    async def revision_sha(self, dirs: WorkspaceDirs, *, name: GitRevisionName, base_branch: str) -> str | None:
+        """Коммит `head` (последний коммит ветки) или `base` (вершина базовой ветки); None, если такого коммита нет.
+        Только деревья и ссылки, блобы не читаются."""
+        ...
+
+    async def revision_files(
+        self,
+        dirs: WorkspaceDirs,
+        target: RemoteTarget,
+        *,
+        sha: str,
+        prefixes: Sequence[str],
+        max_files: int,
+        max_bytes: int,
+    ) -> dict[str, bytes]:
+        """Обычные файлы коммита `sha` под путями `prefixes` (от корня репозитория): путь -> содержимое как в git.
+        Недостающие блобы частичного клона догружаются сетью с доступом `target`; больше `max_files` файлов или
+        `max_bytes` байт это `workspace_too_large`."""
+        ...
+
+
+# Откуда читается версия из git (срез O2): последний коммит ветки или вершина базовой ветки.
+GitRevisionName = Literal["head", "base"]
 
 YamlPath = tuple[str | int, ...]
 
@@ -481,6 +512,11 @@ class IPackPreviewRenderer(Protocol):
         ...
 
     async def describe(self, root: Path, ref: VersionRef) -> VersionDescription: ...
+
+    async def describe_files(self, files: Mapping[str, bytes], ref: VersionRef) -> VersionDescription:
+        """Модель версии по файлам, прочитанным из git (пути от папки паков), без checkout: файлы кладутся во
+        временную папку, дальше тот же разбор в отдельном процессе, что у рабочего дерева."""
+        ...
 
     async def materialize(
         self, root: Path, ref: VersionRef, request: MaterializeRequest, dest: Path

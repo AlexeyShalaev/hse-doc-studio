@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router";
 import {
   OutcomeSectionSchema,
   OutcomeStateSchema,
-  type OutcomeElementRef,
+  type OutcomeSection,
   type OutcomeState,
 } from "@entities/pack-studio";
 
@@ -14,6 +14,15 @@ import {
 // устаревший адрес даёт умолчания, а не поломанный экран.
 
 export type OutcomeMode = "author" | "student";
+
+/**
+ * Что можно выбрать в центре: элементы разделов контракта и вводная из блока «Ветки» (у веток
+ * в контракте раздела нет, они вне разделов результата, поэтому «branches» только у экрана).
+ */
+export type OutcomeSelection = {
+  section: OutcomeSection | "branches";
+  id: string;
+};
 export type OutcomeTab = "inputs" | "result" | "rules";
 
 export type OutcomeUrlState = {
@@ -26,7 +35,7 @@ export type OutcomeUrlState = {
   inputs: Record<string, string>;
   mode: OutcomeMode;
   /** Выбранный элемент результата: раздел и id (`documents:operator_manual`). */
-  selected: OutcomeElementRef | null;
+  selected: OutcomeSelection | null;
   /** Вкладка телефона. */
   tab: OutcomeTab;
 };
@@ -55,17 +64,21 @@ const MODES: readonly OutcomeMode[] = ["author", "student"];
 const TABS: readonly OutcomeTab[] = ["inputs", "result", "rules"];
 
 /** Разбор `раздел:id`; id может содержать двоеточие, делим по первому. */
-export const parseSelected = (raw: string | null): OutcomeElementRef | null => {
+export const parseSelected = (raw: string | null): OutcomeSelection | null => {
   if (!raw) return null;
   const cut = raw.indexOf(":");
   if (cut < 1) return null;
-  const section = OutcomeSectionSchema.safeParse(raw.slice(0, cut));
+  const head = raw.slice(0, cut);
+  const section =
+    head === "branches"
+      ? ({ success: true, data: "branches" } as const)
+      : OutcomeSectionSchema.safeParse(head);
   const id = raw.slice(cut + 1);
   if (!section.success || id.length === 0 || id.length > 2000) return null;
   return { section: section.data, id };
 };
 
-export const formatSelected = (ref: OutcomeElementRef): string =>
+export const formatSelected = (ref: OutcomeSelection): string =>
   `${ref.section}:${ref.id}`;
 
 /** Состояние экрана из адреса: невалидное отбрасывается, пустое даёт умолчание. */

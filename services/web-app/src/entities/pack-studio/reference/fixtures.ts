@@ -1,7 +1,12 @@
+import { z } from "zod";
 import {
+  OutcomeBranchSchema,
+  OutcomeCheckRuleSchema,
   PackOutcomeInputsSchema,
   PackOutcomeSchema,
   PackScenarioListSchema,
+  type OutcomeBranch,
+  type OutcomeCheckRule,
   type PackOutcome,
   type PackOutcomeInputs,
   type PackScenarioList,
@@ -52,3 +57,239 @@ export const COURSEWORK_SCENARIOS: PackScenarioList =
   PackScenarioListSchema.parse(
     load(scenarioFiles, "PackScenarioList", "coursework"),
   );
+
+// Эталон ВКР отдаёт `checks` и `branches` пустыми (`include` не просили). Чтобы экран «Результат» в
+// режиме эталонов и в галерее показывал эти разделы на ВКР, здесь заведены свои значения: правила
+// и ветки собраны вручную по вводным и документам ВКР, цифры иллюстративные. Контракт и сервер
+// их не используют, это данные только для разработки экрана.
+
+const rule = (
+  id: string,
+  ru: string,
+  en: string,
+  category: string,
+  severity: "info" | "warn" | "err",
+  engine: string,
+  appliesTo: string[],
+  off: OutcomeCheckRule["off_reason"] = null,
+) => ({
+  id,
+  title: { ru, en },
+  category,
+  severity,
+  engine,
+  enabled: off === null,
+  off_reason: off,
+  applies_to: appliesTo,
+  why: [],
+});
+
+/** Правила проверок ВКР: по слоям гост-файлов, с выключенными и без документа. */
+export const VKR_CHECKS: OutcomeCheckRule[] = z
+  .array(OutcomeCheckRuleSchema)
+  .parse([
+    rule(
+      "gost-7.32-2017/page-margins",
+      "Поля страницы",
+      "Page margins",
+      "formatting",
+      "warn",
+      "structural",
+      ["thesis"],
+    ),
+    rule(
+      "gost-7.32-2017/line-spacing",
+      "Межстрочный интервал 1.5",
+      "Line spacing 1.5",
+      "formatting",
+      "warn",
+      "structural",
+      ["thesis"],
+    ),
+    rule(
+      "gost-7.32-2017/section-introduction",
+      "Есть введение",
+      "Introduction present",
+      "structure",
+      "err",
+      "regex",
+      ["thesis"],
+    ),
+    rule(
+      "gost-7.32-2017/bibliography-section",
+      "Есть список источников",
+      "Bibliography present",
+      "structure",
+      "err",
+      "regex",
+      ["thesis"],
+    ),
+    rule(
+      "gost-7.32-2017/dangling-cite",
+      "Ссылка на отсутствующий источник",
+      "Dangling citation",
+      "bibliography",
+      "warn",
+      "log_parse",
+      ["thesis"],
+    ),
+    rule(
+      "gost-7.32-2017/list-style",
+      "Единый стиль списков",
+      "Consistent list style",
+      "formatting",
+      "info",
+      "python",
+      ["thesis"],
+    ),
+    rule(
+      "typography-ru/quotes",
+      "Кавычки-ёлочки",
+      "Guillemet quotes",
+      "formatting",
+      "info",
+      "typography",
+      ["thesis"],
+    ),
+    rule(
+      "hse-cs-se-vkr/section-sources",
+      "Источники в техническом задании",
+      "Sources in the specification",
+      "structure",
+      "warn",
+      "regex",
+      ["technical_specification"],
+    ),
+    rule(
+      "hse-cs-se-vkr/spec-placeholders",
+      "Незаполненные заготовки",
+      "Placeholders left",
+      "content",
+      "warn",
+      "python",
+      ["technical_specification", "test_program_and_methodology"],
+    ),
+    rule(
+      "hse-cs-se-vkr/manual-contacts",
+      "Контакты в руководстве оператора",
+      "Contacts in the operator manual",
+      "content",
+      "info",
+      "python",
+      ["operator_manual"],
+      "no_active_document",
+    ),
+    rule(
+      "hse-cs-se-vkr/annotation-length",
+      "Длина аннотации",
+      "Annotation length",
+      "content",
+      "info",
+      "python",
+      ["annotation"],
+      "no_active_document",
+    ),
+    rule(
+      "typography-ru/ellipsis",
+      "Многоточие",
+      "Ellipsis",
+      "formatting",
+      "info",
+      "typography",
+      ["thesis"],
+      "category_disabled",
+    ),
+    rule(
+      "gost-7.32-2017/figure-numbering",
+      "Нумерация рисунков",
+      "Figure numbering",
+      "references",
+      "info",
+      "structural",
+      ["thesis"],
+      "disabled",
+    ),
+  ]);
+
+const print = (value: string) => ({ value, label: null, fingerprint: value });
+
+/** Ветки ВКР: что станет при другом значении вводной (счётчики по разделам). */
+export const VKR_BRANCHES: OutcomeBranch[] = z
+  .array(OutcomeBranchSchema)
+  .parse([
+    {
+      input: "kind",
+      label: null,
+      chosen: "project",
+      affects: ["documents", "meta", "points", "route"],
+      alternatives: [
+        { ...print("project"), fingerprint: "0a1b2c3d4e5f6071", delta: [] },
+        {
+          ...print("research"),
+          fingerprint: "1b2c3d4e5f607182",
+          delta: [
+            { section: "documents", added: 3, changed: 0, removed: 7 },
+            { section: "meta", added: 0, changed: 2, removed: 1 },
+            { section: "points", added: 0, changed: 2, removed: 0 },
+          ],
+        },
+      ],
+    },
+    {
+      input: "staffing",
+      label: null,
+      chosen: "solo",
+      affects: ["documents", "participants", "points", "route"],
+      alternatives: [
+        { ...print("solo"), fingerprint: "2c3d4e5f60718293", delta: [] },
+        {
+          ...print("team2"),
+          fingerprint: "3d4e5f6071829304",
+          delta: [
+            { section: "documents", added: 0, changed: 11, removed: 0 },
+            { section: "participants", added: 1, changed: 0, removed: 0 },
+            { section: "route", added: 4, changed: 2, removed: 0 },
+          ],
+        },
+        {
+          ...print("team3"),
+          fingerprint: "4e5f607182930415",
+          delta: [
+            { section: "documents", added: 0, changed: 11, removed: 0 },
+            { section: "participants", added: 2, changed: 0, removed: 0 },
+            { section: "route", added: 8, changed: 2, removed: 0 },
+          ],
+        },
+      ],
+    },
+    {
+      input: "meta.nda",
+      label: { ru: "NDA", en: "NDA" },
+      chosen: "yes",
+      affects: ["documents", "points"],
+      alternatives: [
+        {
+          ...print("no"),
+          fingerprint: "5f60718293041526",
+          delta: [{ section: "documents", added: 1, changed: 0, removed: 0 }],
+        },
+        { ...print("yes"), fingerprint: "607182930415263e", delta: [] },
+      ],
+    },
+    {
+      input: "academic_supervisor",
+      label: null,
+      chosen: "yes",
+      affects: ["participants"],
+      alternatives: [
+        { ...print("yes"), fingerprint: "7182930415263e4f", delta: [] },
+        {
+          ...print("no"),
+          fingerprint: "82930415263e4f50",
+          delta: [
+            { section: "participants", added: 0, changed: 0, removed: 1 },
+          ],
+        },
+      ],
+    },
+  ]);

@@ -10,6 +10,8 @@ import {
 } from "@entities/pack-studio";
 import {
   COURSEWORK_SCENARIOS,
+  VKR_BRANCHES,
+  VKR_CHECKS,
   VKR_INPUTS,
   VKR_OUTCOME,
 } from "@entities/pack-studio/reference";
@@ -112,6 +114,8 @@ const seedWorkspace = (
   id: string,
   kind: Kind,
   search: string,
+  edit?: (outcome: PackOutcome) => void,
+  parts: "ok" | "error" = "ok",
 ) => {
   const url = parseOutcomeSearch(new URLSearchParams(search));
   const request = {
@@ -145,7 +149,35 @@ const seedWorkspace = (
     inputs: { ...VKR_OUTCOME.inputs, ...url.inputs },
   };
   if (kind === "ready") {
+    edit?.(base);
     client.setQueryData(key, base);
+    // Правила проверок и ветки приходят отдельными запросами (`include`) раскрытых разделов.
+    const partKey = (part: "checks" | "branches") =>
+      packOutcomeKeys.result(id, REF, { ...request, include: [part] });
+    if (parts === "error") {
+      for (const part of ["checks", "branches"] as const) {
+        client
+          .getQueryCache()
+          .build(client, { queryKey: partKey(part) })
+          .setState({
+            status: "error",
+            fetchStatus: "idle",
+            data: undefined,
+            error: new ApiError("Внутренняя ошибка.", "internal_error", 500),
+            errorUpdateCount: 1,
+            errorUpdatedAt: Date.now(),
+          });
+      }
+    } else {
+      client.setQueryData(partKey("checks"), {
+        ...base,
+        checks: structuredClone(VKR_CHECKS),
+      });
+      client.setQueryData(partKey("branches"), {
+        ...base,
+        branches: structuredClone(VKR_BRANCHES),
+      });
+    }
   } else if (kind === "empty") {
     client.setQueryData(key, {
       ...base,
@@ -190,6 +222,70 @@ type Spec = {
   kind: Kind;
   /** Query адреса экрана. */
   search?: string;
+  /** Правка эталона под состояние, которого в эталонах нет (команда, руководитель «нет»). */
+  edit?: (outcome: PackOutcome) => void;
+  /** Что отвечают запросы правил проверок и веток: данные или сбой. */
+  parts?: "ok" | "error";
+};
+
+/** Команда из двух: личные документы по авторам, у одного нет редакции на язык проекта. */
+const teamOfTwo = (outcome: PackOutcome) => {
+  outcome.participants = [
+    {
+      persona: "author1",
+      role: "author",
+      name: "Иванов Иван Иванович",
+      present: true,
+      org: null,
+      why: [],
+    },
+    {
+      persona: "author2",
+      role: "author",
+      name: "Петрова Анна Сергеевна",
+      present: true,
+      org: null,
+      why: [],
+    },
+    ...outcome.participants.filter((p) => p.role !== "author"),
+  ];
+  for (const doc of outcome.documents) {
+    if (doc.state === "active" && doc.scope === "personal") {
+      doc.instances = [
+        {
+          id: `${doc.id}-1`,
+          owner: "author1",
+          owner_name: "Иванов",
+          file_name: `${doc.name.ru ?? doc.id}_Иванов.pdf`,
+        },
+        {
+          id: `${doc.id}-2`,
+          owner: "author2",
+          owner_name: "Петрова",
+          file_name: `${doc.name.ru ?? doc.id}_Петрова.pdf`,
+        },
+      ];
+    }
+    if (doc.id === "pdp_review") doc.lang_state = "fallback";
+  }
+};
+
+/** Научрук не указан: шаги маршрута с ним остаются без человека. */
+const noSupervisor = (outcome: PackOutcome) => {
+  for (const p of outcome.participants) {
+    if (p.persona === "supervisor") {
+      p.present = false;
+      p.name = "";
+      p.org = null;
+    }
+  }
+  for (const point of outcome.points) {
+    for (const step of point.route.steps) {
+      for (const person of step) {
+        if (person.persona === "supervisor") person.name = "";
+      }
+    }
+  }
 };
 
 const SPECS: Spec[] = [
@@ -224,6 +320,53 @@ const SPECS: Spec[] = [
     kind: "ready",
     search:
       "scenario=company-supervisor&i.kind=research&i.staffing=team2&selected=documents:operator_manual",
+  },
+  {
+    id: "po_sections_team",
+    title: "Секции: команда из двух",
+    note: "Документы с экземплярами по авторам и откатом на другой язык, два автора в участниках.",
+    kind: "ready",
+    search: "selected=documents:pdp_review",
+    edit: teamOfTwo,
+  },
+  {
+    id: "po_sections_no_supervisor",
+    title: "Секции: руководитель не указан",
+    note: "Бледная карточка руководителя и предупреждение о шагах маршрута без человека.",
+    kind: "ready",
+    search: "selected=participants:supervisor",
+    edit: noSupervisor,
+  },
+  {
+    id: "po_checks",
+    title: "Секция «Проверки»",
+    note: "Правила по документам и слоям с движком и серьёзностью, выключенные в свёрнутом блоке, плашка про границы расчёта.",
+    kind: "ready",
+    search: "selected=checks:gost-7.32-2017/line-spacing",
+  },
+  {
+    id: "po_checks_error",
+    title: "Секция «Проверки»: сбой запроса",
+    note: "Правила не получены: плашка с причиной и повтором, остальной экран на месте.",
+    kind: "ready",
+    search: "selected=checks:gost-7.32-2017/line-spacing",
+    parts: "error",
+  },
+  {
+    id: "po_branches",
+    title: "Секция «Ветки и варианты»",
+    note: "Варианты документов, откат языка, что изменится при другом значении вводной, ветка пространства.",
+    kind: "ready",
+    search: "selected=branches:staffing",
+    edit: teamOfTwo,
+  },
+  {
+    id: "po_branches_error",
+    title: "Секция «Ветки и варианты»: сбой запроса",
+    note: "Варианты и язык показаны из основного расчёта, а блок «что изменится» сообщает о сбое.",
+    kind: "ready",
+    search: "selected=branches:staffing",
+    parts: "error",
   },
   {
     id: "po_student",
@@ -278,7 +421,14 @@ export const getPackOutcomeGallery = (): GalleryGroup[] => [
         note: spec.note,
         frame: "screen" as const,
         seed: (client: QueryClient) => {
-          seedWorkspace(client, id, spec.kind, spec.search ?? "");
+          seedWorkspace(
+            client,
+            id,
+            spec.kind,
+            spec.search ?? "",
+            spec.edit,
+            spec.parts,
+          );
         },
         render: () => (
           <GalleryUrl initial={spec.search ?? ""}>

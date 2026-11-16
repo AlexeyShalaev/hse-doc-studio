@@ -436,6 +436,9 @@ tags:
 | `HSE_STUDIO__PACK_STUDIO__PREVIEW_RENDER_MEMORY_BYTES` | int | `536870912` | оба | Memory limit of the isolated render process (Linux). |
 | `HSE_STUDIO__PACK_STUDIO__PREVIEW_CACHE_ENTRIES` | int | `200` | оба | Built preview PDFs kept by cache key. |
 | `HSE_STUDIO__PACK_STUDIO__PREVIEW_KEEP_HOURS` | float | `24.0` | оба | How long preview build records, logs and leftover folders are kept. |
+| `HSE_STUDIO__PACK_STUDIO__OUTCOME_TIMEOUT_S` | float | `5.0` | оба | Time limit of one outcome calculation (503 outcome_busy after it). |
+| `HSE_STUDIO__PACK_STUDIO__OUTCOME_MAX_CONCURRENT` | int | `4` | оба | Outcome calculations running at once in the process. |
+| `HSE_STUDIO__PACK_STUDIO__OUTCOME_CACHE_ENTRIES` | int | `256` | оба | Outcome responses kept by request key. |
 | `HSE_STUDIO__PACK_STUDIO__HOSTING_TIMEOUT_S` | float | `20.0` | оба | Timeout for one request to the git hosting API (pull request, CI status). |
 | `HSE_STUDIO__PACK_STUDIO__MAX_DIFF_BYTES` | int | `1048576` | оба | Largest diff of a workspace against its base branch shown at once. |
 | `HSE_STUDIO__PACK_STUDIO__OFFICIAL_REPO_URL` | str | `https://github.com/AlexeyShalaev/hse-doc-studio` | оба | Official packs repository (https). Empty hides the Official packs button. |

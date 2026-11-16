@@ -10,12 +10,12 @@ import asyncio
 import hashlib
 import shutil
 import tempfile
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
 from hse_doc_studio.core.pack_studio.errors import PackStudioError, PackStudioErrorCode
-from hse_doc_studio.core.pack_studio.paths import PACK_MANIFEST, TEMPLATE_MANIFEST, VersionRef
+from hse_doc_studio.core.pack_studio.paths import PACK_MANIFEST, TEMPLATE_MANIFEST, VersionRef, validate_rel_path
 from hse_doc_studio.core.pack_studio.preview import (
     MaterializedDoc,
     MaterializeRequest,
@@ -61,6 +61,15 @@ class PackPreviewRenderer:
             return await asyncio.to_thread(self._isolated, describe_version, dirs, limits)
         except IsolatedRenderError as exc:
             raise PackStudioError(PackStudioErrorCode.version_unreadable, reason=str(exc)) from exc
+
+    async def describe_files(self, files: Mapping[str, bytes], ref: VersionRef) -> VersionDescription:
+        self._tmp_dir.mkdir(parents=True, exist_ok=True)
+        root = Path(await asyncio.to_thread(tempfile.mkdtemp, prefix="rev-", dir=self._tmp_dir))
+        try:
+            await asyncio.to_thread(_write_files, root, files)
+            return await self.describe(root, ref)
+        finally:
+            await asyncio.to_thread(shutil.rmtree, root, ignore_errors=True)
 
     async def materialize(
         self, root: Path, ref: VersionRef, request: MaterializeRequest, dest: Path
@@ -112,6 +121,19 @@ class PackPreviewRenderer:
         for line in (*(f"{k}:{v}" for k, v in sorted(files.items())), *extra, *example_hashes):
             tree.update(line.encode() + b"\n")
         return PreviewInputs(files=files, extra=extra, tree=tree.hexdigest())
+
+
+def _write_files(root: Path, files: Mapping[str, bytes]) -> None:
+    """Файлы из git (пути от папки паков) во временную папку. Имя, которое не проходит проверку путей, пропускается:
+    за пределы папки файл выйти не может."""
+    for rel, data in files.items():
+        try:
+            safe = validate_rel_path(rel)
+        except PackStudioError:
+            continue
+        target = root / safe
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
 
 
 def _dirs(root: Path, ref: VersionRef) -> VersionDirs:

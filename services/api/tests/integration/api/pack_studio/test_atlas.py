@@ -1,168 +1,186 @@
-"""Атлас результата версии (срез O4, раздел 4.4 дизайна результата) в локальной Студии.
+"""Атлас результата версии (срез O4, раздел 4.4 дизайна результата) в локальной Студии и над git пространства.
 
-Настоящие роутер, DI и чтение файлов пространства; разбор версии идёт в отдельном процессе, как у предпросмотра.
-Проверяются тело ответа по контракту, ETag и 304 по `If-None-Match`, закрепления, ошибки кодами и учёт правки
-манифеста между запросами."""
+Настоящие роутер, DI и чтение версий; версии настоящие (ВКР `hse-cs-se` 2026.1.2, курсовой проект `hse-cs-sse`
+2026.1.6) и черновик ВКР, который можно править. Проверяются числа дизайна, тело по строгой модели контракта, ETag
+и 304, закрепления, ошибки кодами, три состояния версии и учёт несохранённой правки."""
 
 from __future__ import annotations
 
-from collections.abc import Mapping
-from pathlib import Path
 from typing import Any
 
 from hse_doc_studio.api.schemas.pack_studio_outcome import PackOutcomeAtlasResponse
+from httpx import Response
 
-from .conftest import API, DRAFT, DRAFT_DIR, PACK_FILES, RELEASED, RELEASED_DIR, Stand, write_pack
-
-_VERSION = """\
-id: "{version}"
-status: {status}
-summary: {{ ru: "Версия", en: "Version" }}
-langs: [ru]
-documents:
-  - id: report
-    name: {{ ru: "Отчёт", en: "Report" }}
-    source_file: report/report.tex
-    output_file: report/report.pdf
-  - id: memo
-    name: {{ ru: "Записка", en: "Memo" }}
-    source_file: memo/memo.tex
-    output_file: memo/memo.pdf
-    supported_kinds: [research]
-
-signatures:
-  slots:
-    - id: author
-      label: {{ ru: Автор, en: Author }}
-      applies_to: [report]
-    - id: supervisor
-      label: {{ ru: Руководитель, en: Supervisor }}
-      applies_to: [report]
-    - id: co_supervisor
-      label: {{ ru: Консультант, en: Co-supervisor }}
-      applies_to: [report]
-
-pack_submission:
-  profiles:
-    - id: final
-      name: {{ ru: "Защита", en: "Defence" }}
-      items:
-        - doc_id: report
-          signatures: [author, supervisor]
-      signing_slots:
-        - {{ doc_id: report, slot_id: co_supervisor, when: {{ person: co_supervisor }} }}
-"""
-
-FILES: Mapping[str, str] = {
-    **{k: v for k, v in PACK_FILES.items() if not k.endswith("version.yaml") and "/files/" not in k},
-    f"{RELEASED_DIR}/version.yaml": _VERSION.format(version=RELEASED, status="stable"),
-    f"{RELEASED_DIR}/files/report/report.tex": "\\documentclass{article}\n",
-    f"{RELEASED_DIR}/files/memo/memo.tex": "\\documentclass{article}\n",
-    f"{DRAFT_DIR}/version.yaml": _VERSION.format(version=DRAFT, status="beta"),
-    f"{DRAFT_DIR}/files/report/report.tex": "\\documentclass{article}\n",
-    f"{DRAFT_DIR}/files/memo/memo.tex": "\\documentclass{article}\n",
-}
+from .conftest import Stand
+from .outcome_support import (
+    COURSEWORK,
+    DRAFT_VKR,
+    LANGS,
+    VKR,
+    edit_manifest,
+    folder_with_draft,
+    folder_with_real_packs,
+    outcome_url,
+)
+from .test_outcome_git import _ready
 
 
-async def _workspace(stand: Stand) -> tuple[str, Path]:
-    await stand.enable()
-    root = write_pack(stand.root / "packs", FILES)
-    ws = await stand.folder_workspace(root.parent, packs_path=root.name)
-    return str(ws["id"]), root
+async def _atlas(
+    stand: Stand, ws: str, ref: tuple[str, str, str], *, pins: tuple[str, ...] = (), **params: str
+) -> Response:
+    query: list[tuple[str, str]] = [("pin", pin) for pin in pins] + list(params.items())
+    return await stand.client.get(outcome_url(ws, ref, "/atlas"), params=query)
 
 
-def _url(ws: str, version: str = DRAFT) -> str:
-    return f"{API}/workspaces/{ws}/versions/demo/report/{version}/outcome/atlas"
-
-
-async def test__atlas__dimensions_rows_and_outcomes_come_from_the_version(stand: Stand) -> None:
-    ws, _ = await _workspace(stand)
-
-    resp = await stand.client.get(_url(ws))
-
+def _parse(resp: Response) -> PackOutcomeAtlasResponse:
     assert resp.status_code == 200, resp.text
-    body = resp.json()
-    PackOutcomeAtlasResponse.model_validate(body)
-    assert (body["pack"], body["template"], body["version"], body["state"]) == ("demo", "report", DRAFT, "work_tree")
-    dims = {d["input"]: d for d in body["dimensions"]}
-    assert set(dims) == {"kind", "supervisor", "co_supervisor", "academic_supervisor"}
-    assert "route" in dims["co_supervisor"]["affects"]
-    assert dims["co_supervisor"]["rules"][0]["pointer"] == "/pack_submission/profiles/0/signing_slots/0/when"
-    assert {i["input"]: i["reason"] for i in body["ignored"]} == {"lang": "no_effect", "staffing": "no_effect"}
-    assert body["rows_total"] == len(body["rows"]) == 2 * 3 * 2 * 2
-    assert body["combinations_total"] == 2 * 3 * 2 * 2
-    assert body["revision"].startswith("sha256-")
-    assert resp.headers["ETag"].startswith('W/"atlas-')
+    return PackOutcomeAtlasResponse.model_validate(resp.json())
+
+
+def _distinct(atlas: PackOutcomeAtlasResponse, *sections: str) -> int:
+    wanted = set(sections)
+    return len({tuple(p.fingerprint for p in o.digest.sections if p.section in wanted) for o in atlas.outcomes})
+
+
+# ── числа дизайна ────────────────────────────────────────────────────────────
+
+
+async def test__vkr__rows_outcomes_and_ignored_inputs_are_the_documented_ones(stand: Stand) -> None:
+    ws = await folder_with_real_packs(stand)
+
+    resp = await _atlas(stand, ws, VKR)
+
+    atlas = _parse(resp)
+    assert (atlas.pack, atlas.template, atlas.version, atlas.state) == (*VKR, "work_tree")
+    assert (atlas.combinations_total, atlas.rows_total, atlas.outcomes_distinct) == (5184, 864, 384)
+    assert _distinct(atlas, "documents", "points", "route") == 24
+    assert _distinct(atlas, "documents", "points", "route", "participants") == 192
+    assert {(i.input, i.reason) for i in atlas.ignored} == {("lang", "cosmetic"), ("variant.presentation", "cosmetic")}
+    assert [d.input for d in atlas.dimensions][:3] == ["kind", "staffing", "supervisor"]
+    assert atlas.revision.startswith("sha256-")
     assert resp.headers["Cache-Control"] == "private, no-cache"
+    assert resp.headers["ETag"].startswith('"')
 
 
-async def test__atlas__if_none_match_answers_304_until_the_manifest_changes(stand: Stand) -> None:
-    ws, root = await _workspace(stand)
-    first = await stand.client.get(_url(ws))
+async def test__coursework__four_routes_and_the_rules_that_read_each_dimension(stand: Stand) -> None:
+    ws = await folder_with_real_packs(stand)
+
+    atlas = _parse(await _atlas(stand, ws, COURSEWORK))
+
+    assert (atlas.combinations_total, atlas.rows_total, atlas.outcomes_distinct) == (576, 12, 12)
+    assert _distinct(atlas, "route") == 4
+    assert _distinct(atlas, "documents") == 1
+    by_input = {d.input: d for d in atlas.dimensions}
+    assert list(by_input) == ["supervisor", "co_supervisor", "academic_supervisor"]
+    assert by_input["supervisor"].rules[0].pointer == "/pack_submission/profiles/0/signing_slots/1/when"
+    assert by_input["academic_supervisor"].rules == []
+
+
+# ── ETag, закрепления, ошибки ────────────────────────────────────────────────
+
+
+async def test__etag__if_none_match_answers_304_and_a_pin_has_its_own_etag(stand: Stand) -> None:
+    ws = await folder_with_real_packs(stand)
+    first = await _atlas(stand, ws, COURSEWORK)
     etag = first.headers["ETag"]
 
-    same = await stand.client.get(_url(ws), headers={"If-None-Match": etag})
+    same = await stand.client.get(outcome_url(ws, COURSEWORK, "/atlas"), headers={"If-None-Match": etag})
+    pinned = await _atlas(stand, ws, COURSEWORK, pins=("supervisor:company",))
+
     assert same.status_code == 304
     assert same.headers["ETag"] == etag
     assert same.content == b""
-
-    manifest = root / DRAFT_DIR / "version.yaml"
-    manifest.write_text(
-        manifest.read_text(encoding="utf-8").replace("co_supervisor }", "supervisor, role: company }"), encoding="utf-8"
+    assert pinned.headers["ETag"] != etag
+    assert _parse(pinned).rows_total == 4
+    again = await stand.client.get(
+        outcome_url(ws, COURSEWORK, "/atlas"),
+        params=[("pin", "supervisor:company")],
+        headers={"If-None-Match": pinned.headers["ETag"]},
     )
-    changed = await stand.client.get(_url(ws), headers={"If-None-Match": etag})
-
-    assert changed.status_code == 200, changed.text
-    assert changed.headers["ETag"] != etag
-    assert changed.json()["revision"] != first.json()["revision"]
+    assert again.status_code == 304
 
 
-async def test__atlas__pins_cut_the_table_and_change_the_etag(stand: Stand) -> None:
-    ws, _ = await _workspace(stand)
-    full = await stand.client.get(_url(ws))
+async def test__pins__cut_the_table_and_keep_the_pinned_input_as_a_one_valued_dimension(stand: Stand) -> None:
+    ws = await folder_with_real_packs(stand)
+    full = _parse(await _atlas(stand, ws, VKR))
 
-    pinned = await stand.client.get(_url(ws), params=[("pin", "supervisor:none"), ("pin", "kind:research")])
+    pinned = _parse(await _atlas(stand, ws, VKR, pins=("kind:research", "meta.nda:yes")))
 
-    assert pinned.status_code == 200, pinned.text
-    body = pinned.json()
-    assert body["rows_total"] == 4
-    assert {r["key"].split("|")[0] for r in body["rows"]} == {"research"}
-    assert pinned.headers["ETag"] != full.headers["ETag"]
-    assert body["revision"] == full.json()["revision"]
+    assert pinned.rows_total == full.rows_total // 4
+    assert pinned.combinations_total == full.combinations_total
+    kind = next(d for d in pinned.dimensions if d.input == "kind")
+    assert (kind.values, kind.default) == (["research"], "research")
+    assert all(row.key.startswith("research|") for row in pinned.rows)
+    assert pinned.revision == full.revision
 
 
-async def test__atlas__errors_are_coded(stand: Stand) -> None:
-    ws, _ = await _workspace(stand)
+async def test__errors__are_coded(stand: Stand) -> None:
+    ws = await folder_with_real_packs(stand)
+    ref = COURSEWORK
 
-    unknown = await stand.client.get(_url(ws), params={"pin": "nope:x"})
-    bad_value = await stand.client.get(_url(ws), params={"pin": "supervisor:boss"})
-    junk = await stand.client.get(_url(ws), params={"pin": "supervisor"})
-    twice = await stand.client.get(_url(ws), params=[("pin", "supervisor:none"), ("pin", "supervisor:company")])
-    example = await stand.client.get(_url(ws), params={"example": "missing"})
-    head = await stand.client.get(_url(ws), params={"state": "head"})
-    missing = await stand.client.get(_url(ws, "9.9.9"))
+    cases: dict[str, tuple[Response, str]] = {
+        "nope": (await _atlas(stand, ws, ref, pins=("nope:x",)), "nope"),
+        "supervisor": (await _atlas(stand, ws, ref, pins=("supervisor:boss",)), "supervisor"),
+        "pin": (await _atlas(stand, ws, ref, pins=("supervisor",)), "pin"),
+        "twice": (await _atlas(stand, ws, ref, pins=("supervisor:none", "supervisor:company")), "supervisor"),
+        "example": (await _atlas(stand, ws, ref, example="missing"), "example"),
+    }
 
-    for resp, field in (
-        (unknown, "nope"),
-        (bad_value, "supervisor"),
-        (junk, "pin"),
-        (twice, "supervisor"),
-        (example, "example"),
-    ):
-        assert resp.status_code == 400, resp.text
+    for name, (resp, field) in cases.items():
+        assert resp.status_code == 400, (name, resp.text)
         assert resp.json()["code"] == "inputs_invalid"
         assert resp.json()["field"] == field
-    assert head.status_code == 409
-    assert head.json()["code"] == "diff_base_unavailable"
+    missing = await _atlas(stand, ws, ("hse-cs-sse", "coursework", "9.9.9"))
     assert missing.status_code == 404, missing.text
+    # Папка без git не имеет `head` и `base`.
+    head = await _atlas(stand, ws, ref, state="head")
+    assert (head.status_code, head.json()["code"], head.json()["reason"]) == (409, "diff_base_unavailable", "no_git")
 
 
-async def test__atlas__a_released_version_is_read_the_same_way(stand: Stand) -> None:
-    ws, _ = await _workspace(stand)
+# ── версии над git и несохранённая правка ────────────────────────────────────
 
-    resp = await stand.client.get(_url(ws, RELEASED))
 
-    assert resp.status_code == 200, resp.text
-    body: dict[str, Any] = resp.json()
-    assert body["version"] == RELEASED
-    assert body["rows_total"] == 24
+async def test__git__head_and_base_give_the_same_atlas_with_their_own_etag(stand: Stand) -> None:
+    _, ws = await _ready(stand)
+
+    answers = {state: await _atlas(stand, ws, COURSEWORK, state=state) for state in ("work_tree", "head", "base")}
+    parsed = {state: _parse(resp) for state, resp in answers.items()}
+
+    assert {state: atlas.state for state, atlas in parsed.items()} == {s: s for s in answers}
+    assert len({resp.headers["ETag"] for resp in answers.values()}) == 3
+    bodies = [{k: v for k, v in r.json().items() if k not in {"state", "elapsed_ms"}} for r in answers.values()]
+    assert bodies[0] == bodies[1] == bodies[2]
+    assert parsed["head"].rows_total == 12
+
+
+async def test__git__an_unsaved_edit_changes_the_work_tree_atlas_only(stand: Stand) -> None:
+    _, ws = await _ready(stand)
+
+    def lang(atlas: PackOutcomeAtlasResponse) -> str:
+        return next(i.reason for i in atlas.ignored if i.input == "lang")
+
+    before = _parse(await _atlas(stand, ws, DRAFT_VKR))
+    assert lang(before) == "cosmetic"
+
+    await edit_manifest(stand, ws, LANGS, "langs: [ru]")
+
+    work = _parse(await _atlas(stand, ws, DRAFT_VKR))
+    head = _parse(await _atlas(stand, ws, DRAFT_VKR, state="head"))
+    assert (lang(work), lang(head)) == ("no_effect", "cosmetic")
+    assert work.revision != head.revision
+    assert work.rows_total == head.rows_total == 864
+
+
+async def test__draft__an_edit_between_requests_changes_the_etag(stand: Stand) -> None:
+    ws, _ = await folder_with_draft(stand)
+    first = await _atlas(stand, ws, DRAFT_VKR)
+
+    await edit_manifest(stand, ws, LANGS, "langs: [ru]")
+    second = await stand.client.get(
+        outcome_url(ws, DRAFT_VKR, "/atlas"), headers={"If-None-Match": first.headers["ETag"]}
+    )
+
+    assert second.status_code == 200, second.text
+    assert second.headers["ETag"] != first.headers["ETag"]
+    body: dict[str, Any] = second.json()
+    assert body["revision"] != first.json()["revision"]
