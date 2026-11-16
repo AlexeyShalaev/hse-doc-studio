@@ -208,7 +208,7 @@ describe("панель «Правила и причины»: «Почему?»",
       expect(items[2]).toHaveTextContent("Не выполнено");
       expect(items[0]).toHaveTextContent("Выполнено");
       // Условие и факт человеческой фразой.
-      expect(items[0]).toHaveTextContent("вид работы: проектный");
+      expect(items[0]).toHaveTextContent("вид работы: нужно проектный");
       expect(items[0]).toHaveTextContent("Сейчас:");
       expect(items[0]).toHaveTextContent("проектный");
       expect(within(items[2]!).getByTestId(/builtin$/)).toHaveTextContent(
@@ -706,6 +706,26 @@ describe("панель «Правила и причины»: «Почему?»",
       await waitFor(() => {
         expect(panel).toHaveFocus();
       });
+    });
+
+    it("Alt+Z из панели прячет её, фокус остаётся на экране и возвращает панель", async () => {
+      mount("selected=documents:operator_manual");
+      await screen.findByTestId("outcome-chain");
+      const panel = screen.getByTestId("outcome-rules-panel");
+      panel.focus();
+      const press = () =>
+        fireEvent.keyDown(document.activeElement ?? document.body, {
+          key: "z",
+          code: "KeyZ",
+          altKey: true,
+        });
+      press();
+      await waitFor(() => {
+        expect(screen.queryByTestId("outcome-rules-panel")).toBeNull();
+      });
+      expect(screen.getByTestId("outcome-center")).toHaveFocus();
+      press();
+      expect(await screen.findByTestId("outcome-rules-panel")).toHaveFocus();
     });
 
     it("сосед из списка выбирается Enter с клавиатуры", async () => {

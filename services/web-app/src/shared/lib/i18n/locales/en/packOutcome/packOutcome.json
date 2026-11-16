@@ -477,8 +477,8 @@
       "check_disabled": "Check rule disabled"
     },
     "cond": {
-      "in": "{{subject}}: {{expected}}",
-      "equals": "{{subject}}: {{expected}}",
+      "in": "{{subject}}: must be {{expected}}",
+      "equals": "{{subject}}: must be {{expected}}",
       "contains_any": "{{subject}} contains one of: {{expected}}",
       "present": "{{subject}} is set",
       "truthy": "{{subject}} is on"

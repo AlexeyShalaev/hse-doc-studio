@@ -183,6 +183,10 @@ export const OutcomeBody = ({ workspace, version }: OutcomeBodyProps) => {
         update({ tab: url.state.tab === "rules" ? "result" : "rules" });
       else {
         if (panels.rightCollapsed) setFocusRules((n) => n + 1);
+        // Панель, в которой стоял фокус, исчезает: фокус уходит в результат, а не в пустоту.
+        else if (rulesRef.current?.contains(document.activeElement)) {
+          resultRef.current?.focus();
+        }
         panels.setRightCollapsed(!panels.rightCollapsed);
       }
     }

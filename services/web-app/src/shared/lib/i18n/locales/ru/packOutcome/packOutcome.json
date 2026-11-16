@@ -493,8 +493,8 @@
       "check_disabled": "Правило проверки отключено"
     },
     "cond": {
-      "in": "{{subject}}: {{expected}}",
-      "equals": "{{subject}}: {{expected}}",
+      "in": "{{subject}}: нужно {{expected}}",
+      "equals": "{{subject}}: нужно {{expected}}",
       "contains_any": "{{subject}} содержит одно из: {{expected}}",
       "present": "{{subject}} указано",
       "truthy": "{{subject}} включено"
