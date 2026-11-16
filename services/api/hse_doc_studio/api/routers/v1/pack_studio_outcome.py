@@ -5,6 +5,11 @@
 Состояния версии: `work_tree` (рабочее дерево с несохранёнными правками), `head` (последний коммит), `base`
 (вершина базовой ветки); `head` и `base` читаются из git без checkout, у папки их нет (`diff_base_unavailable`).
 
+`GET .../outcome/atlas?state=&pin=&example=` отдаёт таблицу исходов версии (`PackOutcomeAtlas`, срез O4): измерения,
+реально меняющие результат, и строки `{key, outcome}`; `pin=<вводная>:<значение>` (повторяемый) закрепляет вводную.
+Атлас считается дольше расчёта: срок 20 с, не больше двух одновременных на процесс, частота 6 в минуту на человека
+(правило `pack_atlas`), больше 2000 строк это `atlas_too_large`.
+
 Ответ несёт `ETag` по ключу запроса (версия, источник, `revision`, вводные); по `If-None-Match` сервер отвечает 304,
 не считая. Расчёт идёт с пределом времени, при его превышении и при перегрузке 503 `outcome_busy` с `Retry-After`;
 частота ограничена правилом `pack_outcome` (20 в секунду на человека, `api/rate_limit.py`).
@@ -16,18 +21,20 @@ from typing import Annotated
 from uuid import UUID
 
 from dishka.integrations.fastapi import FromDishka
-from fastapi import APIRouter, Depends, Header, Response
+from fastapi import APIRouter, Depends, Header, Query, Response
 from fastapi.responses import JSONResponse
 
 from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.routers.v1.pack_studio import pack_studio_guard
 from hse_doc_studio.api.schemas.pack_studio_outcome import (
     OutcomeStateName,
+    PackOutcomeAtlasResponse,
     PackOutcomeInputsResponse,
     PackOutcomeRequest,
     PackOutcomeResponse,
 )
 from hse_doc_studio.core.access.context import require_actor
+from hse_doc_studio.use_cases.pack_studio.outcome_atlas import PackAtlasService, parse_pins
 from hse_doc_studio.use_cases.pack_studio.outcome_service import OutcomeReply, OutcomeRequest, PackOutcomeService
 
 router = APIRouter(route_class=SafeDishkaRoute, dependencies=[Depends(pack_studio_guard)])
@@ -83,5 +90,32 @@ async def post_outcome(  # noqa: PLR0913 — путь версии, тело и 
     )
     reply = await outcome.outcome(
         require_actor(), workspace_id, pack, template, version, request, if_none_match=if_none_match
+    )
+    return _respond(reply)
+
+
+@router.get(f"{_OUTCOME}/atlas", response_model=PackOutcomeAtlasResponse)
+async def get_outcome_atlas(  # noqa: PLR0913 — путь версии, параметры запроса и условный запрос
+    workspace_id: UUID,
+    pack: str,
+    template: str,
+    version: str,
+    atlas: FromDishka[PackAtlasService],
+    state: OutcomeStateName = "work_tree",
+    pin: Annotated[list[str] | None, Query(description="<вводная>:<значение>, повторяемый")] = None,
+    example: Annotated[str | None, Query(max_length=255)] = None,
+    if_none_match: IfNoneMatch = None,
+) -> Response:
+    """Измерения, исходы и таблица `{key, outcome}`: клиент по ключу находит исход, не считая условий."""
+    reply = await atlas.atlas(
+        require_actor(),
+        workspace_id,
+        pack,
+        template,
+        version,
+        state,
+        example=example,
+        pins=parse_pins(pin or []),
+        if_none_match=if_none_match,
     )
     return _respond(reply)
