@@ -1,0 +1,4 @@
+{
+  "left": {"state": "base", "scenario": null, "example": null, "inputs": {"supervisor": "university"}},
+  "right": {"state": "work_tree", "scenario": null, "example": null, "inputs": {"supervisor": "university"}}
+}

@@ -1,0 +1,161 @@
+{
+  "workspace_id": "6f1c1c8e-1b7a-4d51-9a43-0a5b2f3c4d10",
+  "pack": "hse-cs-se",
+  "template": "vkr",
+  "version": "2026.1.2",
+  "state": "work_tree",
+  "revision": "sha256-99e5f70b531e4d96",
+  "inputs": [
+    {
+      "id": "lang",
+      "group": "project",
+      "type": "select",
+      "label": null,
+      "values": [{"value": "ru", "label": null}, {"value": "en", "label": null}],
+      "default": "ru",
+      "affects": [],
+      "rules": 21
+    },
+    {
+      "id": "kind",
+      "group": "project",
+      "type": "select",
+      "label": null,
+      "values": [{"value": "project", "label": null}, {"value": "research", "label": null}],
+      "default": "project",
+      "affects": ["documents", "meta", "points", "route"],
+      "rules": 21
+    },
+    {
+      "id": "staffing",
+      "group": "project",
+      "type": "select",
+      "label": null,
+      "values": [{"value": "solo", "label": null}, {"value": "team2", "label": null}, {"value": "team3", "label": null}],
+      "default": "solo",
+      "affects": ["documents", "participants", "points", "route"],
+      "rules": 18
+    },
+    {
+      "id": "supervisor",
+      "group": "people",
+      "type": "select",
+      "label": null,
+      "values": [
+        {"value": "university", "label": null},
+        {"value": "company", "label": null},
+        {"value": "none", "label": null}
+      ],
+      "default": "university",
+      "affects": ["participants"],
+      "rules": 0
+    },
+    {
+      "id": "co_supervisor",
+      "group": "people",
+      "type": "bool",
+      "label": null,
+      "values": [{"value": "no", "label": null}, {"value": "yes", "label": null}],
+      "default": "no",
+      "affects": ["participants"],
+      "rules": 0
+    },
+    {
+      "id": "academic_supervisor",
+      "group": "people",
+      "type": "bool",
+      "label": null,
+      "values": [{"value": "yes", "label": null}, {"value": "no", "label": null}],
+      "default": "yes",
+      "affects": ["participants"],
+      "rules": 0
+    },
+    {
+      "id": "meta.manuals",
+      "group": "meta",
+      "type": "select",
+      "label": {"ru": "Руководства в комплекте", "en": "Manuals in the set"},
+      "values": [
+        {"value": "Программиста и оператора", "label": null},
+        {"value": "Только программиста", "label": null},
+        {"value": "Только оператора", "label": null}
+      ],
+      "default": "Программиста и оператора",
+      "affects": ["documents", "points", "route"],
+      "rules": 1
+    },
+    {
+      "id": "meta.nda",
+      "group": "meta",
+      "type": "bool",
+      "label": {"ru": "Работа под NDA", "en": "NDA work"},
+      "values": [{"value": "no", "label": null}, {"value": "yes", "label": null}],
+      "default": "no",
+      "affects": ["documents", "points"],
+      "rules": 1
+    },
+    {
+      "id": "answer.ai_declaration.used_ai",
+      "group": "answers",
+      "type": "select",
+      "label": {"ru": "Использование ИИ", "en": "AI usage"},
+      "values": [
+        {"value": "no", "label": {"ru": "Я не использовал(а) ИИ", "en": "I did not use AI"}},
+        {"value": "yes", "label": {"ru": "Я использовал(а) ИИ", "en": "I used AI"}}
+      ],
+      "default": "no",
+      "affects": ["forms"],
+      "rules": 4
+    },
+    {
+      "id": "variant.presentation",
+      "group": "variants",
+      "type": "select",
+      "label": {"ru": "Презентация защиты", "en": "Defense Presentation"},
+      "values": [
+        {"value": "pptx", "label": {"ru": "PowerPoint-шаблон", "en": "PowerPoint template"}},
+        {"value": "reveal", "label": {"ru": "RevealJS (HTML)", "en": "RevealJS (HTML)"}},
+        {"value": "beamer", "label": {"ru": "LaTeX Beamer", "en": "LaTeX Beamer"}}
+      ],
+      "default": "pptx",
+      "affects": [],
+      "rules": 0
+    }
+  ],
+  "examples": [
+    {
+      "id": "auto:normal",
+      "source": "auto",
+      "label": {"ru": "Обычный", "en": "Typical"},
+      "error": null,
+      "defaults": {}
+    },
+    {
+      "id": "auto:long",
+      "source": "auto",
+      "label": {"ru": "Длинные значения", "en": "Long values"},
+      "error": null,
+      "defaults": {}
+    },
+    {
+      "id": "auto:empty",
+      "source": "auto",
+      "label": {"ru": "Пустой", "en": "Empty"},
+      "error": null,
+      "defaults": {}
+    }
+  ],
+  "default_example": "auto:normal",
+  "defaults": {
+    "lang": "ru",
+    "kind": "project",
+    "staffing": "solo",
+    "supervisor": "university",
+    "co_supervisor": "no",
+    "academic_supervisor": "yes",
+    "meta.manuals": "Программиста и оператора",
+    "meta.nda": "no",
+    "answer.ai_declaration.used_ai": "no",
+    "variant.presentation": "pptx"
+  }
+}

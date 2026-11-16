@@ -1,0 +1,71 @@
+{
+  "element": {"section": "documents", "id": "operator_manual"},
+  "state": "inactive",
+  "chain": [
+    {
+      "id": "t22",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/operator_manual/doc.yaml",
+        "pointer": "/supported_kinds",
+        "builtin": null
+      },
+      "kind": "supported_kinds",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "kind", "expected": ["project"]}],
+      "actual": {"kind": "project"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "operator_manual"}]
+    },
+    {
+      "id": "t23",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/operator_manual/doc.yaml",
+        "pointer": "/supported_staffing",
+        "builtin": null
+      },
+      "kind": "supported_staffing",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "staffing", "expected": ["solo", "team2", "team3"]}],
+      "actual": {"staffing": "solo"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "operator_manual"}]
+    },
+    {
+      "id": "t24",
+      "rule": {"origin": "builtin", "file": null, "pointer": null, "builtin": "manuals_gate"},
+      "kind": "builtin_gate",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "contains_any", "subject": "meta.manuals", "expected": ["оператора"]}],
+      "actual": {"meta.manuals": "Только программиста"},
+      "status": "not_held",
+      "subjects": [{"section": "documents", "id": "operator_manual"}]
+    },
+    {
+      "id": "t25",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/operator_manual/doc.yaml",
+        "pointer": "/supported_langs",
+        "builtin": null
+      },
+      "kind": "supported_langs",
+      "effect": "display",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "lang", "expected": ["ru", "en"]}],
+      "actual": {"lang": "ru"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "operator_manual"}]
+    }
+  ],
+  "readers": [],
+  "counterfactuals": [
+    {"input": "meta.manuals", "value": "Программиста и оператора", "result": "active"},
+    {"input": "meta.manuals", "value": "Только оператора", "result": "active"},
+    {"input": "kind", "value": "research", "result": "absent"}
+  ]
+}

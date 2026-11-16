@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 from hse_doc_studio.api.schemas import pack_studio as s
 from hse_doc_studio.api.schemas import pack_studio_checks as chk
+from hse_doc_studio.api.schemas import pack_studio_outcome as out
 from hse_doc_studio.api.schemas import pack_studio_submission as sub
 from hse_doc_studio.core.pack_studio.errors import PackStudioErrorCode, status_of
 from pydantic import TypeAdapter
@@ -90,6 +91,26 @@ _SCHEMAS: dict[str, Any] = {
     "CreatePackRequest": s.CreatePackRequest,
     "CreatePackTemplateRequest": s.CreatePackTemplateRequest,
     "PackScaffoldCreated": s.PackScaffoldCreatedResponse,
+    # Вычислитель результата (docs/design/template-studio-outcome.md): вводные, результат с объяснениями, атлас,
+    # сценарии, сравнения, линтер результата
+    "PackOutcomeInputs": out.PackOutcomeInputsResponse,
+    "PackOutcomeRequest": out.PackOutcomeRequest,
+    "PackOutcome": out.PackOutcomeResponse,
+    "PackOutcomeAtlas": out.PackOutcomeAtlasResponse,
+    "PackScenario": out.PackScenario,
+    "PackScenarioList": out.PackScenarioListResponse,
+    "PackScenarioWriteRequest": out.PackScenarioWriteRequest,
+    "PackScenarioRunRequest": out.PackScenarioRunRequest,
+    "PackScenarioRun": out.PackScenarioRunResponse,
+    "PackOutcomeLint": out.PackOutcomeLintResponse,
+    "PackOutcomeCompareRequest": out.PackOutcomeCompareRequest,
+    "PackOutcomeCompare": out.PackOutcomeCompareResponse,
+    "PackOutcomeImpactRequest": out.PackOutcomeImpactRequest,
+    "PackOutcomeImpact": out.PackOutcomeImpactResponse,
+    "PackOutcomeMatrixRequest": out.PackOutcomeMatrixRequest,
+    "PackOutcomeMatrix": out.PackOutcomeMatrixResponse,
+    "PackOutcomeExplainRequest": out.PackOutcomeExplainRequest,
+    "PackOutcomeExplain": out.PackOutcomeExplainResponse,
 }
 
 

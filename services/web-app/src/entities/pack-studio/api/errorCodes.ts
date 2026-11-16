@@ -63,6 +63,12 @@ export const PACK_STUDIO_ERROR_CODES = [
   "template_id_taken",
   "pack_not_found",
   "workspace_git_failed",
+  "inputs_invalid",
+  "scenario_invalid",
+  "scenario_not_found",
+  "scenario_taken",
+  "atlas_too_large",
+  "diff_base_unavailable",
 ] as const;
 
 export type PackStudioErrorCode = (typeof PACK_STUDIO_ERROR_CODES)[number];

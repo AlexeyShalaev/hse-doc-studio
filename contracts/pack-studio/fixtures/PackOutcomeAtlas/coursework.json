@@ -1,0 +1,805 @@
+{
+  "workspace_id": "6f1c1c8e-1b7a-4d51-9a43-0a5b2f3c4d10",
+  "pack": "hse-cs-sse",
+  "template": "coursework",
+  "version": "2026.1.6",
+  "state": "work_tree",
+  "revision": "sha256-5ee257ee0e5e3197",
+  "dimensions": [
+    {
+      "input": "supervisor",
+      "values": ["university", "company", "none"],
+      "default": "university",
+      "affects": ["participants", "route"],
+      "rules": [
+        {
+          "origin": "manifest",
+          "file": "version.yaml",
+          "pointer": "/pack_submission/profiles/0/signing_slots/1/when",
+          "builtin": null
+        }
+      ]
+    },
+    {
+      "input": "co_supervisor",
+      "values": ["no", "yes"],
+      "default": "no",
+      "affects": ["participants", "route"],
+      "rules": [
+        {
+          "origin": "manifest",
+          "file": "version.yaml",
+          "pointer": "/pack_submission/profiles/0/signing_slots/0/when",
+          "builtin": null
+        }
+      ]
+    },
+    {
+      "input": "academic_supervisor",
+      "values": ["yes", "no"],
+      "default": "yes",
+      "affects": ["participants"],
+      "rules": []
+    }
+  ],
+  "ignored": [
+    {"input": "lang", "reason": "cosmetic"},
+    {"input": "kind", "reason": "no_effect"},
+    {"input": "staffing", "reason": "no_effect"},
+    {"input": "meta.proposal_stage", "reason": "no_effect"},
+    {"input": "meta.report_margins", "reason": "no_effect"},
+    {"input": "variant.presentation", "reason": "cosmetic"}
+  ],
+  "combinations_total": 576,
+  "rows_total": 12,
+  "outcomes_distinct": 12,
+  "outcomes": [
+    {
+      "id": "o1",
+      "fingerprint": "bf9f758a65d433f4",
+      "digest": {
+        "documents": {
+          "project_proposal": "active",
+          "topic_application": "active",
+          "report": "active",
+          "presentation": "active"
+        },
+        "participants": ["author", "supervisor", "academic_supervisor"],
+        "meta_visible": [
+          "year",
+          "name_en",
+          "name_ru",
+          "proposal_stage",
+          "specialization",
+          "program_code",
+          "department",
+          "supervisor_department",
+          "faculty",
+          "city",
+          "city_en",
+          "form_year",
+          "udc",
+          "report_margins",
+          "font_main",
+          "font_sans",
+          "font_mono",
+          "supervisor",
+          "co_supervisor",
+          "academic_supervisor"
+        ],
+        "points": [
+          {
+            "id": "topic-approval",
+            "items": ["project_proposal", "topic_application"],
+            "steps": [["author"], ["supervisor"]],
+            "pairs": 3
+          },
+          {"id": "extended-proposal", "items": ["project_proposal", "presentation"], "steps": [], "pairs": 0},
+          {"id": "pre-defence", "items": ["report", "presentation"], "steps": [], "pairs": 0},
+          {
+            "id": "final",
+            "items": ["report", "presentation", "project_proposal"],
+            "steps": [["author"]],
+            "pairs": 1
+          }
+        ],
+        "sections": [
+          {"section": "documents", "fingerprint": "94a80e445490", "count": 4},
+          {"section": "meta", "fingerprint": "2ad6ed600e12", "count": 20},
+          {"section": "forms", "fingerprint": "82107665d317", "count": 1},
+          {"section": "participants", "fingerprint": "880bb0cd5fbd", "count": 3},
+          {"section": "points", "fingerprint": "7b23fb4c856d", "count": 9},
+          {"section": "route", "fingerprint": "eee2fbd16601", "count": 4},
+          {"section": "checks", "fingerprint": "74234e98afe7", "count": 0}
+        ]
+      },
+      "rows": 1
+    },
+    {
+      "id": "o2",
+      "fingerprint": "d8d10c82be328498",
+      "digest": {
+        "documents": {
+          "project_proposal": "active",
+          "topic_application": "active",
+          "report": "active",
+          "presentation": "active"
+        },
+        "participants": ["author", "supervisor"],
+        "meta_visible": [
+          "year",
+          "name_en",
+          "name_ru",
+          "proposal_stage",
+          "specialization",
+          "program_code",
+          "department",
+          "supervisor_department",
+          "faculty",
+          "city",
+          "city_en",
+          "form_year",
+          "udc",
+          "report_margins",
+          "font_main",
+          "font_sans",
+          "font_mono",
+          "supervisor",
+          "co_supervisor",
+          "academic_supervisor"
+        ],
+        "points": [
+          {
+            "id": "topic-approval",
+            "items": ["project_proposal", "topic_application"],
+            "steps": [["author"], ["supervisor"]],
+            "pairs": 3
+          },
+          {"id": "extended-proposal", "items": ["project_proposal", "presentation"], "steps": [], "pairs": 0},
+          {"id": "pre-defence", "items": ["report", "presentation"], "steps": [], "pairs": 0},
+          {
+            "id": "final",
+            "items": ["report", "presentation", "project_proposal"],
+            "steps": [["author"]],
+            "pairs": 1
+          }
+        ],
+        "sections": [
+          {"section": "documents", "fingerprint": "94a80e445490", "count": 4},
+          {"section": "meta", "fingerprint": "2ad6ed600e12", "count": 20},
+          {"section": "forms", "fingerprint": "82107665d317", "count": 1},
+          {"section": "participants", "fingerprint": "aceb3b79ae1b", "count": 2},
+          {"section": "points", "fingerprint": "7b23fb4c856d", "count": 9},
+          {"section": "route", "fingerprint": "eee2fbd16601", "count": 4},
+          {"section": "checks", "fingerprint": "74234e98afe7", "count": 0}
+        ]
+      },
+      "rows": 1
+    },
+    {
+      "id": "o3",
+      "fingerprint": "abd0ce5afef52c89",
+      "digest": {
+        "documents": {
+          "project_proposal": "active",
+          "topic_application": "active",
+          "report": "active",
+          "presentation": "active"
+        },
+        "participants": ["author", "supervisor", "co_supervisor", "academic_supervisor"],
+        "meta_visible": [
+          "year",
+          "name_en",
+          "name_ru",
+          "proposal_stage",
+          "specialization",
+          "program_code",
+          "department",
+          "supervisor_department",
+          "faculty",
+          "city",
+          "city_en",
+          "form_year",
+          "udc",
+          "report_margins",
+          "font_main",
+          "font_sans",
+          "font_mono",
+          "supervisor",
+          "co_supervisor",
+          "academic_supervisor"
+        ],
+        "points": [
+          {
+            "id": "topic-approval",
+            "items": ["project_proposal", "topic_application"],
+            "steps": [["author"], ["supervisor", "co_supervisor"]],
+            "pairs": 4
+          },
+          {"id": "extended-proposal", "items": ["project_proposal", "presentation"], "steps": [], "pairs": 0},
+          {"id": "pre-defence", "items": ["report", "presentation"], "steps": [], "pairs": 0},
+          {
+            "id": "final",
+            "items": ["report", "presentation", "project_proposal"],
+            "steps": [["author"]],
+            "pairs": 1
+          }
+        ],
+        "sections": [
+          {"section": "documents", "fingerprint": "94a80e445490", "count": 4},
+          {"section": "meta", "fingerprint": "2ad6ed600e12", "count": 20},
+          {"section": "forms", "fingerprint": "82107665d317", "count": 1},
+          {"section": "participants", "fingerprint": "03681a49e263", "count": 4},
+          {"section": "points", "fingerprint": "7b23fb4c856d", "count": 9},
+          {"section": "route", "fingerprint": "34eb2f0323b5", "count": 5},
+          {"section": "checks", "fingerprint": "74234e98afe7", "count": 0}
+        ]
+      },
+      "rows": 1
+    },
+    {
+      "id": "o4",
+      "fingerprint": "7235afb2288f1fe1",
+      "digest": {
+        "documents": {
+          "project_proposal": "active",
+          "topic_application": "active",
+          "report": "active",
+          "presentation": "active"
+        },
+        "participants": ["author", "supervisor", "co_supervisor"],
+        "meta_visible": [
+          "year",
+          "name_en",
+          "name_ru",
+          "proposal_stage",
+          "specialization",
+          "program_code",
+          "department",
+          "supervisor_department",
+          "faculty",
+          "city",
+          "city_en",
+          "form_year",
+          "udc",
+          "report_margins",
+          "font_main",
+          "font_sans",
+          "font_mono",
+          "supervisor",
+          "co_supervisor",
+          "academic_supervisor"
+        ],
+        "points": [
+          {
+            "id": "topic-approval",
+            "items": ["project_proposal", "topic_application"],
+            "steps": [["author"], ["supervisor", "co_supervisor"]],
+            "pairs": 4
+          },
+          {"id": "extended-proposal", "items": ["project_proposal", "presentation"], "steps": [], "pairs": 0},
+          {"id": "pre-defence", "items": ["report", "presentation"], "steps": [], "pairs": 0},
+          {
+            "id": "final",
+            "items": ["report", "presentation", "project_proposal"],
+            "steps": [["author"]],
+            "pairs": 1
+          }
+        ],
+        "sections": [
+          {"section": "documents", "fingerprint": "94a80e445490", "count": 4},
+          {"section": "meta", "fingerprint": "2ad6ed600e12", "count": 20},
+          {"section": "forms", "fingerprint": "82107665d317", "count": 1},
+          {"section": "participants", "fingerprint": "ab87907603d9", "count": 3},
+          {"section": "points", "fingerprint": "7b23fb4c856d", "count": 9},
+          {"section": "route", "fingerprint": "34eb2f0323b5", "count": 5},
+          {"section": "checks", "fingerprint": "74234e98afe7", "count": 0}
+        ]
+      },
+      "rows": 1
+    },
+    {
+      "id": "o5",
+      "fingerprint": "1947a539032aad3a",
+      "digest": {
+        "documents": {
+          "project_proposal": "active",
+          "topic_application": "active",
+          "report": "active",
+          "presentation": "active"
+        },
+        "participants": ["author", "supervisor", "academic_supervisor"],
+        "meta_visible": [
+          "year",
+          "name_en",
+          "name_ru",
+          "proposal_stage",
+          "specialization",
+          "program_code",
+          "department",
+          "supervisor_department",
+          "faculty",
+          "city",
+          "city_en",
+          "form_year",
+          "udc",
+          "report_margins",
+          "font_main",
+          "font_sans",
+          "font_mono",
+          "supervisor",
+          "co_supervisor",
+          "academic_supervisor"
+        ],
+        "points": [
+          {
+            "id": "topic-approval",
+            "items": ["project_proposal", "topic_application"],
+            "steps": [["author"], ["supervisor"], ["academic_supervisor"]],
+            "pairs": 4
+          },
+          {"id": "extended-proposal", "items": ["project_proposal", "presentation"], "steps": [], "pairs": 0},
+          {"id": "pre-defence", "items": ["report", "presentation"], "steps": [], "pairs": 0},
+          {
+            "id": "final",
+            "items": ["report", "presentation", "project_proposal"],
+            "steps": [["author"]],
+            "pairs": 1
+          }
+        ],
+        "sections": [
+          {"section": "documents", "fingerprint": "94a80e445490", "count": 4},
+          {"section": "meta", "fingerprint": "2ad6ed600e12", "count": 20},
+          {"section": "forms", "fingerprint": "82107665d317", "count": 1},
+          {"section": "participants", "fingerprint": "880bb0cd5fbd", "count": 3},
+          {"section": "points", "fingerprint": "7b23fb4c856d", "count": 9},
+          {"section": "route", "fingerprint": "47a0733ffa58", "count": 5},
+          {"section": "checks", "fingerprint": "74234e98afe7", "count": 0}
+        ]
+      },
+      "rows": 1
+    },
+    {
+      "id": "o6",
+      "fingerprint": "01e1d6ab5364376f",
+      "digest": {
+        "documents": {
+          "project_proposal": "active",
+          "topic_application": "active",
+          "report": "active",
+          "presentation": "active"
+        },
+        "participants": ["author", "supervisor"],
+        "meta_visible": [
+          "year",
+          "name_en",
+          "name_ru",
+          "proposal_stage",
+          "specialization",
+          "program_code",
+          "department",
+          "supervisor_department",
+          "faculty",
+          "city",
+          "city_en",
+          "form_year",
+          "udc",
+          "report_margins",
+          "font_main",
+          "font_sans",
+          "font_mono",
+          "supervisor",
+          "co_supervisor",
+          "academic_supervisor"
+        ],
+        "points": [
+          {
+            "id": "topic-approval",
+            "items": ["project_proposal", "topic_application"],
+            "steps": [["author"], ["supervisor"], ["academic_supervisor"]],
+            "pairs": 4
+          },
+          {"id": "extended-proposal", "items": ["project_proposal", "presentation"], "steps": [], "pairs": 0},
+          {"id": "pre-defence", "items": ["report", "presentation"], "steps": [], "pairs": 0},
+          {
+            "id": "final",
+            "items": ["report", "presentation", "project_proposal"],
+            "steps": [["author"]],
+            "pairs": 1
+          }
+        ],
+        "sections": [
+          {"section": "documents", "fingerprint": "94a80e445490", "count": 4},
+          {"section": "meta", "fingerprint": "2ad6ed600e12", "count": 20},
+          {"section": "forms", "fingerprint": "82107665d317", "count": 1},
+          {"section": "participants", "fingerprint": "aceb3b79ae1b", "count": 2},
+          {"section": "points", "fingerprint": "7b23fb4c856d", "count": 9},
+          {"section": "route", "fingerprint": "47a0733ffa58", "count": 5},
+          {"section": "checks", "fingerprint": "74234e98afe7", "count": 0}
+        ]
+      },
+      "rows": 1
+    },
+    {
+      "id": "o7",
+      "fingerprint": "3c377efbbad93ca7",
+      "digest": {
+        "documents": {
+          "project_proposal": "active",
+          "topic_application": "active",
+          "report": "active",
+          "presentation": "active"
+        },
+        "participants": ["author", "supervisor", "co_supervisor", "academic_supervisor"],
+        "meta_visible": [
+          "year",
+          "name_en",
+          "name_ru",
+          "proposal_stage",
+          "specialization",
+          "program_code",
+          "department",
+          "supervisor_department",
+          "faculty",
+          "city",
+          "city_en",
+          "form_year",
+          "udc",
+          "report_margins",
+          "font_main",
+          "font_sans",
+          "font_mono",
+          "supervisor",
+          "co_supervisor",
+          "academic_supervisor"
+        ],
+        "points": [
+          {
+            "id": "topic-approval",
+            "items": ["project_proposal", "topic_application"],
+            "steps": [["author"], ["supervisor", "co_supervisor"], ["academic_supervisor"]],
+            "pairs": 5
+          },
+          {"id": "extended-proposal", "items": ["project_proposal", "presentation"], "steps": [], "pairs": 0},
+          {"id": "pre-defence", "items": ["report", "presentation"], "steps": [], "pairs": 0},
+          {
+            "id": "final",
+            "items": ["report", "presentation", "project_proposal"],
+            "steps": [["author"]],
+            "pairs": 1
+          }
+        ],
+        "sections": [
+          {"section": "documents", "fingerprint": "94a80e445490", "count": 4},
+          {"section": "meta", "fingerprint": "2ad6ed600e12", "count": 20},
+          {"section": "forms", "fingerprint": "82107665d317", "count": 1},
+          {"section": "participants", "fingerprint": "03681a49e263", "count": 4},
+          {"section": "points", "fingerprint": "7b23fb4c856d", "count": 9},
+          {"section": "route", "fingerprint": "a39d65532fca", "count": 6},
+          {"section": "checks", "fingerprint": "74234e98afe7", "count": 0}
+        ]
+      },
+      "rows": 1
+    },
+    {
+      "id": "o8",
+      "fingerprint": "1a836479029eae3a",
+      "digest": {
+        "documents": {
+          "project_proposal": "active",
+          "topic_application": "active",
+          "report": "active",
+          "presentation": "active"
+        },
+        "participants": ["author", "supervisor", "co_supervisor"],
+        "meta_visible": [
+          "year",
+          "name_en",
+          "name_ru",
+          "proposal_stage",
+          "specialization",
+          "program_code",
+          "department",
+          "supervisor_department",
+          "faculty",
+          "city",
+          "city_en",
+          "form_year",
+          "udc",
+          "report_margins",
+          "font_main",
+          "font_sans",
+          "font_mono",
+          "supervisor",
+          "co_supervisor",
+          "academic_supervisor"
+        ],
+        "points": [
+          {
+            "id": "topic-approval",
+            "items": ["project_proposal", "topic_application"],
+            "steps": [["author"], ["supervisor", "co_supervisor"], ["academic_supervisor"]],
+            "pairs": 5
+          },
+          {"id": "extended-proposal", "items": ["project_proposal", "presentation"], "steps": [], "pairs": 0},
+          {"id": "pre-defence", "items": ["report", "presentation"], "steps": [], "pairs": 0},
+          {
+            "id": "final",
+            "items": ["report", "presentation", "project_proposal"],
+            "steps": [["author"]],
+            "pairs": 1
+          }
+        ],
+        "sections": [
+          {"section": "documents", "fingerprint": "94a80e445490", "count": 4},
+          {"section": "meta", "fingerprint": "2ad6ed600e12", "count": 20},
+          {"section": "forms", "fingerprint": "82107665d317", "count": 1},
+          {"section": "participants", "fingerprint": "ab87907603d9", "count": 3},
+          {"section": "points", "fingerprint": "7b23fb4c856d", "count": 9},
+          {"section": "route", "fingerprint": "a39d65532fca", "count": 6},
+          {"section": "checks", "fingerprint": "74234e98afe7", "count": 0}
+        ]
+      },
+      "rows": 1
+    },
+    {
+      "id": "o9",
+      "fingerprint": "5786ea4c651ac5a6",
+      "digest": {
+        "documents": {
+          "project_proposal": "active",
+          "topic_application": "active",
+          "report": "active",
+          "presentation": "active"
+        },
+        "participants": ["author", "academic_supervisor"],
+        "meta_visible": [
+          "year",
+          "name_en",
+          "name_ru",
+          "proposal_stage",
+          "specialization",
+          "program_code",
+          "department",
+          "supervisor_department",
+          "faculty",
+          "city",
+          "city_en",
+          "form_year",
+          "udc",
+          "report_margins",
+          "font_main",
+          "font_sans",
+          "font_mono",
+          "supervisor",
+          "co_supervisor",
+          "academic_supervisor"
+        ],
+        "points": [
+          {
+            "id": "topic-approval",
+            "items": ["project_proposal", "topic_application"],
+            "steps": [["author"], ["supervisor"]],
+            "pairs": 3
+          },
+          {"id": "extended-proposal", "items": ["project_proposal", "presentation"], "steps": [], "pairs": 0},
+          {"id": "pre-defence", "items": ["report", "presentation"], "steps": [], "pairs": 0},
+          {
+            "id": "final",
+            "items": ["report", "presentation", "project_proposal"],
+            "steps": [["author"]],
+            "pairs": 1
+          }
+        ],
+        "sections": [
+          {"section": "documents", "fingerprint": "94a80e445490", "count": 4},
+          {"section": "meta", "fingerprint": "2ad6ed600e12", "count": 20},
+          {"section": "forms", "fingerprint": "82107665d317", "count": 1},
+          {"section": "participants", "fingerprint": "05235eecbf6b", "count": 2},
+          {"section": "points", "fingerprint": "7b23fb4c856d", "count": 9},
+          {"section": "route", "fingerprint": "eee2fbd16601", "count": 4},
+          {"section": "checks", "fingerprint": "74234e98afe7", "count": 0}
+        ]
+      },
+      "rows": 1
+    },
+    {
+      "id": "o10",
+      "fingerprint": "a7d942c56b465b53",
+      "digest": {
+        "documents": {
+          "project_proposal": "active",
+          "topic_application": "active",
+          "report": "active",
+          "presentation": "active"
+        },
+        "participants": ["author"],
+        "meta_visible": [
+          "year",
+          "name_en",
+          "name_ru",
+          "proposal_stage",
+          "specialization",
+          "program_code",
+          "department",
+          "supervisor_department",
+          "faculty",
+          "city",
+          "city_en",
+          "form_year",
+          "udc",
+          "report_margins",
+          "font_main",
+          "font_sans",
+          "font_mono",
+          "supervisor",
+          "co_supervisor",
+          "academic_supervisor"
+        ],
+        "points": [
+          {
+            "id": "topic-approval",
+            "items": ["project_proposal", "topic_application"],
+            "steps": [["author"], ["supervisor"]],
+            "pairs": 3
+          },
+          {"id": "extended-proposal", "items": ["project_proposal", "presentation"], "steps": [], "pairs": 0},
+          {"id": "pre-defence", "items": ["report", "presentation"], "steps": [], "pairs": 0},
+          {
+            "id": "final",
+            "items": ["report", "presentation", "project_proposal"],
+            "steps": [["author"]],
+            "pairs": 1
+          }
+        ],
+        "sections": [
+          {"section": "documents", "fingerprint": "94a80e445490", "count": 4},
+          {"section": "meta", "fingerprint": "2ad6ed600e12", "count": 20},
+          {"section": "forms", "fingerprint": "82107665d317", "count": 1},
+          {"section": "participants", "fingerprint": "16f5f07ca1f4", "count": 1},
+          {"section": "points", "fingerprint": "7b23fb4c856d", "count": 9},
+          {"section": "route", "fingerprint": "eee2fbd16601", "count": 4},
+          {"section": "checks", "fingerprint": "74234e98afe7", "count": 0}
+        ]
+      },
+      "rows": 1
+    },
+    {
+      "id": "o11",
+      "fingerprint": "b5487d2d92526d66",
+      "digest": {
+        "documents": {
+          "project_proposal": "active",
+          "topic_application": "active",
+          "report": "active",
+          "presentation": "active"
+        },
+        "participants": ["author", "co_supervisor", "academic_supervisor"],
+        "meta_visible": [
+          "year",
+          "name_en",
+          "name_ru",
+          "proposal_stage",
+          "specialization",
+          "program_code",
+          "department",
+          "supervisor_department",
+          "faculty",
+          "city",
+          "city_en",
+          "form_year",
+          "udc",
+          "report_margins",
+          "font_main",
+          "font_sans",
+          "font_mono",
+          "supervisor",
+          "co_supervisor",
+          "academic_supervisor"
+        ],
+        "points": [
+          {
+            "id": "topic-approval",
+            "items": ["project_proposal", "topic_application"],
+            "steps": [["author"], ["supervisor", "co_supervisor"]],
+            "pairs": 4
+          },
+          {"id": "extended-proposal", "items": ["project_proposal", "presentation"], "steps": [], "pairs": 0},
+          {"id": "pre-defence", "items": ["report", "presentation"], "steps": [], "pairs": 0},
+          {
+            "id": "final",
+            "items": ["report", "presentation", "project_proposal"],
+            "steps": [["author"]],
+            "pairs": 1
+          }
+        ],
+        "sections": [
+          {"section": "documents", "fingerprint": "94a80e445490", "count": 4},
+          {"section": "meta", "fingerprint": "2ad6ed600e12", "count": 20},
+          {"section": "forms", "fingerprint": "82107665d317", "count": 1},
+          {"section": "participants", "fingerprint": "cf16cb75d9ca", "count": 3},
+          {"section": "points", "fingerprint": "7b23fb4c856d", "count": 9},
+          {"section": "route", "fingerprint": "34eb2f0323b5", "count": 5},
+          {"section": "checks", "fingerprint": "74234e98afe7", "count": 0}
+        ]
+      },
+      "rows": 1
+    },
+    {
+      "id": "o12",
+      "fingerprint": "710767ee74354c36",
+      "digest": {
+        "documents": {
+          "project_proposal": "active",
+          "topic_application": "active",
+          "report": "active",
+          "presentation": "active"
+        },
+        "participants": ["author", "co_supervisor"],
+        "meta_visible": [
+          "year",
+          "name_en",
+          "name_ru",
+          "proposal_stage",
+          "specialization",
+          "program_code",
+          "department",
+          "supervisor_department",
+          "faculty",
+          "city",
+          "city_en",
+          "form_year",
+          "udc",
+          "report_margins",
+          "font_main",
+          "font_sans",
+          "font_mono",
+          "supervisor",
+          "co_supervisor",
+          "academic_supervisor"
+        ],
+        "points": [
+          {
+            "id": "topic-approval",
+            "items": ["project_proposal", "topic_application"],
+            "steps": [["author"], ["supervisor", "co_supervisor"]],
+            "pairs": 4
+          },
+          {"id": "extended-proposal", "items": ["project_proposal", "presentation"], "steps": [], "pairs": 0},
+          {"id": "pre-defence", "items": ["report", "presentation"], "steps": [], "pairs": 0},
+          {
+            "id": "final",
+            "items": ["report", "presentation", "project_proposal"],
+            "steps": [["author"]],
+            "pairs": 1
+          }
+        ],
+        "sections": [
+          {"section": "documents", "fingerprint": "94a80e445490", "count": 4},
+          {"section": "meta", "fingerprint": "2ad6ed600e12", "count": 20},
+          {"section": "forms", "fingerprint": "82107665d317", "count": 1},
+          {"section": "participants", "fingerprint": "8e324629efa8", "count": 2},
+          {"section": "points", "fingerprint": "7b23fb4c856d", "count": 9},
+          {"section": "route", "fingerprint": "34eb2f0323b5", "count": 5},
+          {"section": "checks", "fingerprint": "74234e98afe7", "count": 0}
+        ]
+      },
+      "rows": 1
+    }
+  ],
+  "rows": [
+    {"key": "university|no|yes", "outcome": "o1"},
+    {"key": "university|no|no", "outcome": "o2"},
+    {"key": "university|yes|yes", "outcome": "o3"},
+    {"key": "university|yes|no", "outcome": "o4"},
+    {"key": "company|no|yes", "outcome": "o5"},
+    {"key": "company|no|no", "outcome": "o6"},
+    {"key": "company|yes|yes", "outcome": "o7"},
+    {"key": "company|yes|no", "outcome": "o8"},
+    {"key": "none|no|yes", "outcome": "o9"},
+    {"key": "none|no|no", "outcome": "o10"},
+    {"key": "none|yes|yes", "outcome": "o11"},
+    {"key": "none|yes|no", "outcome": "o12"}
+  ],
+  "elapsed_ms": 38
+}

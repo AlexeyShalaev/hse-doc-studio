@@ -1,0 +1,797 @@
+{
+  "workspace_id": "6f1c1c8e-1b7a-4d51-9a43-0a5b2f3c4d10",
+  "pack": "hse-cs-se",
+  "template": "vkr",
+  "version": "2026.1.2",
+  "state": "work_tree",
+  "revision": "sha256-99e5f70b531e4d96",
+  "errors": 0,
+  "warnings": 7,
+  "findings": [
+    {
+      "rule_id": "slot-never-routed",
+      "severity": "warning",
+      "message": "Слот «co_supervisor» не попадает в маршрут ни одной точки сдачи ни при какой комбинации вводных.",
+      "file": "version.yaml",
+      "pointer": "/signatures/slots/2",
+      "line": null,
+      "elements": [],
+      "witnesses": []
+    },
+    {
+      "rule_id": "translation-missing",
+      "severity": "warning",
+      "message": "У поля «name_en» нет английского перевода подсказки help.",
+      "file": "version.yaml",
+      "pointer": "/meta_fields/name_en/help",
+      "line": null,
+      "elements": [{"section": "meta", "id": "name_en"}],
+      "witnesses": []
+    },
+    {
+      "rule_id": "translation-missing",
+      "severity": "warning",
+      "message": "У поля «name_short» нет английского перевода подсказки help.",
+      "file": "version.yaml",
+      "pointer": "/meta_fields/name_short/help",
+      "line": null,
+      "elements": [{"section": "meta", "id": "name_short"}],
+      "witnesses": []
+    },
+    {
+      "rule_id": "translation-missing",
+      "severity": "warning",
+      "message": "У поля «udc» нет английского перевода подсказки help.",
+      "file": "version.yaml",
+      "pointer": "/meta_fields/udc/help",
+      "line": null,
+      "elements": [{"section": "meta", "id": "udc"}],
+      "witnesses": []
+    },
+    {
+      "rule_id": "translation-missing",
+      "severity": "warning",
+      "message": "У поля «program_code» нет английского перевода подсказки help.",
+      "file": "version.yaml",
+      "pointer": "/meta_fields/program_code/help",
+      "line": null,
+      "elements": [{"section": "meta", "id": "program_code"}],
+      "witnesses": []
+    },
+    {
+      "rule_id": "translation-missing",
+      "severity": "warning",
+      "message": "У поля «academic_supervisor» нет английского перевода подсказки help.",
+      "file": "version.yaml",
+      "pointer": "/meta_fields/academic_supervisor/help",
+      "line": null,
+      "elements": [{"section": "meta", "id": "academic_supervisor"}],
+      "witnesses": []
+    },
+    {
+      "rule_id": "translation-missing",
+      "severity": "warning",
+      "message": "У поля «doc_code_base» нет английского перевода подсказки help.",
+      "file": "version.yaml",
+      "pointer": "/meta_fields/doc_code_base/help",
+      "line": null,
+      "elements": [{"section": "meta", "id": "doc_code_base"}],
+      "witnesses": []
+    }
+  ],
+  "coverage": {
+    "scenarios": 1,
+    "rules_total": 67,
+    "rules_covered": 1,
+    "rules_half": 63,
+    "rules_uncovered": 3,
+    "rules": [
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/technical_specification/doc.yaml",
+          "pointer": "/supported_kinds",
+          "builtin": null
+        },
+        "kind": "supported_kinds",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/technical_specification/doc.yaml",
+          "pointer": "/supported_staffing",
+          "builtin": null
+        },
+        "kind": "supported_staffing",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/technical_specification/doc.yaml",
+          "pointer": "/supported_langs",
+          "builtin": null
+        },
+        "kind": "supported_langs",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/technical_specification/doc.yaml",
+          "pointer": "/variants/1/supported_langs",
+          "builtin": null
+        },
+        "kind": "variant_langs",
+        "seen": ["not_held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/shared_technical_specification/doc.yaml",
+          "pointer": "/supported_kinds",
+          "builtin": null
+        },
+        "kind": "supported_kinds",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/shared_technical_specification/doc.yaml",
+          "pointer": "/supported_staffing",
+          "builtin": null
+        },
+        "kind": "supported_staffing",
+        "seen": ["not_held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/shared_technical_specification/doc.yaml",
+          "pointer": "/supported_langs",
+          "builtin": null
+        },
+        "kind": "supported_langs",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/test_program_and_methodology/doc.yaml",
+          "pointer": "/supported_kinds",
+          "builtin": null
+        },
+        "kind": "supported_kinds",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/test_program_and_methodology/doc.yaml",
+          "pointer": "/supported_staffing",
+          "builtin": null
+        },
+        "kind": "supported_staffing",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/test_program_and_methodology/doc.yaml",
+          "pointer": "/supported_langs",
+          "builtin": null
+        },
+        "kind": "supported_langs",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/test_program_and_methodology/doc.yaml",
+          "pointer": "/variants/1/supported_langs",
+          "builtin": null
+        },
+        "kind": "variant_langs",
+        "seen": ["not_held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/shared_test_program_and_methodology/doc.yaml",
+          "pointer": "/supported_kinds",
+          "builtin": null
+        },
+        "kind": "supported_kinds",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/shared_test_program_and_methodology/doc.yaml",
+          "pointer": "/supported_staffing",
+          "builtin": null
+        },
+        "kind": "supported_staffing",
+        "seen": ["not_held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/shared_test_program_and_methodology/doc.yaml",
+          "pointer": "/supported_langs",
+          "builtin": null
+        },
+        "kind": "supported_langs",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/source_listing/doc.yaml",
+          "pointer": "/supported_kinds",
+          "builtin": null
+        },
+        "kind": "supported_kinds",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/source_listing/doc.yaml",
+          "pointer": "/supported_staffing",
+          "builtin": null
+        },
+        "kind": "supported_staffing",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/source_listing/doc.yaml",
+          "pointer": "/supported_langs",
+          "builtin": null
+        },
+        "kind": "supported_langs",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/programmer_manual/doc.yaml",
+          "pointer": "/supported_kinds",
+          "builtin": null
+        },
+        "kind": "supported_kinds",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/programmer_manual/doc.yaml",
+          "pointer": "/supported_staffing",
+          "builtin": null
+        },
+        "kind": "supported_staffing",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/programmer_manual/doc.yaml",
+          "pointer": "/supported_langs",
+          "builtin": null
+        },
+        "kind": "supported_langs",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/operator_manual/doc.yaml",
+          "pointer": "/supported_kinds",
+          "builtin": null
+        },
+        "kind": "supported_kinds",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/operator_manual/doc.yaml",
+          "pointer": "/supported_staffing",
+          "builtin": null
+        },
+        "kind": "supported_staffing",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/operator_manual/doc.yaml",
+          "pointer": "/supported_langs",
+          "builtin": null
+        },
+        "kind": "supported_langs",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/operator_manual/doc.yaml",
+          "pointer": "/variants/1/supported_langs",
+          "builtin": null
+        },
+        "kind": "variant_langs",
+        "seen": ["not_held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/annotation/doc.yaml",
+          "pointer": "/supported_kinds",
+          "builtin": null
+        },
+        "kind": "supported_kinds",
+        "seen": ["not_held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/annotation/doc.yaml",
+          "pointer": "/supported_staffing",
+          "builtin": null
+        },
+        "kind": "supported_staffing",
+        "seen": [],
+        "scenarios": []
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/annotation/doc.yaml",
+          "pointer": "/supported_langs",
+          "builtin": null
+        },
+        "kind": "supported_langs",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/shared_annotation/doc.yaml",
+          "pointer": "/supported_kinds",
+          "builtin": null
+        },
+        "kind": "supported_kinds",
+        "seen": ["not_held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/shared_annotation/doc.yaml",
+          "pointer": "/supported_staffing",
+          "builtin": null
+        },
+        "kind": "supported_staffing",
+        "seen": [],
+        "scenarios": []
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/shared_annotation/doc.yaml",
+          "pointer": "/supported_langs",
+          "builtin": null
+        },
+        "kind": "supported_langs",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/interim_report/doc.yaml",
+          "pointer": "/supported_kinds",
+          "builtin": null
+        },
+        "kind": "supported_kinds",
+        "seen": ["not_held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/interim_report/doc.yaml",
+          "pointer": "/supported_staffing",
+          "builtin": null
+        },
+        "kind": "supported_staffing",
+        "seen": [],
+        "scenarios": []
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/interim_report/doc.yaml",
+          "pointer": "/supported_langs",
+          "builtin": null
+        },
+        "kind": "supported_langs",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/pdp_assignment/doc.yaml",
+          "pointer": "/supported_kinds",
+          "builtin": null
+        },
+        "kind": "supported_kinds",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/pdp_assignment/doc.yaml",
+          "pointer": "/supported_staffing",
+          "builtin": null
+        },
+        "kind": "supported_staffing",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/pdp_assignment/doc.yaml",
+          "pointer": "/supported_langs",
+          "builtin": null
+        },
+        "kind": "supported_langs",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/pdp_work_plan/doc.yaml",
+          "pointer": "/supported_kinds",
+          "builtin": null
+        },
+        "kind": "supported_kinds",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/pdp_work_plan/doc.yaml",
+          "pointer": "/supported_staffing",
+          "builtin": null
+        },
+        "kind": "supported_staffing",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/pdp_work_plan/doc.yaml",
+          "pointer": "/supported_langs",
+          "builtin": null
+        },
+        "kind": "supported_langs",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/pdp_report_title/doc.yaml",
+          "pointer": "/supported_kinds",
+          "builtin": null
+        },
+        "kind": "supported_kinds",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/pdp_report_title/doc.yaml",
+          "pointer": "/supported_staffing",
+          "builtin": null
+        },
+        "kind": "supported_staffing",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/pdp_report_title/doc.yaml",
+          "pointer": "/supported_langs",
+          "builtin": null
+        },
+        "kind": "supported_langs",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/pdp_review/doc.yaml",
+          "pointer": "/supported_kinds",
+          "builtin": null
+        },
+        "kind": "supported_kinds",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/pdp_review/doc.yaml",
+          "pointer": "/supported_staffing",
+          "builtin": null
+        },
+        "kind": "supported_staffing",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/pdp_review/doc.yaml",
+          "pointer": "/supported_langs",
+          "builtin": null
+        },
+        "kind": "supported_langs",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/topic_presentation/doc.yaml",
+          "pointer": "/supported_kinds",
+          "builtin": null
+        },
+        "kind": "supported_kinds",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/topic_presentation/doc.yaml",
+          "pointer": "/supported_staffing",
+          "builtin": null
+        },
+        "kind": "supported_staffing",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/topic_presentation/doc.yaml",
+          "pointer": "/supported_langs",
+          "builtin": null
+        },
+        "kind": "supported_langs",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/presentation/doc.yaml",
+          "pointer": "/supported_kinds",
+          "builtin": null
+        },
+        "kind": "supported_kinds",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/presentation/doc.yaml",
+          "pointer": "/supported_staffing",
+          "builtin": null
+        },
+        "kind": "supported_staffing",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/presentation/doc.yaml",
+          "pointer": "/supported_langs",
+          "builtin": null
+        },
+        "kind": "supported_langs",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/thesis/doc.yaml",
+          "pointer": "/supported_kinds",
+          "builtin": null
+        },
+        "kind": "supported_kinds",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/thesis/doc.yaml",
+          "pointer": "/supported_staffing",
+          "builtin": null
+        },
+        "kind": "supported_staffing",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/thesis/doc.yaml",
+          "pointer": "/supported_langs",
+          "builtin": null
+        },
+        "kind": "supported_langs",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {"origin": "manifest", "file": "files/nda/doc.yaml", "pointer": "/supported_kinds", "builtin": null},
+        "kind": "supported_kinds",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/nda/doc.yaml",
+          "pointer": "/supported_staffing",
+          "builtin": null
+        },
+        "kind": "supported_staffing",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {"origin": "builtin", "file": null, "pointer": null, "builtin": "nda_gate"},
+        "kind": "builtin_gate",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {"origin": "manifest", "file": "files/nda/doc.yaml", "pointer": "/supported_langs", "builtin": null},
+        "kind": "supported_langs",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "version.yaml",
+          "pointer": "/meta_fields/manuals/supported_kinds",
+          "builtin": null
+        },
+        "kind": "field_kinds",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "version.yaml",
+          "pointer": "/forms/0/sections/0/fields/1/visible_if",
+          "builtin": null
+        },
+        "kind": "visible_if",
+        "seen": ["not_held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "version.yaml",
+          "pointer": "/forms/0/sections/0/fields/2/visible_if",
+          "builtin": null
+        },
+        "kind": "visible_if",
+        "seen": ["not_held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "version.yaml",
+          "pointer": "/forms/0/sections/0/fields/3/visible_if",
+          "builtin": null
+        },
+        "kind": "visible_if",
+        "seen": ["not_held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "version.yaml",
+          "pointer": "/forms/0/sections/0/fields/4/visible_if",
+          "builtin": null
+        },
+        "kind": "visible_if",
+        "seen": ["not_held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {"origin": "builtin", "file": null, "pointer": null, "builtin": "builtin_route"},
+        "kind": "route_order",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "version.yaml",
+          "pointer": "/pack_submission/profiles/1/items/3/supported_kinds",
+          "builtin": null
+        },
+        "kind": "item_kinds",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "version.yaml",
+          "pointer": "/pack_submission/profiles/2/items/2/supported_kinds",
+          "builtin": null
+        },
+        "kind": "item_kinds",
+        "seen": ["held"],
+        "scenarios": ["nda-programmer"]
+      }
+    ]
+  }
+}

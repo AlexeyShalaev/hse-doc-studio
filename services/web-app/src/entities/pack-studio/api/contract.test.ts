@@ -68,6 +68,26 @@ import {
   PackChecksSchema,
 } from "./checks";
 import {
+  PackOutcomeAtlasSchema,
+  PackOutcomeCompareRequestSchema,
+  PackOutcomeCompareSchema,
+  PackOutcomeExplainRequestSchema,
+  PackOutcomeExplainSchema,
+  PackOutcomeImpactRequestSchema,
+  PackOutcomeImpactSchema,
+  PackOutcomeInputsSchema,
+  PackOutcomeLintSchema,
+  PackOutcomeMatrixRequestSchema,
+  PackOutcomeMatrixSchema,
+  PackOutcomeRequestSchema,
+  PackOutcomeSchema,
+  PackScenarioListSchema,
+  PackScenarioRunRequestSchema,
+  PackScenarioRunSchema,
+  PackScenarioSchema,
+  PackScenarioWriteRequestSchema,
+} from "./outcome";
+import {
   PackSubmissionPatchRequestSchema,
   PackSubmissionRoutesRequestSchema,
   PackSubmissionRoutesSchema,
@@ -161,6 +181,25 @@ const SCHEMAS: Record<string, ZodType> = {
   CreatePackRequest: CreatePackRequestSchema,
   CreatePackTemplateRequest: CreatePackTemplateRequestSchema,
   PackScaffoldCreated: PackScaffoldCreatedSchema,
+  // Вычислитель результата: вводные, результат с объяснениями, атлас, сценарии, сравнения
+  PackOutcomeInputs: PackOutcomeInputsSchema,
+  PackOutcomeRequest: PackOutcomeRequestSchema,
+  PackOutcome: PackOutcomeSchema,
+  PackOutcomeAtlas: PackOutcomeAtlasSchema,
+  PackScenario: PackScenarioSchema,
+  PackScenarioList: PackScenarioListSchema,
+  PackScenarioWriteRequest: PackScenarioWriteRequestSchema,
+  PackScenarioRunRequest: PackScenarioRunRequestSchema,
+  PackScenarioRun: PackScenarioRunSchema,
+  PackOutcomeLint: PackOutcomeLintSchema,
+  PackOutcomeCompareRequest: PackOutcomeCompareRequestSchema,
+  PackOutcomeCompare: PackOutcomeCompareSchema,
+  PackOutcomeImpactRequest: PackOutcomeImpactRequestSchema,
+  PackOutcomeImpact: PackOutcomeImpactSchema,
+  PackOutcomeMatrixRequest: PackOutcomeMatrixRequestSchema,
+  PackOutcomeMatrix: PackOutcomeMatrixSchema,
+  PackOutcomeExplainRequest: PackOutcomeExplainRequestSchema,
+  PackOutcomeExplain: PackOutcomeExplainSchema,
 };
 
 const readJson = (path: string): unknown =>

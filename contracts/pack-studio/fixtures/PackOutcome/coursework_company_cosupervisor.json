@@ -1,0 +1,1424 @@
+{
+  "workspace_id": "6f1c1c8e-1b7a-4d51-9a43-0a5b2f3c4d10",
+  "pack": "hse-cs-sse",
+  "template": "coursework",
+  "version": "2026.1.6",
+  "state": "work_tree",
+  "revision": "sha256-5ee257ee0e5e3197",
+  "inputs": {
+    "lang": "ru",
+    "kind": "project",
+    "staffing": "solo",
+    "supervisor": "company",
+    "co_supervisor": "yes",
+    "academic_supervisor": "yes",
+    "meta.proposal_stage": "Предварительная",
+    "meta.report_margins": "ГОСТ 7.32 — 30/15/20/20",
+    "variant.presentation": "pptx"
+  },
+  "example": "auto:normal",
+  "fingerprint": "51ad330cf2f4a6ca",
+  "documents": [
+    {
+      "id": "project_proposal",
+      "name": {"ru": "Описание проекта и заявка на выполнение", "en": "Project description and application"},
+      "group": "topic",
+      "scope": "personal",
+      "required": true,
+      "state": "active",
+      "lang_state": "native",
+      "languages": ["ru", "en"],
+      "variants": [],
+      "instances": [
+        {
+          "id": "project_proposal",
+          "owner": null,
+          "owner_name": null,
+          "file_name": "Описание проекта и заявка на выполнение.pdf"
+        }
+      ],
+      "source_file": "project_proposal/project_proposal.tex",
+      "manifest": "files/project_proposal/doc.yaml",
+      "why": ["t1", "t2", "t3"]
+    },
+    {
+      "id": "topic_application",
+      "name": {"ru": "Заявление о выборе темы КП", "en": "Topic application"},
+      "group": "topic",
+      "scope": "personal",
+      "required": true,
+      "state": "active",
+      "lang_state": "native",
+      "languages": ["ru", "en"],
+      "variants": [],
+      "instances": [
+        {
+          "id": "topic_application",
+          "owner": null,
+          "owner_name": null,
+          "file_name": "Заявление о выборе темы курсового проекта.pdf"
+        }
+      ],
+      "source_file": "topic_application/topic_application.tex",
+      "manifest": "files/topic_application/doc.yaml",
+      "why": ["t4", "t5", "t6"]
+    },
+    {
+      "id": "report",
+      "name": {"ru": "Отчёт о курсовом проекте", "en": "Course project report"},
+      "group": "work",
+      "scope": "personal",
+      "required": true,
+      "state": "active",
+      "lang_state": "native",
+      "languages": ["ru", "en"],
+      "variants": [],
+      "instances": [{"id": "report", "owner": null, "owner_name": null, "file_name": "Отчёт о курсовом проекте.pdf"}],
+      "source_file": "report/report.tex",
+      "manifest": "files/report/doc.yaml",
+      "why": ["t7", "t8", "t9"]
+    },
+    {
+      "id": "presentation",
+      "name": {"ru": "Презентация", "en": "Presentation"},
+      "group": "pres",
+      "scope": "personal",
+      "required": true,
+      "state": "active",
+      "lang_state": "native",
+      "languages": ["ru", "en"],
+      "variants": [
+        {
+          "id": "pptx",
+          "label": {"ru": "PowerPoint-шаблон", "en": "PowerPoint template"},
+          "langs": [],
+          "available": true,
+          "chosen": true,
+          "why": []
+        },
+        {
+          "id": "reveal",
+          "label": {"ru": "RevealJS (HTML)", "en": "RevealJS (HTML)"},
+          "langs": [],
+          "available": true,
+          "chosen": false,
+          "why": []
+        },
+        {
+          "id": "beamer",
+          "label": {"ru": "LaTeX Beamer", "en": "LaTeX Beamer"},
+          "langs": [],
+          "available": true,
+          "chosen": false,
+          "why": []
+        }
+      ],
+      "instances": [{"id": "presentation", "owner": null, "owner_name": null, "file_name": "Презентация.pptx"}],
+      "source_file": "presentation/pptx/presentation.pptx",
+      "manifest": "files/presentation/doc.yaml",
+      "why": ["t10", "t11", "t12"]
+    }
+  ],
+  "meta": [
+    {
+      "id": "year",
+      "type": "string",
+      "label": {"ru": "Учебный год (год защиты КП)", "en": "Academic year (defence year)"},
+      "scope": "project",
+      "group": "study",
+      "visible": true,
+      "required_at": "create",
+      "value": "2027",
+      "options": [],
+      "why": []
+    },
+    {
+      "id": "name_en",
+      "type": "string",
+      "label": {"ru": "Название работы на английском", "en": "Title in English"},
+      "scope": "project",
+      "group": "proposal",
+      "visible": true,
+      "required_at": "never",
+      "value": "An Approval Gate for LLM Agents Acting on Corporate APIs",
+      "options": [],
+      "why": []
+    },
+    {
+      "id": "name_ru",
+      "type": "string",
+      "label": {"ru": "Название работы на русском (если проект назван по-английски)", "en": "Title in Russian"},
+      "scope": "project",
+      "group": "proposal",
+      "visible": true,
+      "required_at": "never",
+      "value": "Контур согласования действий LLM-агента над корпоративными API",
+      "options": [],
+      "why": []
+    },
+    {
+      "id": "proposal_stage",
+      "type": "select",
+      "label": {"ru": "Редакция заявки", "en": "Proposal edition"},
+      "scope": "project",
+      "group": "proposal",
+      "visible": true,
+      "required_at": "never",
+      "value": "Предварительная",
+      "options": ["Предварительная", "Доработанная"],
+      "why": []
+    },
+    {
+      "id": "specialization",
+      "type": "string",
+      "label": {"ru": "Образовательная программа", "en": "Educational programme"},
+      "scope": "project",
+      "group": "study",
+      "visible": true,
+      "required_at": "never",
+      "value": "Системная и программная инженерия",
+      "options": [],
+      "why": []
+    },
+    {
+      "id": "program_code",
+      "type": "string",
+      "label": {"ru": "Код и направление подготовки", "en": "Field of study"},
+      "scope": "project",
+      "group": "title",
+      "visible": true,
+      "required_at": "never",
+      "value": "09.04.04 «Программная инженерия»",
+      "options": [],
+      "why": []
+    },
+    {
+      "id": "department",
+      "type": "string",
+      "label": {"ru": "Департамент", "en": "Department"},
+      "scope": "project",
+      "group": "title",
+      "visible": true,
+      "required_at": "never",
+      "value": "Департамент программной инженерии",
+      "options": [],
+      "why": []
+    },
+    {
+      "id": "supervisor_department",
+      "type": "string",
+      "label": {
+        "ru": "Кафедра / департамент / организация научного руководителя",
+        "en": "Supervisor's department or organisation"
+      },
+      "scope": "project",
+      "group": "title",
+      "visible": true,
+      "required_at": "never",
+      "value": "Департамент программной инженерии ФКН",
+      "options": [],
+      "why": []
+    },
+    {
+      "id": "faculty",
+      "type": "string",
+      "label": {"ru": "Факультет", "en": "Faculty"},
+      "scope": "project",
+      "group": "title",
+      "visible": true,
+      "required_at": "never",
+      "value": "Факультет компьютерных наук",
+      "options": [],
+      "why": []
+    },
+    {
+      "id": "city",
+      "type": "string",
+      "label": {"ru": "Город", "en": "City"},
+      "scope": "project",
+      "group": "title",
+      "visible": true,
+      "required_at": "never",
+      "value": "Москва",
+      "options": [],
+      "why": []
+    },
+    {
+      "id": "city_en",
+      "type": "string",
+      "label": {"ru": "Город на английском", "en": "City in English"},
+      "scope": "project",
+      "group": "title",
+      "visible": true,
+      "required_at": "never",
+      "value": "Moscow",
+      "options": [],
+      "why": []
+    },
+    {
+      "id": "form_year",
+      "type": "string",
+      "label": {"ru": "Год в заявлении и датах подписей", "en": "Year in the application and signature dates"},
+      "scope": "project",
+      "group": "title",
+      "visible": true,
+      "required_at": "never",
+      "value": "2026",
+      "options": [],
+      "why": []
+    },
+    {
+      "id": "udc",
+      "type": "string",
+      "label": {"ru": "Код УДК", "en": "UDC code"},
+      "scope": "project",
+      "group": "title",
+      "visible": true,
+      "required_at": "finalize",
+      "value": "004.4",
+      "options": [],
+      "why": []
+    },
+    {
+      "id": "report_margins",
+      "type": "select",
+      "label": {"ru": "Поля страницы отчёта", "en": "Report page margins"},
+      "scope": "project",
+      "group": "title",
+      "visible": true,
+      "required_at": "never",
+      "value": "ГОСТ 7.32 — 30/15/20/20",
+      "options": ["ГОСТ 7.32 — 30/15/20/20", "ВШЭ — 25/10/20/20"],
+      "why": []
+    },
+    {
+      "id": "font_main",
+      "type": "font",
+      "label": {"ru": "Основной шрифт", "en": "Main font"},
+      "scope": "project",
+      "group": null,
+      "visible": true,
+      "required_at": "never",
+      "value": "Times New Roman",
+      "options": ["Times New Roman", "PT Serif", "Liberation Serif", "Tinos", "Cambria", "Georgia"],
+      "why": []
+    },
+    {
+      "id": "font_sans",
+      "type": "font",
+      "label": {"ru": "Рубленый шрифт (слайды)", "en": "Sans-serif font (slides)"},
+      "scope": "project",
+      "group": null,
+      "visible": true,
+      "required_at": "never",
+      "value": "Arial",
+      "options": ["Arial", "PT Sans", "Liberation Sans", "Helvetica", "Verdana"],
+      "why": []
+    },
+    {
+      "id": "font_mono",
+      "type": "font",
+      "label": {"ru": "Моноширинный шрифт (код, листинги)", "en": "Monospace font"},
+      "scope": "project",
+      "group": null,
+      "visible": true,
+      "required_at": "never",
+      "value": "Consolas",
+      "options": ["Consolas", "Courier New", "PT Mono", "JetBrains Mono", "Fira Mono", "DejaVu Sans Mono"],
+      "why": []
+    },
+    {
+      "id": "supervisor",
+      "type": "person",
+      "label": {"ru": "Научный руководитель", "en": "Supervisor"},
+      "scope": "project",
+      "group": null,
+      "visible": true,
+      "required_at": "create",
+      "value": null,
+      "options": [],
+      "why": []
+    },
+    {
+      "id": "co_supervisor",
+      "type": "person",
+      "label": {"ru": "Консультант / соруководитель (если есть)", "en": "Consultant / co-supervisor (optional)"},
+      "scope": "project",
+      "group": null,
+      "visible": true,
+      "required_at": "never",
+      "value": null,
+      "options": [],
+      "why": []
+    },
+    {
+      "id": "academic_supervisor",
+      "type": "person",
+      "label": {"ru": "Академический руководитель ОП", "en": "Academic programme supervisor"},
+      "scope": "project",
+      "group": null,
+      "visible": true,
+      "required_at": "never",
+      "value": null,
+      "options": [],
+      "why": []
+    }
+  ],
+  "forms": [
+    {
+      "id": "code_link",
+      "title": {"ru": "Ссылка на репозиторий", "en": "Repository link"},
+      "per_author": true,
+      "applies": true,
+      "required_for_pack": true,
+      "fields": [
+        {
+          "id": "repo_url",
+          "type": "text",
+          "label": {"ru": "Ссылка на репозиторий", "en": "Repository URL"},
+          "visible": true,
+          "required": true,
+          "why": []
+        },
+        {
+          "id": "branch",
+          "type": "text",
+          "label": {"ru": "Ветка / тег (опционально)", "en": "Branch / tag (optional)"},
+          "visible": true,
+          "required": false,
+          "why": []
+        },
+        {
+          "id": "access",
+          "type": "textarea",
+          "label": {"ru": "Режим доступа", "en": "Access"},
+          "visible": true,
+          "required": false,
+          "why": []
+        }
+      ],
+      "why": []
+    }
+  ],
+  "participants": [
+    {
+      "persona": "author",
+      "role": "author",
+      "name": "Иванов Иван Иванович",
+      "present": true,
+      "org": null,
+      "why": []
+    },
+    {
+      "persona": "supervisor",
+      "role": "supervisor",
+      "name": "Смирнов Олег Игоревич",
+      "present": true,
+      "org": "company",
+      "why": []
+    },
+    {
+      "persona": "co_supervisor",
+      "role": "co_supervisor",
+      "name": "Кузнецова Анна Викторовна",
+      "present": true,
+      "org": "university",
+      "why": []
+    },
+    {
+      "persona": "academic_supervisor",
+      "role": "academic_supervisor",
+      "name": "Васильев Дмитрий Андреевич",
+      "present": true,
+      "org": "university",
+      "why": []
+    }
+  ],
+  "points": [
+    {
+      "id": "topic-approval",
+      "index": 0,
+      "name": {"ru": "Заявка на тему КП (SmartLMS)", "en": "Topic application (SmartLMS)"},
+      "deadline_hint": {
+        "ru": "Обычно в середине ноября, точную дату объявляют в SmartLMS",
+        "en": "Usually mid-November; the exact date is announced in SmartLMS"
+      },
+      "items": [
+        {
+          "doc_id": "project_proposal",
+          "active": true,
+          "off_reason": null,
+          "signatures": ["supervisor"],
+          "why": []
+        },
+        {
+          "doc_id": "topic_application",
+          "active": true,
+          "off_reason": null,
+          "signatures": ["author", "supervisor"],
+          "why": []
+        }
+      ],
+      "extra_items": [],
+      "route": {
+        "steps": [
+          [{"persona": "author", "role": "author", "name": "Иванов Иван Иванович"}],
+          [
+            {"persona": "supervisor", "role": "supervisor", "name": "Смирнов Олег Игоревич"},
+            {"persona": "co_supervisor", "role": "co_supervisor", "name": "Кузнецова Анна Викторовна"}
+          ],
+          [
+            {
+              "persona": "academic_supervisor",
+              "role": "academic_supervisor",
+              "name": "Васильев Дмитрий Андреевич"
+            }
+          ]
+        ],
+        "pairs": [
+          {
+            "doc_id": "project_proposal",
+            "slot_id": "supervisor",
+            "persona": "supervisor",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          },
+          {
+            "doc_id": "topic_application",
+            "slot_id": "author",
+            "persona": "author",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          },
+          {
+            "doc_id": "topic_application",
+            "slot_id": "supervisor",
+            "persona": "supervisor",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          },
+          {
+            "doc_id": "topic_application",
+            "slot_id": "co_supervisor",
+            "persona": "co_supervisor",
+            "source": "preset",
+            "optional": false,
+            "when": {"person": "co_supervisor", "role": null},
+            "why": ["t14"]
+          },
+          {
+            "doc_id": "topic_application",
+            "slot_id": "academic_supervisor",
+            "persona": "academic_supervisor",
+            "source": "preset",
+            "optional": false,
+            "when": {"person": "supervisor", "role": "company"},
+            "why": ["t15"]
+          }
+        ],
+        "skipped": [],
+        "may_add": [],
+        "order_source": "profile",
+        "preset": true,
+        "why": ["t13"]
+      },
+      "why": []
+    },
+    {
+      "id": "extended-proposal",
+      "index": 1,
+      "name": {"ru": "CP1 — доработанная заявка", "en": "CP1 — extended proposal"},
+      "deadline_hint": {
+        "ru": "Обычно в январе, дату объявляют на семинаре наставника",
+        "en": "Usually in January; the date is announced at the mentor seminar"
+      },
+      "items": [
+        {"doc_id": "project_proposal", "active": true, "off_reason": null, "signatures": [], "why": []},
+        {"doc_id": "presentation", "active": true, "off_reason": null, "signatures": [], "why": []}
+      ],
+      "extra_items": [],
+      "route": {
+        "steps": [],
+        "pairs": [],
+        "skipped": [],
+        "may_add": [],
+        "order_source": "builtin",
+        "preset": false,
+        "why": ["t16"]
+      },
+      "why": []
+    },
+    {
+      "id": "pre-defence",
+      "index": 2,
+      "name": {"ru": "Предзащита КП", "en": "Course project pre-defence"},
+      "deadline_hint": {
+        "ru": "За три-четыре недели до защит, дату объявляет учебный офис",
+        "en": "Three to four weeks before the defences; the programme office announces the date"
+      },
+      "items": [
+        {"doc_id": "report", "active": true, "off_reason": null, "signatures": [], "why": []},
+        {"doc_id": "presentation", "active": true, "off_reason": null, "signatures": [], "why": []}
+      ],
+      "extra_items": [],
+      "route": {
+        "steps": [],
+        "pairs": [],
+        "skipped": [],
+        "may_add": [],
+        "order_source": "builtin",
+        "preset": false,
+        "why": ["t16"]
+      },
+      "why": []
+    },
+    {
+      "id": "final",
+      "index": 3,
+      "name": {"ru": "Защита КП", "en": "Course project defence"},
+      "deadline_hint": {
+        "ru": "Обычно в июне: сначала текст руководителю, затем загрузка в SmartLMS; даты объявляют в SmartLMS",
+        "en": "Usually in June: the text goes to the supervisor first, then to SmartLMS; the dates are announced in SmartLMS"
+      },
+      "items": [
+        {"doc_id": "report", "active": true, "off_reason": null, "signatures": ["author"], "why": []},
+        {"doc_id": "presentation", "active": true, "off_reason": null, "signatures": [], "why": []},
+        {"doc_id": "project_proposal", "active": true, "off_reason": null, "signatures": [], "why": []}
+      ],
+      "extra_items": [
+        {
+          "source": ".hse-studio/forms/code_link.json",
+          "output_name": "Ссылка на репозиторий.txt",
+          "format": "markdown",
+          "active": true,
+          "off_reason": null,
+          "why": []
+        }
+      ],
+      "route": {
+        "steps": [[{"persona": "author", "role": "author", "name": "Иванов Иван Иванович"}]],
+        "pairs": [
+          {
+            "doc_id": "report",
+            "slot_id": "author",
+            "persona": "author",
+            "source": "point",
+            "optional": false,
+            "when": null,
+            "why": []
+          }
+        ],
+        "skipped": [],
+        "may_add": [{"doc_id": "report", "slot_id": "supervisor"}],
+        "order_source": "builtin",
+        "preset": true,
+        "why": ["t16"]
+      },
+      "why": []
+    }
+  ],
+  "checks": [
+    {
+      "id": "gost-7.32-2017/page-margins",
+      "title": {"ru": "Поля страницы", "en": "Page margins"},
+      "category": "formatting",
+      "severity": "warn",
+      "engine": "structural",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["report"],
+      "why": []
+    },
+    {
+      "id": "gost-7.32-2017/line-spacing",
+      "title": {"ru": "Межстрочный интервал 1.5", "en": "Line spacing 1.5"},
+      "category": "formatting",
+      "severity": "warn",
+      "engine": "structural",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["report"],
+      "why": []
+    },
+    {
+      "id": "gost-7.32-2017/font-size",
+      "title": {"ru": "Размер шрифта 12pt", "en": "Font size 12pt"},
+      "category": "formatting",
+      "severity": "info",
+      "engine": "structural",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["report"],
+      "why": []
+    },
+    {
+      "id": "gost-7.32-2017/paragraph-indent",
+      "title": {"ru": "Абзацный отступ 1.25 см", "en": "Paragraph indent 1.25 cm"},
+      "category": "formatting",
+      "severity": "info",
+      "engine": "structural",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["report"],
+      "why": []
+    },
+    {
+      "id": "gost-7.32-2017/section-introduction",
+      "title": {"ru": "Раздел «Введение»", "en": "«Introduction» section"},
+      "category": "structure",
+      "severity": "err",
+      "engine": "regex",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["report"],
+      "why": []
+    },
+    {
+      "id": "gost-7.32-2017/section-conclusion",
+      "title": {"ru": "Раздел «Заключение»", "en": "«Conclusion» section"},
+      "category": "structure",
+      "severity": "err",
+      "engine": "regex",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["report"],
+      "why": []
+    },
+    {
+      "id": "gost-7.32-2017/bibliography-section",
+      "title": {"ru": "Список использованных источников", "en": "List of references"},
+      "category": "structure",
+      "severity": "err",
+      "engine": "regex",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["report"],
+      "why": []
+    },
+    {
+      "id": "gost-7.32-2017/figure-caption-format",
+      "title": {"ru": "Ручной префикс в подписи к рисунку", "en": "Manual prefix in figure caption"},
+      "category": "references",
+      "severity": "warn",
+      "engine": "regex",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["report"],
+      "why": []
+    },
+    {
+      "id": "gost-7.32-2017/table-caption-format",
+      "title": {"ru": "Ручной префикс в заголовке таблицы", "en": "Manual prefix in table heading"},
+      "category": "references",
+      "severity": "warn",
+      "engine": "regex",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["report"],
+      "why": []
+    },
+    {
+      "id": "gost-7.32-2017/float-orphans",
+      "title": {"ru": "Ссылки на рисунки и таблицы", "en": "References to figures and tables"},
+      "category": "references",
+      "severity": "warn",
+      "engine": "structural",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["report"],
+      "why": []
+    },
+    {
+      "id": "gost-7.32-2017/figure-numbering",
+      "title": {"ru": "Сквозная нумерация рисунков", "en": "Continuous figure numbering"},
+      "category": "references",
+      "severity": "info",
+      "engine": "structural",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["report"],
+      "why": []
+    },
+    {
+      "id": "gost-7.32-2017/unused-sources",
+      "title": {"ru": "Неиспользованные источники", "en": "Unused sources"},
+      "category": "bibliography",
+      "severity": "info",
+      "engine": "reference_check",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["report"],
+      "why": []
+    },
+    {
+      "id": "gost-7.32-2017/dangling-cite",
+      "title": {"ru": "Неразрешённая библиографическая ссылка", "en": "Unresolved bibliographic citation"},
+      "category": "bibliography",
+      "severity": "warn",
+      "engine": "log_parse",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["report"],
+      "why": []
+    },
+    {
+      "id": "gost-7.32-2017/overfull-hbox",
+      "title": {"ru": "Выход текста за поля (overfull hbox)", "en": "Text overflows margins (overfull hbox)"},
+      "category": "formatting",
+      "severity": "info",
+      "engine": "log_parse",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["report"],
+      "why": []
+    },
+    {
+      "id": "gost-7.32-2017/list-style",
+      "title": {"ru": "Оформление списков", "en": "List formatting"},
+      "category": "formatting",
+      "severity": "info",
+      "engine": "python",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["report"],
+      "why": []
+    },
+    {
+      "id": "hse-sse-proposal-2026/section-motivation",
+      "title": {"ru": "Предметная область, актуальность и мотивация", "en": "Subject area, relevance and motivation"},
+      "category": "structure",
+      "severity": "err",
+      "engine": "regex",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["project_proposal"],
+      "why": []
+    },
+    {
+      "id": "hse-sse-proposal-2026/related-work",
+      "title": {"ru": "Обзор существующих работ", "en": "Related work"},
+      "category": "structure",
+      "severity": "err",
+      "engine": "regex",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["project_proposal"],
+      "why": []
+    },
+    {
+      "id": "hse-sse-proposal-2026/problem-statement",
+      "title": {"ru": "Постановка задачи", "en": "Problem statement"},
+      "category": "structure",
+      "severity": "err",
+      "engine": "regex",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["project_proposal"],
+      "why": []
+    },
+    {
+      "id": "hse-sse-proposal-2026/object-subject",
+      "title": {"ru": "Объект и предмет исследования", "en": "Object and subject of study"},
+      "category": "content",
+      "severity": "warn",
+      "engine": "python",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["project_proposal"],
+      "why": []
+    },
+    {
+      "id": "hse-sse-proposal-2026/aim",
+      "title": {"ru": "Цель работы", "en": "Aim of the work"},
+      "category": "structure",
+      "severity": "err",
+      "engine": "regex",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["project_proposal"],
+      "why": []
+    },
+    {
+      "id": "hse-sse-proposal-2026/expected-results",
+      "title": {"ru": "Ожидаемые результаты", "en": "Expected results"},
+      "category": "structure",
+      "severity": "err",
+      "engine": "regex",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["project_proposal"],
+      "why": []
+    },
+    {
+      "id": "hse-sse-proposal-2026/references",
+      "title": {"ru": "Список источников", "en": "References"},
+      "category": "bibliography",
+      "severity": "err",
+      "engine": "regex",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["project_proposal"],
+      "why": []
+    },
+    {
+      "id": "hse-sse-proposal-2026/single-aim",
+      "title": {"ru": "Одна цель", "en": "A single aim"},
+      "category": "content",
+      "severity": "info",
+      "engine": "python",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["project_proposal"],
+      "why": []
+    },
+    {
+      "id": "hse-sse-proposal-2026/tasks-count",
+      "title": {"ru": "Число задач (3–7)", "en": "Number of tasks (3–7)"},
+      "category": "content",
+      "severity": "info",
+      "engine": "python",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["project_proposal"],
+      "why": []
+    },
+    {
+      "id": "hse-sse-proposal-2026/keywords-separator",
+      "title": {"ru": "Ключевые слова через «;»", "en": "Keywords separated by «;»"},
+      "category": "content",
+      "severity": "warn",
+      "engine": "python",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["project_proposal"],
+      "why": []
+    },
+    {
+      "id": "hse-sse-proposal-2026/cited-sources",
+      "title": {"ru": "Ссылки на источники в тексте", "en": "Sources cited in the text"},
+      "category": "bibliography",
+      "severity": "warn",
+      "engine": "python",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["project_proposal"],
+      "why": []
+    },
+    {
+      "id": "hse-sse-proposal-2026/placeholders-left",
+      "title": {"ru": "Незаполненные поля", "en": "Unfilled placeholders"},
+      "category": "content",
+      "severity": "warn",
+      "engine": "python",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["project_proposal"],
+      "why": []
+    },
+    {
+      "id": "hse-sse-report-2026/abstract",
+      "title": {"ru": "Реферат", "en": "Abstract"},
+      "category": "structure",
+      "severity": "err",
+      "engine": "regex",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["report"],
+      "why": []
+    },
+    {
+      "id": "hse-sse-report-2026/definitions",
+      "title": {"ru": "Определения, обозначения и сокращения", "en": "Definitions and abbreviations"},
+      "category": "structure",
+      "severity": "warn",
+      "engine": "regex",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["report"],
+      "why": []
+    },
+    {
+      "id": "hse-sse-report-2026/toc",
+      "title": {"ru": "Содержание", "en": "Contents"},
+      "category": "structure",
+      "severity": "err",
+      "engine": "regex",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["report"],
+      "why": []
+    },
+    {
+      "id": "hse-sse-report-2026/aim-in-introduction",
+      "title": {"ru": "Цель и задачи во введении", "en": "Aim and tasks in the introduction"},
+      "category": "content",
+      "severity": "warn",
+      "engine": "python",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["report"],
+      "why": []
+    },
+    {
+      "id": "hse-sse-report-2026/main-chapters",
+      "title": {"ru": "Главы основной части", "en": "Main part chapters"},
+      "category": "structure",
+      "severity": "info",
+      "engine": "python",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["report"],
+      "why": []
+    },
+    {
+      "id": "hse-sse-report-2026/repository-link",
+      "title": {"ru": "Ссылка на репозиторий", "en": "Repository link"},
+      "category": "content",
+      "severity": "info",
+      "engine": "python",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["report"],
+      "why": []
+    },
+    {
+      "id": "hse-sse-report-2026/placeholders-left",
+      "title": {"ru": "Незаполненные поля", "en": "Unfilled placeholders"},
+      "category": "content",
+      "severity": "warn",
+      "engine": "python",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["report"],
+      "why": []
+    },
+    {
+      "id": "typography-ru/quotes",
+      "title": {"ru": "Кавычки-ёлочки", "en": "Guillemets («»)"},
+      "category": "formatting",
+      "severity": "info",
+      "engine": "typography",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["report"],
+      "why": []
+    },
+    {
+      "id": "typography-ru/dash",
+      "title": {"ru": "Тире вместо дефиса", "en": "Em-dash instead of a hyphen"},
+      "category": "formatting",
+      "severity": "info",
+      "engine": "typography",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["report"],
+      "why": []
+    },
+    {
+      "id": "typography-ru/ellipsis",
+      "title": {"ru": "Многоточие", "en": "Ellipsis"},
+      "category": "formatting",
+      "severity": "info",
+      "engine": "typography",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["report"],
+      "why": []
+    },
+    {
+      "id": "typography-ru/initials",
+      "title": {"ru": "Неразрывные пробелы в инициалах", "en": "Non-breaking spaces in initials"},
+      "category": "formatting",
+      "severity": "info",
+      "engine": "typography",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["report"],
+      "why": []
+    },
+    {
+      "id": "typography-ru/percent",
+      "title": {"ru": "Неразрывный пробел перед знаком процента", "en": "Non-breaking space before the percent sign"},
+      "category": "formatting",
+      "severity": "info",
+      "engine": "typography",
+      "enabled": true,
+      "off_reason": null,
+      "applies_to": ["report"],
+      "why": []
+    }
+  ],
+  "branches": [
+    {
+      "input": "supervisor",
+      "label": null,
+      "chosen": "company",
+      "affects": ["participants", "route"],
+      "alternatives": [
+        {
+          "value": "university",
+          "label": null,
+          "fingerprint": "178e9a671940f46c",
+          "delta": [{"section": "route", "added": 1, "changed": 0, "removed": 2}]
+        },
+        {"value": "company", "label": null, "fingerprint": "51ad330cf2f4a6ca", "delta": []},
+        {
+          "value": "none",
+          "label": null,
+          "fingerprint": "3fdbc04abbaf205f",
+          "delta": [
+            {"section": "participants", "added": 0, "changed": 0, "removed": 1},
+            {"section": "route", "added": 1, "changed": 0, "removed": 2}
+          ]
+        }
+      ]
+    },
+    {
+      "input": "co_supervisor",
+      "label": null,
+      "chosen": "yes",
+      "affects": ["participants", "route"],
+      "alternatives": [
+        {
+          "value": "no",
+          "label": null,
+          "fingerprint": "5bb2e007b2ade751",
+          "delta": [
+            {"section": "participants", "added": 0, "changed": 0, "removed": 1},
+            {"section": "route", "added": 1, "changed": 1, "removed": 1}
+          ]
+        },
+        {"value": "yes", "label": null, "fingerprint": "51ad330cf2f4a6ca", "delta": []}
+      ]
+    },
+    {
+      "input": "academic_supervisor",
+      "label": null,
+      "chosen": "yes",
+      "affects": ["participants"],
+      "alternatives": [
+        {"value": "yes", "label": null, "fingerprint": "51ad330cf2f4a6ca", "delta": []},
+        {
+          "value": "no",
+          "label": null,
+          "fingerprint": "0f11540c8eb7968a",
+          "delta": [{"section": "participants", "added": 0, "changed": 0, "removed": 1}]
+        }
+      ]
+    }
+  ],
+  "digest": {
+    "documents": {
+      "project_proposal": "active",
+      "topic_application": "active",
+      "report": "active",
+      "presentation": "active"
+    },
+    "participants": ["author", "supervisor", "co_supervisor", "academic_supervisor"],
+    "meta_visible": [
+      "year",
+      "name_en",
+      "name_ru",
+      "proposal_stage",
+      "specialization",
+      "program_code",
+      "department",
+      "supervisor_department",
+      "faculty",
+      "city",
+      "city_en",
+      "form_year",
+      "udc",
+      "report_margins",
+      "font_main",
+      "font_sans",
+      "font_mono",
+      "supervisor",
+      "co_supervisor",
+      "academic_supervisor"
+    ],
+    "points": [
+      {
+        "id": "topic-approval",
+        "items": ["project_proposal", "topic_application"],
+        "steps": [["author"], ["supervisor", "co_supervisor"], ["academic_supervisor"]],
+        "pairs": 5
+      },
+      {"id": "extended-proposal", "items": ["project_proposal", "presentation"], "steps": [], "pairs": 0},
+      {"id": "pre-defence", "items": ["report", "presentation"], "steps": [], "pairs": 0},
+      {
+        "id": "final",
+        "items": ["report", "presentation", "project_proposal"],
+        "steps": [["author"]],
+        "pairs": 1
+      }
+    ],
+    "sections": [
+      {"section": "documents", "fingerprint": "94a80e445490", "count": 4},
+      {"section": "meta", "fingerprint": "2ad6ed600e12", "count": 20},
+      {"section": "forms", "fingerprint": "82107665d317", "count": 1},
+      {"section": "participants", "fingerprint": "03681a49e263", "count": 4},
+      {"section": "points", "fingerprint": "7b23fb4c856d", "count": 9},
+      {"section": "route", "fingerprint": "a39d65532fca", "count": 6},
+      {"section": "checks", "fingerprint": "74234e98afe7", "count": 0}
+    ]
+  },
+  "trace": [
+    {
+      "id": "t1",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/project_proposal/doc.yaml",
+        "pointer": "/supported_kinds",
+        "builtin": null
+      },
+      "kind": "supported_kinds",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "kind", "expected": ["project", "research"]}],
+      "actual": {"kind": "project"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "project_proposal"}]
+    },
+    {
+      "id": "t2",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/project_proposal/doc.yaml",
+        "pointer": "/supported_staffing",
+        "builtin": null
+      },
+      "kind": "supported_staffing",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "staffing", "expected": ["solo", "team2", "team3"]}],
+      "actual": {"staffing": "solo"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "project_proposal"}]
+    },
+    {
+      "id": "t3",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/project_proposal/doc.yaml",
+        "pointer": "/supported_langs",
+        "builtin": null
+      },
+      "kind": "supported_langs",
+      "effect": "display",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "lang", "expected": ["ru", "en"]}],
+      "actual": {"lang": "ru"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "project_proposal"}]
+    },
+    {
+      "id": "t4",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/topic_application/doc.yaml",
+        "pointer": "/supported_kinds",
+        "builtin": null
+      },
+      "kind": "supported_kinds",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "kind", "expected": ["project", "research"]}],
+      "actual": {"kind": "project"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "topic_application"}]
+    },
+    {
+      "id": "t5",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/topic_application/doc.yaml",
+        "pointer": "/supported_staffing",
+        "builtin": null
+      },
+      "kind": "supported_staffing",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "staffing", "expected": ["solo", "team2", "team3"]}],
+      "actual": {"staffing": "solo"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "topic_application"}]
+    },
+    {
+      "id": "t6",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/topic_application/doc.yaml",
+        "pointer": "/supported_langs",
+        "builtin": null
+      },
+      "kind": "supported_langs",
+      "effect": "display",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "lang", "expected": ["ru", "en"]}],
+      "actual": {"lang": "ru"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "topic_application"}]
+    },
+    {
+      "id": "t7",
+      "rule": {"origin": "manifest", "file": "files/report/doc.yaml", "pointer": "/supported_kinds", "builtin": null},
+      "kind": "supported_kinds",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "kind", "expected": ["project", "research"]}],
+      "actual": {"kind": "project"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "report"}]
+    },
+    {
+      "id": "t8",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/report/doc.yaml",
+        "pointer": "/supported_staffing",
+        "builtin": null
+      },
+      "kind": "supported_staffing",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "staffing", "expected": ["solo", "team2", "team3"]}],
+      "actual": {"staffing": "solo"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "report"}]
+    },
+    {
+      "id": "t9",
+      "rule": {"origin": "manifest", "file": "files/report/doc.yaml", "pointer": "/supported_langs", "builtin": null},
+      "kind": "supported_langs",
+      "effect": "display",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "lang", "expected": ["ru", "en"]}],
+      "actual": {"lang": "ru"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "report"}]
+    },
+    {
+      "id": "t10",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/presentation/doc.yaml",
+        "pointer": "/supported_kinds",
+        "builtin": null
+      },
+      "kind": "supported_kinds",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "kind", "expected": ["research", "project"]}],
+      "actual": {"kind": "project"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "presentation"}]
+    },
+    {
+      "id": "t11",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/presentation/doc.yaml",
+        "pointer": "/supported_staffing",
+        "builtin": null
+      },
+      "kind": "supported_staffing",
+      "effect": "gate",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "staffing", "expected": ["solo", "team2", "team3"]}],
+      "actual": {"staffing": "solo"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "presentation"}]
+    },
+    {
+      "id": "t12",
+      "rule": {
+        "origin": "manifest",
+        "file": "files/presentation/doc.yaml",
+        "pointer": "/supported_langs",
+        "builtin": null
+      },
+      "kind": "supported_langs",
+      "effect": "display",
+      "join": "all",
+      "terms": [{"op": "in", "subject": "lang", "expected": ["ru", "en"]}],
+      "actual": {"lang": "ru"},
+      "status": "held",
+      "subjects": [{"section": "documents", "id": "presentation"}]
+    },
+    {
+      "id": "t13",
+      "rule": {
+        "origin": "manifest",
+        "file": "version.yaml",
+        "pointer": "/pack_submission/profiles/0/signing_route",
+        "builtin": null
+      },
+      "kind": "route_order",
+      "effect": "order",
+      "join": "all",
+      "terms": [],
+      "actual": {},
+      "status": "held",
+      "subjects": [{"section": "route", "id": "topic-approval"}]
+    },
+    {
+      "id": "t14",
+      "rule": {
+        "origin": "manifest",
+        "file": "version.yaml",
+        "pointer": "/pack_submission/profiles/0/signing_slots/0/when",
+        "builtin": null
+      },
+      "kind": "slot_when",
+      "effect": "add",
+      "join": "all",
+      "terms": [{"op": "present", "subject": "co_supervisor", "expected": []}],
+      "actual": {"co_supervisor": "yes"},
+      "status": "held",
+      "subjects": [{"section": "route", "id": "topic-approval/topic_application/co_supervisor"}]
+    },
+    {
+      "id": "t15",
+      "rule": {
+        "origin": "manifest",
+        "file": "version.yaml",
+        "pointer": "/pack_submission/profiles/0/signing_slots/1/when",
+        "builtin": null
+      },
+      "kind": "slot_when",
+      "effect": "add",
+      "join": "all",
+      "terms": [
+        {"op": "present", "subject": "supervisor", "expected": []},
+        {"op": "equals", "subject": "supervisor.role", "expected": ["company"]}
+      ],
+      "actual": {"supervisor": "yes", "supervisor.role": "company"},
+      "status": "held",
+      "subjects": [{"section": "route", "id": "topic-approval/topic_application/academic_supervisor"}]
+    },
+    {
+      "id": "t16",
+      "rule": {"origin": "builtin", "file": null, "pointer": null, "builtin": "builtin_route"},
+      "kind": "route_order",
+      "effect": "order",
+      "join": "all",
+      "terms": [],
+      "actual": {},
+      "status": "held",
+      "subjects": [
+        {"section": "route", "id": "extended-proposal"},
+        {"section": "route", "id": "pre-defence"},
+        {"section": "route", "id": "final"}
+      ]
+    }
+  ],
+  "out_of_scope": ["python_checks", "signature_anchors", "tex_content", "jinja_content"],
+  "elapsed_ms": 1
+}

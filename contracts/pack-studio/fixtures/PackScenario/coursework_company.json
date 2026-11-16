@@ -1,0 +1,83 @@
+{
+  "format": 1,
+  "name": {"ru": "Научрук из компании, есть консультант", "en": "Company supervisor with a co-supervisor"},
+  "description": {
+    "ru": "Заявка уходит на подпись автору, научруку с консультантом и академическому руководителю.",
+    "en": "The application goes to the author, the supervisor with the co-supervisor and the academic supervisor."
+  },
+  "example": "auto:normal",
+  "inputs": {"supervisor": "company", "co_supervisor": "yes"},
+  "versions": ["2026.1.*"],
+  "snapshot": {
+    "documents": {
+      "project_proposal": "active",
+      "topic_application": "active",
+      "report": "active",
+      "presentation": "active"
+    },
+    "participants": ["author", "supervisor", "co_supervisor", "academic_supervisor"],
+    "meta_visible": [
+      "year",
+      "name_en",
+      "name_ru",
+      "proposal_stage",
+      "specialization",
+      "program_code",
+      "department",
+      "supervisor_department",
+      "faculty",
+      "city",
+      "city_en",
+      "form_year",
+      "udc",
+      "report_margins",
+      "font_main",
+      "font_sans",
+      "font_mono",
+      "supervisor",
+      "co_supervisor",
+      "academic_supervisor"
+    ],
+    "points": [
+      {
+        "id": "topic-approval",
+        "items": ["project_proposal", "topic_application"],
+        "steps": [["author"], ["supervisor", "co_supervisor"], ["academic_supervisor"]],
+        "pairs": 5
+      },
+      {"id": "extended-proposal", "items": ["project_proposal", "presentation"], "steps": [], "pairs": 0},
+      {"id": "pre-defence", "items": ["report", "presentation"], "steps": [], "pairs": 0},
+      {
+        "id": "final",
+        "items": ["report", "presentation", "project_proposal"],
+        "steps": [["author"]],
+        "pairs": 1
+      }
+    ],
+    "sections": [
+      {"section": "documents", "fingerprint": "94a80e445490", "count": 4},
+      {"section": "meta", "fingerprint": "2ad6ed600e12", "count": 20},
+      {"section": "forms", "fingerprint": "82107665d317", "count": 1},
+      {"section": "participants", "fingerprint": "03681a49e263", "count": 4},
+      {"section": "points", "fingerprint": "7b23fb4c856d", "count": 9},
+      {"section": "route", "fingerprint": "a39d65532fca", "count": 6},
+      {"section": "checks", "fingerprint": "74234e98afe7", "count": 0}
+    ]
+  },
+  "assertions": [
+    {
+      "kind": "route_steps",
+      "point": "topic-approval",
+      "steps": [["author"], ["supervisor", "co_supervisor"], ["academic_supervisor"]]
+    },
+    {
+      "kind": "route_pair",
+      "point": "topic-approval",
+      "doc": "topic_application",
+      "slot": "academic_supervisor",
+      "persona": "academic_supervisor",
+      "present": true
+    },
+    {"kind": "participant_present", "persona": "co_supervisor", "present": true}
+  ]
+}
