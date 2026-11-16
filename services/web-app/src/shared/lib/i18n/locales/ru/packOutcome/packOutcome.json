@@ -293,12 +293,92 @@
       "supervisors": "Руководителей",
       "absent": "Нет в комбинации"
     },
+    "empty": "В этой комбинации участников нет."
+  },
+  "points": {
+    "stats": {
+      "points": "Точек",
+      "active": "Пунктов сдаётся",
+      "off": "Выключено",
+      "extra": "Доп. файлов"
+    },
+    "filterPoint": "Точка",
+    "filterAll": "Все точки",
+    "empty": "В версии нет точек сдачи.",
+    "itemsOf_one": "{{active}} из {{total}} пункта",
+    "itemsOf_few": "{{active}} из {{total}} пунктов",
+    "itemsOf_many": "{{active}} из {{total}} пунктов",
+    "itemsOf_other": "{{active}} из {{total}} пунктов",
+    "deadline": "Срок:",
+    "items": "Что сдаётся",
+    "signatures": "Подписи:",
+    "noSignatures": "без подписей",
+    "signed": "Подписей: {{count}}",
+    "openDoc": "К документу",
+    "openDocLabel": "Показать документ «{{name}}» в разделе «Документы»",
+    "off": {
+      "nda": "NDA",
+      "kind": "вид работы",
+      "absent": "документа нет в комплекте",
+      "inactive": "документ выключен"
+    },
+    "offPrefix": "не сдаётся:",
+    "offBlock": "Выключенные пункты",
+    "whyUnknown": "причина не указана в ответе",
+    "extra": "Дополнительные файлы",
+    "extraFrom": "из {{source}}",
+    "noItems": "В точке нет пунктов."
+  },
+  "route": {
+    "stats": {
+      "points": "Точек с подписями",
+      "steps": "Шагов",
+      "pairs": "Подписей",
+      "skipped": "Пропущено",
+      "mayAdd": "Можно добавить"
+    },
+    "filterPoint": "Точка",
+    "filterAll": "Все точки",
+    "empty": "В версии нет точек сдачи, маршрута нет.",
+    "order": "Порядок:",
+    "orderSource": {
+      "profile": "из профиля точки",
+      "version": "из версии",
+      "builtin": "встроенный"
+    },
+    "preset": "пресет маршрута",
+    "stepsLabel": "Шаги маршрута точки «{{point}}»",
+    "step": "Шаг {{n}}",
+    "parallel": "параллельно",
+    "noName": "не указан",
+    "noPerson": "шаг без человека",
+    "pairs": "Подписи по документам",
+    "pairsLabel": "Подписи документа «{{doc}}»",
+    "source": {
+      "point": "из точки",
+      "preset": "из пресета"
+    },
+    "optional": "Необязательна",
+    "whenSet": "если {{person}} указан",
+    "whenOrg": "если {{person}} {{org}}",
+    "orgOf": {
+      "university": "из ВШЭ",
+      "company": "из компании"
+    },
+    "skippedBlock": "Пропущены условием",
+    "skippedPrefix": "пропущено:",
+    "skippedUnknown": "условие слота не выполнено",
+    "mayAddBlock": "Можно добавить при создании проекта",
+    "mayAddLead": "Автор проекта включит эти подписи сам.",
+    "noRouteBlock": "Точки без подписей",
+    "noRouteLead": "Подписи этим точкам не нужны.",
     "warnTitle": "Нет человека для шага маршрута",
     "warnStep": "Точка «{{point}}», шаг {{step}}: не указан {{who}}",
-    "empty": "В этой комбинации участников нет."
+    "emptySteps": "Шагов нет"
   },
   "reasons": {
     "unset": "не задано",
+    "orgOf": "{{subject}}, организация",
     "op": {
       "in": "{{subject}}: сейчас {{actual}}, нужно {{expected}}",
       "equals": "{{subject}}: сейчас {{actual}}, нужно {{expected}}",

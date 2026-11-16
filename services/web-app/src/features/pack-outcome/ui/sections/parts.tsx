@@ -1,6 +1,7 @@
 import { useId, useState, type ReactNode } from "react";
-import { ChevronDown, ChevronRight, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, Search, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import type { EmptyStep } from "../../lib/routeSteps";
 import type { OutcomeSelection } from "../../lib/urlState";
 import { useOutcomeModel } from "../../model";
 import { useIsSelected } from "./helpers";
@@ -208,3 +209,42 @@ export const GroupTitle = ({
     {count !== undefined && <span className="po-group-count">{count}</span>}
   </h4>
 );
+
+/**
+ * Предупреждение «Нет человека для шага маршрута»: общее для секций «Участники» и «Маршрут
+ * подписания». Список шагов считает `emptySteps` из ответа сервера; пустой список ничего не рисует.
+ */
+export const StepWarning = ({
+  steps,
+  testId,
+}: {
+  steps: readonly EmptyStep[];
+  testId: string;
+}) => {
+  const { t } = useTranslation("packOutcome");
+  if (steps.length === 0) return null;
+  return (
+    <div
+      className="po-warn"
+      role="group"
+      aria-label={t("route.warnTitle")}
+      data-testid={testId}
+    >
+      <TriangleAlert size="1rem" aria-hidden="true" className="po-warn-icon" />
+      <div>
+        <p className="po-warn-title">{t("route.warnTitle")}</p>
+        <ul className="po-warn-list">
+          {steps.map((s) => (
+            <li key={`${s.pointId}:${String(s.step)}`}>
+              {t("route.warnStep", {
+                point: s.pointName,
+                step: s.step,
+                who: s.personas.join(", "),
+              })}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+};

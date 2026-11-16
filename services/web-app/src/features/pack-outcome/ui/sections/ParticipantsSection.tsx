@@ -1,4 +1,3 @@
-import { TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type {
   OutcomeInput,
@@ -7,43 +6,13 @@ import type {
 } from "@entities/pack-studio";
 import { Badge } from "@shared/ui";
 import { pickLocalized } from "@shared/lib/i18n/pickLocalized";
+import { emptySteps } from "../../lib/routeSteps";
 import { summarize } from "../../lib/summary";
 import { useOutcomeModel } from "../../model";
 import { SectionShell } from "./SectionShell";
-import { PickItem, Reason, Stats } from "./parts";
+import { PickItem, Reason, StepWarning, Stats } from "./parts";
 import { onArrowNav } from "./helpers";
 import { useExplain } from "./useExplain";
-
-/** Шаг маршрута точки, в котором нет человека: сервер прислал персону с пустым именем. */
-type EmptyStep = {
-  pointId: string;
-  pointName: string;
-  step: number;
-  personas: string[];
-};
-
-const emptySteps = (outcome: PackOutcome, lang: string): EmptyStep[] => {
-  const out: EmptyStep[] = [];
-  const absent = new Set(
-    outcome.participants.filter((p) => !p.present).map((p) => p.persona),
-  );
-  for (const point of outcome.points) {
-    point.route.steps.forEach((step, index) => {
-      const gone = step.filter(
-        (person) => person.name.trim() === "" || absent.has(person.persona),
-      );
-      if (gone.length > 0) {
-        out.push({
-          pointId: point.id,
-          pointName: pickLocalized(point.name, lang, point.id),
-          step: index + 1,
-          personas: gone.map((person) => person.persona),
-        });
-      }
-    });
-  }
-  return out;
-};
 
 const AUTHOR = /^author(\d+)$/;
 
@@ -156,34 +125,7 @@ const ParticipantsBody = ({ outcome }: { outcome: PackOutcome }) => {
           },
         ]}
       />
-      {steps.length > 0 && (
-        <div
-          className="po-warn"
-          role="group"
-          aria-label={t("participants.warnTitle")}
-          data-testid="outcome-participants-warning"
-        >
-          <TriangleAlert
-            size="1rem"
-            aria-hidden="true"
-            className="po-warn-icon"
-          />
-          <div>
-            <p className="po-warn-title">{t("participants.warnTitle")}</p>
-            <ul className="po-warn-list">
-              {steps.map((s) => (
-                <li key={`${s.pointId}:${String(s.step)}`}>
-                  {t("participants.warnStep", {
-                    point: s.pointName,
-                    step: s.step,
-                    who: s.personas.join(", "),
-                  })}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      )}
+      <StepWarning steps={steps} testId="outcome-participants-warning" />
       {people.length === 0 ? (
         <p className="po-note" data-testid="outcome-participants-empty">
           {t("participants.empty")}

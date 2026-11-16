@@ -24,6 +24,8 @@ describe("галерея экрана «Результат»", () => {
         "po_loading",
         "po_unreadable",
         "po_empty",
+        "po_sections_points",
+        "po_sections_route",
         "po_inputs_vkr",
         "po_inputs_changed",
         "po_inputs_scenario",
@@ -53,7 +55,7 @@ describe("галерея экрана «Результат»", () => {
       expect(container.textContent.length, entry.id).toBeGreaterThan(0);
       // Ни одного ключа словаря вместо текста.
       expect(container.textContent, entry.id).not.toMatch(
-        /\b(bar|status|panels|inputs|result|sections|rules|footer|errors)\.[a-z]/,
+        /\b(bar|status|panels|inputs|result|sections|rules|footer|errors|points|route|reasons)\.[a-z]/,
       );
       unmount();
     }
@@ -127,6 +129,35 @@ describe("галерея экрана «Результат»", () => {
         .querySelector('[data-testid="outcome-control-supervisor-company"]')
         ?.getAttribute("aria-checked"),
     ).toBe("true");
+  });
+
+  it("запись маршрута рисует параллельный шаг и пропущенную пару", async () => {
+    await i18n.changeLanguage("ru");
+    const entry = entries.find((e) => e.id === "po_sections_route");
+    expect(entry).toBeDefined();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    entry?.seed?.(client);
+    const { container } = render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>{entry?.render()}</MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const lane = container.querySelector(
+      '[data-testid="outcome-route-pdp-application-steps"]',
+    );
+    expect(lane?.tagName).toBe("OL");
+    expect(lane?.querySelectorAll("li")).toHaveLength(2);
+    expect(
+      container.querySelector('[data-testid="outcome-step-pdp-application-2"]')
+        ?.textContent,
+    ).toContain("параллельно");
+    expect(
+      container.querySelector(
+        '[data-testid="outcome-route-pdp-application-skipped"]',
+      ),
+    ).not.toBeNull();
   });
 
   it.each([
