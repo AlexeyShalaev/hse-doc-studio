@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@shared/ui";
@@ -12,6 +12,7 @@ import {
   versionLangs,
 } from "../../lib/documents";
 import { KINDS } from "../../lib/fields";
+import { useRecordFocus } from "../../lib/focus";
 import {
   asArray,
   asRecord,
@@ -162,6 +163,7 @@ const VariantCard = ({
         <ChipToggles
           label={t("doc.langs")}
           hint={t("doc.variantLangsHint")}
+          at={`/variants/${String(index)}/supported_langs`}
           options={langs.map((l) => ({ value: l, label: l }))}
           value={variantLangs}
           disabled={readOnly}
@@ -178,8 +180,16 @@ const VariantCard = ({
  * Форма `doc.yaml` документа (5.3; T12): названия, файлы, требования, языки,
  * вид работы и состав, группа навигации, варианты и перевод файлов.
  */
-export const DocForm = ({ docId }: { docId: string }) => {
+export const DocForm = ({
+  docId,
+  at,
+}: {
+  docId: string;
+  at?: string | null | undefined;
+}) => {
   const { t } = useTranslation("packForms");
+  const root = useRef<HTMLDivElement>(null);
+  useRecordFocus(root, at, docId);
   const { model, edit, readOnly, busy } = useModelEditor();
   const [addingVariant, setAddingVariant] = useState(false);
   const doc = model.documents.find((d) => d.id === docId);
@@ -204,7 +214,7 @@ export const DocForm = ({ docId }: { docId: string }) => {
   const group = asString(data.group);
 
   return (
-    <div className="pf-section" data-testid="pf-doc-form">
+    <div className="pf-section" data-testid="pf-doc-form" ref={root}>
       <FormBlock title={t("doc.title", { id: doc.id })} lead={t("doc.lead")}>
         <LocalizedInput
           label={t("doc.name")}
@@ -328,6 +338,7 @@ export const DocForm = ({ docId }: { docId: string }) => {
           value={asStrings(data.supported_langs)}
           disabled={readOnly}
           testId="pf-doc-langs"
+          at="/supported_langs"
           onChange={(next) => {
             write(["supported_langs"], next, data);
           }}
@@ -335,6 +346,7 @@ export const DocForm = ({ docId }: { docId: string }) => {
         <div className="pf-grid">
           <ChipToggles
             label={t("doc.kinds")}
+            at="/supported_kinds"
             options={KINDS.map((k) => ({ value: k, label: t(`kinds.${k}`) }))}
             value={kinds.length ? kinds : KINDS}
             disabled={readOnly}
@@ -348,6 +360,7 @@ export const DocForm = ({ docId }: { docId: string }) => {
           />
           <ChipToggles
             label={t("doc.staffing")}
+            at="/supported_staffing"
             options={STAFFING.map((s) => ({
               value: s,
               label: t(`doc.staffingValues.${s}`),
@@ -400,6 +413,7 @@ export const DocForm = ({ docId }: { docId: string }) => {
                 key={`${id}-${String(i)}`}
                 className="pf-item"
                 data-testid={`pf-variant-${id}`}
+                data-pf-at={`/variants/${String(i)}`}
               >
                 <div className="pf-item-head">
                   <span className="mono pf-id">{id}</span>

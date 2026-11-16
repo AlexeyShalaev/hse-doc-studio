@@ -261,6 +261,10 @@ export const InputsPanel = () => {
         inert={inert}
         linked={links.get(input.id) ?? NO_LINKS}
         highlighted={highlight.input === input.id}
+        impactOpen={
+          url.state.selected?.section === "branches" &&
+          url.state.selected.id === input.id
+        }
         onChange={onChange}
         onReset={onReset}
         onHighlight={highlight.setInput}

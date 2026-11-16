@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next";
 import type {
   OutcomeInput,
+  OutcomeTerm,
   OutcomeTrace,
   PackOutcome,
 } from "@entities/pack-studio";
@@ -28,15 +29,24 @@ const lookup = (
   return t(path, { defaultValue: "" }) || null;
 };
 
-export const makeExplainer = (
+/** Тексты условий и фактов решений трассы: ровно то, что вернул сервер, словами. */
+export type TraceText = {
+  /** Подпись вводной или значения для текста (`kind` -> «вид работы»). */
+  subject: (id: string) => string;
+  value: (subject: string, value: string) => string;
+  /** Условие решения человеческой фразой («вид работы: проектный») по всем его терминам. */
+  condition: (trace: OutcomeTrace) => string;
+  /** Что вычислитель увидел: пары «предмет, значение» из `actual`. */
+  facts: (trace: OutcomeTrace) => { subject: string; value: string }[];
+  /** Фраза о невыполненном условии («вид работы: сейчас проектный, нужно исследовательский»). */
+  failure: (trace: OutcomeTrace) => string;
+};
+
+export const makeTraceText = (
   t: TFunction<"packOutcome">,
   lang: string,
-  outcome: PackOutcome,
   inputs: readonly OutcomeInput[] | undefined,
-): Explainer => {
-  const byId = new Map<string, OutcomeTrace>(
-    outcome.trace.map((x) => [x.id, x]),
-  );
+): TraceText => {
   const input = (id: string) => inputs?.find((i) => i.id === id);
 
   const subject = (id: string): string => {
@@ -54,26 +64,55 @@ export const makeExplainer = (
     if (label) return pickLocalized(label, lang, raw);
     return lookup(t, "values", raw) ?? raw;
   };
-
-  const sentence = (trace: OutcomeTrace): string => {
-    return trace.terms
-      .map((term) => {
-        const actualRaw = trace.actual[term.subject];
-        const actual =
-          actualRaw === undefined || actualRaw === ""
-            ? t("reasons.unset")
-            : value(term.subject, actualRaw);
-        const expected = term.expected
-          .map((e) => value(term.subject, e))
-          .join(", ");
-        return t(`reasons.op.${term.op}`, {
-          subject: subject(term.subject),
-          actual,
-          expected,
-        });
-      })
-      .join("; ");
+  const actualOf = (trace: OutcomeTrace, id: string): string => {
+    const raw = trace.actual[id];
+    return raw === undefined || raw === ""
+      ? t("reasons.unset")
+      : value(id, raw);
   };
+  const expectedOf = (term: OutcomeTerm): string =>
+    term.expected.map((e) => value(term.subject, e)).join(", ");
+
+  const failure = (trace: OutcomeTrace): string =>
+    trace.terms
+      .map((term) =>
+        t(`reasons.op.${term.op}`, {
+          subject: subject(term.subject),
+          actual: actualOf(trace, term.subject),
+          expected: expectedOf(term),
+        }),
+      )
+      .join("; ");
+
+  const condition = (trace: OutcomeTrace): string =>
+    trace.terms
+      .map((term) =>
+        t(`rules.cond.${term.op}`, {
+          subject: subject(term.subject),
+          expected: expectedOf(term),
+        }),
+      )
+      .join(t(trace.join === "any" ? "rules.joinAny" : "rules.joinAll"));
+
+  const facts = (trace: OutcomeTrace) =>
+    Object.entries(trace.actual).map(([id, raw]) => ({
+      subject: subject(id),
+      value: raw === "" ? t("reasons.unset") : value(id, raw),
+    }));
+
+  return { subject, value, condition, facts, failure };
+};
+
+export const makeExplainer = (
+  t: TFunction<"packOutcome">,
+  lang: string,
+  outcome: PackOutcome,
+  inputs: readonly OutcomeInput[] | undefined,
+): Explainer => {
+  const byId = new Map<string, OutcomeTrace>(
+    outcome.trace.map((x) => [x.id, x]),
+  );
+  const text = makeTraceText(t, lang, inputs);
 
   const reasons = (why: readonly string[]): string[] => {
     const out: string[] = [];
@@ -82,11 +121,11 @@ export const makeExplainer = (
       if (trace?.status !== "not_held" || trace.terms.length === 0) {
         continue;
       }
-      const text = sentence(trace);
-      if (text && !out.includes(text)) out.push(text);
+      const sentence = text.failure(trace);
+      if (sentence && !out.includes(sentence)) out.push(sentence);
     }
     return out;
   };
 
-  return { reasons, subject, value };
+  return { reasons, subject: text.subject, value: text.value };
 };

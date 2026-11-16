@@ -1,5 +1,6 @@
 import { apiClient, parseResp } from "@shared/api";
 import {
+  PackOutcomeExplainSchema,
   PackOutcomeInputsSchema,
   PackOutcomeSchema,
   PackScenarioEntrySchema,
@@ -7,6 +8,8 @@ import {
   PackScenarioRunSchema,
   type OutcomeState,
   type PackOutcome,
+  type PackOutcomeExplain,
+  type PackOutcomeExplainRequest,
   type PackOutcomeInputs,
   type PackOutcomeRequest,
   type PackScenarioEntry,
@@ -41,6 +44,14 @@ export const scenariosBase = (
 ): string =>
   `${workspace(id)}/templates/${enc(pack)}/${enc(template)}/scenarios`;
 
+/** Ответ «Почему?» вместе с ETag: следующий запрос того же ключа идёт с `If-None-Match`. */
+export type OutcomeExplainReply = {
+  data: PackOutcomeExplain;
+  etag: string | null;
+};
+
+const notModified = (status: number): boolean => status === 304;
+
 export const packOutcomeApi = {
   /** Вводные версии: панель строится из них, ни одной вводной в клиенте не прописано. */
   inputs: (
@@ -66,6 +77,33 @@ export const packOutcomeApi = {
     apiClient
       .post(outcomeBase(id, ref), body, { ...quiet, ...cancel(signal) })
       .then(parseResp(PackOutcomeSchema)),
+  /**
+   * Цепочка решений, соседи и «что если» одного элемента. `known` это прежний ответ на тот же
+   * запрос: уходит `If-None-Match`, а на 304 тот же ответ возвращается без разбора тела.
+   */
+  explain: (
+    id: string,
+    ref: PackVersionRef,
+    body: PackOutcomeExplainRequest,
+    known?: OutcomeExplainReply | null,
+    signal?: AbortSignal,
+  ): Promise<OutcomeExplainReply> =>
+    apiClient
+      .post(`${outcomeBase(id, ref)}/explain`, body, {
+        ...quiet,
+        ...cancel(signal),
+        headers: known?.etag ? { "If-None-Match": known.etag } : {},
+        validateStatus: (status) =>
+          (status >= 200 && status < 300) || notModified(status),
+      })
+      .then((response) => {
+        if (notModified(response.status) && known) return known;
+        const etag: unknown = response.headers.etag;
+        return {
+          data: parseResp(PackOutcomeExplainSchema)(response),
+          etag: typeof etag === "string" ? etag : null,
+        };
+      }),
   /** Сценарии шаблона; битые файлы приходят с `error`. `state`: откуда читать файлы (по умолчанию рабочее дерево). */
   scenarios: (
     id: string,

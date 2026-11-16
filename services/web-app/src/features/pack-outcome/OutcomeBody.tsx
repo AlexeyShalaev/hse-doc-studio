@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -93,6 +94,11 @@ export const OutcomeBody = ({
   const inputsRef = useRef<HTMLElement>(null);
   const resultRef = useRef<HTMLElement>(null);
   const rulesRef = useRef<HTMLElement>(null);
+  // Alt+Z, открывший «Правила и причины», переводит фокус в панель: счётчик меняется на каждое нажатие.
+  const [focusRules, setFocusRules] = useState(0);
+  useEffect(() => {
+    if (focusRules > 0) rulesRef.current?.focus();
+  }, [focusRules]);
 
   const location = findLocation(tree.data, version);
   const found = location !== null;
@@ -147,6 +153,7 @@ export const OutcomeBody = ({
   const model: OutcomeModel = {
     workspaceId: workspace.id,
     ref: version,
+    versionPath: location?.version.path ?? "",
     released: location?.version.released ?? false,
     phone,
     url,
@@ -183,7 +190,14 @@ export const OutcomeBody = ({
       event.preventDefault();
       if (phone)
         update({ tab: url.state.tab === "rules" ? "result" : "rules" });
-      else panels.setRightCollapsed(!panels.rightCollapsed);
+      else {
+        if (panels.rightCollapsed) setFocusRules((n) => n + 1);
+        // Панель, в которой стоял фокус, исчезает: фокус уходит в результат, а не в пустоту.
+        else if (rulesRef.current?.contains(document.activeElement)) {
+          resultRef.current?.focus();
+        }
+        panels.setRightCollapsed(!panels.rightCollapsed);
+      }
     }
   };
 
@@ -416,6 +430,7 @@ export const OutcomeBody = ({
                     className="btn sm po-rail-why"
                     data-testid="outcome-rail-why"
                     onClick={() => {
+                      setFocusRules((n) => n + 1);
                       panels.setRightCollapsed(false);
                     }}
                   >

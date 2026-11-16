@@ -1,15 +1,23 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { EmptyState } from "@shared/ui";
 import { useOutcomeModel } from "../model";
+import { InputImpact } from "./rules/InputImpact";
+import { WhyView } from "./rules/WhyView";
+import type { AppliedWhatIf } from "./rules/WhatIf";
+import "../rules.css";
 
 /**
- * Панель «Правила и причины». Каркас (срез F1): показывает выбранный элемент из адреса и
- * снимает выбор. Цепочка «Почему?», «что ещё решает правило», «что если» и правка по месту
- * приходят срезами F6 и F7.
+ * Панель «Правила и причины» (template-studio-outcome.md, 3.5, срез F6): контекстная, показывает
+ * то, что выбрано в центре. У элемента результата это «Почему?» (цепочка правил, соседи, «что
+ * если»), у вводной из блока «Ветки» или панели вводных её влияние. Правка по месту приходит
+ * срезом F7.
  */
 export const RulesPanel = () => {
   const { t } = useTranslation("packOutcome");
   const { url, select } = useOutcomeModel();
+  // «Что если» живёт выше выбора: вернуть вводную можно и после перехода к другому элементу.
+  const [applied, setApplied] = useState<AppliedWhatIf | null>(null);
   const selected = url.state.selected;
   if (!selected) {
     return (
@@ -21,14 +29,19 @@ export const RulesPanel = () => {
       />
     );
   }
+  const section = selected.section;
   return (
     <div className="po-rules" data-testid="outcome-rules">
-      <p className="po-rules-label">{t("rules.selected")}</p>
-      <p className="po-rules-element" data-testid="outcome-selected">
-        <span className="ps-mark">{t(`sections.${selected.section}`)}</span>
-        <span className="mono po-rules-id">{selected.id}</span>
-      </p>
-      <p className="po-stub">{t("rules.pending")}</p>
+      {section === "branches" ? (
+        <InputImpact key={selected.id} input={selected.id} />
+      ) : (
+        <WhyView
+          key={`${section}:${selected.id}`}
+          element={{ section, id: selected.id }}
+          applied={applied}
+          onApplied={setApplied}
+        />
+      )}
       <button
         type="button"
         className="btn sm"
