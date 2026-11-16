@@ -1,9 +1,9 @@
 import type { KeyboardEvent } from "react";
-import type { OutcomeElementRef } from "@entities/pack-studio";
+import type { OutcomeSelection } from "../../lib/urlState";
 import { useOutcomeModel } from "../../model";
 
 /** Выбран ли элемент: сравнение с `selected` из адреса. */
-export const useIsSelected = (el: OutcomeElementRef): boolean => {
+export const useIsSelected = (el: OutcomeSelection): boolean => {
   const { url } = useOutcomeModel();
   const sel = url.state.selected;
   return sel !== null && sel.section === el.section && sel.id === el.id;
