@@ -9,17 +9,30 @@ import { ApiError } from "@shared/api";
 import type {
   OutcomeElementRef,
   OutcomeState,
+  OutcomeSubject,
   PackOutcome,
+  PackOutcomeAtlas,
+  PackOutcomeCompare,
+  PackOutcomeCompareRequest,
   PackOutcomeExplain,
   PackOutcomeExplainRequest,
+  PackOutcomeImpact,
+  PackOutcomeImpactRequest,
   PackOutcomeInputs,
+  PackOutcomeMatrix,
+  PackOutcomeMatrixRequest,
   PackOutcomeRequest,
   PackScenarioEntry,
   PackScenarioList,
   PackScenarioRun,
   PackScenarioWriteRequest,
 } from "./outcome";
-import { packOutcomeApi, type OutcomeExplainReply } from "./outcomeApi";
+import {
+  packOutcomeApi,
+  type OutcomeExplainReply,
+  type OutcomeReply,
+  type PackOutcomeAtlasRequest,
+} from "./outcomeApi";
 import type { PackVersionRef } from "./packStudioApi";
 import { packStudioKeys } from "./queries";
 
@@ -52,6 +65,70 @@ export const normalizeExplainRequest = (
   return { ...base, element: { section: element.section, id: element.id } };
 };
 
+const byName = ([a]: [string, string], [b]: [string, string]): number =>
+  a < b ? -1 : a > b ? 1 : 0;
+
+const sortedInputs = (
+  inputs: Record<string, string> | undefined,
+): Record<string, string> | undefined => {
+  const entries = Object.entries(inputs ?? {}).sort(byName);
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+};
+
+/** Запрос атласа в каноническом виде: `pin` по алфавиту, пустое отброшено. */
+export const normalizeAtlasRequest = (
+  request: PackOutcomeAtlasRequest,
+): PackOutcomeAtlasRequest => {
+  const out: PackOutcomeAtlasRequest = { state: request.state ?? "work_tree" };
+  if (request.example) out.example = request.example;
+  if (request.scenario) out.scenario = request.scenario;
+  const pin = sortedInputs(request.pin);
+  if (pin) out.pin = pin;
+  return out;
+};
+
+/** Сторона сравнения в каноническом виде: одинаковые по смыслу стороны дают один ключ и один ETag. */
+export const normalizeSubject = (subject: OutcomeSubject): OutcomeSubject => {
+  const out: OutcomeSubject = { state: subject.state ?? "work_tree" };
+  if (subject.scenario) out.scenario = subject.scenario;
+  if (subject.example) out.example = subject.example;
+  const inputs = sortedInputs(subject.inputs);
+  if (inputs) out.inputs = inputs;
+  return out;
+};
+
+export const normalizeCompareRequest = (
+  request: PackOutcomeCompareRequest,
+): PackOutcomeCompareRequest => ({
+  left: normalizeSubject(request.left),
+  right: normalizeSubject(request.right),
+});
+
+/** «До и после»: база по умолчанию `base`, сценарии по алфавиту (пусто или null: все), атлас по умолчанию включён. */
+export const normalizeImpactRequest = (
+  request: PackOutcomeImpactRequest,
+): PackOutcomeImpactRequest => {
+  const out: PackOutcomeImpactRequest = {
+    base: request.base ?? "base",
+    include_atlas: request.include_atlas ?? true,
+  };
+  if (request.scenarios && request.scenarios.length > 0) {
+    out.scenarios = [...request.scenarios].sort();
+  }
+  return out;
+};
+
+export const normalizeMatrixRequest = (
+  request: PackOutcomeMatrixRequest,
+): PackOutcomeMatrixRequest => {
+  const out: PackOutcomeMatrixRequest = { state: request.state ?? "work_tree" };
+  if (request.scenarios && request.scenarios.length > 0) {
+    out.scenarios = [...request.scenarios].sort();
+  }
+  if (request.against) out.against = request.against;
+  return out;
+};
+
 export const packOutcomeKeys = {
   all: (id: string) => [...packStudioKeys.workspace(id), "outcome"] as const,
   version: (id: string, ref: PackVersionRef) =>
@@ -73,6 +150,47 @@ export const packOutcomeKeys = {
       ...packOutcomeKeys.version(id, ref),
       "explain",
       normalizeExplainRequest(request),
+    ] as const,
+  /**
+   * Режимы экрана (срез F9): ключи под общим префиксом версии, поэтому `packOutcomeKeys.all(id)` и
+   * `version(id, ref)` сбрасывают их вместе с результатом; запись сценария сбрасывает `matrix`,
+   * `impact` и `compare`, где участвует сценарий (`refreshScenarioViews`).
+   */
+  atlas: (id: string, ref: PackVersionRef, request: PackOutcomeAtlasRequest) =>
+    [
+      ...packOutcomeKeys.version(id, ref),
+      "atlas",
+      normalizeAtlasRequest(request),
+    ] as const,
+  compare: (
+    id: string,
+    ref: PackVersionRef,
+    request: PackOutcomeCompareRequest,
+  ) =>
+    [
+      ...packOutcomeKeys.version(id, ref),
+      "compare",
+      normalizeCompareRequest(request),
+    ] as const,
+  impact: (
+    id: string,
+    ref: PackVersionRef,
+    request: PackOutcomeImpactRequest,
+  ) =>
+    [
+      ...packOutcomeKeys.version(id, ref),
+      "impact",
+      normalizeImpactRequest(request),
+    ] as const,
+  matrix: (
+    id: string,
+    ref: PackVersionRef,
+    request: PackOutcomeMatrixRequest,
+  ) =>
+    [
+      ...packOutcomeKeys.version(id, ref),
+      "matrix",
+      normalizeMatrixRequest(request),
     ] as const,
   /** Все списки сценариев шаблона (по состояниям): общий префикс для сброса после записи. */
   scenariosAll: (id: string, pack: string, template: string) =>
@@ -240,13 +358,34 @@ const refreshScenarioViews = (
     queryKey: packOutcomeKeys.all(id),
     predicate: ({ queryKey }) => {
       if (queryKey[4] !== pack || queryKey[5] !== template) return false;
-      if (queryKey[7] === "scenario-run") return true;
+      // Прогон, матрица и «до и после» считают по всем сценариям шаблона.
+      if (
+        queryKey[7] === "scenario-run" ||
+        queryKey[7] === "matrix" ||
+        queryKey[7] === "impact"
+      ) {
+        return true;
+      }
       const request: unknown = queryKey[8];
+      if (!results || typeof request !== "object" || request === null) {
+        return false;
+      }
+      if (queryKey[7] === "compare") {
+        return [
+          "left" in request ? request.left : null,
+          "right" in request ? request.right : null,
+        ].some(
+          (side) =>
+            typeof side === "object" &&
+            side !== null &&
+            "scenario" in side &&
+            side.scenario === scenario,
+        );
+      }
       return (
-        results &&
-        (queryKey[7] === "result" || queryKey[7] === "explain") &&
-        typeof request === "object" &&
-        request !== null &&
+        (queryKey[7] === "result" ||
+          queryKey[7] === "explain" ||
+          queryKey[7] === "atlas") &&
         "scenario" in request &&
         request.scenario === scenario
       );
@@ -393,4 +532,221 @@ export const usePackOutcomeExplain = (
     // Ответ зависит только от ключа: свежим он остаётся, пока не сменится `revision`.
     staleTime: 15_000,
   });
+};
+
+/** Занятый сервер повторяется до трёх раз через `retry_after_s`; сеть и 5xx один раз; 4xx никогда. */
+const retryOutcomeOrBusy = (count: number, error: unknown): boolean =>
+  isOutcomeBusy(error) ? count < 3 : retryOutcome(count, error);
+const busyRetryDelay = (_count: number, error: unknown): number =>
+  isOutcomeBusy(error) ? busyDelaySeconds(error) * 1000 : 1000;
+
+/**
+ * Общая основа запросов режимов (атлас, сравнение, матрица, «до и после»): прежний ответ того же
+ * ключа уходит условным запросом (`If-None-Match`), на 304 берётся он же; прежние данные другого
+ * ключа на экране не остаются (чужая таблица под новым заголовком вводила бы в заблуждение).
+ */
+const useConditionalOutcome = <T>(
+  key: readonly unknown[],
+  fetcher: (
+    known: OutcomeReply<T> | null,
+    signal: AbortSignal,
+  ) => Promise<OutcomeReply<T>>,
+  enabled: boolean,
+) => {
+  const client = useQueryClient();
+  return useQuery<OutcomeReply<T>, Error, T>({
+    queryKey: key,
+    queryFn: ({ signal, queryKey }) =>
+      fetcher(client.getQueryData<OutcomeReply<T>>(queryKey) ?? null, signal),
+    select: (reply) => reply.data,
+    enabled,
+    retry: retryOutcomeOrBusy,
+    retryDelay: busyRetryDelay,
+    refetchOnWindowFocus: false,
+    staleTime: 15_000,
+  });
+};
+
+const NO_VERSION: PackVersionRef = { pack: "", template: "", version: "" };
+const noVersion = (): Error => new Error("version is not chosen");
+
+/**
+ * Атлас версии (режим «Атлас»): измерения, исходы, таблица `{key, outcome}`. Считается секунды, поэтому
+ * включается только на открытом режиме (`enabled`). Ошибки: `atlas_too_large`, `outcome_busy`
+ * (разбирает `classifyOutcomeFailure`).
+ */
+export const usePackOutcomeAtlas = (
+  id: string,
+  ref: PackVersionRef | null,
+  request: PackOutcomeAtlasRequest,
+  enabled = true,
+) =>
+  useConditionalOutcome<PackOutcomeAtlas>(
+    packOutcomeKeys.atlas(id, ref ?? NO_VERSION, request),
+    (known, signal) => {
+      if (!ref) throw noVersion();
+      return packOutcomeApi.atlas(
+        id,
+        ref,
+        normalizeAtlasRequest(request),
+        known,
+        signal,
+      );
+    },
+    enabled && ref !== null,
+  );
+
+/**
+ * Сравнение двух сторон (режим «Сравнить»): `changes` со знаками, причинами `why` и сводкой по
+ * разделам. Ошибки: `diff_base_unavailable` (причины `no_git`, `no_base`, `new_version`),
+ * `inputs_invalid`, `outcome_busy`.
+ */
+export const usePackOutcomeCompare = (
+  id: string,
+  ref: PackVersionRef | null,
+  request: PackOutcomeCompareRequest,
+  enabled = true,
+) =>
+  useConditionalOutcome<PackOutcomeCompare>(
+    packOutcomeKeys.compare(id, ref ?? NO_VERSION, request),
+    (known, signal) => {
+      if (!ref) throw noVersion();
+      return packOutcomeApi.compare(
+        id,
+        ref,
+        normalizeCompareRequest(request),
+        known,
+        signal,
+      );
+    },
+    enabled && ref !== null,
+  );
+
+/**
+ * «До и после»: рабочее дерево против базы по сценариям шаблона и атласу (`summary`, `scenarios`,
+ * `new_findings`). Для среза F10 («Предложить изменения»): включается при открытом диалоге
+ * (`enabled`), ключ `packOutcomeKeys.impact(id, ref, request)` под общим префиксом версии, поэтому
+ * запись сценария и `packOutcomeKeys.all(id)` его сбрасывают. Атлас внутри считается секунды:
+ * `include_atlas: false` его пропускает. Ошибки: `diff_base_unavailable`, `outcome_too_large`,
+ * `outcome_busy` (повторяется сам до трёх раз), разбор в `classifyOutcomeFailure`.
+ */
+export const usePackOutcomeImpact = (
+  id: string,
+  ref: PackVersionRef | null,
+  request: PackOutcomeImpactRequest,
+  enabled = true,
+) =>
+  useConditionalOutcome<PackOutcomeImpact>(
+    packOutcomeKeys.impact(id, ref ?? NO_VERSION, request),
+    (known, signal) => {
+      if (!ref) throw noVersion();
+      return packOutcomeApi.impact(
+        id,
+        ref,
+        normalizeImpactRequest(request),
+        known,
+        signal,
+      );
+    },
+    enabled && ref !== null,
+  );
+
+/**
+ * Матрица «сценарии на разделы» (режим «Матрица»). `against: "base"` добавляет пометки `changed`
+ * против базы. Ошибки: `outcome_too_large`, `diff_base_unavailable` (только с `against`), `outcome_busy`.
+ */
+export const usePackOutcomeMatrix = (
+  id: string,
+  ref: PackVersionRef | null,
+  request: PackOutcomeMatrixRequest,
+  enabled = true,
+) =>
+  useConditionalOutcome<PackOutcomeMatrix>(
+    packOutcomeKeys.matrix(id, ref ?? NO_VERSION, request),
+    (known, signal) => {
+      if (!ref) throw noVersion();
+      return packOutcomeApi.matrix(
+        id,
+        ref,
+        normalizeMatrixRequest(request),
+        known,
+        signal,
+      );
+    },
+    enabled && ref !== null,
+  );
+
+/** Почему нет базы для сравнения (`reason` у `diff_base_unavailable`). */
+export type DiffBaseReason = "no_git" | "no_base" | "new_version";
+
+/**
+ * Отказ вычислителя одним видом: экран решает, что показать (подсказка закрепить вводные, «сравнивать
+ * не с чем», «выберите меньше сценариев», «повторить через N с»). Тексты берутся у экрана,
+ * подробности (`limit`, `rows`, `reason`) из тела ответа.
+ */
+export type OutcomeFailure =
+  | { kind: "busy"; retryAfterS: number }
+  | { kind: "atlas_too_large"; limit: number | null; rows: number | null }
+  | { kind: "diff_base_unavailable"; reason: DiffBaseReason | null }
+  | { kind: "outcome_too_large"; limit: number | null; size: number | null }
+  | {
+      kind: "inputs_invalid";
+      field: string | null;
+      value: string | null;
+      reason: string | null;
+    }
+  | { kind: "unreadable"; reason: string | null }
+  | { kind: "offline" }
+  | { kind: "server" }
+  | { kind: "other" };
+
+const num = (raw: unknown): number | null =>
+  typeof raw === "number" && Number.isFinite(raw) ? raw : null;
+const str = (raw: unknown): string | null =>
+  typeof raw === "string" && raw !== "" ? raw : null;
+
+export const classifyOutcomeFailure = (error: unknown): OutcomeFailure => {
+  if (!(error instanceof ApiError)) return { kind: "other" };
+  const data = error.data;
+  if (isOutcomeBusy(error)) {
+    return { kind: "busy", retryAfterS: busyDelaySeconds(error) };
+  }
+  if (error.code === "atlas_too_large") {
+    return {
+      kind: "atlas_too_large",
+      limit: num(data?.limit),
+      rows: num(data?.rows),
+    };
+  }
+  if (error.code === "diff_base_unavailable") {
+    const reason = data?.reason;
+    return {
+      kind: "diff_base_unavailable",
+      reason:
+        reason === "no_git" || reason === "no_base" || reason === "new_version"
+          ? reason
+          : null,
+    };
+  }
+  if (error.code === "outcome_too_large") {
+    return {
+      kind: "outcome_too_large",
+      limit: num(data?.limit),
+      size: num(data?.size),
+    };
+  }
+  if (error.code === "inputs_invalid") {
+    return {
+      kind: "inputs_invalid",
+      field: str(data?.field),
+      value: str(data?.value),
+      reason: str(data?.reason),
+    };
+  }
+  if (error.code === "version_unreadable") {
+    return { kind: "unreadable", reason: str(data?.reason) };
+  }
+  if (error.status === 0) return { kind: "offline" };
+  if (error.status >= 500) return { kind: "server" };
+  return { kind: "other" };
 };

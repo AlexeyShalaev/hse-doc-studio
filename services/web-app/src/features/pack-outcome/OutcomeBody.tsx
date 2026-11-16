@@ -34,6 +34,7 @@ import { type OutcomeModel } from "./model";
 import { FilesDrawer } from "./ui/FilesDrawer";
 import { Footer } from "./ui/Footer";
 import { InputsPanel } from "./ui/InputsPanel";
+import { ModeTabs } from "./ui/ModeTabs";
 import { Notice } from "./ui/Notice";
 import { PanelShell } from "./ui/PanelShell";
 import { ResultCenter } from "./ui/ResultCenter";
@@ -269,6 +270,7 @@ export const OutcomeBody = ({
       className="po-center"
       data-testid="outcome-center"
     >
+      {student ? null : <ModeTabs />}
       <ResultCenter />
     </section>
   );

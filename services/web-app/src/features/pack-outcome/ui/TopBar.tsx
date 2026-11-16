@@ -76,6 +76,7 @@ export const TopBar = ({ tree, location, dirty, onOpenFiles }: TopBarProps) => {
       state: url.state.state,
       mode: url.state.mode,
       tab: url.state.tab,
+      view: url.state.view,
       scenario: sameTemplate ? url.state.scenario : null,
     }).toString();
     void navigate(packOutcomePath(workspaceId, target, search));

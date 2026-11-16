@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { FileText } from "lucide-react";
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
@@ -7,6 +8,8 @@ import { EmptyState } from "@shared/ui";
 import { summarize } from "../lib/summary";
 import { useOutcomeModel } from "../model";
 import { Notice } from "./Notice";
+import { VIEW_PANEL_ID, viewTabId } from "./modeIds";
+import { ModeSkeleton } from "./ModeSkeleton";
 import {
   BranchesSection,
   ChecksSection,
@@ -16,6 +19,11 @@ import {
   PointsSection,
   RouteSection,
 } from "./sections";
+
+// Режимы «Матрица», «Атлас», «Сравнить» (срез F9) грузятся отдельным чанком: открывают их реже.
+const OutcomeModes = lazy(() =>
+  import("../modes").then((module) => ({ default: module.OutcomeModes })),
+);
 
 /** Причина, по которой лоадер не прочитал версию (`reason` в теле ошибки), если сервер её прислал. */
 const reasonOf = (error: unknown): string | null => {
@@ -33,6 +41,22 @@ export const ResultCenter = () => {
   const { t } = useTranslation("packOutcome");
   const model = useOutcomeModel();
   const { outcome, shown, workspaceId, ref, url } = model;
+  const view = url.state.mode === "student" ? "result" : url.state.view;
+  if (view !== "result") {
+    return (
+      <div
+        className="po-center-body"
+        id={VIEW_PANEL_ID}
+        role="tabpanel"
+        aria-labelledby={viewTabId(view)}
+        data-testid={`outcome-view-panel-${view}`}
+      >
+        <Suspense fallback={<ModeSkeleton />}>
+          <OutcomeModes view={view} />
+        </Suspense>
+      </div>
+    );
+  }
   const failed = outcome.isError;
   const error: unknown = failed ? outcome.error : null;
   const unreadable =
@@ -79,7 +103,14 @@ export const ResultCenter = () => {
   const empty = shown?.documents.length === 0;
 
   return (
-    <div className="po-center-body">
+    <div
+      className="po-center-body"
+      id={VIEW_PANEL_ID}
+      role={url.state.mode === "student" ? undefined : "tabpanel"}
+      aria-labelledby={
+        url.state.mode === "student" ? undefined : viewTabId("result")
+      }
+    >
       <div className="po-summary" data-testid="outcome-summary">
         {sum ? (
           <p className="po-summary-text">

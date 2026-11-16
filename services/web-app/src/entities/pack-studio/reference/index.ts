@@ -1,5 +1,9 @@
 export {
+  COURSEWORK_ATLAS,
+  COURSEWORK_COMPARE,
+  COURSEWORK_IMPACT,
   COURSEWORK_INPUTS,
+  COURSEWORK_MATRIX,
   COURSEWORK_OUTCOME,
   COURSEWORK_RUN,
   COURSEWORK_SCENARIOS,
@@ -8,6 +12,13 @@ export {
   VKR_INPUTS,
   VKR_OUTCOME,
 } from "./fixtures";
+export {
+  buildVkrAtlas,
+  modesCalls,
+  pinnedAtlas,
+  setModesBehavior,
+} from "./modes";
+export type { ModesBehavior } from "./modes";
 export { elementInfos, explainFor, realExplains } from "./explain";
 export {
   REFERENCE_BEHAVIORS,

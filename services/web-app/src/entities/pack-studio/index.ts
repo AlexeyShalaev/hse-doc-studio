@@ -14,19 +14,33 @@ export type { PackFile, PackVersionRef } from "./api/packStudioApi";
 // эндпоинтов (outcomeApi, хуки). Сервер результата приходит срезами O1 и O2; до них клиент
 // живёт на эталонах контракта (reference/, только разработка и тесты).
 export * from "./api/outcome";
-export { packOutcomeApi } from "./api/outcomeApi";
-export type { OutcomeExplainReply } from "./api/outcomeApi";
+export { atlasQuery, packOutcomeApi } from "./api/outcomeApi";
+export type {
+  OutcomeExplainReply,
+  OutcomeReply,
+  PackOutcomeAtlasRequest,
+} from "./api/outcomeApi";
 export {
   busyDelaySeconds,
+  classifyOutcomeFailure,
   isElementGone,
   isOutcomeBusy,
+  normalizeAtlasRequest,
+  normalizeCompareRequest,
   normalizeExplainRequest,
+  normalizeImpactRequest,
+  normalizeMatrixRequest,
   normalizeOutcomeRequest,
+  normalizeSubject,
   packOutcomeKeys,
   retryOutcome,
   usePackOutcome,
   useDeletePackScenario,
+  usePackOutcomeAtlas,
+  usePackOutcomeCompare,
   usePackOutcomeExplain,
+  usePackOutcomeImpact,
+  usePackOutcomeMatrix,
   usePackOutcomeInputs,
   usePackScenarioRun,
   usePackScenarios,
@@ -34,6 +48,8 @@ export {
 } from "./api/outcomeQueries";
 export type {
   DeletePackScenario,
+  DiffBaseReason,
+  OutcomeFailure,
   WritePackScenario,
 } from "./api/outcomeQueries";
 // Срез T14: файлы правил проверок и checks_version формой.
