@@ -1,0 +1,96 @@
+% !TeX program = xelatex
+% ============================================================
+% pdp_report_title/pdp_report_title.tex — «Титульный лист отчёта о
+% преддипломной практике» по официальной форме
+% «1-4-Форма титульного листа отчета ПДП».
+%
+% Загружается в «Отчёт о ПДП» (СмартЛМС) ОТДЕЛЬНО ПОДПИСАННЫМ вместе с
+% подписанным текстом ВКР. Подписывают студент и руководитель(-и)
+% практики; руководители также выставляют оценку. Официальная форма
+% русская. Данные — из настроек (\hse…).
+% ============================================================
+\documentclass[12pt,a4paper]{extarticle}
+\input{../common/preamble}
+\newcommand{\docname}{Титульный лист отчёта о ПДП}
+\newcommand{\doccode}{}
+\newcommand{\doccodelu}{}
+\input{../common/commands}
+\begin{document}
+\pagestyle{empty}
+\sloppy
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+\singlespacing
+
+\begin{center}
+Правительство Российской Федерации\\
+Федеральное государственное автономное образовательное учреждение высшего образования\\
+«Национальный исследовательский университет\\
+«Высшая школа экономики»
+
+\vspace{1.2em}
+\hseFaculty\\
+% «бакалавриат» + «а» = «бакалавриата» (родительный падеж приклейкой)
+Образовательная программа \hseDegreeLevel{}а «\hseSpecialization»
+
+\vspace{2.6em}
+\textbf{\large ОТЧЕТ}
+
+\vspace{0.4em}
+\textbf{по преддипломной практике}
+
+\vspace{0.9em}
+Подготовка ВКР на тему\\
+«\hseProjectName»
+\end{center}
+
+\vspace{2.8em}
+\noindent\hfill
+\begin{minipage}[t]{0.55\textwidth}
+\raggedright
+Выполнил(а) студент\\
+образовательной программы\\
+\hseProgramCode\ «\hseSpecialization»\\
+группы \hseGroup
+
+\vspace{0.6em}
+\strut\hseAuthorName\\[-0.05cm]
+\rule{6cm}{0.4pt}\\[-0.05cm]
+{\scriptsize (подпись, инициалы, фамилия)}
+\end{minipage}
+
+\vspace{1.6em}
+Руководитель практики от НИУ ВШЭ
+
+\smallskip
+\hseSupervisorName, НИУ ВШЭ, \hseSupervisorTitle
+
+\vspace{0.7em}
+\rule{2.6cm}{0.4pt}\quad\rule{3.2cm}{0.4pt}\quad\rule{4.2cm}{0.4pt}\\
+{\scriptsize \hspace{0.4cm}(дата)\hspace{2.4cm}(оценка)\hspace{3.2cm}(подпись)}
+
+\ifhseHasCoSupervisor
+\vspace{1.2em}
+Руководитель практики от профильной организации
+
+\smallskip
+\hseCoSupervisorName, \hseFill{организация, должность}
+
+\vspace{0.7em}
+\rule{2.6cm}{0.4pt}\quad\rule{3.2cm}{0.4pt}\quad\rule{4.2cm}{0.4pt}\\
+{\scriptsize \hspace{0.4cm}(дата)\hspace{2.4cm}(оценка)\hspace{3.2cm}(подпись)}
+\fi
+
+\vspace{1.2em}
+Оценка комиссии
+
+\vspace{0.7em}
+\rule{2.6cm}{0.4pt}\quad\rule{3.2cm}{0.4pt}\\
+{\scriptsize \hspace{0.4cm}(дата)\hspace{2.4cm}(оценка)}
+
+\vfill
+\begin{center}
+\hseCity{} -- \hseYear
+\end{center}
+
+\end{document}
