@@ -24,6 +24,7 @@ from hse_doc_studio.core.meta_usage import (
     referenced_keys,
     used_macros,
 )
+from hse_doc_studio.core.pack_studio.outcome.predicates import document_in_scope, field_visible_for_kind
 from hse_doc_studio.core.team import is_team
 
 _SOURCE_SUFFIXES = (".tex", ".j2")
@@ -48,7 +49,7 @@ class ProjectField:
 
 def visible_for_kind(definition: MetaFieldDef, kind: str) -> bool:
     """Как `metaFieldVisibleForKind` в настройках: пустой список видов значит «во всех»."""
-    return not definition.supported_kinds or kind in definition.supported_kinds
+    return field_visible_for_kind(definition.supported_kinds, kind)
 
 
 def project_documents(project: Project, version: TemplateVersion) -> list[DocumentDefinition]:
@@ -56,7 +57,7 @@ def project_documents(project: Project, version: TemplateVersion) -> list[Docume
     return [
         doc
         for doc in version.documents
-        if project.kind in doc.supported_kinds and str(project.staffing) in doc.supported_staffing
+        if document_in_scope(doc.supported_kinds, doc.supported_staffing, str(project.kind), str(project.staffing))
     ]
 
 

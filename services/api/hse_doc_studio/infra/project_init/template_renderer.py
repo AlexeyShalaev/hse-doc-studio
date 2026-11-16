@@ -218,8 +218,26 @@ def _should_render(path: Path) -> bool:
     return path.suffix.lower() in _TEXT_EXTENSIONS
 
 
-def _render_text(content: str, context: dict[str, Any], source_path: Path) -> str:
+class TemplateRenderError(Exception):
+    """Шаблон не отрендерился в строгом режиме (`strict=True`, режим resolve): путь и причина.
+
+    Сборка проекта строгим режимом не пользуется: она по-прежнему копирует файл как есть и пишет предупреждение.
+    Строгий режим нужен проверке «шаблон падает при рендере, а загрузчик молча копирует его» (правило
+    `jinja-fail-open` линтера результата, `docs/design/template-studio-outcome.md`, раздел 6.1): там ошибку надо
+    видеть, а не терять.
+    """
+
+    def __init__(self, source_path: Path, cause: Exception) -> None:
+        super().__init__(f"{source_path}: {type(cause).__name__}: {cause}")
+        self.source_path = source_path
+        self.cause = cause
+
+
+def _render_text(content: str, context: dict[str, Any], source_path: Path, *, strict: bool = False) -> str:
     """Render Jinja2 template; return original content on hard errors.
+
+    `strict=True` (режим resolve): ошибка рендера поднимается как `TemplateRenderError`, тихой копии файла нет.
+    Поведение сборки (`strict=False`) не меняется.
 
     Uses ChainableUndefined so missing chained attributes (e.g. project.meta.foo
     when meta has no `foo`) render as empty string instead of leaking raw
@@ -244,34 +262,24 @@ def _render_text(content: str, context: dict[str, Any], source_path: Path) -> st
         # / `((# ... #))` accordingly (see pres beamer template). Разметка
         # задана в jinja_sandbox.LATEX_SYNTAX.
         return pack_environment().render_source(content, context)
-    except TemplateSyntaxError as exc:
-        logger.warning(
-            "jinja2 syntax error, copying as-is",
-            path=str(source_path),
-            exc=str(exc),
-        )
-        return content
-    except SecurityError as exc:
-        logger.warning(
-            "jinja2 sandbox violation, copying as-is",
-            path=str(source_path),
-            exc=str(exc),
-        )
-        return content
-    except UndefinedError as exc:
-        logger.warning(
-            "jinja2 undefined variable, copying as-is",
-            path=str(source_path),
-            exc=str(exc),
-        )
-        return content
     except Exception as exc:
-        logger.warning(
-            "jinja2 render error, copying as-is",
-            path=str(source_path),
-            exc=str(exc),
-        )
-        return content
+        if strict:
+            raise TemplateRenderError(source_path, exc) from exc
+        return _fallback_copy(exc, content, source_path)
+
+
+def _fallback_copy(exc: Exception, content: str, source_path: Path) -> str:
+    """Тихая копия файла как есть с предупреждением: так сборка проекта переживает битый шаблон."""
+    if isinstance(exc, TemplateSyntaxError):
+        message = "jinja2 syntax error, copying as-is"
+    elif isinstance(exc, SecurityError):
+        message = "jinja2 sandbox violation, copying as-is"
+    elif isinstance(exc, UndefinedError):
+        message = "jinja2 undefined variable, copying as-is"
+    else:
+        message = "jinja2 render error, copying as-is"
+    logger.warning(message, path=str(source_path), exc=str(exc))
+    return content
 
 
 # Слайды официального pptx-шаблона несут Jinja-плейсхолдеры прямо в XML —
@@ -291,6 +299,7 @@ class TemplateRenderer:
         extra_skip_dirs: frozenset[Path] = frozenset(),
         skip_existing: bool = False,
         lang_codes: tuple[str, ...] | None = None,
+        strict: bool = False,
     ) -> list[str]:
         """
         Copy files from version_files_dir into dest_folder.
@@ -312,6 +321,10 @@ class TemplateRenderer:
         - `skip_existing=True` — существующие файлы назначения НЕ трогаются
           (правки студента не перезаписываются), докладываются только
           отсутствующие.
+        - `strict=True` — режим resolve: ошибка рендера Jinja (текст и слайды
+          pptx) поднимается как `TemplateRenderError`, а не превращается в
+          тихую копию файла. Сборка проекта strict не включает и ведёт себя
+          как прежде.
         Returns the POSIX dest (project-space) rel paths of files actually written.
         """
         if not version_files_dir.exists():
@@ -343,7 +356,7 @@ class TemplateRenderer:
             if src_file.suffix.lower() == ".pptx":
                 # .pptx остаётся в _BINARY_EXTENSIONS (другие потоки полагаются
                 # на это), но здесь ветвимся раньше: слайды рендерятся Jinja.
-                self._copy_pptx_rendered(src_file, dest_file, context)
+                self._copy_pptx_rendered(src_file, dest_file, context, strict=strict)
                 written.append(dest_rel)
             elif _is_binary(src_file):
                 shutil.copy2(src_file, dest_file)
@@ -352,10 +365,12 @@ class TemplateRenderer:
             elif _should_render(src_file):
                 try:
                     content = src_file.read_text(encoding="utf-8")
-                    rendered = _render_text(content, context, src_file)
+                    rendered = _render_text(content, context, src_file, strict=strict)
                     dest_file.write_text(rendered, encoding="utf-8")
                     logger.debug("rendered text", src=str(src_file), dest=str(dest_file))
                     written.append(dest_rel)
+                except TemplateRenderError:
+                    raise
                 except Exception as exc:
                     logger.warning(
                         "text file copy error, skipping",
@@ -369,7 +384,9 @@ class TemplateRenderer:
                 written.append(dest_rel)
         return written
 
-    def _copy_pptx_rendered(self, src_file: Path, dest_file: Path, context: dict[str, Any]) -> None:
+    def _copy_pptx_rendered(
+        self, src_file: Path, dest_file: Path, context: dict[str, Any], *, strict: bool = False
+    ) -> None:
         """Копирует .pptx как zip, прогоняя slide-XML через Jinja.
 
         Официальный университетский pptx-шаблон несёт плейсхолдеры пака
@@ -378,7 +395,8 @@ class TemplateRenderer:
         есть маркеры Jinja; все остальные члены архива копируются
         байт-в-байт с сохранением порядка. Любая ошибка (битый zip, не-utf8,
         ...) — предупреждение и честный copy2: создание проекта не должно
-        падать из-за презентации.
+        падать из-за презентации. В строгом режиме (`strict`, режим resolve) ошибка
+        рендера слайда поднимается как `TemplateRenderError`.
         """
         try:
             with zipfile.ZipFile(src_file, "r") as src_zip:
@@ -389,7 +407,7 @@ class TemplateRenderer:
                     if _PPTX_SLIDE_XML_RE.match(info.filename):
                         text = data.decode("utf-8")
                         if "{{" in text or "((*" in text:
-                            payload = _render_text(text, context, src_file).encode("utf-8")
+                            payload = _render_text(text, context, src_file, strict=strict).encode("utf-8")
                     # Свежий ZipInfo: имя/дата — из исходника, без унаследованных
                     # флагов (data descriptor и т.п.), сжатие — ZIP_DEFLATED.
                     out_info = zipfile.ZipInfo(info.filename, date_time=info.date_time)
@@ -397,6 +415,8 @@ class TemplateRenderer:
                     out_info.compress_type = zipfile.ZIP_DEFLATED
                     dest_zip.writestr(out_info, payload)
             logger.debug("rendered pptx", src=str(src_file), dest=str(dest_file))
+        except TemplateRenderError:
+            raise
         except Exception as exc:
             logger.warning("pptx render error, copying as-is", src=str(src_file), exc=str(exc))
             shutil.copy2(src_file, dest_file)
@@ -646,6 +666,8 @@ def regenerate_dynamic_includes(
     project: Project,
     version: TemplateVersion,
     template_repo: ITemplateRepository,
+    *,
+    strict: bool = False,
 ) -> None:
     """(Re)render every `DynamicInclude` from the project into its folder.
 
@@ -654,6 +676,8 @@ def regenerate_dynamic_includes(
     build without re-rendering the user's own `.tex` files. Errors are logged
     and swallowed: a missing/broken include must never abort a compile — the
     build falls back to the previously generated file.
+
+    `strict=True` (режим resolve): ошибка рендера инклуда поднимается как `TemplateRenderError`.
     """
     if not version.dynamic_includes:
         return
@@ -668,15 +692,17 @@ def regenerate_dynamic_includes(
         if context is None:
             logger.warning("regenerate_dynamic_includes: cannot build context", project_id=str(project.id))
             return
-        _render_includes_into_base(project, version, files_dir, context, base_dir)
+        _render_includes_into_base(project, version, files_dir, context, base_dir, strict=strict)
 
 
-def _render_includes_into_base(
+def _render_includes_into_base(  # noqa: PLR0913 — проект, версия, каталог, контекст, база и режим
     project: Project,
     version: TemplateVersion,
     files_dir: Path,
     context: dict[str, Any],
     base_dir: str,
+    *,
+    strict: bool = False,
 ) -> None:
     for inc in version.dynamic_includes:
         src = files_dir / inc.template
@@ -684,11 +710,13 @@ def _render_includes_into_base(
             logger.warning("dynamic include source missing", template=inc.template, path=str(src))
             continue
         try:
-            rendered = _render_text(src.read_text(encoding="utf-8"), context, src)
+            rendered = _render_text(src.read_text(encoding="utf-8"), context, src, strict=strict)
             dest = project.folder / prefix_path(base_dir, inc.output)
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_text(rendered, encoding="utf-8")
             logger.debug("dynamic include regenerated", template=inc.template, output=inc.output, base=base_dir or ".")
+        except TemplateRenderError:
+            raise
         except Exception as exc:
             logger.warning("dynamic include render error", template=inc.template, exc=str(exc))
 

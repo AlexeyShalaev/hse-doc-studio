@@ -7,6 +7,7 @@ import structlog
 
 from hse_doc_studio.core.catalog import FormDefinition
 from hse_doc_studio.core.entities import Project
+from hse_doc_studio.core.pack_studio.outcome.predicates import kind_allowed
 from hse_doc_studio.core.repositories import (
     IFormStateRepository,
     IProjectIndexRepository,
@@ -72,7 +73,7 @@ class ListFormsUC:
         for form in version.forms:
             # Формы гейтятся по виду проекта (supported_kinds), как документы:
             # research-форма (напр. «Ссылка на код») в программном виде не видна.
-            if str(project.kind) not in form.supported_kinds:
+            if not kind_allowed(form.supported_kinds, str(project.kind)):
                 continue
             if team and form.per_author:
                 for author in managed_authors(project):

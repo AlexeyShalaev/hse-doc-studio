@@ -22,6 +22,7 @@ from uuid import UUID
 from hse_doc_studio.core.catalog import DocumentDefinition, MetaFieldDef, TemplateVersion
 from hse_doc_studio.core.doc_dirs import def_source_dirs
 from hse_doc_studio.core.enums import Lang, MetaFieldType, PersonRole, ProjectKind, ProjectStaffing, RequiredAt
+from hse_doc_studio.core.pack_studio.outcome.predicates import document_in_scope
 from hse_doc_studio.core.team import normalize_team_authors
 from hse_doc_studio.core.value_objects import Author, Person
 
@@ -133,8 +134,10 @@ def _meta_switch(field_id: str, meta: MetaFieldDef) -> PreviewSwitch | None:
     return None
 
 
-def switches_for(version: TemplateVersion) -> tuple[PreviewSwitch, ...]:
-    """Переключатели версии (6.2): язык, вид, состав, люди проекта, NDA и до пяти полей select и bool."""
+def switches_for(version: TemplateVersion, *, max_meta: int | None = MAX_META_SWITCHES) -> tuple[PreviewSwitch, ...]:
+    """Переключатели версии (6.2): язык, вид, состав, люди проекта, NDA и до пяти полей select и bool.
+
+    `max_meta` None: все поля select и bool (вводные вычислителя результата, раздел 2.1 дизайна: в нём все)."""
     langs = version_langs(version)
     kinds = version_kinds(version)
     staffing = _staffing_values(version)
@@ -154,7 +157,7 @@ def switches_for(version: TemplateVersion) -> tuple[PreviewSwitch, ...]:
         switches.append(PreviewSwitch(SWITCH_NDA, (NO, YES), NO))
     meta_switches: list[PreviewSwitch] = []
     for field_id, meta in version.meta_fields.items():
-        if len(meta_switches) >= MAX_META_SWITCHES:
+        if max_meta is not None and len(meta_switches) >= max_meta:
             break
         if field_id == SWITCH_NDA and version.nda is not None:
             continue
@@ -581,9 +584,7 @@ def _lengthened(project: SyntheticProject) -> SyntheticProject:
 
 def document_present(doc: DocumentDefinition, project: SyntheticProject) -> bool:
     """Есть ли документ в проекте этой комбинации: вид работы и состав (как `create_project._build_documents`)."""
-    if project.kind.value not in doc.supported_kinds:
-        return False
-    return project.staffing.value in doc.supported_staffing
+    return document_in_scope(doc.supported_kinds, doc.supported_staffing, project.kind.value, project.staffing.value)
 
 
 # ── Ключ кэша ──────────────────────────────────────────────────────────────
