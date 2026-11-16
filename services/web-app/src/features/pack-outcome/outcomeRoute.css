@@ -1,0 +1,251 @@
+/* Секции F4: точки сдачи и маршрут подписания. Отдельный файл: срезы F2 и F5 правят outcome.css. */
+
+/* ── точки сдачи ── */
+.po-route {
+  container-type: inline-size;
+}
+.po-point,
+.po-route {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding-bottom: 0.5rem;
+}
+.po-point[data-selected="true"] {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-line);
+}
+.po-point-hint {
+  font-weight: 600;
+  color: var(--fg-1);
+}
+.po-point-empty {
+  margin: 0;
+  padding: 0 0.625rem;
+}
+.po-sub-title {
+  margin: 0.25rem 0.625rem 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+.po-rows {
+  display: grid;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0 0.5rem;
+  list-style: none;
+  min-width: 0;
+}
+.po-point .po-disc,
+.po-route .po-disc {
+  padding: 0 0.5rem;
+}
+.po-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  justify-content: space-between;
+}
+.po-row > .po-pick {
+  flex: 1 1 12rem;
+  width: auto;
+  min-width: 0;
+}
+.po-link-btn {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  gap: 0.25rem;
+  margin: 0 0.5rem 0 0;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.71875rem;
+  cursor: pointer;
+}
+.po-link-btn:hover,
+.po-link-btn[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.po-link-btn:focus-visible {
+  outline-offset: 1px;
+}
+
+/* ── маршрут: дорожка шагов ── */
+.po-route-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.375rem 0.75rem;
+  padding: 0.5rem 0.625rem 0;
+}
+.po-route-title {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--fg-0);
+  overflow-wrap: anywhere;
+}
+.po-route-meta {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+.po-lane {
+  display: flex;
+  align-items: stretch;
+  gap: 1.5rem;
+  margin: 0;
+  padding: 0.25rem 0.5rem;
+  list-style: none;
+  counter-reset: po-step;
+}
+.po-step {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 16rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-3, 0.5rem);
+  background: var(--bg-1);
+}
+.po-step:hover {
+  border-color: var(--border-strong);
+}
+.po-step:has(.po-pick[aria-pressed="true"]) {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-line);
+  background: var(--accent-soft);
+}
+/* Стрелка к следующему шагу: горизонтальная на десктопе, вертикальная на телефоне. */
+.po-step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  width: 1.5rem;
+  height: 0;
+  border-top: 2px solid var(--border-strong);
+  transform: translateY(-1px);
+}
+.po-step:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: calc(100% + 1.5rem - 0.5rem);
+  width: 0.4rem;
+  height: 0.4rem;
+  border-top: 2px solid var(--border-strong);
+  border-right: 2px solid var(--border-strong);
+  transform: translateY(-50%) rotate(45deg);
+}
+.po-persons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.po-person {
+  display: flex;
+  flex-direction: column;
+  padding: 0.25rem 0.375rem;
+  border-left: 3px solid var(--accent-line, var(--border-strong));
+  border-radius: var(--r-2, 0.375rem);
+  background: var(--bg-0);
+  min-width: 0;
+}
+.po-person[data-empty="true"] {
+  border-left-color: var(--c-warn);
+  background: var(--c-warn-soft);
+}
+.po-person-role {
+  font-size: 0.6875rem;
+  color: var(--fg-2);
+}
+.po-person-who {
+  font-size: 0.78125rem;
+  color: var(--fg-0);
+  overflow-wrap: anywhere;
+}
+.po-person-warn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.78125rem;
+  font-weight: 600;
+  color: var(--c-warn);
+}
+.po-pairs {
+  padding: 0 0.5rem;
+}
+.po-mayadd,
+.po-unsigned {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.po-mayadd-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.5rem;
+}
+.po-mayadd-slot {
+  min-width: 8rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--fg-1);
+}
+.po-mayadd-docs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+.po-unsigned li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.125rem 0.75rem;
+  font-size: 0.78125rem;
+}
+
+/* Узкая колонка (телефон или тесный центр): дорожка идёт сверху вниз, без горизонтального скролла. */
+@container (max-width: 38rem) {
+  .po-lane {
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+  .po-step {
+    max-width: none;
+  }
+  .po-step:not(:last-child)::after {
+    top: 100%;
+    left: 1.25rem;
+    width: 0;
+    height: 1.25rem;
+    border-top: 0;
+    border-left: 2px solid var(--border-strong);
+    transform: none;
+  }
+  .po-step:not(:last-child)::before {
+    top: calc(100% + 1.25rem - 0.5rem);
+    left: 1.25rem;
+    border: 0;
+    border-right: 2px solid var(--border-strong);
+    border-bottom: 2px solid var(--border-strong);
+    transform: translateX(-50%) rotate(45deg);
+  }
+}

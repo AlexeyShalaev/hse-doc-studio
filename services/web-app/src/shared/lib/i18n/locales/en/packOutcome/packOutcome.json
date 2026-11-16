@@ -214,12 +214,90 @@
       "supervisors": "Supervisors",
       "absent": "Not in combination"
     },
+    "empty": "No participants in this combination."
+  },
+  "points": {
+    "stats": {
+      "points": "Checkpoints",
+      "active": "Items due",
+      "off": "Off",
+      "extra": "Extra files"
+    },
+    "filterPoint": "Checkpoint",
+    "filterAll": "All checkpoints",
+    "empty": "The version has no checkpoints.",
+    "itemsOf_one": "{{active}} of {{total}} item",
+    "itemsOf_other": "{{active}} of {{total}} items",
+    "deadline": "Deadline:",
+    "items": "What is submitted",
+    "signatures": "Signatures:",
+    "noSignatures": "no signatures",
+    "signed": "Signatures: {{count}}",
+    "openDoc": "Open document",
+    "openDocLabel": "Show the document \"{{name}}\" in the Documents section",
+    "off": {
+      "nda": "NDA",
+      "kind": "work type",
+      "absent": "document is not in the set",
+      "inactive": "document is off"
+    },
+    "offPrefix": "not submitted:",
+    "offBlock": "Items that are off",
+    "whyUnknown": "the reason is not in the response",
+    "extra": "Extra files",
+    "extraFrom": "from {{source}}",
+    "noItems": "The checkpoint has no items."
+  },
+  "route": {
+    "stats": {
+      "points": "Checkpoints with signatures",
+      "steps": "Steps",
+      "pairs": "Signatures",
+      "skipped": "Skipped",
+      "mayAdd": "Can be added"
+    },
+    "filterPoint": "Checkpoint",
+    "filterAll": "All checkpoints",
+    "empty": "The version has no checkpoints, so there is no route.",
+    "order": "Order:",
+    "orderSource": {
+      "profile": "from the checkpoint",
+      "version": "from the version",
+      "builtin": "built in"
+    },
+    "preset": "route preset",
+    "stepsLabel": "Route steps of checkpoint \"{{point}}\"",
+    "step": "Step {{n}}",
+    "parallel": "in parallel",
+    "noName": "not set",
+    "noPerson": "step without a person",
+    "pairs": "Signatures by document",
+    "pairsLabel": "Signatures of document \"{{doc}}\"",
+    "source": {
+      "point": "from the checkpoint",
+      "preset": "from the preset"
+    },
+    "optional": "Optional",
+    "whenSet": "if {{person}} is set",
+    "whenOrg": "if {{person}} is from {{org}}",
+    "orgOf": {
+      "university": "HSE",
+      "company": "the company"
+    },
+    "skippedBlock": "Skipped by a condition",
+    "skippedPrefix": "skipped:",
+    "skippedUnknown": "the slot condition is not met",
+    "mayAddBlock": "Can be added when the project is created",
+    "mayAddLead": "The project author will turn these signatures on.",
+    "noRouteBlock": "Checkpoints without signatures",
+    "noRouteLead": "These checkpoints need no signatures.",
     "warnTitle": "No person for a route step",
     "warnStep": "Point \"{{point}}\", step {{step}}: {{who}} is not set",
-    "empty": "No participants in this combination."
+    "emptySteps": "No steps"
   },
   "reasons": {
     "unset": "not set",
+    "orgOf": "{{subject}} organization",
     "op": {
       "in": "{{subject}}: now {{actual}}, needs {{expected}}",
       "equals": "{{subject}}: now {{actual}}, needs {{expected}}",
