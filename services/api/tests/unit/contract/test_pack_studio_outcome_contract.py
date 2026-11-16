@@ -262,6 +262,32 @@ def test__matrix__every_row_has_one_cell_per_column() -> None:
     assert all([c["section"] for c in row["cells"]] == body["columns"] for row in body["rows"])
 
 
+def test__matrix__cell_status_follows_the_row_and_the_base_comparison() -> None:
+    body = _load("PackOutcomeMatrix", "coursework")
+
+    for row in body["rows"]:
+        if row["status"] == "error":
+            assert row["message"] is not None
+            assert all(c["status"] == "error" and c["count"] == 0 for c in row["cells"])
+        else:
+            assert row["message"] is None
+            assert all(c["status"] != "error" for c in row["cells"])
+        # Раздел, изменённый против базы, это `changed`; сценарий с таким разделом не может быть `passed`.
+        assert all(c["status"] == "changed" for c in row["cells"] if c["changed"])
+        if any(c["changed"] for c in row["cells"]):
+            assert row["status"] != "unchecked"
+
+
+def test__compare__reasons_name_a_rule_and_at_least_one_side() -> None:
+    body = _load("PackOutcomeCompare", "two_scenarios")
+    reasons = [r for c in body["changes"] for r in c["why"]]
+
+    assert reasons
+    assert all(r["before"] is not None or r["after"] is not None for r in reasons)
+    assert all(r["rule"]["origin"] in {"manifest", "builtin"} for r in reasons)
+    assert all(len(c["why"]) <= 6 for c in body["changes"])  # noqa: PLR2004
+
+
 def test__scenario_list__broken_files_stay_visible_without_content() -> None:
     body = _load("PackScenarioList", "coursework")
 

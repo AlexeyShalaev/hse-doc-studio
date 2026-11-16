@@ -85,6 +85,7 @@ from hse_doc_studio.use_cases.pack_studio.model import PackModelService
 from hse_doc_studio.use_cases.pack_studio.official import OfficialPacks
 from hse_doc_studio.use_cases.pack_studio.outcome_atlas import PackAtlasService
 from hse_doc_studio.use_cases.pack_studio.outcome_lint import PackOutcomeLintService
+from hse_doc_studio.use_cases.pack_studio.outcome_compare import PackCompareService
 from hse_doc_studio.use_cases.pack_studio.outcome_service import OutcomeLimits, PackOutcomeService
 from hse_doc_studio.use_cases.pack_studio.places import PackPlacesService
 from hse_doc_studio.use_cases.pack_studio.preview import PackPreviewService, PreviewLimits
@@ -388,6 +389,11 @@ class PackStudioProvider(Provider):
     ) -> PackOutcomeLintService:
         # Один на процесс: держит кэш находок, универсум правил, семафор расчётов и общие расчёты одинаковых запросов.
         return PackOutcomeLintService(outcome, workspaces, probe)
+
+    @provide
+    def get_compare_service(self, outcome: PackOutcomeService, atlas: PackAtlasService) -> PackCompareService:
+        # Один на процесс: кэши «до и после» и матрицы, семафор тяжёлых расчётов, общие расчёты одинаковых запросов.
+        return PackCompareService(outcome, atlas)
 
     @provide
     def get_checks_form_service(self, files: PackFilesService) -> PackChecksFormService:

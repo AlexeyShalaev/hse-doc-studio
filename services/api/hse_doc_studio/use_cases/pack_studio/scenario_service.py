@@ -126,6 +126,35 @@ def _digest_of(files: Mapping[str, bytes], names: list[str]) -> dict[str, str]:
     return {name: hashlib.sha256(files[name]).hexdigest()[:16] for name in names}
 
 
+def select_scenario_files(files: Mapping[str, bytes], wanted: list[str] | None) -> list[str]:
+    """Имена файлов сценариев для расчёта по порядку id; `wanted` None: все (не больше `MAX_SCENARIOS`). Неизвестный
+    id это `scenario_not_found`."""
+    names = sorted(name for name in files if name.endswith(SCENARIO_SUFFIX))
+    if wanted is None:
+        return names[:MAX_SCENARIOS]
+    known = {name.removesuffix(SCENARIO_SUFFIX): name for name in names}
+    for scenario_id in wanted:
+        if scenario_id not in known:
+            raise PackStudioError(PackStudioErrorCode.scenario_not_found, scenario=scenario_id)
+    return sorted({known[scenario_id] for scenario_id in wanted})
+
+
+def parse_scenario_files(
+    pack: str, template: str, files: Mapping[str, bytes], names: list[str]
+) -> dict[str, Scenario | str]:
+    """Выбранные файлы разобраны: сценарий по id либо текст ошибки файла (он не читается, но остаётся в расчёте)."""
+    parsed: dict[str, Scenario | str] = {}
+    for name in names:
+        entry = _entry(pack, template, name.removesuffix(SCENARIO_SUFFIX), files[name])
+        parsed[entry.id] = entry.scenario if entry.scenario is not None else (entry.error or "unreadable")
+    return parsed
+
+
+def scenario_digests(files: Mapping[str, bytes], names: list[str]) -> dict[str, str]:
+    """Дайджесты выбранных файлов: правка любого меняет ключ кэша и ETag расчёта."""
+    return _digest_of(files, names)
+
+
 class PackScenarioService:
     """Один на процесс: держит кэш прогонов; расчёт и чтение состояний версии у `PackOutcomeService`."""
 
@@ -227,7 +256,7 @@ class PackScenarioService:
         `scenario_not_found`; вне `versions` на этой версии: `unchecked` с пояснением."""
         ctx = await self._outcome.scenario_context(actor, workspace_id, pack, template, state, version)
         files = ctx.source.scenarios
-        selected = self._select(files, scenarios)
+        selected = select_scenario_files(files, scenarios)
         key = request_key(
             {
                 "kind": "scenario-run",
@@ -246,10 +275,7 @@ class PackScenarioService:
         cached = self._runs.get(key)
         if cached is not None:
             return OutcomeReply(etag, cached)
-        parsed: dict[str, Scenario | str] = {}
-        for name in selected:
-            entry = _entry(pack, template, name.removesuffix(SCENARIO_SUFFIX), files[name])
-            parsed[entry.id] = entry.scenario if entry.scenario is not None else (entry.error or "unreadable")
+        parsed = parse_scenario_files(pack, template, files, selected)
         model, examples, today = ctx.source.desc.version, ctx.examples, ctx.today
         # Покрытие по строкам атласа: универсум правил считает и кэширует служба линтера (дольше самого прогона).
         universe = await self._lint.universe(ctx) if self._lint is not None else None
@@ -265,18 +291,6 @@ class PackScenarioService:
         }
         self._runs.put(key, body, cost=0)
         return OutcomeReply(etag, body)
-
-    @staticmethod
-    def _select(files: Mapping[str, bytes], wanted: list[str] | None) -> list[str]:
-        """Имена файлов сценариев для прогона по порядку id; неизвестный id это `scenario_not_found`."""
-        names = sorted(name for name in files if name.endswith(SCENARIO_SUFFIX))
-        if wanted is None:
-            return names[:MAX_SCENARIOS]
-        known = {name.removesuffix(SCENARIO_SUFFIX): name for name in names}
-        for scenario_id in wanted:
-            if scenario_id not in known:
-                raise PackStudioError(PackStudioErrorCode.scenario_not_found, scenario=scenario_id)
-        return sorted({known[scenario_id] for scenario_id in wanted})
 
     # ── внутреннее ───────────────────────────────────────────────────────────
 
@@ -330,4 +344,12 @@ class PackScenarioService:
         return recorded
 
 
-__all__ = ["PackScenarioService", "ScenarioEntry", "ScenarioListing", "scenario_dir"]
+__all__ = [
+    "PackScenarioService",
+    "ScenarioEntry",
+    "ScenarioListing",
+    "parse_scenario_files",
+    "scenario_digests",
+    "scenario_dir",
+    "select_scenario_files",
+]

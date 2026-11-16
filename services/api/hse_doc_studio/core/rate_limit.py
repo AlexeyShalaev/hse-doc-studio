@@ -66,6 +66,8 @@ MCP_CALL = RateRule("mcp_call", limit=120, window_s=60)
 
 # Атлас результата версии шаблона (Студия шаблонов, O4): расчёт тысяч комбинаций, по человеку; кэш и 304 разгружают.
 PACK_ATLAS = RateRule("pack_atlas", limit=6, window_s=60)
+# «До и после» и матрица сценариев (Студия шаблонов, O7): каждый сценарий считается дважды, по человеку.
+PACK_IMPACT = RateRule("pack_impact", limit=6, window_s=60)
 
 # Линтер результата версии (Студия шаблонов, O8): атлас и результат каждой его строки, плюс прогон сценариев ради
 # покрытия; по человеку, кэш и 304 разгружают.
@@ -96,6 +98,7 @@ RULES: dict[str, RateRule] = {
         DEVICE_CODE_LOOKUP,
         MCP_CALL,
         PACK_ATLAS,
+        PACK_IMPACT,
         PACK_OUTCOME,
         PACK_OUTCOME_LINT,
         SSH_ATTEMPT,

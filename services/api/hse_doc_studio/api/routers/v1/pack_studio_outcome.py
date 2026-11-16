@@ -12,6 +12,14 @@
 Атлас считается дольше расчёта: срок 20 с, не больше двух одновременных на процесс, частота 6 в минуту на человека
 (правило `pack_atlas`), больше 2000 строк это `atlas_too_large`.
 
+`POST .../outcome/compare` сравнивает два результата (две стороны: состояние, сценарий, набор данных, вводные):
+изменения `+`, `~`, `-` с причинами из трассы (`PackOutcomeCompare`, срез O7). `POST .../outcome/impact` это «до и
+после»: каждый сценарий шаблона и (по умолчанию) строки атласа на базе и в рабочем дереве, «изменится N из M
+сценариев» (`PackOutcomeImpact`). `POST .../outcome/matrix` это матрица «сценарии на разделы» со статусом клетки
+(`PackOutcomeMatrix`). `impact` и `matrix` считают каждый сценарий дважды, поэтому срок 20 с, не больше двух
+одновременных на процесс, частота 6 в минуту на человека (правило `pack_impact`), ответ больше 8 МиБ это
+`outcome_too_large`. База без git, без базовой ветки и новая версия это `diff_base_unavailable` с `reason`.
+
 `GET .../outcome/lint?state=&jinja=` отдаёт находки линтера результата и покрытие правил сценариями шаблона
 (`PackOutcomeLint`, срез O8): статические правила, правила по атласу, а по `jinja=true` на рабочем дереве ещё и
 правила по файлам шаблонов (рендер в отдельном процессе). Считается как атлас: срок 30 с, не больше двух
@@ -35,17 +43,25 @@ from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.routers.v1.pack_studio import pack_studio_guard
 from hse_doc_studio.api.schemas.pack_studio_outcome import (
     OutcomeStateName,
+    OutcomeSubject,
     PackOutcomeAtlasResponse,
+    PackOutcomeCompareRequest,
+    PackOutcomeCompareResponse,
     PackOutcomeExplainRequest,
     PackOutcomeExplainResponse,
+    PackOutcomeImpactRequest,
+    PackOutcomeImpactResponse,
     PackOutcomeInputsResponse,
     PackOutcomeLintResponse,
+    PackOutcomeMatrixRequest,
+    PackOutcomeMatrixResponse,
     PackOutcomeRequest,
     PackOutcomeResponse,
 )
 from hse_doc_studio.core.access.context import require_actor
 from hse_doc_studio.core.pack_studio.outcome.model import ElementRef
 from hse_doc_studio.use_cases.pack_studio.outcome_atlas import PackAtlasService, parse_pins
+from hse_doc_studio.use_cases.pack_studio.outcome_compare import PackCompareService, Subject
 from hse_doc_studio.use_cases.pack_studio.outcome_lint import PackOutcomeLintService
 from hse_doc_studio.use_cases.pack_studio.outcome_service import (
     ExplainRequest,
@@ -167,6 +183,84 @@ async def post_outcome_explain(  # noqa: PLR0913 — путь версии, те
     return _respond(reply)
 
 
+def _subject(body: OutcomeSubject) -> Subject:
+    return Subject(state=body.state, scenario=body.scenario, example=body.example, inputs=body.inputs)
+
+
+@router.post(f"{_OUTCOME}/compare", response_model=PackOutcomeCompareResponse)
+async def post_outcome_compare(  # noqa: PLR0913 — путь версии, тело и условный запрос
+    workspace_id: UUID,
+    pack: str,
+    template: str,
+    version: str,
+    body: PackOutcomeCompareRequest,
+    compare: FromDishka[PackCompareService],
+    if_none_match: IfNoneMatch = None,
+) -> Response:
+    """Две стороны (состояние, сценарий, набор данных, вводные): что изменилось по разделам и элементам и почему."""
+    reply = await compare.compare(
+        require_actor(),
+        workspace_id,
+        pack,
+        template,
+        version,
+        _subject(body.left),
+        _subject(body.right),
+        if_none_match=if_none_match,
+    )
+    return _respond(reply)
+
+
+@router.post(f"{_OUTCOME}/impact", response_model=PackOutcomeImpactResponse)
+async def post_outcome_impact(  # noqa: PLR0913 — путь версии, тело и условный запрос
+    workspace_id: UUID,
+    pack: str,
+    template: str,
+    version: str,
+    body: PackOutcomeImpactRequest,
+    compare: FromDishka[PackCompareService],
+    if_none_match: IfNoneMatch = None,
+) -> Response:
+    """«До и после»: рабочее дерево против базы по сценариям шаблона и по атласу; «изменится N из M сценариев»."""
+    reply = await compare.impact(
+        require_actor(),
+        workspace_id,
+        pack,
+        template,
+        version,
+        base=body.base,
+        scenarios=body.scenarios,
+        include_atlas=body.include_atlas,
+        if_none_match=if_none_match,
+    )
+    return _respond(reply)
+
+
+@router.post(f"{_OUTCOME}/matrix", response_model=PackOutcomeMatrixResponse)
+async def post_outcome_matrix(  # noqa: PLR0913 — путь версии, тело и условный запрос
+    workspace_id: UUID,
+    pack: str,
+    template: str,
+    version: str,
+    body: PackOutcomeMatrixRequest,
+    compare: FromDishka[PackCompareService],
+    if_none_match: IfNoneMatch = None,
+) -> Response:
+    """Матрица «сценарии на разделы»: отпечаток, счётчик и статус клетки; `against: base` подсвечивает правки."""
+    reply = await compare.matrix(
+        require_actor(),
+        workspace_id,
+        pack,
+        template,
+        version,
+        state=body.state,
+        scenarios=body.scenarios,
+        against=body.against,
+        if_none_match=if_none_match,
+    )
+    return _respond(reply)
+
+
 @router.get(f"{_OUTCOME}/lint", response_model=PackOutcomeLintResponse)
 async def get_outcome_lint(  # noqa: PLR0913 — путь версии, параметры запроса и условный запрос
     workspace_id: UUID,
@@ -175,9 +269,7 @@ async def get_outcome_lint(  # noqa: PLR0913 — путь версии, пара
     version: str,
     lint: FromDishka[PackOutcomeLintService],
     state: OutcomeStateName = "work_tree",
-    jinja: Annotated[
-        bool, Query(description="Добавить правила по файлам шаблонов (Jinja), только рабочее дерево")
-    ] = False,
+    jinja: Annotated[bool, Query(description="Правила по файлам шаблонов (Jinja), только рабочее дерево")] = False,
     if_none_match: IfNoneMatch = None,
 ) -> Response:
     """Находки линтера результата (ошибки первыми) и покрытие правил сценариями: какие правила и комбинации ни один

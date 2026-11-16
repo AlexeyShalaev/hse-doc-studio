@@ -18,7 +18,16 @@ from hse_doc_studio.core.agent.tools import ToolDefinition
 from hse_doc_studio.core.enums import ToolKind
 from hse_doc_studio.core.mcp.entities import MCP_PACKS_SCOPE, MCP_SIGN_SCOPE, McpToolGroup, McpToolMeta
 from hse_doc_studio.core.mcp.protocols import IDependencyResolver
-from hse_doc_studio.core.rate_limit import COMPILE, GIT_SYNC, INVITE, PACK_OUTCOME, PACK_OUTCOME_LINT, UPLOAD, RateRule
+from hse_doc_studio.core.rate_limit import (
+    COMPILE,
+    GIT_SYNC,
+    INVITE,
+    PACK_IMPACT,
+    PACK_OUTCOME,
+    PACK_OUTCOME_LINT,
+    UPLOAD,
+    RateRule,
+)
 from hse_doc_studio.use_cases.chat._registry import ToolRegistry
 from hse_doc_studio.use_cases.mcp.tools import access as access_tools
 from hse_doc_studio.use_cases.mcp.tools import (
@@ -29,6 +38,7 @@ from hse_doc_studio.use_cases.mcp.tools import (
     files,
     git,
     pack_outcome,
+    pack_outcome_compare,
     packs,
     people,
     projects,
@@ -228,6 +238,10 @@ MCP_TOOL_RULES: tuple[McpToolRule, ...] = (
     _rule("pack_outcome", _G.packs, _R, rate=PACK_OUTCOME, scope=MCP_PACKS_SCOPE),
     # Линтер результата и покрытие правил сценариями (срез O8): частота как у маршрута `outcome/lint`.
     _rule("pack_outcome_lint", _G.packs, _R, rate=PACK_OUTCOME_LINT, scope=MCP_PACKS_SCOPE),
+    # Сравнения результата (срез O7): `compare` считает два результата (правило расчёта), `impact` каждый сценарий
+    # на базе и в рабочем дереве (6 в минуту на человека, как у эндпоинта).
+    _rule("pack_outcome_compare", _G.packs, _R, rate=PACK_OUTCOME, scope=MCP_PACKS_SCOPE),
+    _rule("pack_outcome_impact", _G.packs, _R, rate=PACK_IMPACT, scope=MCP_PACKS_SCOPE),
     # Push и PR на хостинге доступом пространства: внешнее действие, как синхронизация проекта с git-remote.
     _rule("pack_propose", _G.packs, _X, dangerous=True, rate=GIT_SYNC, scope=MCP_PACKS_SCOPE),
     # Админка (сценарии сами требуют админа установки)
@@ -306,6 +320,8 @@ MCP_TOOL_CLASSES: tuple[type[McpTool], ...] = (
     pack_outcome.PackOutcomeInputsTool,
     pack_outcome.PackOutcomeTool,
     pack_outcome.PackOutcomeLintTool,
+    pack_outcome_compare.PackOutcomeCompareTool,
+    pack_outcome_compare.PackOutcomeImpactTool,
     admin.AdminListUsersTool,
     admin.AdminQueueSummaryTool,
     admin.AdminRunnerSummaryTool,

@@ -6,7 +6,7 @@
   "left": {
     "state": "work_tree",
     "revision": "sha256-5ee257ee0e5e3197",
-    "fingerprint": "1e216ad85e279a9b",
+    "fingerprint": "8e0ce660940bb6d3",
     "inputs": {
       "lang": "ru",
       "kind": "project",
@@ -22,7 +22,7 @@
   "right": {
     "state": "work_tree",
     "revision": "sha256-5ee257ee0e5e3197",
-    "fingerprint": "51ad330cf2f4a6ca",
+    "fingerprint": "2dff9790e8b254fd",
     "inputs": {
       "lang": "ru",
       "kind": "project",
@@ -37,8 +37,18 @@
   },
   "identical": false,
   "summary": [
-    {"section": "participants", "added": 1, "changed": 0, "removed": 0},
-    {"section": "route", "added": 3, "changed": 1, "removed": 2}
+    {
+      "section": "participants",
+      "added": 1,
+      "changed": 0,
+      "removed": 0
+    },
+    {
+      "section": "route",
+      "added": 3,
+      "changed": 1,
+      "removed": 2
+    }
   ],
   "changes": [
     {
@@ -46,9 +56,10 @@
       "section": "participants",
       "kind": "participant",
       "id": "co_supervisor",
-      "label": "co_supervisor",
+      "label": "участник co_supervisor",
       "before": null,
-      "after": null
+      "after": null,
+      "why": []
     },
     {
       "symbol": "~",
@@ -57,7 +68,110 @@
       "id": "topic-approval/step/2",
       "label": "topic-approval: шаг 2",
       "before": "supervisor",
-      "after": "supervisor, co_supervisor"
+      "after": "supervisor, co_supervisor",
+      "why": [
+        {
+          "rule": {
+            "origin": "manifest",
+            "file": "version.yaml",
+            "pointer": "/pack_submission/profiles/0/signing_slots/0/when",
+            "builtin": null
+          },
+          "kind": "slot_when",
+          "terms": [
+            {
+              "op": "present",
+              "subject": "co_supervisor",
+              "expected": []
+            }
+          ],
+          "before": null,
+          "after": "held",
+          "before_actual": {},
+          "after_actual": {
+            "co_supervisor": "yes"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "-",
+      "section": "route",
+      "kind": "skipped_pair",
+      "id": "topic-approval/topic_application/co_supervisor",
+      "label": "topic-approval: topic_application: co_supervisor, условие не выполнено",
+      "before": null,
+      "after": null,
+      "why": [
+        {
+          "rule": {
+            "origin": "manifest",
+            "file": "version.yaml",
+            "pointer": "/pack_submission/profiles/0/signing_slots/0/when",
+            "builtin": null
+          },
+          "kind": "slot_when",
+          "terms": [
+            {
+              "op": "present",
+              "subject": "co_supervisor",
+              "expected": []
+            }
+          ],
+          "before": "not_held",
+          "after": "held",
+          "before_actual": {
+            "co_supervisor": "no"
+          },
+          "after_actual": {
+            "co_supervisor": "yes"
+          }
+        }
+      ]
+    },
+    {
+      "symbol": "-",
+      "section": "route",
+      "kind": "skipped_pair",
+      "id": "topic-approval/topic_application/academic_supervisor",
+      "label": "topic-approval: topic_application: academic_supervisor, условие не выполнено",
+      "before": null,
+      "after": null,
+      "why": [
+        {
+          "rule": {
+            "origin": "manifest",
+            "file": "version.yaml",
+            "pointer": "/pack_submission/profiles/0/signing_slots/1/when",
+            "builtin": null
+          },
+          "kind": "slot_when",
+          "terms": [
+            {
+              "op": "present",
+              "subject": "supervisor",
+              "expected": []
+            },
+            {
+              "op": "equals",
+              "subject": "supervisor.role",
+              "expected": [
+                "company"
+              ]
+            }
+          ],
+          "before": "not_held",
+          "after": "held",
+          "before_actual": {
+            "supervisor": "yes",
+            "supervisor.role": "university"
+          },
+          "after_actual": {
+            "supervisor": "yes",
+            "supervisor.role": "company"
+          }
+        }
+      ]
     },
     {
       "symbol": "+",
@@ -66,43 +180,132 @@
       "id": "topic-approval/step/3",
       "label": "topic-approval: шаг 3",
       "before": null,
-      "after": "academic_supervisor"
+      "after": "academic_supervisor",
+      "why": [
+        {
+          "rule": {
+            "origin": "manifest",
+            "file": "version.yaml",
+            "pointer": "/pack_submission/profiles/0/signing_route",
+            "builtin": null
+          },
+          "kind": "route_order",
+          "terms": [],
+          "before": null,
+          "after": "held",
+          "before_actual": {},
+          "after_actual": {}
+        },
+        {
+          "rule": {
+            "origin": "manifest",
+            "file": "version.yaml",
+            "pointer": "/pack_submission/profiles/0/signing_slots/1/when",
+            "builtin": null
+          },
+          "kind": "slot_when",
+          "terms": [
+            {
+              "op": "present",
+              "subject": "supervisor",
+              "expected": []
+            },
+            {
+              "op": "equals",
+              "subject": "supervisor.role",
+              "expected": [
+                "company"
+              ]
+            }
+          ],
+          "before": null,
+          "after": "held",
+          "before_actual": {},
+          "after_actual": {
+            "supervisor": "yes",
+            "supervisor.role": "company"
+          }
+        }
+      ]
     },
     {
       "symbol": "+",
       "section": "route",
       "kind": "route_pair",
       "id": "topic-approval/topic_application/co_supervisor",
-      "label": "topic_application: co_supervisor",
+      "label": "topic-approval: topic_application: co_supervisor",
       "before": null,
-      "after": "co_supervisor"
+      "after": "co_supervisor (preset)",
+      "why": [
+        {
+          "rule": {
+            "origin": "manifest",
+            "file": "version.yaml",
+            "pointer": "/pack_submission/profiles/0/signing_slots/0/when",
+            "builtin": null
+          },
+          "kind": "slot_when",
+          "terms": [
+            {
+              "op": "present",
+              "subject": "co_supervisor",
+              "expected": []
+            }
+          ],
+          "before": "not_held",
+          "after": "held",
+          "before_actual": {
+            "co_supervisor": "no"
+          },
+          "after_actual": {
+            "co_supervisor": "yes"
+          }
+        }
+      ]
     },
     {
       "symbol": "+",
       "section": "route",
       "kind": "route_pair",
       "id": "topic-approval/topic_application/academic_supervisor",
-      "label": "topic_application: academic_supervisor",
+      "label": "topic-approval: topic_application: academic_supervisor",
       "before": null,
-      "after": "academic_supervisor"
-    },
-    {
-      "symbol": "-",
-      "section": "route",
-      "kind": "skipped_pair",
-      "id": "topic-approval/topic_application/academic_supervisor",
-      "label": "topic_application: academic_supervisor",
-      "before": null,
-      "after": null
-    },
-    {
-      "symbol": "-",
-      "section": "route",
-      "kind": "skipped_pair",
-      "id": "topic-approval/topic_application/co_supervisor",
-      "label": "topic_application: co_supervisor",
-      "before": null,
-      "after": null
+      "after": "academic_supervisor (preset)",
+      "why": [
+        {
+          "rule": {
+            "origin": "manifest",
+            "file": "version.yaml",
+            "pointer": "/pack_submission/profiles/0/signing_slots/1/when",
+            "builtin": null
+          },
+          "kind": "slot_when",
+          "terms": [
+            {
+              "op": "present",
+              "subject": "supervisor",
+              "expected": []
+            },
+            {
+              "op": "equals",
+              "subject": "supervisor.role",
+              "expected": [
+                "company"
+              ]
+            }
+          ],
+          "before": "not_held",
+          "after": "held",
+          "before_actual": {
+            "supervisor": "yes",
+            "supervisor.role": "university"
+          },
+          "after_actual": {
+            "supervisor": "yes",
+            "supervisor.role": "company"
+          }
+        }
+      ]
     }
   ]
 }

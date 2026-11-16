@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
 
@@ -18,7 +18,7 @@ from hse_doc_studio.core.catalog import TemplateVersion
 from hse_doc_studio.core.pack_studio.outcome.atlas import AtlasTooLarge
 from hse_doc_studio.core.pack_studio.outcome.coverage import RuleUniverse, outcomes_universe
 from hse_doc_studio.core.pack_studio.outcome.inputs import OutcomeInputError, input_specs, normalize_inputs
-from hse_doc_studio.core.pack_studio.outcome.model import Outcome
+from hse_doc_studio.core.pack_studio.outcome.model import IncludeName, Outcome
 from hse_doc_studio.core.pack_studio.outcome.scenario_check import (
     Change,
     Coverage,
@@ -82,12 +82,21 @@ def resolve_scenario(  # noqa: PLR0913 — версия, наборы, сцен�
     wanted_example: str | None = None,
     trace: bool = True,
     revision: str = "",
+    include: Collection[IncludeName] = (),
 ) -> Outcome:
-    """Результат версии для сценария: умолчания, вводные сценария, `inputs` поверх. `ScenarioRunError`, если сценарий
-    версии не подходит."""
+    """Результат версии для сценария: умолчания, вводные сценария, `inputs` поверх. `include` как у `resolve`
+    (`checks`). `ScenarioRunError`, если сценарий версии не подходит."""
     example = example_of(scenario, examples, wanted_example)
     try:
-        return resolve(version, {**scenario.inputs, **(inputs or {})}, example, today, trace=trace, revision=revision)
+        return resolve(
+            version,
+            {**scenario.inputs, **(inputs or {})},
+            example,
+            today,
+            trace=trace,
+            revision=revision,
+            include=include,
+        )
     except OutcomeInputError as exc:
         raise ScenarioRunError(f"{exc.field}={exc.value!r}: {exc.reason}") from None
 

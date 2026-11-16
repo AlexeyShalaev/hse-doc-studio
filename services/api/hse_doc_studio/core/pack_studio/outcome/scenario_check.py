@@ -19,6 +19,7 @@ from typing import Literal
 
 from hse_doc_studio.core.pack_studio.outcome.coverage import Coverage, RuleCoverage, coverage_of
 from hse_doc_studio.core.pack_studio.outcome.model import (
+    ChangeReason,
     Digest,
     DigestPoint,
     Outcome,
@@ -71,7 +72,9 @@ class Failure:
 
 @dataclass(frozen=True, slots=True)
 class Change:
-    """Одно изменение результата относительно снимка (`OutcomeChange` контракта)."""
+    """Одно изменение результата относительно снимка или другого результата (`OutcomeChange` контракта). `why` это
+    правила, из-за которых изменился элемент; его заполняют только сравнения результатов (`compare.py`), снимок трассы
+    не хранит."""
 
     symbol: ChangeSymbol
     section: SectionName
@@ -80,6 +83,7 @@ class Change:
     label: str
     before: str | None
     after: str | None
+    why: tuple[ChangeReason, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
