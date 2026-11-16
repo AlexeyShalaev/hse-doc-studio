@@ -121,7 +121,7 @@ class _Git:
     pushes: list[RemoteTarget] = field(default_factory=list)
     authors: list[VcsAuthor] = field(default_factory=list)
 
-    async def status(self, _dirs: Any, *, base_branch: str, packs_path: str) -> WorkGitStatus:
+    async def status(self, _dirs: Any, _target: Any, *, base_branch: str, packs_path: str) -> WorkGitStatus:
         change = FileChange(CHANGED, ChangeStatus.modified)
         return WorkGitStatus(
             head_sha="c" * 40,
@@ -138,7 +138,7 @@ class _Git:
     async def create_branch(self, _dirs: Any, *, name: str) -> None:
         self.branch = name
 
-    async def commit(self, _dirs: Any, *, packs_path: str, message: str, author: VcsAuthor) -> str | None:
+    async def commit(self, _dirs: Any, _target: Any, *, packs_path: str, message: str, author: VcsAuthor) -> str | None:
         self.authors.append(author)
         self.dirty = False
         return "c" * 40

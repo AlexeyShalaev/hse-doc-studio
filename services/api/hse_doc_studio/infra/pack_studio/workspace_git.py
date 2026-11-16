@@ -14,14 +14,23 @@
 
 Блоб, которого нет в хранилище, git подгружает сам, но только в командах с сетью (`runner.run`: доступ пространства,
 те же ограничения сети и времени, что у выборки). Локальные команды (`run_local`) идут с `GIT_ALLOW_PROTOCOL=none`
-и подгрузить ничего не могут, поэтому им нельзя читать содержимое файлов базы: после «Обновить» её блобов в
-хранилище нет. Состояние ветки (`status`) поэтому сравнивает с базой только идентификаторы объектов
-(`diff-index --raw`) и хэши файлов рабочего дерева, а не текст.
+и подгрузить ничего не могут. Поэтому:
+
+- после каждой команды с сетью (клон, выборка базы, ветка, слияние, сброс, восстановление) блобы, которые могут
+  понадобиться локальному git, догружаются явно (`_hydrate`): всё под папкой паков в HEAD и в базе плюс
+  `.gitignore`, `.gitattributes` и `.gitmodules` на пути к ней. Эти файлы корня лежат вне разреженного дерева
+  (skip-worktree), и `status`, `add -A`, `ls-files --others`, `clean` читают правила игнорирования из их блоба в
+  индексе: без блоба свежий клон падал на первом же `status`;
+- локальная команда, которая всё же упёрлась в недостающий объект («could not fetch <oid> from promisor remote»),
+  догружает его тем же путём и повторяется. Так чинятся и пространства, созданные до этой правки;
+- состояние ветки (`status`) сравнивает с базой только идентификаторы объектов (`diff-index --raw`) и хэши файлов
+  рабочего дерева, а не текст.
 """
 
 from __future__ import annotations
 
 import asyncio
+import re
 import shutil
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -32,7 +41,7 @@ import yaml
 
 from hse_doc_studio.api.config import GitConfig
 from hse_doc_studio.core.git_sync.entities import GitResult, RemoteTarget
-from hse_doc_studio.core.git_sync.error_classifier import GitOp
+from hse_doc_studio.core.git_sync.error_classifier import DETAIL_TAIL_CHARS, GitOp, scrub
 from hse_doc_studio.core.git_sync.error_messages import git_error
 from hse_doc_studio.core.git_sync.errors import GitErrorCode, GitSyncError
 from hse_doc_studio.core.git_sync.protocols import IGitRemoteRunner
@@ -64,6 +73,19 @@ _KIB = 1024
 _HASH_BATCH = 200
 # Глобальные опции git со значением: подкоманда в журнале ищется после них.
 _OPTIONS_WITH_VALUE = frozenset({"-c", "-C", "--work-tree", "--git-dir"})
+# Файлы, которые git читает сам (игнорирование, атрибуты, подмодули), в каждом каталоге на пути к папке паков.
+_CONTROL_FILES = (".gitignore", ".gitattributes", ".gitmodules")
+# Объектов в одной выборке по идентификаторам: длина командной строки ограничена.
+_FETCH_BATCH = 200
+# Сколько раз локальная команда может догрузить недостающий объект и повториться.
+_LAZY_ROUNDS = 3
+_PROMISOR_MISS = re.compile(r"could not fetch ([0-9a-f]{40}(?:[0-9a-f]{24})?) from promisor remote")
+# Подсказка к workspace_git_failed: без адресов и путей сервера, не длиннее этого.
+_HINT_LINES = 2
+_HINT_MAX = 300
+_HINT_URL = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://\S+")
+_HINT_SCP = re.compile(r"\b[\w.-]+@[\w.-]+:\S+")
+_HINT_PATH = re.compile(r"(?<![\w.~<>/-])(?:/|[A-Za-z]:[\\/])[^\s'\"`]*")
 
 
 def remote_ref(branch: str) -> str:
@@ -149,6 +171,52 @@ def _subcommand(args: Sequence[str]) -> str:
     return ""
 
 
+def git_hint(command: str, stderr: str) -> str:
+    """Безопасная подсказка к сбою локального git для ответа: подкоманда и первые строки ошибки.
+
+    Вывод сначала проходит общую очистку от секретов, потом из него уходят адреса (в том числе вида
+    `git@host:repo`) и абсолютные пути сервера. Пути внутри репозитория и идентификаторы объектов остаются: по ним
+    видно, какой файл git не смог прочитать.
+    """
+    lines = [line.strip() for line in scrub(stderr).splitlines() if line.strip()]
+    errors = [line for line in lines if line.startswith(("fatal:", "error:"))] or lines
+    text = " | ".join(errors[:_HINT_LINES])
+    text = _HINT_URL.sub("<url>", text)
+    text = _HINT_SCP.sub("<url>", text)
+    text = _HINT_PATH.sub("<path>", text)
+    text = "".join(ch for ch in text if ch.isprintable())
+    if len(text) > _HINT_MAX:
+        text = text[: _HINT_MAX - 1] + "…"
+    head = f"git {command}" if command else "git"
+    return f"{head}: {text}" if text else head
+
+
+def _promised_object(stderr: str) -> str | None:
+    """Идентификатор объекта, за которым локальный git пытался сходить в promisor remote."""
+    found = _PROMISOR_MISS.search(stderr)
+    return found.group(1) if found else None
+
+
+def _control_paths(packs_path: str) -> list[str]:
+    """`.gitignore` и соседи в корне и в каждом каталоге над папкой паков (внутри неё они и так в выборке)."""
+    folders = [""]
+    if packs_path != ".":
+        parts = packs_path.split("/")
+        folders += ["/".join(parts[:i]) for i in range(1, len(parts))]
+    return [f"{folder}/{name}" if folder else name for folder in folders for name in _CONTROL_FILES]
+
+
+def _blob_oids(raw: bytes) -> set[str]:
+    """`ls-tree -r -z`: `mode type oid\tpath\0`; только блобы (ссылки подмодулей это коммиты)."""
+    oids: set[str] = set()
+    for entry in raw.decode("utf-8", errors="replace").split("\0"):
+        meta, _, _path = entry.partition("\t")
+        fields = meta.split()
+        if len(fields) == 3 and fields[1] == "blob":  # noqa: PLR2004 — три поля формата ls-tree
+            oids.add(fields[2])
+    return oids
+
+
 def _branch(name: str) -> str:
     try:
         return validate_ref_name(name)
@@ -223,12 +291,14 @@ class PackWorkspaceGit:
             target=target,
             timeout_s=self._config.clone_timeout_s,
         )
+        await self._hydrate(dirs, target, packs_path=packs_path)
         return await self._tip(dirs, branch)
 
     async def fetch(self, dirs: WorkspaceDirs, target: RemoteTarget, *, branch: str, limits: WorkspaceLimits) -> str:
         branch = _branch(branch)
         await self._fetch(dirs, target, branch, timeout_s=self._config.fetch_timeout_s)
         await self._check_store_size(dirs, limits)
+        await self._hydrate(dirs, target)
         return await self._tip(dirs, branch)
 
     async def released(
@@ -258,11 +328,14 @@ class PackWorkspaceGit:
 
     # ── срез T6: ветка, коммит, отправка, слияние базы ──
 
-    async def status(self, dirs: WorkspaceDirs, *, base_branch: str, packs_path: str) -> WorkGitStatus:
+    async def status(
+        self, dirs: WorkspaceDirs, target: RemoteTarget, *, base_branch: str, packs_path: str
+    ) -> WorkGitStatus:
         base = remote_ref(_branch(base_branch))
         head = (await self._local(dirs, ["rev-parse", "--verify", "HEAD^{commit}"])).decode("ascii").strip()
         branch_out = await self._run_local(dirs, ["symbolic-ref", "--quiet", "--short", "HEAD"], check=False)
         branch = branch_out.stdout.decode("utf-8", errors="replace").strip() if branch_out.returncode == 0 else None
+        # Правила игнорирования и атрибуты git читает из блобов индекса: недостающий догружается с доступом.
         porcelain = await self._local(
             dirs,
             [
@@ -274,9 +347,10 @@ class PackWorkspaceGit:
                 "--no-renames",
                 *_scope(packs_path),
             ],
+            target=target,
         )
         uncommitted = _parse_porcelain(porcelain, packs_path)
-        changed = {c.path: c for c in await self._changed_against(dirs, base, packs_path)}
+        changed = {c.path: c for c in await self._changed_against(dirs, target, base, packs_path)}
         for change in uncommitted:
             if change.status is ChangeStatus.added:
                 changed.setdefault(change.path, change)
@@ -314,10 +388,14 @@ class PackWorkspaceGit:
             target=target,
             timeout_s=self._config.fetch_timeout_s,
         )
+        await self._hydrate(dirs, target)
         return await self._head(dirs)
 
-    async def commit(self, dirs: WorkspaceDirs, *, packs_path: str, message: str, author: VcsAuthor) -> str | None:
-        await self._local(dirs, [*self._tree(dirs), "add", "-A", *_scope(packs_path)])
+    async def commit(
+        self, dirs: WorkspaceDirs, target: RemoteTarget, *, packs_path: str, message: str, author: VcsAuthor
+    ) -> str | None:
+        # `add -A` читает правила игнорирования и атрибуты: недостающий блоб догружается с доступом.
+        await self._local(dirs, [*self._tree(dirs), "add", "-A", *_scope(packs_path)], target=target)
         # Плумбинг без поиска переименований: сравниваются только идентификаторы, блобы не читаются.
         staged = await self._run_local(
             dirs, [*self._tree(dirs), "diff-index", "--cached", "--quiet", "HEAD", "--"], check=False
@@ -325,7 +403,9 @@ class PackWorkspaceGit:
         if staged.returncode == 0:
             return None
         await self._local(
-            dirs, [*_author_config(author), *self._tree(dirs), "commit", "--quiet", "--no-verify", "-m", message]
+            dirs,
+            [*_author_config(author), *self._tree(dirs), "commit", "--quiet", "--no-verify", "-m", message],
+            target=target,
         )
         return await self._head(dirs)
 
@@ -376,10 +456,11 @@ class PackWorkspaceGit:
                 dirs, [*self._tree(dirs), "diff", "--name-only", "-z", "--diff-filter=U"], check=False
             )
             conflicts = tuple(name for name in unmerged.stdout.decode("utf-8", errors="replace").split("\0") if name)
-            await self._run_local(dirs, [*self._tree(dirs), "merge", "--abort"], check=False)
+            await self._run_local(dirs, [*self._tree(dirs), "merge", "--abort"], check=False, target=target)
             if not conflicts:
                 raise
             return MergeOutcome(sha=await self._head(dirs), merged=False, conflicts=conflicts)
+        await self._hydrate(dirs, target)
         return MergeOutcome(sha=await self._head(dirs), merged=True)
 
     async def reset_to_base(self, dirs: WorkspaceDirs, target: RemoteTarget, *, base_branch: str) -> str:
@@ -391,8 +472,9 @@ class PackWorkspaceGit:
             target=target,
             timeout_s=self._config.fetch_timeout_s,
         )
+        await self._hydrate(dirs, target)
         # Новые файлы, которых нет в базе, checkout не убирает.
-        await self._local(dirs, [*self._tree(dirs), "clean", "-fdq", "--", "."])
+        await self._local(dirs, [*self._tree(dirs), "clean", "-fdq", "--", "."], target=target)
         return await self._head(dirs)
 
     async def base_registries(
@@ -415,11 +497,13 @@ class PackWorkspaceGit:
         base = remote_ref(_branch(base_branch))
         # Новые файлы попадают в diff как «намерение добавить»: следующий коммит всё равно берёт их целиком.
         untracked = await self._local(
-            dirs, [*self._tree(dirs), "ls-files", "-z", "--others", "--exclude-standard", *_scope(packs_path)]
+            dirs,
+            [*self._tree(dirs), "ls-files", "-z", "--others", "--exclude-standard", *_scope(packs_path)],
+            target=target,
         )
         names = [name for name in untracked.decode("utf-8", errors="replace").split("\0") if name]
         if names:
-            await self._local(dirs, [*self._tree(dirs), "add", "--intent-to-add", "--", *names])
+            await self._local(dirs, [*self._tree(dirs), "add", "--intent-to-add", "--", *names], target=target)
         result = await self._runner.run(
             [*self._tree(dirs), "diff", "--no-color", "--no-ext-diff", "--no-textconv", base, *_scope(packs_path)],
             op=GitOp.fetch,
@@ -452,6 +536,7 @@ class PackWorkspaceGit:
                 target=target,
                 timeout_s=self._config.fetch_timeout_s,
             )
+        await self._hydrate(dirs, target)
 
     async def branch_paths(self, dirs: WorkspaceDirs, *, base_branch: str) -> tuple[str, ...]:
         base = remote_ref(_branch(base_branch))
@@ -460,7 +545,9 @@ class PackWorkspaceGit:
         raw = await self._local(dirs, ["diff", "--name-only", "-z", "--no-renames", f"{base}...HEAD"])
         return tuple(name for name in raw.decode("utf-8", errors="replace").split("\0") if name)
 
-    async def _changed_against(self, dirs: WorkspaceDirs, base: str, packs_path: str) -> list[FileChange]:
+    async def _changed_against(
+        self, dirs: WorkspaceDirs, target: RemoteTarget, base: str, packs_path: str
+    ) -> list[FileChange]:
         """Файлы рабочего дерева, которые отличаются от базы, без чтения блобов базы.
 
         Porcelain `git diff <база>` для файла, правленого на диске, сравнивает содержимое с блобом базы, а в частичном
@@ -471,7 +558,7 @@ class PackWorkspaceGit:
             dirs, [*self._tree(dirs), "diff-index", "--raw", "-z", "--no-renames", base, *_scope(packs_path)]
         )
         entries = _parse_raw(raw)
-        same = await self._equal_to_base(dirs, [e for e in entries if e.work_unknown])
+        same = await self._equal_to_base(dirs, target, [e for e in entries if e.work_unknown])
         changes: list[FileChange] = []
         for entry in entries:
             rel = _rel(entry.path, packs_path)
@@ -479,7 +566,9 @@ class PackWorkspaceGit:
                 changes.append(FileChange(rel, _status_of(entry.status)))
         return changes
 
-    async def _equal_to_base(self, dirs: WorkspaceDirs, entries: Sequence[_RawChange]) -> set[str]:
+    async def _equal_to_base(
+        self, dirs: WorkspaceDirs, target: RemoteTarget, entries: Sequence[_RawChange]
+    ) -> set[str]:
         """Пути, чей текст на диске совпадает с базой: `hash-object` с теми же преобразованиями, что у `add`."""
         files = [e for e in entries if (dirs.tree / e.path).is_file() and not (dirs.tree / e.path).is_symlink()]
         same: set[str] = set()
@@ -489,6 +578,7 @@ class PackWorkspaceGit:
                 dirs,
                 ["-C", str(dirs.tree), *self._tree(dirs), "hash-object", "--", *(e.path for e in batch)],
                 check=False,
+                target=target,
             )
             if result.returncode != 0:
                 # Файл успели убрать или заменить папкой: от базы он точно отличается.
@@ -551,21 +641,106 @@ class PackWorkspaceGit:
         out = await self._local(dirs, ["rev-parse", "--verify", "--quiet", f"{remote_ref(branch)}^{{commit}}"])
         return out.decode("ascii", errors="replace").strip()
 
-    async def _local(self, dirs: WorkspaceDirs, args: list[str]) -> bytes:
-        return (await self._run_local(dirs, args)).stdout
+    async def _local(self, dirs: WorkspaceDirs, args: list[str], *, target: RemoteTarget | None = None) -> bytes:
+        return (await self._run_local(dirs, args, target=target)).stdout
 
-    async def _run_local(self, dirs: WorkspaceDirs | None, args: list[str], *, check: bool = True) -> GitResult:
+    async def _run_local(
+        self,
+        dirs: WorkspaceDirs | None,
+        args: list[str],
+        *,
+        check: bool = True,
+        target: RemoteTarget | None = None,
+    ) -> GitResult:
         """Локальная команда без сети. Её сбой это состояние хранилища на сервере, а не отказ хостинга: человек
-        получает понятный код пространства, а очищенный вывод git остаётся в журнале."""
-        try:
-            return await self._runner.run_local(
-                args, git_dir=dirs.git if dirs is not None else None, timeout_s=_LOCAL_TIMEOUT_S, check=check
+        получает понятный код пространства с безопасной подсказкой (`hint`), а очищенный вывод git идёт в журнал.
+
+        С `target` команда, которой не хватило объекта частичного клона, догружает его сетевой командой с доступом
+        пространства (`_hydrate`) и повторяется: сама она в сеть по-прежнему не ходит.
+        """
+        command = _subcommand(args)
+        for round_ in range(_LAZY_ROUNDS + 1):
+            result = await self._runner.run_local(
+                args, git_dir=dirs.git if dirs is not None else None, timeout_s=_LOCAL_TIMEOUT_S, check=False
             )
-        except GitSyncError as exc:
-            if exc.code is not GitErrorCode.git_error:
-                raise
-            logger.warning("pack studio: local git failed", command=_subcommand(args), detail=exc.detail)
-            raise PackStudioError(PackStudioErrorCode.workspace_git_failed) from None
+            if result.returncode == 0:
+                return result
+            missing = _promised_object(result.stderr)
+            if missing is None or target is None or dirs is None or round_ == _LAZY_ROUNDS:
+                break
+            logger.info("pack studio: local git needs a missing object", command=command, round=round_ + 1)
+            await self._hydrate(dirs, target, extra=(missing,))
+        if not check:
+            return result
+        logger.warning(
+            "pack studio: local git failed",
+            command=command,
+            detail=scrub(result.stderr)[-DETAIL_TAIL_CHARS:].strip(),
+        )
+        raise PackStudioError(PackStudioErrorCode.workspace_git_failed, hint=git_hint(command, result.stderr))
+
+    async def _hydrate(
+        self, dirs: WorkspaceDirs, target: RemoteTarget, *, packs_path: str | None = None, extra: Sequence[str] = ()
+    ) -> None:
+        """Догрузить блобы, которые может прочитать локальный git: папка паков в HEAD и в выбранных ветках сервера,
+        файлы `.gitignore`, `.gitattributes`, `.gitmodules` на пути к ней и `extra`. Паки маленькие, поэтому для
+        их папки блобы держатся целиком. Сеть только когда чего-то нет; проверка наличия ничего не подгружает."""
+        packs = packs_path if packs_path is not None else self._packs_path(dirs)
+        tips = await self._tips(dirs)
+        wanted: set[str] = set(extra)
+        pathspec = ["--", "."] if packs == "." else ["--", packs, *_control_paths(packs)]
+        for tip in tips:
+            listed = await self._run_local(dirs, ["ls-tree", "-r", "-z", tip, *pathspec], check=False)
+            if listed.returncode == 0:
+                wanted |= _blob_oids(listed.stdout)
+        if not wanted:
+            return
+        missing = await self._missing(dirs, tips)
+        need = sorted(oid for oid in wanted if oid in missing or oid in extra)
+        for start in range(0, len(need), _FETCH_BATCH):
+            await self._runner.run(
+                [
+                    "-c",
+                    "fetch.negotiationAlgorithm=noop",
+                    "fetch",
+                    "--no-tags",
+                    "--no-write-fetch-head",
+                    "--no-recurse-submodules",
+                    "--filter=blob:none",
+                    "--",
+                    _REMOTE,
+                    *need[start : start + _FETCH_BATCH],
+                ],
+                op=GitOp.fetch,
+                git_dir=dirs.git,
+                target=target,
+                timeout_s=self._config.fetch_timeout_s,
+            )
+
+    async def _tips(self, dirs: WorkspaceDirs) -> list[str]:
+        """HEAD (если он есть) и выбранные ветки сервера: из них берутся пути и их блобы."""
+        refs = await self._run_local(dirs, ["for-each-ref", "--format=%(refname)", f"refs/remotes/{_REMOTE}/"])
+        tips = [line for line in refs.stdout.decode("utf-8", errors="replace").splitlines() if line]
+        head = await self._run_local(dirs, ["rev-parse", "--verify", "--quiet", "HEAD^{commit}"], check=False)
+        return ["HEAD", *tips] if head.returncode == 0 else tips
+
+    async def _missing(self, dirs: WorkspaceDirs, tips: Sequence[str]) -> set[str]:
+        """Объекты деревьев `tips`, которых нет в хранилище. `--missing=print` ничего не подгружает."""
+        if not tips:
+            return set()
+        out = await self._local(dirs, ["rev-list", "--objects", "--missing=print", "--no-walk", *tips])
+        return {line[1:] for line in out.decode("ascii", errors="replace").splitlines() if line.startswith("?")}
+
+    @staticmethod
+    def _packs_path(dirs: WorkspaceDirs) -> str:
+        """Папка паков из шаблона разреженной выборки (`/<папка>/`); без шаблона пространство видит весь репозиторий."""
+        sparse = dirs.git / "info" / "sparse-checkout"
+        try:
+            pattern = sparse.read_text(encoding="utf-8").strip()
+        except OSError:
+            return "."
+        folder = pattern.strip("/")
+        return folder or "."
 
     @staticmethod
     def _fresh_dirs(dirs: WorkspaceDirs) -> None:

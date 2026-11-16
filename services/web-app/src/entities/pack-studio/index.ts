@@ -133,9 +133,11 @@ export type {
   VersionLocation,
 } from "./lib/packPaths";
 export { packErrorText, workspaceErrorText } from "./lib/errorText";
+export { PackErrorText } from "./ui/PackErrorText";
 export {
   errorNumber,
   forkRequired,
+  gitFailureHint,
   lintFailure,
   mergeConflictFiles,
 } from "./lib/gitErrors";

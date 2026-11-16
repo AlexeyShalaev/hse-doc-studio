@@ -1,10 +1,10 @@
-"""Студия шаблонов: состояние git в частичном клоне, когда база ушла вперёд, а блобов новой базы ещё нет.
+"""Студия шаблонов: состояние git в частичном клоне, когда база ушла вперёд.
 
 Выборка базы (`--filter=blob:none`) приносит коммиты и деревья, но не содержимое файлов. Раньше `GET .../git`
 сравнивал рабочее дерево с базой через `git diff`, который для правленого файла читает блоб базы. Локальный git
 ходить в сеть не может (`GIT_ALLOW_PROTOCOL=none`), и страница получала 502 «transport 'https' not allowed ... could
-not fetch ... from promisor remote». Теперь состояние считается без блобов, а полный diff подгружает их с доступом
-пространства.
+not fetch ... from promisor remote». Теперь «Обновить» догружает блобы базы под папкой паков, а состояние ветки их и
+не читает: хранилище, где блоба базы нет (пространство, обновлённое до этой правки), отвечает так же.
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ from typing import Any
 from tests.fixtures.git_remote import BareRemote, GitHttpServer, run_git, seed_remote
 from tests.fixtures.tls import make_ca_signed
 from tests.integration.api.pack_studio.conftest import API, DRAFT_DIR, TEMPLATE_DIR, Stand
+from tests.integration.api.pack_studio.test_git_studio_layout import _drop_pack_with
 from tests.integration.api.pack_studio.test_git_workspace import _git_workspace, _remote, _store
 
 _DRAFT_TEX = f"{DRAFT_DIR}/files/report/main.tex"
@@ -56,6 +57,13 @@ async def _base_moved_under_local_edits(stand: Stand, remote: BareRemote, ws_id:
     refreshed = await _refresh(stand, ws_id)
     assert refreshed["base_sha"] == remote.head("main")
     assert refreshed["error"] is None, refreshed
+    # «Обновить» догрузила блобы базы под папкой паков.
+    assert not _missing_in_base(stand, ws_id, _DRAFT_TEX)
+
+
+def _forget_base_blob(stand: Stand, ws_id: str) -> None:
+    """Блоба черновика из базы снова нет: так выглядит хранилище, обновлённое до догрузки блобов базы."""
+    _drop_pack_with(stand, ws_id, f"refs/remotes/origin/main:packs/{_DRAFT_TEX}")
     assert _missing_in_base(stand, ws_id, _DRAFT_TEX)
 
 
@@ -64,6 +72,7 @@ async def test__git_view__base_moved_and_its_blobs_are_missing__answers_without_
     ws = await _git_workspace(stand, remote)
     ws_id = str(ws["id"])
     await _base_moved_under_local_edits(stand, remote, ws_id)
+    _forget_base_blob(stand, ws_id)
 
     resp = await stand.client.get(f"{API}/workspaces/{ws_id}/git")
 
@@ -82,6 +91,7 @@ async def test__git_view__file_equal_to_the_new_base__is_not_changed(stand: Stan
     ws = await _git_workspace(stand, remote)
     ws_id = str(ws["id"])
     await _base_moved_under_local_edits(stand, remote, ws_id)
+    _forget_base_blob(stand, ws_id)
     # Человек вручную привёл файл к тексту базы: от базы он не отличается, хотя от своего коммита отличается.
     await _put(stand, ws_id, _DRAFT_TEX, _THEIRS)
 
@@ -99,6 +109,7 @@ async def test__commit_and_diff__base_blobs_missing__work_and_diff_fetches_them(
     ws = await _git_workspace(stand, remote)
     ws_id = str(ws["id"])
     await _base_moved_under_local_edits(stand, remote, ws_id)
+    _forget_base_blob(stand, ws_id)
 
     committed = await stand.client.post(f"{API}/workspaces/{ws_id}/git/commit", json={})
     diff = await stand.client.get(f"{API}/workspaces/{ws_id}/git/diff")
@@ -139,6 +150,7 @@ async def test__https_workspace_with_token__git_view_and_diff_after_base_moved(
     assert ws["state"] == "ready", ws
     ws_id = str(ws["id"])
     await _base_moved_under_local_edits(stand, bare, ws_id)
+    _forget_base_blob(stand, ws_id)
 
     view = await stand.client.get(f"{API}/workspaces/{ws_id}/git")
     diff = await stand.client.get(f"{API}/workspaces/{ws_id}/git/diff")

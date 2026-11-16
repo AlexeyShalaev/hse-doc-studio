@@ -9,7 +9,8 @@
     "network": "Network error",
     "unknown": "Unknown error",
     "schemaConsole": "{{method}} {{url}} — open DevTools → Console for the full report with path/received. You can share it with the AI agent.",
-    "zodNoHttp": "ZodError without HTTP context. See console for details."
+    "zodNoHttp": "ZodError without HTTP context. See console for details.",
+    "gitHint": "Details for support"
   },
   "compile": {
     "imageMissingTitle": "Image not installed",
@@ -291,7 +292,7 @@
     "name_required": "Enter a name in Russian or English.",
     "template_id_taken": "This pack already has a template with this id.",
     "pack_not_found": "Pack not found in the workspace.",
-    "workspace_git_failed": "The local copy of the repository in the workspace could not be read. Try again later; if the error persists, delete the workspace and create it again.",
+    "workspace_git_failed": "The local copy of the repository in the workspace could not be read. Try again later; if the error persists, send the details from this message to the administrator.",
     "source_not_found": "Catalog source not found. Reload the page.",
     "source_busy": "This source is already being checked or applied. Wait for it to finish.",
     "source_kind_not_allowed": "This kind of source is not available here: a folder connects only in the local Studio.",

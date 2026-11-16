@@ -60,6 +60,16 @@ export const forkRequired = (error: unknown): ForkRequired | null => {
   };
 };
 
+/**
+ * workspace_git_failed: подсказка сервера (подкоманда git и первые строки ошибки,
+ * без адресов, токенов и путей сервера); иначе null.
+ */
+export const gitFailureHint = (error: unknown): string | null => {
+  if (codeOf(error) !== "workspace_git_failed") return null;
+  const hint = (error as ApiError).data?.hint;
+  return typeof hint === "string" && hint.trim() !== "" ? hint : null;
+};
+
 /** Число из тела ошибки (limit у preview_quota и другие); иначе null. */
 export const errorNumber = (error: unknown, field: string): number | null => {
   if (!(error instanceof ApiError)) return null;

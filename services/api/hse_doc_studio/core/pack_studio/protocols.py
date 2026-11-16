@@ -174,8 +174,11 @@ class IPackWorkspaceGit(Protocol):
 
     # ── срез T6: ветка, коммит, отправка, слияние базы ──
 
-    async def status(self, dirs: WorkspaceDirs, *, base_branch: str, packs_path: str) -> WorkGitStatus:
-        """Ветка, вершина, правки после коммита и отличия от базы под папкой паков; без сети."""
+    async def status(
+        self, dirs: WorkspaceDirs, target: RemoteTarget, *, base_branch: str, packs_path: str
+    ) -> WorkGitStatus:
+        """Ветка, вершина, правки после коммита и отличия от базы под папкой паков. Сеть (доступ `target`) только
+        чтобы догрузить блоб частичного клона, без которого локальный git не может ответить."""
         ...
 
     async def local_branches(self, dirs: WorkspaceDirs) -> tuple[str, ...]: ...
@@ -188,8 +191,11 @@ class IPackWorkspaceGit(Protocol):
         """Переход на ветку (дерево чистое). `fetch`: ветки нет локально, она берётся с сервера. Возвращает вершину."""
         ...
 
-    async def commit(self, dirs: WorkspaceDirs, *, packs_path: str, message: str, author: VcsAuthor) -> str | None:
-        """Все правки под папкой паков одним коммитом от имени автора; None, если коммитить нечего."""
+    async def commit(
+        self, dirs: WorkspaceDirs, target: RemoteTarget, *, packs_path: str, message: str, author: VcsAuthor
+    ) -> str | None:
+        """Все правки под папкой паков одним коммитом от имени автора; None, если коммитить нечего. `target` как у
+        `status`: только для догрузки недостающего блоба."""
         ...
 
     async def push(

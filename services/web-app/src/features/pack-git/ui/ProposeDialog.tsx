@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import {
   forkRequired,
   lintFailure,
-  packErrorText,
   usePackOfficial,
   useProposePack,
   type ForkRequired,
@@ -12,6 +11,7 @@ import {
   type PackForkChoice,
   type PackGit,
   type PackProposeResponse,
+  PackErrorText,
 } from "@entities/pack-studio";
 import { ApiError } from "@shared/api";
 import { pickLocalized } from "@shared/lib";
@@ -444,7 +444,11 @@ export const ProposeDialog = ({
           />
         )}
         {shownError !== null && (
-          <Notice tone="err" role="alert" text={packErrorText(shownError)} />
+          <Notice
+            tone="err"
+            role="alert"
+            text={<PackErrorText error={shownError} />}
+          />
         )}
       </div>
     );
@@ -546,7 +550,7 @@ export const ProposeDialog = ({
           <Notice
             tone="err"
             role="alert"
-            text={packErrorText(shownError)}
+            text={<PackErrorText error={shownError} />}
             action={
               denied ? (
                 <Button size="xs" variant="secondary" onClick={onAccess}>

@@ -56,8 +56,11 @@ const onBranch = (patch: Partial<PackGit> = {}): PackGit => ({
   ...patch,
 });
 
-const mount = (git: PackGit) => {
-  vi.spyOn(packStudioApi, "git").mockResolvedValue(git);
+/** `failure`: состояние git не читается, сервер отвечает этой ошибкой. */
+const mount = (git: PackGit, failure?: ApiError) => {
+  const state = vi.spyOn(packStudioApi, "git");
+  if (failure) state.mockRejectedValue(failure);
+  else state.mockResolvedValue(git);
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -422,6 +425,18 @@ describe("панель git рабочего пространства", () => {
     );
     expect(await screen.findByTestId("git-access-service")).toHaveTextContent(
       "Работает служебный доступ установки",
+    );
+  });
+
+  it("сбой локального git: текст и свёрнутая подсказка для поддержки", async () => {
+    mount(DIRTY, apiError("workspace_git_failed"));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("пришлите администратору подробности");
+    const hint = within(alert).getByTestId("git-failure-hint");
+    expect(hint).not.toHaveAttribute("open");
+    expect(hint).toHaveTextContent("Подробности для поддержки");
+    expect(hint).toHaveTextContent(
+      "git status: fatal: transport 'https' not allowed",
     );
   });
 });

@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  packErrorText,
   useCommitPack,
   type PackGit,
+  PackErrorText,
 } from "@entities/pack-studio";
 import { toast } from "@shared/lib";
 import { Button, Modal, Textarea } from "@shared/ui";
@@ -107,7 +107,11 @@ export const CommitDialog = ({
           data-testid="git-commit-message"
         />
         {commit.isError && (
-          <Notice tone="err" role="alert" text={packErrorText(commit.error)} />
+          <Notice
+            tone="err"
+            role="alert"
+            text={<PackErrorText error={commit.error} />}
+          />
         )}
       </div>
     </Modal>

@@ -10,6 +10,7 @@ import type { PackCiStatus, PackPreviewBuild } from "../api/schemas";
 import {
   errorNumber,
   forkRequired,
+  gitFailureHint,
   lintFailure,
   mergeConflictFiles,
 } from "./gitErrors";
@@ -58,6 +59,24 @@ describe("поля отказов git Студии шаблонов", () => {
         }),
       ),
     ).toEqual({ canCreate: false, reason: "fork_host_mismatch" });
+  });
+
+  it("workspace_git_failed: подсказка сервера, у других кодов и без неё null", () => {
+    const hint = "git status: fatal: could not fetch abc from promisor remote";
+    expect(
+      gitFailureHint(new ApiError("x", "workspace_git_failed", 409, { hint })),
+    ).toBe(hint);
+    expect(
+      gitFailureHint(new ApiError("x", "workspace_git_failed", 409, {})),
+    ).toBe(null);
+    expect(
+      gitFailureHint(
+        new ApiError("x", "workspace_git_failed", 409, { hint: " " }),
+      ),
+    ).toBe(null);
+    expect(
+      gitFailureHint(new ApiError("x", "merge_conflict", 409, { hint })),
+    ).toBe(null);
   });
 
   it("число из тела ошибки", () => {

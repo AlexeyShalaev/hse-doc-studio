@@ -17,13 +17,13 @@ import {
 import { useTranslation } from "react-i18next";
 import {
   mergeConflictFiles,
-  packErrorText,
   packStudioKeys,
   useMergePackBase,
   usePackChecks,
   usePackGit,
   type LintFailure,
   type PackWorkspace,
+  PackErrorText,
 } from "@entities/pack-studio";
 import { toast } from "@shared/lib";
 import { ActionMenu, Button, Spinner } from "@shared/ui";
@@ -95,7 +95,7 @@ export const PackGitBar = ({
         <Notice
           tone="err"
           role="alert"
-          text={packErrorText(git.error)}
+          text={<PackErrorText error={git.error} />}
           action={
             <Button
               size="xs"
@@ -319,7 +319,7 @@ export const PackGitBar = ({
           <Notice
             tone="err"
             role="alert"
-            text={packErrorText(merge.error)}
+            text={<PackErrorText error={merge.error} />}
             action={
               <Button
                 size="xs"
