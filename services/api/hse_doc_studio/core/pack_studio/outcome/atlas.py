@@ -220,6 +220,11 @@ def encode_key(values: Iterable[str]) -> str:
     return KEY_SEPARATOR.join(value.replace(KEY_SEPARATOR, _KEY_ESCAPE) for value in values)
 
 
+def decode_key(key: str) -> tuple[str, ...]:
+    """Значения измерений из ключа строки (обратное `encode_key`)."""
+    return tuple(part.replace(_KEY_ESCAPE, KEY_SEPARATOR) for part in key.split(KEY_SEPARATOR))
+
+
 def row_count(dimensions: Sequence[tuple[str, Sequence[str]]]) -> int:
     """Строк в таблице: произведение чисел значений измерений (без измерений одна строка)."""
     count = 1

@@ -178,6 +178,23 @@ def section_prints(outcome: Outcome) -> tuple[SectionPrint, ...]:
     return tuple(SectionPrint(s, section_print(s, elements[s]), counts[s]) for s in SECTIONS)
 
 
+def checks_print(outcome: Outcome) -> tuple[str, int]:
+    """Отпечаток и счётчик раздела `checks` (применимость правил проверок). В `fingerprint` и `digest` результата этот
+    раздел не входит (проверки приходят по `include`); сравнения и матрица считают его отдельно. Результат без `checks`
+    даёт отпечаток пустого раздела и 0."""
+    rules = outcome.checks or ()
+    elements = outcome_elements(outcome)["checks"] if outcome.checks is not None else []
+    return section_print("checks", elements), sum(1 for rule in rules if rule.enabled)
+
+
+def full_fingerprint(outcome: Outcome) -> str:
+    """Отпечаток структуры вместе с проверками: у результата без `checks` он равен `outcome.fingerprint`, иначе в него
+    входит применимость правил проверок, так что сравнения видят и её изменение."""
+    if outcome.checks is None:
+        return outcome.fingerprint
+    return _hash([outcome.fingerprint, checks_print(outcome)[0]], 16)
+
+
 def fingerprint_of(prints: tuple[SectionPrint, ...]) -> str:
     """Отпечаток всей структуры результата без трассы: 16 знаков от отпечатков разделов."""
     return _hash([[p.section, p.fingerprint] for p in prints], 16)

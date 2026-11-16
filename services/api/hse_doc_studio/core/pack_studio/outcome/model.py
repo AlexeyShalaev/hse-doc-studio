@@ -242,6 +242,20 @@ class CheckRuleOutcome:
 
 
 @dataclass(frozen=True, slots=True)
+class ChangeReason:
+    """Правило, из-за которого элемент изменился при сравнении двух результатов: исход решения слева (`before`) и справа
+    (`after`; None: у этого элемента решения на этой стороне нет) и фактические значения вводных с каждой стороны."""
+
+    rule: RuleRef
+    kind: str
+    terms: tuple[Term, ...]
+    before: VerdictName | None
+    after: VerdictName | None
+    before_actual: dict[str, str]
+    after_actual: dict[str, str]
+
+
+@dataclass(frozen=True, slots=True)
 class SectionDelta:
     section: SectionName
     added: int

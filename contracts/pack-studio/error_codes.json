@@ -66,5 +66,6 @@
   "atlas_too_large",
   "diff_base_unavailable",
   "outcome_busy",
-  "outcome_element_not_found"
+  "outcome_element_not_found",
+  "outcome_too_large"
 ]
