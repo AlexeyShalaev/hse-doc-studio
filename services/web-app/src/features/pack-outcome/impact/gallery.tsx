@@ -1,5 +1,4 @@
 import type { QueryClient } from "@tanstack/react-query";
-import { MemoryRouter } from "react-router";
 import {
   packOutcomeKeys,
   packStudioKeys,
@@ -160,13 +159,11 @@ export const getImpactGalleryEntries = (): GalleryEntry[] =>
         }
       },
       render: () => (
-        <MemoryRouter>
-          <ImpactBlock
-            workspaceId={id}
-            versions={[REF]}
-            onReport={() => undefined}
-          />
-        </MemoryRouter>
+        <ImpactBlock
+          workspaceId={id}
+          versions={[REF]}
+          onReport={() => undefined}
+        />
       ),
     };
   });

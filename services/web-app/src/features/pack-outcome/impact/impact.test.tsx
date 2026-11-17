@@ -138,9 +138,9 @@ describe("блок «Что изменится в результате» (F10)",
     expect(
       await screen.findAllByTestId("outcome-change-route_step"),
     ).toHaveLength(1);
-    await userEvent.click(
-      screen.getAllByTestId("outcome-change-why")[0] as HTMLElement,
-    );
+    const [why] = screen.getAllByTestId("outcome-change-why");
+    if (!why) throw new Error("no why button");
+    await userEvent.click(why);
     expect(
       (await screen.findAllByTestId("outcome-change-reasons")).length,
     ).toBeGreaterThan(0);
