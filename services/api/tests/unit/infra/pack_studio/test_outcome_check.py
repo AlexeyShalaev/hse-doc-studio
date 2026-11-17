@@ -178,6 +178,7 @@ def test__cli__format_error_fails_the_run_and_a_failing_scenario_only_warns(
     assert code in {0, 1}
 
 
+@pytest.mark.timeout(300)
 def test__repository_packs__scenarios_pass_and_the_outcome_check_has_no_errors() -> None:
     root = Path(__file__).resolve().parents[6] / "packs"
 

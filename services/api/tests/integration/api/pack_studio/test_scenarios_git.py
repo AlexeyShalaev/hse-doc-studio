@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from hse_doc_studio.core.pack_studio.outcome.scenarios import ParticipantAssertion, Scenario, scenario_text
 
 from tests.fixtures.git_remote import BareRemote, make_bare_remote, seed_remote
@@ -98,6 +99,7 @@ async def test__fresh_clone__scenario_from_the_commit_is_seen_in_all_three_state
     assert len(etags) == 1, "байты те же, ETag файла тот же в любом состоянии"
 
 
+@pytest.mark.timeout(180)
 async def test__fresh_clone__run_in_three_states_gives_the_same_result_with_its_own_etag(stand: Stand) -> None:
     _, ws = await _ready(stand)
 

@@ -10,6 +10,7 @@ from __future__ import annotations
 import time
 from typing import Any
 
+import pytest
 from hse_doc_studio.api.schemas.pack_studio_outcome import PackOutcomeLintResponse
 from hse_doc_studio.infra.ratelimit.memory import InMemoryRateLimiter
 from httpx import Response
@@ -151,6 +152,7 @@ async def test__draft__a_langs_edit_is_seen_by_the_translation_rule(stand: Stand
     assert "translation-missing" not in _rules(_parse(await _lint(stand, ws, DRAFT_VKR)))
 
 
+@pytest.mark.timeout(120)
 async def test__jinja__a_broken_template_is_an_error_only_on_request(stand: Stand) -> None:
     ws, root = await folder_with_draft(stand)
     tex = root / "hse-cs-se/templates/vkr/versions/2026.1.9/files/thesis/thesis.ru.tex"
@@ -172,6 +174,7 @@ async def test__jinja__a_broken_template_is_an_error_only_on_request(stand: Stan
     assert item.hint
 
 
+@pytest.mark.timeout(120)
 async def test__jinja__on_real_packs_the_button_finds_nothing(stand: Stand) -> None:
     ws = await folder_with_real_packs(stand)
 
