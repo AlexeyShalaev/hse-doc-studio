@@ -103,13 +103,17 @@ def _probes(version: TemplateVersion, today: date) -> Iterator[_Probe]:
     staffing = [spec for spec in input_specs(version) if spec.id == SWITCH_STAFFING][0].values
     team = next((value for value in staffing if value != "solo"), None)
     nobody = {SWITCH_SUPERVISOR: "none", SWITCH_CO_SUPERVISOR: "no", SWITCH_ACADEMIC: "no"}
-    for lang, kind in ((lang, kind) for lang in langs for kind in kinds):
+    pairs = [(lang, kind) for lang in langs for kind in kinds]
+    for lang, kind in pairs:
         base = {SWITCH_LANG: lang, SWITCH_KIND: kind}
         yield _probe("непусто", normal, {**base, SWITCH_STAFFING: staffing[0]}, version, today)
-        yield _probe("пусто", empty, {**base, SWITCH_STAFFING: staffing[0]}, version, today)
         yield _probe("пусто, без руководителей", empty, {**base, **nobody}, version, today)
-        if team is not None:
-            yield _probe("непусто, команда", normal, {**base, SWITCH_STAFFING: team}, version, today)
+    # Остальные пробы (пустой набор с руководителями, команда) на одной паре языка и вида: ветки шаблона от них
+    # зависят слабо, а каждая проба это полный рендер всех файлов версии.
+    base = {SWITCH_LANG: pairs[0][0], SWITCH_KIND: pairs[0][1]}
+    yield _probe("пусто", empty, {**base, SWITCH_STAFFING: staffing[0]}, version, today)
+    if team is not None:
+        yield _probe("непусто, команда", normal, {**base, SWITCH_STAFFING: team}, version, today)
 
 
 def _probe(label: str, example: Any, overrides: dict[str, str], version: TemplateVersion, today: date) -> _Probe:
