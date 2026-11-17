@@ -348,9 +348,13 @@ const mockWorkspaces = async (page: Page): Promise<Fake> => {
       });
     }
     // Экран «Результат» (F1): сервера результата пока нет, отвечают эталоны контракта.
-    const outcome = /^\/[^/]+\/versions\/hse-cs-sse\/coursework\/([^/]+)\/outcome(\/inputs|\/explain)?$/.exec(rest);
+    const outcome = /^\/[^/]+\/versions\/hse-cs-sse\/coursework\/([^/]+)\/outcome(\/inputs|\/explain|\/impact)?$/.exec(rest);
     if (outcome) {
       const [, version = "", inputs] = outcome;
+      if (inputs === "/impact") {
+        // «До и после» (F10): эталон контракта, в одном сценарии из трёх результат изменится.
+        return json(route, { ...fixture("PackOutcomeImpact", "coursework"), workspace_id: WS, version });
+      }
       if (inputs === "/explain") {
         // «Почему?» (F6): эталон объяснения, правила манифеста указывают на version.yaml открытой версии.
         fake.explains.push(req.postDataJSON());
@@ -646,6 +650,11 @@ for (const lang of LANGS) {
 
       // «Предложить изменения»: проверка пака не прошла, находка в «Проблемах» с переходом к файлу и строке.
       await page.getByTestId("propose-changes").click();
+      // «Что изменится в результате» (F10): в одном сценарии из трёх результат изменится, нужна отметка «я знаю».
+      await expect(page.getByTestId("impact-headline")).toContainText(text("1 из 3", "1 of 3"));
+      await expect(page.getByTestId("git-propose-submit")).toBeDisabled();
+      await page.getByTestId("git-propose-ack-input").check();
+      await shot(page, L, "ps-49-impact");
       await page.getByTestId("git-propose-submit").click();
       const gate = page.getByTestId("problems-gate");
       await expect(gate).toContainText("TemplateSyntaxError");
@@ -653,6 +662,7 @@ for (const lang of LANGS) {
 
       // Повтор: PR открыт, статус проверок идёт.
       await page.getByTestId("propose-changes").click();
+      await page.getByTestId("git-propose-ack-input").check();
       await page.getByTestId("git-propose-submit").click();
       await expect(page.getByTestId("git-propose-done")).toContainText("#7");
       await expect(page.getByTestId("git-propose-pr-link")).toHaveAttribute("href", PR_URL);

@@ -32,6 +32,7 @@ import {
   type OutcomeSelection,
 } from "./lib/urlState";
 import { OutcomeBody } from "./OutcomeBody";
+import { getImpactGalleryEntries } from "./impact/gallery";
 import { seedModes, type ModesSeed } from "./modes/seed";
 import {
   INPUTS_SOURCE,
@@ -1288,5 +1289,12 @@ export const getPackOutcomeGallery = (): GalleryGroup[] => [
         ),
       };
     }),
+  },
+  {
+    id: "pack-outcome-impact",
+    title: "Студия шаблонов: «Что изменится в результате»",
+    description:
+      "Блок «до и после» в диалоге «Предложить изменения»: ответ impact в кэше запросов, сервер не нужен.",
+    entries: getImpactGalleryEntries(),
   },
 ];

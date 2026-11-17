@@ -9,6 +9,7 @@ import type {
   PackOutcomeAtlas,
   PackOutcomeCompare,
   PackOutcomeCompareRequest,
+  PackOutcomeImpact,
   PackOutcomeMatrix,
   PackOutcomeMatrixRequest,
   PackScenarioEntry,
@@ -31,7 +32,20 @@ import {
  * `no_base` (сравнивать не с чем); `too_large` (ответ больше предела); `fail` (сбой сервера).
  */
 export type ModesBehavior =
-  "normal" | "atlas_too_large" | "busy" | "no_base" | "too_large" | "fail";
+  | "normal"
+  | "atlas_too_large"
+  | "busy"
+  | "no_base"
+  | "no_git"
+  | "new_version"
+  | "too_large"
+  | "fail"
+  // «До и после» (F10): ничего не изменится; один сценарий не читается; атлас слишком большой;
+  // сценариев нет.
+  | "impact_same"
+  | "impact_error"
+  | "impact_atlas_null"
+  | "impact_empty";
 
 let modesBehavior: ModesBehavior = "normal";
 /** Для тестов и галереи: как отвечают режимы; `busy` срабатывает один раз. */
@@ -292,6 +306,73 @@ const matrixFor = (
   return out;
 };
 
+/** «До и после» по состоянию подмены: эталон контракта или его вариант (F10). */
+const impactFor = (
+  where: Where,
+  behavior: ModesBehavior = modesBehavior,
+): PackOutcomeImpact => {
+  const out = structuredClone(COURSEWORK_IMPACT);
+  out.workspace_id = where.id;
+  out.pack = where.pack || out.pack;
+  out.template = where.template || out.template;
+  out.version = where.version || out.version;
+  const first = out.scenarios.find((s) => s.status === "changed");
+  switch (behavior) {
+    case "impact_same":
+      out.scenarios = out.scenarios.map((s) => ({
+        ...s,
+        status: "unchanged",
+        changes: [],
+      }));
+      out.summary = {
+        ...out.summary,
+        scenarios_changed: 0,
+        scenarios_unchanged: out.scenarios.length,
+        sections: [],
+        atlas: out.summary.atlas
+          ? { ...out.summary.atlas, rows_changed: 0, outcomes_after: 12 }
+          : null,
+      };
+      break;
+    case "impact_error":
+      if (first) {
+        first.status = "error";
+        first.changes = [];
+        first.message =
+          "Вводная supervisor.role есть только в новой версии: на базе сценарий не читается.";
+      }
+      out.summary = {
+        ...out.summary,
+        scenarios_changed: 0,
+        scenarios_error: 1,
+        sections: [],
+      };
+      break;
+    case "impact_atlas_null":
+      out.summary = { ...out.summary, atlas: null };
+      break;
+    case "impact_empty":
+      out.scenarios = [];
+      out.summary = {
+        ...out.summary,
+        scenarios_total: 0,
+        scenarios_changed: 0,
+        scenarios_unchanged: 0,
+        scenarios_error: 0,
+      };
+      break;
+    default:
+      break;
+  }
+  return out;
+};
+
+/** Для тестов и галереи: «до и после» по эталону контракта в выбранном виде. */
+export const referenceImpact = (
+  behavior: ModesBehavior = "normal",
+): PackOutcomeImpact =>
+  impactFor({ id: "ws", pack: "", template: "", version: "" }, behavior);
+
 /** Сбой, который режимы показывают вместо ответа (по состоянию подмены). */
 const failure = (kind: "atlas" | "compare" | "impact" | "matrix") => {
   const behavior = modesBehavior;
@@ -313,9 +394,15 @@ const failure = (kind: "atlas" | "compare" | "impact" | "matrix") => {
       { limit: 2000, rows: 6912 },
     );
   }
-  if (behavior === "no_base" && kind !== "atlas" && kind !== "matrix") {
+  if (
+    (behavior === "no_base" ||
+      behavior === "no_git" ||
+      behavior === "new_version") &&
+    kind !== "atlas" &&
+    kind !== "matrix"
+  ) {
     return demoError(409, "diff_base_unavailable", "Сравнивать не с чем.", {
-      reason: "no_base",
+      reason: behavior,
     });
   }
   if (behavior === "too_large" && (kind === "matrix" || kind === "impact")) {
@@ -363,10 +450,7 @@ export const createModesRoutes = (state: ModesState): DemoRoute[] => {
     route("POST", "compare", "compare", (req) =>
       compareFor(whereOf(req), req.body as PackOutcomeCompareRequest),
     ),
-    route("POST", "impact", "impact", (req) => ({
-      ...structuredClone(COURSEWORK_IMPACT),
-      workspace_id: whereOf(req).id,
-    })),
+    route("POST", "impact", "impact", (req) => impactFor(whereOf(req))),
     route("POST", "matrix", "matrix", (req) =>
       matrixFor(
         whereOf(req),

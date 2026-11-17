@@ -15,6 +15,7 @@ import { pickLocalized } from "@shared/lib/i18n/pickLocalized";
 import { Select } from "@shared/ui";
 import { writeOutcomeSearch, type OutcomeMode } from "../lib/urlState";
 import { useOutcomeModel } from "../model";
+import { ProposeAction } from "./ProposeAction";
 import { ScenarioPicker } from "./scenarios/ScenarioPicker";
 
 // Переключатель данных только для разработки: в рабочей сборке этой ветки нет.
@@ -172,6 +173,7 @@ export const TopBar = ({
           >
             {t("bar.filesMode")}
           </Link>
+          <ProposeAction />
         </div>
       </div>
       <div className="po-bar-row">

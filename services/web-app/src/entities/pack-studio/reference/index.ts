@@ -18,6 +18,7 @@ export {
   buildVkrAtlas,
   modesCalls,
   pinnedAtlas,
+  referenceImpact,
   setModesBehavior,
 } from "./modes";
 export type { ModesBehavior } from "./modes";

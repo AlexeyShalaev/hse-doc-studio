@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useCallback, useId, useMemo, useState } from "react";
 import { CircleCheck, ExternalLink, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
@@ -11,13 +11,16 @@ import {
   type PackForkChoice,
   type PackGit,
   type PackProposeResponse,
+  type PackVersionRef,
   PackErrorText,
 } from "@entities/pack-studio";
 import { ApiError } from "@shared/api";
 import { pickLocalized } from "@shared/lib";
 import { Button, Input, Modal, Textarea } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
+import { impactVersions } from "../lib/impactVersions";
 import { ChangedFiles } from "./ChangedFiles";
+import { ImpactSlot, type ImpactReport } from "./ImpactSlot";
 
 export type ProposeDialogProps = {
   git: PackGit;
@@ -28,6 +31,12 @@ export type ProposeDialogProps = {
   onLintFailed: (failure: LintFailure) => void;
   /** Открыть «Доступ к репозиторию» (отказ в push, нет прав на PR). */
   onAccess: () => void;
+  /** Версия открытого экрана «Результат»: её «до и после» идёт первой. */
+  version?: PackVersionRef | null;
+  /** Адрес возврата из режима «Файлы» после «Открыть правило» (экран «Результат» со своим состоянием). */
+  backTo?: string;
+  /** Создать сценарий на месте (экран «Результат»); без него блок ведёт на экран «Результат» версии. */
+  onCreateScenario?: (version: PackVersionRef) => void;
 };
 
 type Step =
@@ -276,6 +285,9 @@ export const ProposeDialog = ({
   editorDirty,
   onLintFailed,
   onAccess,
+  version = null,
+  backTo,
+  onCreateScenario,
 }: ProposeDialogProps) => {
   const { t } = useTranslation("packStudio");
   const propose = useProposePack(git.workspace.id);
@@ -286,6 +298,10 @@ export const ProposeDialog = ({
   const [forkMode, setForkMode] = useState<ForkMode>("url");
   const [forkUrl, setForkUrl] = useState("");
   const [accepted, setAccepted] = useState(false);
+  // «До и после» (срез F10): отчёт блока, отметка «я знаю» и включение сводки в описание.
+  const [impact, setImpact] = useState<ImpactReport | null>(null);
+  const [ack, setAck] = useState(false);
+  const [includeSummary, setIncludeSummary] = useState(true);
   const uid = useId();
   const word = prWord(git.provider);
   const ws = git.workspace;
@@ -304,8 +320,23 @@ export const ProposeDialog = ({
         }
       : null);
 
+  const { versions, extra } = useMemo(
+    () => impactVersions(git.changed, version),
+    [git.changed, version],
+  );
+  const hasImpact = versions.length > 0;
+  // Расчёт идёт, пока блок не отчитался или отчитался «считаю»; ничего не посчитано: отметки нет.
+  const impactPending = hasImpact && (impact === null || impact.pending);
+  const needsAck = hasImpact && impact?.needsAck === true;
+  const onImpactFail = useCallback(() => {
+    setImpact({ pending: false, needsAck: false, summary: "" });
+  }, []);
+
   const reset = () => {
     propose.reset();
+    setImpact(null);
+    setAck(false);
+    setIncludeSummary(true);
     setStep({ kind: "form" });
     setTitle("");
     setDescription("");
@@ -321,10 +352,17 @@ export const ProposeDialog = ({
   };
 
   const send = (fork: PackForkChoice | null) => {
+    const summary =
+      includeSummary && impact !== null && impact.summary !== ""
+        ? impact.summary
+        : null;
+    const body = [trimmed(description), summary]
+      .filter((part): part is string => part !== null)
+      .join("\n\n");
     propose.mutate(
       {
         title: trimmed(title),
-        description: trimmed(description),
+        description: body === "" ? null : body,
         message: git.dirty ? trimmed(message) : null,
         ...(fork ? { fork } : {}),
         ...(consentInfo && accepted ? { accept_license: true } : {}),
@@ -539,6 +577,92 @@ export const ProposeDialog = ({
           />
         )}
         <p className="ps-dialog-text">{t("git.propose.checksHint")}</p>
+        {hasImpact && (
+          <div
+            className="flex flex-col"
+            style={{ gap: "0.5rem" }}
+            data-testid="git-propose-impact"
+          >
+            <ImpactSlot
+              workspaceId={ws.id}
+              versions={versions}
+              onReport={setImpact}
+              onFail={onImpactFail}
+              onLeave={close}
+              backTo={backTo}
+              onCreateScenario={
+                onCreateScenario
+                  ? (v) => {
+                      close();
+                      onCreateScenario(v);
+                    }
+                  : undefined
+              }
+            />
+            {extra > 0 && (
+              <p className="ps-dialog-text">
+                {t("git.propose.impact.extra", { count: extra })}
+              </p>
+            )}
+            {impactPending && (
+              <p
+                className="ps-dialog-text"
+                role="status"
+                data-testid="git-propose-impact-waiting"
+              >
+                {t("git.propose.impact.waiting")}
+              </p>
+            )}
+            {needsAck && (
+              <label
+                className="ps-choice"
+                htmlFor={`${uid}-ack`}
+                data-testid="git-propose-ack"
+              >
+                <input
+                  id={`${uid}-ack`}
+                  type="checkbox"
+                  checked={ack}
+                  onChange={(e) => {
+                    setAck(e.target.checked);
+                  }}
+                  style={{ accentColor: "var(--accent)" }}
+                  data-testid="git-propose-ack-input"
+                />
+                <span className="ps-choice-text">
+                  <span>{t("git.propose.impact.ack")}</span>
+                  <span className="ps-choice-hint">
+                    {t("git.propose.impact.ackHint")}
+                  </span>
+                </span>
+              </label>
+            )}
+            {impact !== null && impact.summary !== "" && (
+              <label
+                className="ps-choice"
+                htmlFor={`${uid}-summary`}
+                data-testid="git-propose-summary"
+              >
+                <input
+                  id={`${uid}-summary`}
+                  type="checkbox"
+                  checked={includeSummary}
+                  onChange={(e) => {
+                    setIncludeSummary(e.target.checked);
+                  }}
+                  style={{ accentColor: "var(--accent)" }}
+                  data-testid="git-propose-summary-input"
+                />
+                <span className="ps-choice-text">
+                  <span>{t("git.propose.impact.include")}</span>
+                  <span className="ps-choice-hint">
+                    {t("git.propose.impact.includeHint")}
+                  </span>
+                </span>
+              </label>
+            )}
+          </div>
+        )}
         {consentInfo && (
           <LicenseConsent
             info={consentInfo}
@@ -568,15 +692,23 @@ export const ProposeDialog = ({
           {t("common.cancel")}
         </Button>
         <Button
-          disabled={propose.isPending || (consentInfo !== null && !accepted)}
+          disabled={
+            propose.isPending ||
+            (consentInfo !== null && !accepted) ||
+            impactPending ||
+            (needsAck && !ack)
+          }
           onClick={() => {
             send(null);
           }}
           data-testid="git-propose-submit"
+          data-impact={needsAck ? "warn" : undefined}
         >
           {propose.isPending
             ? t("git.propose.sending")
-            : t(`git.propose.submit.${word}`)}
+            : needsAck
+              ? t("git.propose.impact.anyway")
+              : t(`git.propose.submit.${word}`)}
         </Button>
       </>
     );
