@@ -1612,3 +1612,15 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* ── «Предложить» на экране: список находок проверок пака ── */
+.po-lint-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}

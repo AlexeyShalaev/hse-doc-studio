@@ -33,7 +33,13 @@
     "modeHint": "Hold Alt to see the author view",
     "modePeek": "Alt is held: the author view is shown",
     "modeNoteStudent": "Mode \"As a student\": showing what the student will see.",
-    "modeNoteAuthor": "Mode \"Author\": reasons and rules are shown."
+    "modeNoteAuthor": "Mode \"Author\": reasons and rules are shown.",
+    "propose": "Propose",
+    "proposeHint": "Propose changes: checks, commit, push and a PR",
+    "proposeLint": "Pack checks failed: {{count}} findings. Fix them in Files mode.",
+    "proposeLintOpen": "Open files",
+    "proposeLintTitle": "Pack checks failed",
+    "proposeLintClose": "Close"
   },
   "status": {
     "saved": "Saved",
@@ -1243,6 +1249,90 @@
       "whyHide": "Hide reasons",
       "noDecision": "no decision",
       "absent": "none"
+    }
+  },
+  "impact": {
+    "title": "What changes in the result",
+    "headChanged_one": "The result will change in {{changed}} of {{total}} scenario",
+    "headChanged_other": "The result will change in {{changed}} of {{total}} scenarios",
+    "headSame_one": "The result will not change in the only scenario",
+    "headSame_other": "The result will not change in any of {{total}} scenarios",
+    "headNoScenarios": "The template has no scenarios: nothing to compare the result against",
+    "atlas": "Atlas: {{changed}} of {{total}} rows will change, outcomes {{before}} before and {{after}} after.",
+    "atlasSame": "Atlas: {{total}} rows, {{outcomes}} outcomes, unchanged.",
+    "atlasNull": "The atlas is too large, compared by scenarios only.",
+    "scenarios": "Scenarios",
+    "status": {
+      "unchanged": "Unchanged",
+      "changed": "Changed",
+      "error": "Error"
+    },
+    "counts": {
+      "added": "Added: {{count}}",
+      "changed": "Changed: {{count}}",
+      "removed": "Removed: {{count}}"
+    },
+    "scenarioErrorPlain": "The scenario cannot be read on one of the sides.",
+    "loading": "Computing the result on the base and in the work tree, {{seconds}} s...",
+    "progress": "Calculation progress",
+    "cancel": "Cancel calculation",
+    "run": "Calculate",
+    "busyRetry": "The server is busy, retrying in {{seconds}} s...",
+    "busyTitle": "The server is busy calculating",
+    "busyLead": "Retry in {{seconds}} s. Calculations are rate limited: if the error stays, wait a minute.",
+    "tooLargeTitle": "The comparison is too large",
+    "tooLargeLead": "The response exceeds the limit. Open Matrix and Compare on the Result screen to see differences per scenario.",
+    "offlineTitle": "No connection to the server",
+    "offlineLead": "Check the connection and retry.",
+    "failedTitle": "Could not compute before and after",
+    "notBlocking": "You can still propose the changes.",
+    "cancelled": {
+      "title": "Calculation cancelled",
+      "lead": "You can propose the changes without it."
+    },
+    "released": {
+      "title": "The version is released and immutable",
+      "lead": "Edits do not reach version {{version}}, so there is nothing to compare."
+    },
+    "noBase": {
+      "no_git": {
+        "title": "A folder without git",
+        "lead": "The workspace has no last commit and no base, so there is nothing to compare with. You can propose the changes without a comparison."
+      },
+      "no_base": {
+        "title": "No base",
+        "lead": "The workspace has no base branch. Fetch it in the Files section and the comparison will appear here."
+      },
+      "new_version": {
+        "title": "The version is new, nothing to compare",
+        "lead": "This version is not on the base, so there is no \"before\". You can propose the changes without a comparison."
+      },
+      "unknown": {
+        "title": "Nothing to compare with",
+        "lead": "The version is not on the base, or the workspace has no git."
+      }
+    },
+    "noScenarios": {
+      "title": "No scenarios",
+      "lead": "Scenarios are checks of the result: without them a condition edit goes unnoticed. Create at least one.",
+      "create": "Create a scenario",
+      "open": "Open the result"
+    },
+    "findings": "New result linter warnings",
+    "severity": {
+      "error": "Error",
+      "warning": "Warning",
+      "info": "Note"
+    },
+    "warning": "The result of these scenarios will change. Review the differences above: a confirmation is required to continue.",
+    "pr": {
+      "head_one": "**The result will change in {{changed}} of {{total}} scenario**",
+      "head_other": "**The result will change in {{changed}} of {{total}} scenarios**",
+      "headNone": "Scenario results are unchanged ({{total}} in total)",
+      "atlas": "Atlas: {{changed}} of {{total}} rows will change, outcomes {{before}} before and {{after}} after",
+      "error": "inputs error",
+      "more": "and {{count}} more",
+      "findings": "New result linter warnings: {{count}}"
     }
   }
 }

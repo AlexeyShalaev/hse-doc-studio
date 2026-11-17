@@ -14,10 +14,13 @@ import {
   PackWorkspaceSchema,
   ciPollInterval,
   CI_APPROVAL_POLL_MS,
+  packOutcomeApi,
   packStudioApi,
   type PackGit,
 } from "@entities/pack-studio";
+import { referenceImpact } from "@entities/pack-studio/reference";
 import { i18n } from "@shared/lib";
+import { loadPackOutcomeNamespace } from "@shared/lib/i18n/packOutcomeNamespace";
 import { loadPackStudioNamespace } from "@shared/lib/i18n/packStudioNamespace";
 import { PackGitBar } from "./PackGitBar";
 
@@ -29,6 +32,12 @@ const fixture = <T,>(schema: ZodType<T>, dir: string, name: string): T =>
   schema.parse(
     JSON.parse(readFileSync(join(FIXTURES, dir, `${name}.json`), "utf8")),
   );
+
+/** «До и после» считается при открытии диалога: отправка доступна, когда он ответил. */
+const submitReady = () =>
+  waitFor(() => {
+    expect(screen.getByTestId("git-propose-submit")).toBeEnabled();
+  });
 
 const DIRTY = fixture(PackGitSchema, "PackGit", "detached_dirty");
 const OFFICIAL_WS = fixture(
@@ -64,6 +73,17 @@ const officialGit = (patch: Partial<PackGit["workspace"]> = {}): PackGit => ({
 });
 
 const mount = (git: PackGit) => {
+  vi.spyOn(packStudioApi, "tree").mockResolvedValue({
+    workspace_id: "w",
+    base_sha: null,
+    packs: [],
+    files: [],
+    truncated: false,
+  });
+  vi.spyOn(packOutcomeApi, "impact").mockResolvedValue({
+    data: referenceImpact("impact_same"),
+    etag: null,
+  });
   vi.spyOn(packStudioApi, "git").mockResolvedValue(git);
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -85,7 +105,7 @@ const mount = (git: PackGit) => {
 
 describe("официальные паки в панели git", () => {
   beforeAll(async () => {
-    await loadPackStudioNamespace();
+    await Promise.all([loadPackStudioNamespace(), loadPackOutcomeNamespace()]);
     await i18n.changeLanguage("ru");
   });
   afterEach(() => {
@@ -115,6 +135,7 @@ describe("официальные паки в панели git", () => {
     expect(submit).toBeDisabled();
 
     await userEvent.click(screen.getByTestId("git-propose-license-accept"));
+    await submitReady();
     await userEvent.click(submit);
     await waitFor(() => {
       expect(propose).toHaveBeenCalledWith(
@@ -131,6 +152,7 @@ describe("официальные паки в панели git", () => {
     await userEvent.click(await screen.findByTestId("propose-changes"));
     await screen.findByTestId("git-propose-submit");
     expect(screen.queryByTestId("git-propose-license")).not.toBeInTheDocument();
+    await submitReady();
     await userEvent.click(screen.getByTestId("git-propose-submit"));
     await waitFor(() => {
       expect(propose).toHaveBeenCalled();
