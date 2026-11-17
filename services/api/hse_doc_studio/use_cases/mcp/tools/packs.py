@@ -114,8 +114,108 @@ def _clip(value: object) -> object:
     return value
 
 
+_HINTS: Final[dict[str, tuple[str, str]]] = {
+    "version_released": (
+        "Выпущенная версия неизменяема: создайте черновик тулом pack_new_version и правьте его.",
+        "A released version is immutable: create a draft with pack_new_version and edit that.",
+    ),
+    "releases_read_only": (
+        "Реестр выпусков ведёт pack_release: правьте через мастер версии, а не файлом.",
+        "pack_release maintains the release registry: use the version wizard, not a file edit.",
+    ),
+    "stale_file": (
+        "Файл изменился после чтения: перечитайте (pack_read_file) и повторите правку с новым etag.",
+        "The file changed after you read it: reread it (pack_read_file) and repeat the edit with the new etag.",
+    ),
+    "workspace_dirty": (
+        "Есть несохранённые правки: сохраните их pack_git_commit и повторите.",
+        "There are uncommitted edits: save them with pack_git_commit and retry.",
+    ),
+    "workspace_busy": (
+        "С пространством идёт другая операция (клон, выборка, git): повторите через несколько секунд.",
+        "Another operation (clone, fetch, git) is running on the workspace: retry in a few seconds.",
+    ),
+    "workspace_not_ready": (
+        (
+            "Пространство ещё скачивается или с ошибкой: состояние покажет pack_list_workspaces, при ошибке "
+            "pack_workspace_refresh."
+        ),
+        (
+            "The workspace is still cloning or failed: pack_list_workspaces shows the state; on failure use "
+            "pack_workspace_refresh."
+        ),
+    ),
+    "not_a_git_workspace": (
+        "У пространства-папки нет git: ветки, коммиты и предложение доступны у пространства над репозиторием.",
+        "A folder workspace has no git: branches, commits and proposals need a repository workspace.",
+    ),
+    "merge_conflict": (
+        (
+            "База конфликтует с вашими правками: слияние отменено. Решите конфликт в файлах из files (pack_read_file, "
+            "pack_write_file), сохраните и повторите."
+        ),
+        "The base conflicts with your edits: the merge was cancelled. Resolve the files in files, commit and retry.",
+    ),
+    "lint_failed": (
+        "Проверки нашли ошибки: поправьте их (pack_lint покажет файл и строку) и повторите.",
+        "Checks found errors: fix them (pack_lint shows the file and line) and retry.",
+    ),
+    "branch_name_invalid": (
+        "Допустимое имя ветки: латиница, цифры, «-», «_», «/»; базовую ветку рабочей делать нельзя.",
+        "Use Latin letters, digits, '-', '_' and '/'; the base branch cannot be the work branch.",
+    ),
+    "credentials_missing": (
+        (
+            "Такого сохранённого доступа нет: добавьте доступ git в интерфейсе (Настройки, Git) и возьмите его id из "
+            "pack_list_credentials. Токены через MCP не передаются."
+        ),
+        (
+            "No such saved access: add git access in the interface (Settings, Git) and take its id from "
+            "pack_list_credentials. Tokens are never passed through MCP."
+        ),
+    ),
+    "service_access_missing": (
+        "Служебного доступа к репозиторию нет: добавьте доступ git в интерфейсе и укажите credential_id.",
+        "There is no service access for the repository: add git access in the interface and pass credential_id.",
+    ),
+    "yaml_patch_conflict": (
+        (
+            "Правка не применилась (поле op в ответе указывает номер): сверьте путь с содержимым pack_read_file; "
+            "файл не изменён."
+        ),
+        (
+            "The edit was not applied (op is the operation number): check the path against pack_read_file; the file is "
+            "unchanged."
+        ),
+    ),
+    "model_invalid": (
+        "Правка сломала бы манифест (reason): файл не изменён. Поправьте значение и повторите.",
+        "The edit would break the manifest (reason): the file is unchanged. Fix the value and retry.",
+    ),
+    "scenario_taken": (
+        "Сценарий с таким id уже есть: для правки передайте if_match (etag из pack_scenario_list).",
+        "A scenario with this id exists: pass if_match (etag from pack_scenario_list) to edit it.",
+    ),
+    "pack_scope_required": (
+        "Токену нужна область packs: выпустите токен с областями mcp и packs.",
+        "The token needs the packs scope: issue a token with the mcp and packs scopes.",
+    ),
+    "pack_studio_forbidden": (
+        "Нужно право «Автор шаблонов»: его выдаёт админ установки.",
+        "The 'Template author' right is required: the installation admin grants it.",
+    ),
+}
+
+
+def default_hint(exc: PackStudioError | GitSyncError) -> str | None:
+    """Что делать по коду отказа: следующий шаг для агента (если у тула нет своей подсказки)."""
+    pair = _HINTS.get(exc.code.value)
+    return localized_error(*pair) if pair is not None else None
+
+
 def refusal(exc: PackStudioError | GitSyncError, *, hint: str | None = None) -> ToolResult:
     """Отказ сценария: код, текст на языке интерфейса и поля по коду (длинные строки обрезаны); `hint` что делать."""
+    hint = hint or default_hint(exc)
     if isinstance(exc, GitSyncError):
         body: dict[str, object] = {"code": exc.code.value, "detail": exc.detail}
     else:

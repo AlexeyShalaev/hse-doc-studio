@@ -196,3 +196,14 @@ API `/api/v1/pack-studio/*` и `/api/admin/pack-studio*` (`docs/design/template-
 Официальные паки (срез T22, `docs/design/template-studio.md`, 4.7): вклад только своим аккаунтом GitHub (личный доступ git, форк человека, поток T6); бота установки нет. У пространства `official` (адрес совпадает с официальным репозиторием установки) и `license_accepted_at`; первое «Предложить» из официального пространства без `accept_license: true` отвечает `license_consent_required` (`license`, `license_url`, `contributing_url`). Ветка официального пространства и любого служебного доступа не трогает ничего вне папки паков, иначе `paths_outside_packs` (`files`). Статус проверок: `awaiting_approval` (запуск ждёт одобрения сопровождающего) и `pr_state` (`open`, `merged`, `closed`).
 
 Форму меняют так: сначала эталоны, затем модели и клиент, тесты в том же коммите.
+
+## MCP: паритет с интерфейсом
+
+Каждое действие раздела `/pack-studio` имеет инструмент `pack_*` (`use_cases/mcp/tools/`: `packs.py`, `pack_git.py`, `pack_workspaces.py`, `pack_scenarios.py`, `pack_edit.py`, `pack_help.py`, `pack_outcome*.py`). Общее для всех:
+
+- Права и область токена те же, что у маршрутов: раздел включён, право «Автор шаблонов», область `packs` у PAT (`PackStudioAccess.require`); без них тулы скрыты из `tools/list`.
+- Отказ сценария это ответ с ошибкой `{code, detail, ...поля кода, hint}`: код из `error_codes.json`, `hint` подсказывает следующий шаг (`version_released` -> `pack_new_version`, `stale_file` -> перечитать, `workspace_dirty` -> `pack_git_commit`).
+- Выпущенные версии и реестры выпусков неизменяемы (`version_released`, `releases_read_only`); деструктивные действия (`pack_workspace_delete`, `pack_git_start_over`, `pack_delete_file`, `remove_document`, `apply` и `disconnect` каталога) выполняются только с `confirm: true`, без него описывают последствия. `pack_propose` опасный и выключен по умолчанию.
+- Токены и пароли в аргументах не принимаются и в ответах не возвращаются: пространство ссылается на сохранённый доступ по `credential_id` (`pack_list_credentials`).
+- Ответ: компактный текст по умолчанию, `format: json` структура, `both` оба вида.
+- Частота: те же правила, что у эндпоинтов (`pack_outcome`, `pack_atlas`, `pack_impact`, `git_sync`, `upload`).

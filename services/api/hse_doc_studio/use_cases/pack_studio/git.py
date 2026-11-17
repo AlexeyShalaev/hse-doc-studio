@@ -95,6 +95,18 @@ class GitView:
 
 
 @dataclass(frozen=True)
+class BranchList:
+    """Ветки пространства: текущая, базовая, локальные и (если сервер ответил) отправленные на сервер."""
+
+    current: str | None
+    base: str | None
+    local: tuple[str, ...]
+    server: tuple[str, ...]
+    # Сервер не ответил: `server` пуст, а локальные ветки верны.
+    server_unavailable: bool = False
+
+
+@dataclass(frozen=True)
 class CommitView:
     git: GitView
     sha: str | None
@@ -193,6 +205,17 @@ class PackGitService:
                 max_bytes=self._diff_max,
             ),
         )
+
+    async def branches(self, actor: Actor, workspace_id: UUID) -> BranchList:
+        """Список веток для «переключить ветку»: локальные и серверные (сервер недоступен: только локальные)."""
+        ws = await self._workspaces.git_ready(actor, workspace_id)
+        status = await self._status(ws)
+        local = await self._git.local_branches(self._workspaces.dirs_of(ws))
+        try:
+            server = await self._server_branches(ws)
+        except (GitSyncError, PackStudioError):
+            return BranchList(status.branch, ws.base_branch, tuple(local), (), server_unavailable=True)
+        return BranchList(status.branch, ws.base_branch, tuple(local), server)
 
     async def checks(self, actor: Actor, workspace_id: UUID) -> CiReport:
         ws = await self._workspaces.git_ready(actor, workspace_id)
