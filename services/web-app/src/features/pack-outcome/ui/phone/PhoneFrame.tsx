@@ -14,7 +14,7 @@ export const PhoneFrame = ({
   return (
     <iframe
       title={id}
-      src={`/dev/server-screens?section=pack-studio#entry-${id}`}
+      src={`/dev/server-screens?section=pack-studio&entry=${id}`}
       style={{
         width: 360,
         height: 720,

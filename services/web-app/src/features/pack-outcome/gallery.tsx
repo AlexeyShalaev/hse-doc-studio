@@ -1352,7 +1352,7 @@ export const getPackOutcomeGallery = (): GalleryGroup[] => [
             <GalleryUrl initial={spec.search ?? ""}>
               <div
                 className="ps-shell ui-console"
-                style={{ minHeight: spec.phone ? "100dvh" : "40rem" }}
+                style={{ minHeight: spec.phone ? 0 : "40rem" }}
               >
                 <OutcomeBody
                   workspace={workspace(id)}
