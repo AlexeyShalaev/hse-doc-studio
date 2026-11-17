@@ -5,6 +5,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { i18n } from "@shared/lib";
 import { loadPackOutcomeNamespace } from "@shared/lib/i18n/packOutcomeNamespace";
 import { loadPackStudioNamespace } from "@shared/lib/i18n/packStudioNamespace";
+import { installViewport } from "@shared/lib/viewport/testing";
 import { getPackOutcomeGallery } from "./gallery";
 
 // pdf.js в jsdom не поднимается: просмотрщик подменён адресом файла.
@@ -103,6 +104,12 @@ describe("галерея экрана «Результат»", () => {
             <MemoryRouter>{entry.render()}</MemoryRouter>
           </QueryClientProvider>,
         );
+        if (entry.id.startsWith("po_phone_")) {
+          // В окне шире телефона запись это рамка 360 px с самой галереей.
+          expect(container.querySelector("iframe"), entry.id).not.toBeNull();
+          unmount();
+          continue;
+        }
         expect(container.textContent.length, entry.id).toBeGreaterThan(0);
         // Ни одного ключа словаря вместо текста.
         expect(container.textContent, entry.id).not.toMatch(
@@ -115,6 +122,51 @@ describe("галерея экрана «Результат»", () => {
     },
     60_000,
   );
+
+  it("телефонные записи в узком окне рисуют экран с вкладками и листами", async () => {
+    await i18n.changeLanguage("ru");
+    const viewport = installViewport(360);
+    try {
+      const phoneEntries = entries.filter((e) => e.id.startsWith("po_phone_"));
+      expect(phoneEntries.map((e) => e.id)).toEqual([
+        "po_phone_result",
+        "po_phone_inputs",
+        "po_phone_why",
+        "po_phone_matrix",
+        "po_phone_atlas",
+        "po_phone_compare",
+        "po_phone_preview",
+      ]);
+      for (const entry of phoneEntries) {
+        const client = new QueryClient({
+          defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+        });
+        entry.seed?.(client);
+        const { unmount } = render(
+          <QueryClientProvider client={client}>
+            <MemoryRouter>{entry.render()}</MemoryRouter>
+          </QueryClientProvider>,
+        );
+        const screenEl = await screen.findByTestId("outcome-screen");
+        expect(screenEl, entry.id).toHaveAttribute("data-phone", "true");
+        expect(
+          screen.getByTestId("outcome-tabs"),
+          entry.id,
+        ).toBeInTheDocument();
+        if (entry.id === "po_phone_inputs") {
+          expect(await screen.findByRole("dialog")).toBeInTheDocument();
+        }
+        if (entry.id === "po_phone_why") {
+          expect(
+            await screen.findByTestId("outcome-rules-page"),
+          ).toBeInTheDocument();
+        }
+        unmount();
+      }
+    } finally {
+      viewport.restore();
+    }
+  });
 
   it("запись с адресом показывает состояние из query", async () => {
     await i18n.changeLanguage("ru");

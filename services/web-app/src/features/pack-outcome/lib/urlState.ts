@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useMemo } from "react";
-import { useSearchParams } from "react-router";
+import { useLocation, useSearchParams } from "react-router";
 import { formatSide, parseSide, type CompareSide } from "./compareSide";
 import {
   OutcomeSectionSchema,
@@ -217,15 +217,29 @@ export const OutcomeSearchContext = createContext<OutcomeSearchSource | null>(
   null,
 );
 
+// Счётчик записей в адрес экрана. Лист на телефоне по нему узнаёт, менялся ли адрес, пока он был
+// открыт: состояние роутера обновляется чуть позже самой записи, сравнивать адреса нельзя.
+let urlWrites = 0;
+export const outcomeUrlWrites = (): number => urlWrites;
+
 export type OutcomeUrlControls = {
   state: OutcomeUrlState;
-  /** Изменить часть состояния; `push` добавляет запись в историю (по умолчанию замена). */
-  update: (patch: Partial<OutcomeUrlState>, push?: boolean) => void;
+  /**
+   * Изменить часть состояния; `push` добавляет запись в историю (по умолчанию замена). `navState`
+   * кладётся в запись истории (телефон помечает так открытые листы: `lib/phoneNav.ts`); замена
+   * сохраняет состояние текущей записи, чтобы правка адреса внутри листа его не закрывала.
+   */
+  update: (
+    patch: Partial<OutcomeUrlState>,
+    push?: boolean,
+    navState?: unknown,
+  ) => void;
 };
 
 /** Состояние экрана «Результат» из адреса и запись обратно. */
 export const useOutcomeUrlState = (): OutcomeUrlControls => {
   const [params, setParams] = useSearchParams();
+  const location = useLocation();
   const override = useContext(OutcomeSearchContext);
   const key = override ? override.search : params.toString();
   const state = useMemo(
@@ -233,15 +247,20 @@ export const useOutcomeUrlState = (): OutcomeUrlControls => {
     [key],
   );
   const set = override?.set;
+  const here: unknown = location.state;
   const update = useCallback(
-    (patch: Partial<OutcomeUrlState>, push = false) => {
+    (patch: Partial<OutcomeUrlState>, push = false, navState?: unknown) => {
+      urlWrites += 1;
       if (set) {
         set(writeOutcomeSearch(new URLSearchParams(key), patch));
         return;
       }
-      setParams((prev) => writeOutcomeSearch(prev, patch), { replace: !push });
+      setParams((prev) => writeOutcomeSearch(prev, patch), {
+        replace: !push,
+        state: push ? navState : here,
+      });
     },
-    [key, set, setParams],
+    [here, key, set, setParams],
   );
   return { state, update };
 };

@@ -122,6 +122,7 @@ export const ScenarioSaveDialog = ({
       isOpen
       onClose={onClose}
       width={600}
+      className="po-sheet"
       title={t(
         mode === "create"
           ? "scenarios.dialog.createTitle"

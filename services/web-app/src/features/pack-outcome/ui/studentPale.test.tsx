@@ -426,9 +426,9 @@ describe("режим «Как студент»", () => {
       expect(text("outcome-student-documents")).toBeInTheDocument();
       expect(text("outcome-student-route")).toBeInTheDocument();
       expect(screen.queryByTestId("outcome-tab-rules")).not.toBeInTheDocument();
-      expect(screen.getByTestId("outcome-mode-hint")).toHaveClass(
-        "po-hide-phone",
-      );
+      // Режим виден в верхней панели меткой, подсказки про Alt на телефоне нет.
+      expect(screen.getByTestId("outcome-phone-student")).toBeInTheDocument();
+      expect(screen.queryByTestId("outcome-mode-hint")).toBeNull();
       // Вводные студент меняет во вкладке: она на месте.
       expect(screen.getByTestId("outcome-tab-inputs")).toBeInTheDocument();
     });

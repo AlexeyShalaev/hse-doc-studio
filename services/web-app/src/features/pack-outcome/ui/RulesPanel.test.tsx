@@ -863,9 +863,9 @@ describe("панель «Правила и причины»: «Почему?»",
       viewport.restore();
     });
 
-    it("«Почему?» в листе работает, переход к файлам скрыт", async () => {
+    it("«Почему?» страницей работает, переход к файлам скрыт", async () => {
       mount("tab=rules&selected=documents:operator_manual");
-      const sheet = await screen.findByRole("dialog");
+      const sheet = await screen.findByTestId("outcome-rules-page");
       await within(sheet).findByTestId("outcome-chain");
       expect(within(sheet).queryByTestId("outcome-chain-t22-open")).toBeNull();
       expect(within(sheet).getByTestId("outcome-whatif")).toBeInTheDocument();

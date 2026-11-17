@@ -101,17 +101,27 @@ const Group = ({ id, title, children }: GroupProps) => {
 export const InputsPanel = () => {
   const { t, i18n } = useTranslation("packOutcome");
   const model = useOutcomeModel();
-  const { inputs, url, scenarios, outcome, shown, phone, highlight, select } =
-    model;
+  const {
+    inputs,
+    url,
+    scenarios,
+    outcome,
+    shown,
+    phone,
+    highlight,
+    select,
+    nav,
+  } = model;
   const { update } = url;
   const urlInputs = url.state.inputs;
   const scenarioUi = useScenarioUi();
 
   const commit = useCallback(
     (next: Record<string, string>) => {
-      update({ inputs: next, ...(phone ? { tab: "result" as const } : {}) });
+      // Телефон: «Показать» применяет вводные и закрывает лист (страница под ним остаётся).
+      update({ inputs: next, ...(phone ? { tab: nav.main } : {}) });
     },
-    [phone, update],
+    [nav.main, phone, update],
   );
   const draft = useDraftInputs({
     source: urlInputs,
@@ -430,11 +440,11 @@ export const InputsPanel = () => {
       {phone && (
         <button
           type="button"
-          className="btn primary"
+          className="btn primary po-in-apply"
           data-testid="outcome-inputs-apply"
           onClick={() => {
             if (draft.pending) draft.flush();
-            else update({ tab: "result" });
+            else nav.closeSheet();
           }}
         >
           {t("inputs.apply")}

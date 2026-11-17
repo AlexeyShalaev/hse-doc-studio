@@ -10,6 +10,7 @@ import type {
   PackVersionRef,
   PackWorkspace,
 } from "@entities/pack-studio";
+import type { PhoneNav } from "./lib/phoneNav";
 import type {
   OutcomeMode,
   OutcomeSelection,
@@ -64,6 +65,13 @@ export type OutcomeModel = {
   inputs: UseQueryResult<PackOutcomeInputs>;
   scenarios: UseQueryResult<PackScenarioList>;
   select: (element: OutcomeSelection | null) => void;
+  /**
+   * Показать элемент: выбирает без переключения (повторный вызов выбор не снимает) и на телефоне
+   * открывает вкладку «Почему?». Так работают «К документу» и переходы между секциями.
+   */
+  reveal: (element: OutcomeSelection) => void;
+  /** Вкладки телефона и история браузера (на компьютере не используются). */
+  nav: PhoneNav;
   highlight: OutcomeHighlight;
   /** Вид пространства: у папки без git нет веток и состояний `head` и `base`. */
   workspaceKind: PackWorkspace["kind"];

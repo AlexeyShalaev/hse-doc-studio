@@ -9,6 +9,7 @@ import {
   readPreviewMemory,
   writePreviewMemory,
 } from "../../lib/previewStore";
+import { useSheetHistory } from "../../lib/useSheetHistory";
 import { useOutcomeModel } from "../../model";
 import { PreviewUiContext, type PreviewUi } from "./context";
 import { PreviewPanel } from "./PreviewPanel";
@@ -72,6 +73,7 @@ export const PreviewHost = ({
   );
 
   const shownDocument = available ? document : null;
+  useSheetHistory("preview", phone && shownDocument !== null, close);
   const doc = shown?.documents.find((d) => d.id === shownDocument);
   const name = doc
     ? pickLocalized(doc.name, i18n.language, doc.id)
@@ -95,6 +97,7 @@ export const PreviewHost = ({
           onClose={close}
           title={title}
           width={560}
+          className="po-sheet"
         >
           {panel}
         </Modal>

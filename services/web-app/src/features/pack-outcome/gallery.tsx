@@ -41,13 +41,14 @@ import {
   type PreviewSource,
 } from "./lib/previewRequest";
 import { previewMemoryKey, writePreviewMemory } from "./lib/previewStore";
+import { PhoneFrame } from "./ui/phone/PhoneFrame";
 import type { ScenarioDialog } from "./ui/scenarios/context";
 
 // Галерея экрана «Результат» (/dev/server-screens): каркас во всех состояниях на эталонах
 // контракта, сервер не нужен. Каждая запись живёт в своём пространстве (свой кэш запросов), а
 // адрес экрана задан в MemoryRouter: состояние в query видно так же, как в настоящем адресе.
-// Телефон (360 px) галерея не показывает, он определяется шириной окна браузера: смотрите
-// страницу в узком окне.
+// Телефон определяется шириной окна браузера: записи po_phone_* в широком окне показывают
+// страницу галереи в рамке 360 px, в узком окне сразу сам экран.
 
 const NOW = "2026-11-16T09:30:00Z";
 const VKR_REF: PackVersionRef = {
@@ -540,6 +541,8 @@ type Spec = {
   modes?: ModesSeed;
   /** Предпросмотр PDF, открытый сразу (срез F12). */
   preview?: PreviewSpec;
+  /** Телефонная запись (срез F14): в окне шире телефона это узкое окно с самой страницей галереи. */
+  phone?: boolean;
 };
 
 /** Команда из двух: личные документы по авторам, у одного нет редакции на язык проекта. */
@@ -1211,6 +1214,76 @@ const SPECS: Spec[] = [
   },
 ];
 
+/** Запись галереи на основе готовой: те же данные, другая вкладка, телефонная рамка. */
+const phoneOf = (
+  from: string,
+  id: string,
+  title: string,
+  note: string,
+  extra: string,
+): Spec => {
+  const base = SPECS.find((spec) => spec.id === from);
+  if (!base) throw new Error(`gallery: no entry ${from}`);
+  const search = [base.search, extra].filter(Boolean).join("&");
+  return { ...base, id, title, note, search, phone: true };
+};
+
+/**
+ * Телефон (срез F14). Раскладка включается шириной окна, поэтому в окне шире 768 px запись
+ * показывает саму галерею в рамке 360 px (iframe), а в узком окне сразу экран.
+ */
+const PHONE_SPECS: Spec[] = [
+  phoneOf(
+    "po_result",
+    "po_phone_result",
+    "Телефон: результат",
+    "Две строки сверху (название и «Параметры», сценарий), результат колонкой, нижние вкладки «Вводные», «Результат», «Почему?».",
+    "",
+  ),
+  phoneOf(
+    "po_inputs_changed",
+    "po_phone_inputs",
+    "Телефон: лист «Вводные»",
+    "Лист до 90 % высоты с ручкой и крестиком, «Показать» закреплена у низа, на вкладке счётчик изменённых вводных.",
+    "tab=inputs",
+  ),
+  phoneOf(
+    "po_why_document_off",
+    "po_phone_why",
+    "Телефон: вкладка «Почему?»",
+    "Выбранный элемент открывает вкладку: цепочка правил страницей, «Назад» браузера возвращает результат, у вкладки метка выбора.",
+    "tab=rules",
+  ),
+  phoneOf(
+    "po_mode_matrix",
+    "po_phone_matrix",
+    "Телефон: матрица карточками",
+    "Сценарий это карточка с клетками по разделам, горизонтальной прокрутки нет.",
+    "",
+  ),
+  phoneOf(
+    "po_mode_atlas",
+    "po_phone_atlas",
+    "Телефон: атлас",
+    "Блок измерений свёрнут, строки списком чипов, фильтры и поиск на всю ширину.",
+    "",
+  ),
+  phoneOf(
+    "po_mode_compare",
+    "po_phone_compare",
+    "Телефон: сравнение",
+    "Стороны друг под другом, изменения списком по разделам.",
+    "",
+  ),
+  phoneOf(
+    "po_preview_ready",
+    "po_phone_preview",
+    "Телефон: предпросмотр PDF нижним листом",
+    "Лист поверх результата, закрывается крестиком, Esc и кнопкой «Назад».",
+    "",
+  ),
+];
+
 /** Адрес записи в памяти: запись не трогает адрес страницы галереи. */
 const GalleryUrl = ({
   initial,
@@ -1240,7 +1313,7 @@ export const getPackOutcomeGallery = (): GalleryGroup[] => [
     title: "Студия шаблонов: экран «Результат»",
     description:
       "Каркас экрана на эталонах контракта (contracts/pack-studio/fixtures). Данные в кэше запросов, сервер не нужен.",
-    entries: SPECS.map((spec) => {
+    entries: [...SPECS, ...PHONE_SPECS].map((spec) => {
       const id = `gallery-${spec.id}`;
       return {
         id: spec.id,
@@ -1274,18 +1347,28 @@ export const getPackOutcomeGallery = (): GalleryGroup[] => [
             );
           }
         },
-        render: () => (
-          <GalleryUrl initial={spec.search ?? ""}>
-            <div className="ps-shell ui-console" style={{ minHeight: "40rem" }}>
-              <OutcomeBody
-                workspace={workspace(id)}
-                version={refOf(spec.work ?? "vkr")}
-                scenarioDialog={spec.dialog ?? null}
-                previewDocument={spec.preview?.document ?? null}
-              />
-            </div>
-          </GalleryUrl>
-        ),
+        render: () => {
+          const screen = (
+            <GalleryUrl initial={spec.search ?? ""}>
+              <div
+                className="ps-shell ui-console"
+                style={{ minHeight: spec.phone ? "100dvh" : "40rem" }}
+              >
+                <OutcomeBody
+                  workspace={workspace(id)}
+                  version={refOf(spec.work ?? "vkr")}
+                  scenarioDialog={spec.dialog ?? null}
+                  previewDocument={spec.preview?.document ?? null}
+                />
+              </div>
+            </GalleryUrl>
+          );
+          return spec.phone ? (
+            <PhoneFrame id={spec.id}>{screen}</PhoneFrame>
+          ) : (
+            screen
+          );
+        },
       };
     }),
   },

@@ -867,9 +867,9 @@ describe("правка правила по месту", () => {
       viewport.restore();
     });
 
-    it("в листе правило читается, но править нельзя", async () => {
+    it("на странице «Почему?» правило читается, но править нельзя", async () => {
       mount(`tab=rules&${DOC}`);
-      const sheet = await screen.findByRole("dialog");
+      const sheet = await screen.findByTestId("outcome-rules-page");
       await within(sheet).findByTestId("outcome-chain");
       expect(within(sheet).queryByTestId("outcome-chain-t1-edit")).toBeNull();
       expect(within(sheet).queryByTestId("outcome-edit-bar")).toBeNull();
