@@ -5,9 +5,8 @@ import type { OutcomeChange } from "@entities/pack-studio";
 import { Badge } from "@shared/ui";
 import { changeKey, reasonTrace } from "../lib/compare";
 import { makeTraceText } from "../lib/explain";
-import { useOutcomeModel } from "../model";
 import { DecisionStatus } from "../ui/rules/StateChip";
-import { useOpenRule } from "../ui/rules/useOpenRule";
+import { useChangeEnv } from "./changeEnv";
 
 const SYMBOL_KEY = { "+": "added", "~": "changed", "-": "removed" } as const;
 
@@ -83,13 +82,12 @@ export const ChangeList = ({
 
 const ChangeWhy = ({ change }: { change: OutcomeChange }) => {
   const { t, i18n } = useTranslation("packOutcome");
-  const { inputs, phone } = useOutcomeModel();
-  const rules = useOpenRule();
+  const { inputs, phone, locate, open: openRule } = useChangeEnv();
   const [open, setOpen] = useState(false);
   const panel = useId();
   const text = useMemo(
-    () => makeTraceText(t, i18n.language, inputs.data?.inputs),
-    [t, i18n.language, inputs.data?.inputs],
+    () => makeTraceText(t, i18n.language, inputs),
+    [t, i18n.language, inputs],
   );
   const reasons = change.why ?? [];
   const word = (value: "held" | "not_held" | "skipped" | null) =>
@@ -128,7 +126,7 @@ const ChangeWhy = ({ change }: { change: OutcomeChange }) => {
         >
           {reasons.map((reason, index) => {
             const trace = reasonTrace(reason, "after", index);
-            const where = rules.locate(reason.rule);
+            const where = locate(reason.rule);
             return (
               <li
                 key={`${reason.kind}-${String(index)}`}
@@ -191,13 +189,13 @@ const ChangeWhy = ({ change }: { change: OutcomeChange }) => {
                         </span>
                       </span>
                     </span>
-                    {where && !phone && (
+                    {where && openRule && !phone && (
                       <button
                         type="button"
                         className="btn sm"
                         data-testid="outcome-change-open-rule"
                         onClick={() => {
-                          rules.open(reason.rule);
+                          openRule(reason.rule);
                         }}
                       >
                         <ExternalLink size="0.75rem" aria-hidden="true" />
