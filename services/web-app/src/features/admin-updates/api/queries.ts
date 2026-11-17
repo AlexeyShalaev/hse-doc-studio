@@ -12,6 +12,8 @@ export const RUNS_PAGE_SIZE = 10;
 /** Пока идёт запуск, статус и история обновляются чаще. */
 const POLL_BUSY_MS = 3000;
 const POLL_IDLE_MS = 20000;
+/** Пока api не отвечает (перезапуск при обновлении), спрашиваем часто: итог нужен сразу, как сервер вернётся. */
+const POLL_OUTAGE_MS = 4000;
 
 export const useUpdateStatus = () =>
   useQuery({
@@ -21,7 +23,11 @@ export const useUpdateStatus = () =>
     // Во время обновления api гаснет на минуты: ошибки опроса не должны сбрасывать экран.
     retry: false,
     refetchInterval: (query) =>
-      query.state.data?.active_run ? POLL_BUSY_MS : POLL_IDLE_MS,
+      query.state.status === "error"
+        ? POLL_OUTAGE_MS
+        : query.state.data?.active_run
+          ? POLL_BUSY_MS
+          : POLL_IDLE_MS,
   });
 
 export const useUpdateRuns = (page: number, busy: boolean) =>

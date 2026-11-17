@@ -54,6 +54,7 @@ const run = (patch: Partial<UpdateRun> = {}): UpdateRun => ({
   db_restored: false,
   error_code: null,
   error: null,
+  requested_by_name: null,
   events: [
     { seq: 1, at: NOW, phase: "snapshot", level: "info", message: "снимок" },
   ],
@@ -634,7 +635,7 @@ describe("раздел «Обновления»", () => {
       }),
     );
     render(wrap(<UpdatesPage />));
-    const banner = await screen.findByTestId("update-banner-downgrade");
+    const banner = await screen.findByTestId("update-banner-last");
     expect(banner.textContent).toContain("вернулась на 0.3.3");
     expect(banner.textContent).toContain("здоровье не восстановилось");
   });

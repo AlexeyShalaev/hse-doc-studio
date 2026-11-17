@@ -84,6 +84,7 @@ export const UpdateRunSchema = z.strictObject({
   db_restored: z.boolean(),
   error_code: z.string().nullable(),
   error: z.string().nullable(),
+  requested_by_name: z.string().nullable(),
   events: z.array(RunEventSchema),
 });
 export type UpdateRun = z.infer<typeof UpdateRunSchema>;

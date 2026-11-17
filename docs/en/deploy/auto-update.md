@@ -116,6 +116,17 @@ helm upgrade hse-doc-studio deploy/helm/hse-doc-studio --reuse-values --set imag
 
 Migrations run as a separate Job before the upgrade. To stop notifications set `api.extraEnv.HSE_STUDIO__SERVER_UPDATE__ENABLED=false`. You can verify the image beforehand: `cosign verify` with the `publish.yml` workflow identity.
 
+## Progress on screen
+
+After you press "Update now" the section shows the progress, not just an "in progress" banner:
+
+- **Steps.** Version and environment checks, database snapshot (compose only), image download, image verification, stopping the service, database migrations, restart and rollout, health check, done. Each step has an icon and a state word (waiting, in progress, done, failed, not run), a time and a detail line: "pulling the image for 3 min 20 s", "waiting for readiness", the migration revisions. In Kubernetes a check Job pulls the image, so the "image download" step runs before the api is stopped. A rollback and a database restore appear as extra steps when they happened.
+- **Journal on the server.** The executor sends every event to the api, which stores it in `update_runs` (the database), so the progress survives an api or pod restart. You can close the page.
+- **Downtime during the restart.** While the api is down (Recreate, an image pull of up to 10 minutes, migrations, the readiness check) the section shows "The application is restarting, this can take up to 15 minutes": how long we have waited, how many checks ran, a "Check now" button. Polling is automatic, every 4 seconds. When the server is back the result is shown. If the tab runs an older interface build, the result offers "Reload the page".
+- **Result.** Success: the version, the duration, the release notes. Failure: the reason in plain words (image not downloaded, image not found by its tag, no rights for the executor in the cluster, rollout timed out, migration failed, health check failed), what to do next, and a collapsible "Details for support" block with the code, the step and the last events (without tokens, addresses and paths: the api strips them). Buttons "Retry the update to X" and "Copy details". If the executor was lost in the middle of a run, it says so: "The status is unknown, check the version".
+- **History.** The latest runs: when, what, who pressed, the result, the duration; "Progress" opens the steps and the full journal.
+- **Notifications.** Administrators get an Inbox notification about the result of every run (when "Notify administrators" is on).
+
 ## When something is wrong
 
 | Symptom | What to do |
@@ -129,6 +140,8 @@ Migrations run as a separate Job before the upgrade. To stop notifications set `
 | Update cancelled `unsupported_container_options` | a container has options the updater cannot carry over; update by hand |
 | Rollback refused `schema_incompatible` | the version runs on another database schema; nothing was changed, the only way back is restoring a backup by hand |
 | "The updater is older than the Studio" (`updater_outdated`) | update the updater together with the chart (`helm upgrade`); rollback to a chosen version appears |
+| The page shows "The application is restarting" for more than 15 minutes | compose: `docker compose ps`, `docker compose logs api`; Kubernetes: `kubectl get pods`, `kubectl describe pod` for api; if the image is still pulling, wait |
+| "The status is unknown, check the version" (`updater_lost`, `updater_restarted`) | the updater vanished in the middle of a run: check the version on the page and the services; if the version is new and healthy, the update went through |
 | TAG in `.env` does not change | the file is not writable by the app user: `chmod o+w .env` |
 
 Metrics for alerts: `hse_update_available`, `hse_update_updater_up`, `hse_update_last_run_success`, `hse_update_runs_total{result}`. Process settings: `HSE_STUDIO__SERVER_UPDATE__*` in the [reference](https://github.com/AlexeyShalaev/hse-doc-studio/blob/master/docs/ru/deploy/env-reference.md).

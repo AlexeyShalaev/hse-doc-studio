@@ -129,7 +129,7 @@
     "name": "Словарь админки: updates",
     "path": "dist/assets/locale-admin-updates-*.js",
     "gzip": true,
-    "limit": "10.4 kB"
+    "limit": "16.4 kB"
   },
   {
     "name": "Словарь админки: diagnostics",

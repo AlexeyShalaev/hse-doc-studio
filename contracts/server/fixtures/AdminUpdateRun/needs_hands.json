@@ -17,6 +17,7 @@
   "db_restored": false,
   "error_code": "needs_manual_action",
   "error": "the new version is not healthy after 300 s. Manual action is needed: the schema changed, so the previous version cannot be started as is. Steps are in the run events (diagnose, fix forward, or restore the pre-update backup).",
+  "requested_by_name": "Анна",
   "events": [
     {
       "seq": 0,

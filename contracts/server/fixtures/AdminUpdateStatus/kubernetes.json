@@ -80,6 +80,7 @@
     "db_restored": true,
     "error_code": "health_timeout",
     "error": "the new version is not healthy after 300 s. Rolled back to 0.3.1, database restored from the snapshot",
+    "requested_by_name": null,
     "events": [
       {
         "seq": 0,

@@ -113,6 +113,7 @@ class UpdateRun:
     started_at: datetime | None = None
     finished_at: datetime | None = None
     requested_by: str | None = None
+    requested_by_name: str | None = None  # имя инициатора для чтения (в таблице не хранится, берётся из users)
     backup_run_id: str | None = None
     restore_db: bool = False  # ручной откат: админ согласился потерять данные после обновления
     db_restored: bool = False
