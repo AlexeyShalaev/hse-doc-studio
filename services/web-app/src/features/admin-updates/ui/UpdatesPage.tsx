@@ -32,10 +32,24 @@ import {
 import type { DowngradeTarget, UpdateRun } from "../api/schemas";
 import { failureKey, failureOf, type UpdateFailure } from "../lib/failure";
 import { ensureAdminUpdatesLocales } from "../lib/locales";
+import { buildProgress, formatDuration } from "../lib/progress";
+import { useNow } from "../model/useNow";
+import { useOutage } from "../model/useOutage";
 import { AutoUpdateSection } from "./AutoUpdateSection";
 import { HistoryTable } from "./HistoryTable";
 import { PolicyPanel } from "./PolicyPanel";
+import { RestartNotice } from "./RestartNotice";
+import { FailureCard, SuccessCard } from "./RunOutcome";
+import { ProgressSteps, RunProgressCard } from "./RunProgress";
 import { VersionsSection } from "./VersionsSection";
+
+/** Успешный итог показываем недолго: старый успех не нужен, он есть в истории. */
+const RECENT_SUCCESS_MS = 30 * 60_000;
+
+const notesOf = (
+  data: { releases: { version: string; notes: string[] }[] },
+  version: string,
+): string[] => data.releases.find((r) => r.version === version)?.notes ?? [];
 
 /** Раздел админки «Обновления»: версия, политика и окно, история, «обновить сейчас» и «откатить». */
 export const UpdatesPage = () => {
@@ -79,8 +93,20 @@ const UpdatesContent = () => {
   const fail = (e: unknown) => {
     setFailure(failureOf(e));
   };
+  const outage = useOutage(status);
+  const openedRun = opened
+    ? (runs.data?.items.find((r) => r.id === opened.id) ??
+      (data?.active_run?.id === opened.id ? data.active_run : opened))
+    : null;
+  // Запуск, который мы видели идущим на этой странице: его итог показываем карточкой, даже когда api
+  // перезапускался и вкладка пропустила часть хода.
+  const [watched, setWatched] = useState<string | null>(null);
+  const [dismissed, setDismissed] = useState<string | null>(null);
+  const activeId = data?.active_run?.id ?? null;
+  if (activeId && watched !== activeId) setWatched(activeId);
+  const nowMs = useNow(true, 10_000);
 
-  if (status.isPending || status.isError || !data) {
+  if (status.isPending || (status.isError && !outage.down) || !data) {
     return (
       <div data-testid="updates-page">
         <PageHeader title={t("page.title")} description={t("page.lead")} />
@@ -102,6 +128,39 @@ const UpdatesContent = () => {
     data.available !== null;
   const last = data.last_run;
   const active = data.active_run;
+  const units = { h: t("units.h"), min: t("units.min"), s: t("units.s") };
+  const formatOutage = (seconds: number) => formatDuration(seconds, units);
+  /** Итог показываем: неудачи (кроме отмены самим админом) всегда, успех недавний или виденный нами. */
+  const showOutcome = (run: UpdateRun): boolean => {
+    if (run.kind === "downgrade" && run.status === "succeeded") return false;
+    if (run.status === "succeeded") {
+      const age = run.finished_at
+        ? nowMs - Date.parse(run.finished_at)
+        : Number.POSITIVE_INFINITY;
+      return run.id === watched || age < RECENT_SUCCESS_MS;
+    }
+    if (run.status === "cancelled") {
+      return (
+        run.error_code !== "cancelled" &&
+        run.error_code !== "auto_update_disabled" &&
+        (run.id === watched || run.error_code !== null)
+      );
+    }
+    return run.status === "failed" || run.status === "rolled_back";
+  };
+  const retryable = (run: UpdateRun): boolean =>
+    run.kind === "update" &&
+    canStart &&
+    (data.available?.version === run.to_version ||
+      data.releases.some((r) => r.version === run.to_version));
+  const canRetry = last !== null && retryable(last);
+  const retry = () => {
+    if (!last) return;
+    setFailure(null);
+    setAcceptRisk(false);
+    setUpdateVersion(last.to_version);
+    setConfirmUpdate(true);
+  };
 
   return (
     <div
@@ -183,7 +242,7 @@ const UpdatesContent = () => {
             : ""}
         </Banner>
       )}
-      {!active && last?.kind === "downgrade" && (
+      {!active && last?.kind === "downgrade" && last.status === "succeeded" && (
         <DowngradeBanner
           last={last}
           when={when}
@@ -200,23 +259,70 @@ const UpdatesContent = () => {
           }}
         />
       )}
-      {!active &&
-        last &&
-        last.kind !== "downgrade" &&
-        (last.status === "failed" || last.status === "rolled_back") && (
-          <Banner
-            tone={last.status === "failed" ? "danger" : "warning"}
-            title={t(
-              last.error_code === "needs_manual_action"
-                ? "banner.last.needs_hands"
-                : `banner.last.${last.status}`,
-              { to: last.to_version, at: when(last.created_at) },
-            )}
-            testId="update-banner-last"
-          >
-            {last.error}
-          </Banner>
-        )}
+      {outage.down && outage.since !== null && (
+        <RestartNotice
+          since={outage.since}
+          attempts={outage.attempts}
+          updating={Boolean(active) || watched !== null}
+          executor={data.executor}
+          onRetryNow={() => void status.refetch()}
+        />
+      )}
+      {!outage.down && outage.recoveredAfterS !== null && (
+        <Banner
+          tone="info"
+          title={t("restart.back", {
+            time: formatOutage(outage.recoveredAfterS),
+          })}
+          testId="update-back"
+          action={
+            <Button size="sm" variant="ghost" onClick={outage.dismissRecovered}>
+              {t("outcome.dismiss")}
+            </Button>
+          }
+        />
+      )}
+      {active && (
+        <RunProgressCard
+          run={active}
+          executor={data.executor}
+          updaterSilent={active.status === "running" && !data.updater_online}
+          frozen={outage.down}
+        />
+      )}
+      {!active && last && last.id !== dismissed && showOutcome(last) && (
+        <div data-testid="update-banner-last">
+          {last.status === "succeeded" ? (
+            <SuccessCard
+              run={last}
+              staleTab={
+                data.current_version === last.to_version &&
+                __APP_VERSION__ !== last.to_version
+              }
+              tabVersion={__APP_VERSION__}
+              outageS={outage.recoveredAfterS}
+              notes={notesOf(data, last.to_version)}
+              onDismiss={() => {
+                setDismissed(last.id);
+              }}
+            />
+          ) : (
+            <FailureCard
+              run={last}
+              executor={data.executor}
+              appVersion={__APP_VERSION__}
+              currentVersion={data.current_version}
+              onRetry={canRetry ? retry : undefined}
+              onJournal={() => {
+                setOpened(last);
+              }}
+              onDismiss={() => {
+                setDismissed(last.id);
+              }}
+            />
+          )}
+        </div>
+      )}
       {data.executor === "none" && (
         <Banner
           tone="info"
@@ -410,7 +516,7 @@ const UpdatesContent = () => {
         page={runs.data}
         pageIndex={page}
         loading={runs.isPending}
-        error={runs.isError}
+        error={runs.isError && !outage.down}
         onPage={setPage}
         onRetry={() => void runs.refetch()}
         onOpen={onOpen}
@@ -465,6 +571,13 @@ const UpdatesContent = () => {
           }
         >
           <Notice tone="info" text={t("confirmUpdate.downtime")} />
+          <ConfirmNotes
+            version={updateVersion ?? data.available?.version ?? ""}
+            notes={notesOf(
+              data,
+              updateVersion ?? data.available?.version ?? "",
+            )}
+          />
           {kube && (
             <p className="form-hint" data-testid="update-kube-schema">
               {t("confirmUpdate.schemaKube")}
@@ -620,15 +733,15 @@ const UpdatesContent = () => {
         </Modal>
       )}
 
-      {opened && (
+      {openedRun && (
         <Modal
           isOpen
           onClose={() => {
             setOpened(null);
           }}
           title={t("events.title", {
-            from: opened.from_version,
-            to: opened.to_version,
+            from: openedRun.from_version,
+            to: openedRun.to_version,
           })}
           width={680}
           footer={
@@ -642,12 +755,20 @@ const UpdatesContent = () => {
             </Button>
           }
         >
+          <ProgressSteps
+            progress={buildProgress(openedRun, data.executor, nowMs)}
+            run={openedRun}
+            nowMs={nowMs}
+          />
+          <h4 className="upd-card-sub" style={{ marginTop: "0.75rem" }}>
+            <strong>{t("events.journal")}</strong>
+          </h4>
           <ol
             className="flex flex-col"
             style={{ gap: "0.375rem" }}
             data-testid="update-events"
           >
-            {opened.events.map((e, i) => (
+            {openedRun.events.map((e, i) => (
               <li key={`${String(e.seq)}-${String(i)}`} data-level={e.level}>
                 <span className="dim">{when(e.at)}</span>{" "}
                 <strong>
@@ -657,15 +778,43 @@ const UpdatesContent = () => {
               </li>
             ))}
           </ol>
-          {(opened.from_revision !== null || opened.to_revision !== null) && (
+          {(openedRun.from_revision !== null ||
+            openedRun.to_revision !== null) && (
             <p className="form-hint">
               {t("events.revisions", {
-                from: opened.from_revision ?? "—",
-                to: opened.to_revision ?? "—",
+                from: openedRun.from_revision ?? "—",
+                to: openedRun.to_revision ?? "—",
               })}
             </p>
           )}
         </Modal>
+      )}
+    </div>
+  );
+};
+
+/** Заметки к версии на экране подтверждения: то, что релиз принёс (берётся из ленты релизов). */
+const ConfirmNotes = ({
+  version,
+  notes,
+}: {
+  version: string;
+  notes: string[];
+}) => {
+  const { t } = useTranslation("adminUpdates");
+  return (
+    <div data-testid="update-confirm-notes" style={{ marginTop: "0.5rem" }}>
+      <p className="form-hint">
+        <strong>{t("confirmUpdate.notes", { version })}</strong>
+      </p>
+      {notes.length > 0 ? (
+        <ul className="upd-notes">
+          {notes.map((n) => (
+            <li key={n}>{n}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="form-hint">{t("confirmUpdate.notesNone")}</p>
       )}
     </div>
   );
@@ -709,25 +858,6 @@ const DowngradeBanner = ({
           ) : undefined
         }
       />
-    );
-  }
-  if (
-    last.status === "failed" ||
-    last.status === "rolled_back" ||
-    last.status === "cancelled"
-  ) {
-    return (
-      <Banner
-        tone={last.status === "failed" ? "danger" : "warning"}
-        title={t(`banner.downgrade.${last.status}`, {
-          to: last.to_version,
-          from: last.from_version,
-          at: when(last.created_at),
-        })}
-        testId="update-banner-downgrade"
-      >
-        {last.error}
-      </Banner>
     );
   }
   return null;

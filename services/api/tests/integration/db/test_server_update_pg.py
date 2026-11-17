@@ -11,6 +11,7 @@ from hse_doc_studio.core.server_update.entities import RunEvent, RunKind, RunSta
 from hse_doc_studio.core.server_update.protocols import append_events
 from hse_doc_studio.infra.db import orm  # noqa: F401
 from hse_doc_studio.infra.db.engine import create_sessionmaker
+from hse_doc_studio.infra.db.orm.identity import UserRow
 from hse_doc_studio.infra.db.repositories.server_update import SqlUpdateRunRepository
 from hse_doc_studio.infra.db.session import SessionProvider
 from sqlalchemy.ext.asyncio import AsyncEngine
@@ -125,3 +126,54 @@ async def test__downgrade_kind_is_stored_and_revisions_are_learned_from_history(
     assert await runs.known_revisions() == {"0.3.1": "r2", "0.3.2": "r2"}
     # откат на выбранную версию, как и ручной, помечает версию, с которой ушли: автоустановка её не вернёт
     assert "0.3.2" in await runs.failed_targets()
+
+
+async def test__journal_survives_a_restart_and_names_the_initiator(
+    sessions: SessionProvider, pg_migrated_engine: AsyncEngine
+) -> None:
+    """Журнал лежит в базе: «новый процесс» (второй экземпляр репозитория) читает те же события и имя инициатора."""
+    async with sessions.use() as db:
+        db.add(
+            UserRow(
+                id="adm1",
+                email="adm1@x.org",
+                email_normalized="adm1@x.org",
+                name="Анна",
+                status="active",
+                email_verified=True,
+                created_at=NOW,
+            )
+        )
+    runs = SqlUpdateRunRepository(sessions)
+    run = _run(RunStatus.running).with_(requested_by="adm1")
+    await runs.add(run)
+    await runs.save(
+        append_events(
+            run,
+            [
+                RunEvent(1, NOW, "pull", "info", "pulling"),
+                RunEvent(2, NOW, "migrate", "error", "migrations failed"),
+            ],
+        )
+    )
+
+    reborn = SqlUpdateRunRepository(SessionProvider(create_sessionmaker(pg_migrated_engine)))
+    for loaded in (
+        await reborn.get(run.id),
+        await reborn.active(),
+        (await reborn.page(Window(limit=5, offset=0))).items[0],
+    ):
+        assert loaded is not None
+        assert [e.message for e in loaded.events][-2:] == ["pulling", "migrations failed"]
+        assert loaded.requested_by_name == "Анна"
+        assert loaded.last_seq == 2
+
+
+async def test__initiator_name_is_empty_for_automatic_runs(sessions: SessionProvider) -> None:
+    runs = SqlUpdateRunRepository(sessions)
+    run = _run(RunStatus.queued)
+    await runs.add(run)
+    got = await runs.get(run.id)
+    assert got is not None
+    assert got.requested_by is None
+    assert got.requested_by_name is None

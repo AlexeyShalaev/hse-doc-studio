@@ -313,6 +313,26 @@ async def test__report__rollback_outcome_is_audited_and_alerted_with_the_reason(
     assert await env.runs.active() is None
 
 
+async def test__report__alert_excerpt_carries_no_secrets_or_host_paths() -> None:
+    env = make(releases=REL)
+    run_id = await _claimed(env)
+    await env.service.report(
+        run_id,
+        ev(
+            1,
+            phase="finish",
+            status=RunStatus.failed,
+            message="cannot read /var/run/secrets/kubernetes.io with token=abc123 at 10.1.2.3:443",
+            error_code="kube_forbidden",
+        ),
+    )
+    sent = [p for _u, _k, p, _d in env.notifier.sent]  # type: ignore[attr-defined]
+    excerpt = sent[-1].excerpt or ""
+    assert sent[-1].outcome == "update_failed"
+    for secret in ("abc123", "10.1.2.3", "/var/run/secrets"):
+        assert secret not in excerpt
+
+
 async def test__janitor__queued_run_without_updater_is_cancelled() -> None:
     env = make(releases=REL)
     await configure(env)

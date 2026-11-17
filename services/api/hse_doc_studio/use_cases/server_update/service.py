@@ -41,6 +41,7 @@ from hse_doc_studio.core.server_update.entities import (
 from hse_doc_studio.core.server_update.errors import UpdateError, UpdateErrorCode
 from hse_doc_studio.core.server_update.options import UpdateOptions
 from hse_doc_studio.core.server_update.protocols import IReleaseSource, IUpdateRunRepository, append_events
+from hse_doc_studio.core.server_update.redact import redact
 from hse_doc_studio.core.server_update.settings import (
     KEY_ATTEMPT_AT,
     KEY_CHECK_ERROR,
@@ -754,7 +755,7 @@ class UpdateService:
     # ---- уведомления и метрики ----
 
     async def _alert(self, outcome: str, version: str, excerpt: str, dedupe: str) -> None:
-        payload = NotificationPayload(outcome=outcome, path=version, excerpt=excerpt[:200])
+        payload = NotificationPayload(outcome=outcome, path=version, excerpt=redact(excerpt)[:200])
         try:
             for admin_id in await self._admins.active_admin_ids():
                 await self._notifier.notify(admin_id, NotificationKind.system_alert, payload, dedupe_key=dedupe)

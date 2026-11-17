@@ -2,7 +2,9 @@
   "close": "Close",
   "cancel": "Cancel",
   "units": {
-    "h": "h"
+    "h": "h",
+    "min": "min",
+    "s": "s"
   },
   "page": {
     "title": "Updates",
@@ -142,7 +144,8 @@
       "kind": "What",
       "versions": "Versions",
       "status": "Outcome",
-      "result": "Details"
+      "result": "Details",
+      "duration": "Duration"
     },
     "kind": {
       "update": "Update",
@@ -188,7 +191,9 @@
     "bodyKube": "The updater checks the image, stops the api, applies the migrations in a Job and starts the new version. If it does not come up while the schema is unchanged, the previous image is put back.",
     "schemaKube": "If the migrations managed to change the database schema, the image is not rolled back (the previous one does not start on the new schema): the run ends as \"Needs hands\" with instructions.",
     "acceptRisk": "I understand: there will be no full backup and the database cannot be rolled back",
-    "backupsAccepted": "Backups are off on purpose, reason: {{reason}}"
+    "backupsAccepted": "Backups are off on purpose, reason: {{reason}}",
+    "notes": "What is new in {{version}}",
+    "notesNone": "There are no notes for this release."
   },
   "confirmRollback": {
     "title": "Roll back to {{version}}?",
@@ -199,7 +204,8 @@
   },
   "events": {
     "title": "Log: {{from}} → {{to}}",
-    "revisions": "Database revision: {{from}} → {{to}}"
+    "revisions": "Database revision: {{from}} → {{to}}",
+    "journal": "Event journal"
   },
   "failure": {
     "invalid_input": "A setting value is invalid.",
@@ -272,5 +278,230 @@
     "backupNo": "No backup destination is configured (or the backup is off in the policy): only the database snapshot of the updater is taken. Set up a destination in Backups first if you want a full backup.",
     "backupNoKube": "No backup destination is configured (or the backup is off in the policy), and Kubernetes has no database snapshot. The schema is not changed by this rollback, but a backup in Backups is still worth taking first.",
     "pausesAuto": "After a successful rollback automatic installs are switched off, otherwise the newer version would come back in the next window. Turn them on again when you are ready."
+  },
+  "progress": {
+    "stepsLabel": "Update steps",
+    "heading": "{{kind}} {{from}} → {{to}}",
+    "live": "Step {{index}} of {{total}}: {{step}}, {{state}}",
+    "elapsed": "Running for {{time}}",
+    "keepOpen": "You can close this page: progress is recorded on the server.",
+    "queued": "The run is waiting for the updater to pick it up.",
+    "waitingBackup": "A full backup is being taken before the update.",
+    "silent": "The updater has not reported for a while. The status is unknown: check the installed version and the updater service.",
+    "frozen": "The server is not responding; the screen shows the last known data. It will refresh by itself once the server is back.",
+    "revisions": "Migrations: database revision {{from}} → {{to}}",
+    "recovery": {
+      "rollback": "Rolling back to the previous version",
+      "restore": "Restoring the database from the snapshot"
+    }
+  },
+  "state": {
+    "pending": "waiting",
+    "active": "in progress",
+    "done": "done",
+    "failed": "failed",
+    "skipped": "not run"
+  },
+  "step": {
+    "backup": {
+      "title": "Full backup",
+      "running": "Backup running for {{time}}"
+    },
+    "check": {
+      "title": "Version and environment checks",
+      "running": "Checks running for {{time}}"
+    },
+    "snapshot": {
+      "title": "Database snapshot",
+      "running": "Snapshot running for {{time}}"
+    },
+    "pull": {
+      "title": "Image download",
+      "running": "Pulling the image for {{time}}: on a slow link this takes up to 10 minutes"
+    },
+    "verify": {
+      "title": "Image verification",
+      "running": "Verifying digest and signature for {{time}}"
+    },
+    "stop": {
+      "title": "Apply: stopping the service",
+      "running": "Stopping the service for {{time}}"
+    },
+    "migrate": {
+      "title": "Database migrations",
+      "running": "Applying migrations for {{time}}"
+    },
+    "restart": {
+      "title": "Restart and rollout",
+      "running": "Starting the new version for {{time}}"
+    },
+    "health": {
+      "title": "Health check",
+      "running": "Waiting for readiness for {{time}}: the service must answer without gaps for 20 seconds"
+    },
+    "done": {
+      "title": "Done",
+      "running": "Finishing"
+    }
+  },
+  "restart": {
+    "title": "The application is restarting",
+    "body": "This can take up to {{minutes}} minutes: the image is pulled, migrations are applied, the service passes its readiness check. The page polls by itself and will show the result.",
+    "titleGeneric": "No connection to the server",
+    "bodyGeneric": "The server is not responding. The page retries by itself and will show data once it is back.",
+    "waited": "Waiting {{time}}",
+    "attempts": "Checks: {{count}}",
+    "retry": "Check now",
+    "slowCompose": "Longer than usual. Check on the host: docker compose ps and docker compose logs api.",
+    "slowKube": "Longer than usual. Check in the cluster: kubectl get pods, kubectl describe pod for api, and the namespace events.",
+    "back": "The application is responding again. Downtime: {{time}}."
+  },
+  "outcome": {
+    "dismiss": "Dismiss",
+    "reload": "Reload the page",
+    "notes": "What is new:",
+    "staleTab": "This tab runs build {{tab}}, while {{version}} is installed. Reload the page to load the new interface.",
+    "success": {
+      "title": {
+        "update": "Update complete: version {{version}} is installed",
+        "rollback": "Rollback complete: version {{version}} is installed",
+        "downgrade": "Rollback to the chosen version complete: {{version}} is installed"
+      },
+      "body": "Took {{time}}, finished {{at}}.",
+      "outage": "The application was unavailable for {{time}}."
+    },
+    "failure": {
+      "rolled_back": "The update to {{to}} did not go through; the system was returned to {{from}}",
+      "failed": "The update to {{to}} did not finish: manual action is needed",
+      "cancelled": "The update to {{to}} was cancelled, nothing was changed",
+      "unknown": "The outcome of the update to {{to}} is unknown, check the version",
+      "atStep": "Stopped at step: {{step}}.",
+      "next": "What to do:",
+      "installed": "Version {{version}} is installed now.",
+      "message": "Executor message: {{message}}"
+    },
+    "support": "Details for support",
+    "supportHint": "Technical details without tokens, addresses or paths. Copy them and attach to your request.",
+    "supportCopy": "Copy details",
+    "retry": "Retry the update to {{version}}",
+    "openJournal": "Open the journal",
+    "failureRollback": {
+      "rolled_back": "The rollback to {{to}} did not go through; the system returned to {{from}}",
+      "failed": "The rollback to {{to}} did not finish: manual action is needed",
+      "cancelled": "The rollback to {{to}} was cancelled, nothing was changed",
+      "unknown": "The outcome of the rollback to {{to}} is unknown, check the version"
+    }
+  },
+  "reason": {
+    "image_pull": {
+      "title": "The image could not be downloaded",
+      "body": "The node or host could not get the new version image from the registry.",
+      "hint": "Check access to the registry (network, DNS, rate limits, pull secret) and retry. The system was not changed."
+    },
+    "image_not_found": {
+      "title": "The image was not found by its tag",
+      "body": "The registry has no image for this version: the release was published incompletely or the tag was removed.",
+      "hint": "Wait a few minutes after the release and retry, or pick another version. The system was not changed."
+    },
+    "no_permission": {
+      "title": "The executor has no rights in the cluster",
+      "body": "Kubernetes rejected the updater request (forbidden).",
+      "hint": "Check the updater Role and RoleBinding (the updater.enabled flag in Helm) and retry."
+    },
+    "rollout_timeout": {
+      "title": "The rollout did not finish in time",
+      "body": "The service did not stop or become ready within the allowed time.",
+      "hint": "Check the api pod events and logs: the image is still pulling, resources are short, or the pod fails its probe. If all is well, retry."
+    },
+    "migration_failed": {
+      "title": "The database migration failed",
+      "body": "The new version could not bring the database schema up to its own.",
+      "hint": "See the executor message and the migration Job log. If the schema has changed, contact support before rolling back: the previous version does not start on a newer schema."
+    },
+    "health_failed": {
+      "title": "The health check failed",
+      "body": "The new version started but did not become healthy: the container crashes or restarts.",
+      "hint": "Check the api logs. If a rollback was done, the system is on the previous version; if not, follow the manual-action message."
+    },
+    "digest": {
+      "title": "The image failed the digest check",
+      "body": "The image digest was not found or did not match the one published with the release.",
+      "hint": "For a release without a digest, knowingly choose the \"No verification\" mode (closed mirrors) or install by hand. The system was not changed."
+    },
+    "signature_invalid": {
+      "title": "The image signature is not confirmed",
+      "body": "The cosign signature check failed.",
+      "hint": "Do not install this image. Check the mirror and the verification settings, then retry. The system was not changed."
+    },
+    "schema_blocked": {
+      "title": "The version does not match the database schema",
+      "body": "The database schema differs from the image version, so the run was cancelled or the image cannot be rolled back.",
+      "hint": "Update forward. Returning to this version is only possible by restoring the database from a backup."
+    },
+    "needs_hands": {
+      "title": "Manual action is needed",
+      "body": "The image was not rolled back: migrations changed the database schema and the new version did not come up. The previous version cannot start on the new schema.",
+      "hint": "Find the cause in the journal and fix forward, or restore the backup taken before the update."
+    },
+    "rollback_failed": {
+      "title": "The rollback failed",
+      "body": "The update did not go through and the previous version could not be restored automatically.",
+      "hint": "Manual action is needed: the steps and the snapshot location are in the run journal. Then check the installed version."
+    },
+    "unknown_outcome": {
+      "title": "The status is unknown, check the version",
+      "body": "The updater stopped responding or restarted in the middle of the update, and its journal is incomplete. Success is not confirmed.",
+      "hint": "Check the installed version and the services. If the version is new and everything works, the update went through; if not, retry."
+    },
+    "updater_offline": {
+      "title": "The updater did not pick up the run",
+      "body": "The updater service did not respond; the run was cancelled before any work.",
+      "hint": "Start the updater service and retry. The system was not changed."
+    },
+    "backup_failed": {
+      "title": "The backup before the update failed",
+      "body": "The full backup did not finish, so the update never started.",
+      "hint": "Fix the backup in the Backups section and retry. The system was not changed."
+    },
+    "disk_space": {
+      "title": "Not enough space or the database snapshot failed",
+      "body": "The database snapshot before the update could not be taken.",
+      "hint": "Free some space (the Storage section) and retry. The system was not changed."
+    },
+    "cancelled": {
+      "title": "The run was cancelled",
+      "body": "The run was stopped before any work started.",
+      "hint": "Nothing was changed. Start the update again when needed."
+    },
+    "cluster_unavailable": {
+      "title": "The cluster did not accept the change",
+      "body": "The api Deployment could not be read or changed.",
+      "hint": "Check that the cluster API is reachable and the Deployment is healthy, then retry."
+    },
+    "environment": {
+      "title": "The environment does not fit the update",
+      "body": "The executor did not find the services, volumes or options it knows how to carry over.",
+      "hint": "Check the updater settings and the installation layout, or update by hand following the documentation."
+    },
+    "no_previous": {
+      "title": "Nothing to roll back to",
+      "body": "The updater has no record, image or snapshot of the previous version.",
+      "hint": "Install the needed version with a manual update."
+    },
+    "bad_version": {
+      "title": "The version was not accepted",
+      "body": "The executor rejected the version string.",
+      "hint": "Pick a version from the release list."
+    },
+    "internal": {
+      "title": "Internal executor error",
+      "body": "The executor hit an unexpected error.",
+      "hint": "Copy the details for support and check the installed version: it may not have changed."
+    },
+    "unknown": {
+      "title": "The update did not finish",
+      "body": "The reason is not recognised.",
+      "hint": "Open the journal and the details for support."
+    }
   }
 }
