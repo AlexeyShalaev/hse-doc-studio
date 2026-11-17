@@ -6,35 +6,14 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.36.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.35.0...v0.36.0) (2026-11-17)
+## [0.36.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.35.0...v0.36.0) - 2026-11-17
 
-
-### Features
-
-* **pack-studio:** before and after in Propose changes (F10) ([e002487](https://github.com/AlexeyShalaev/hse-doc-studio/commit/e0024870bb2ade7e2d95a9d00357c42e44d13d4a))
-* **pack-studio:** before and after in Propose changes (F10) ([64d9731](https://github.com/AlexeyShalaev/hse-doc-studio/commit/64d973174c820b9b0ccde5a9969687c247c4e391))
-* **pack-studio:** collapsible atlas dimensions, contrast and matrix layout fixes, design notes (F9) ([39045ac](https://github.com/AlexeyShalaev/hse-doc-studio/commit/39045aca0da689aa968920603f50af8d73490c4b))
-* **pack-studio:** edit rules in place with undo (F7) ([1ddd237](https://github.com/AlexeyShalaev/hse-doc-studio/commit/1ddd237ac0b9cb6ec4a6ae4f7d2dab2a91eea9b8))
-* **pack-studio:** edit rules in place with undo (F7) ([b8e7a7e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/b8e7a7ea0bff9b2903021f33a1d19122ac0af53c))
-* **pack-studio:** exact undo by file text, gallery, docs for in-place edit (F7) ([35bba13](https://github.com/AlexeyShalaev/hse-doc-studio/commit/35bba1367dbe1c1b0569745737ef42a5ad8e391e))
-* **pack-studio:** gallery frame for phone entries, docs of the phone layout (F14) ([621968e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/621968e020c04a4ae61bdb56819f0b08ff4d211d))
-* **pack-studio:** matrix, atlas and compare modes (F9) ([967b578](https://github.com/AlexeyShalaev/hse-doc-studio/commit/967b5782dbfb99e3455d69a5c7f8e93b48d0d355))
-* **pack-studio:** matrix, atlas and compare modes (F9) ([ac2cadf](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ac2cadf2fa5786ee9cc8ecc3d4f5589d9899bbdd))
-* **pack-studio:** outcome compare, impact and matrix (O7) ([498768b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/498768bf35d577dc2be8ab7c0ce861512281f7e3))
-* **pack-studio:** PDF preview in the outcome screen (F12) ([4f0d48b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/4f0d48bc03a1d6dc12385b4d0ff6d8e99921155b))
-* **pack-studio:** PDF preview in the outcome screen (F12) ([f628d4e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f628d4ef7bb296d3547261f2de56a13dc3d3e66c))
-* **pack-studio:** phone gallery, e2e steps, touch targets, large text on the outcome screen (F14) ([3955118](https://github.com/AlexeyShalaev/hse-doc-studio/commit/3955118e64f763392e35aeac4bae057fddf14dea))
-* **pack-studio:** phone layout of the outcome screen (F14) ([2b7a0d6](https://github.com/AlexeyShalaev/hse-doc-studio/commit/2b7a0d64f3d8e52dffe862822432b886a607b616))
-* **pack-studio:** phone layout of the outcome screen, two-row bar, tabs and sheets (F14) ([4fd43e3](https://github.com/AlexeyShalaev/hse-doc-studio/commit/4fd43e3012428d43a7f06097d7bb512d7a697243))
-* **pack-studio:** preview with document variant and scenario (O9) ([11bd561](https://github.com/AlexeyShalaev/hse-doc-studio/commit/11bd561bef954c21f828cc4a64e5e0ee30e11e97))
-* **pack-studio:** scenarios in the outcome screen (F8) ([f54bb31](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f54bb31b5843186e8655182bcb7ca35a9ad7246a))
-* **pack-studio:** student mode and pale slots (F13) ([564b6c2](https://github.com/AlexeyShalaev/hse-doc-studio/commit/564b6c2fa61b3911e0d9eb31251655cd06e320cd))
-* **pack-studio:** student mode and pale slots (F13) ([c04c0e4](https://github.com/AlexeyShalaev/hse-doc-studio/commit/c04c0e48048fe23826636af01dc03dc446947718))
-
-
-### Bug Fixes
-
-* **pack-studio:** impact gallery without nested router, lint in impact test (F10) ([b21f5e9](https://github.com/AlexeyShalaev/hse-doc-studio/commit/b21f5e9cccc6bfe8ce7e75ac17f08d40aed1b0d2))
+- Template Studio: edit a rule right on the Result screen. In the Why panel every chain item has Edit rule: kinds of work, staffing, languages, NDA, optional flags, questionnaire and signature slot conditions, disabled checks. After saving you see what changed in the result (plus, tilde, minus), Ctrl+Z and Ctrl+Shift+Z undo and redo edits, and a deleted record can be restored within 10 seconds. A released version is immutable, for it the button leads to the new version wizard.
+- Template Studio: Matrix, Atlas and Compare modes. The matrix shows scenarios by result section with a status for every cell, including against the base. The atlas lists all distinguishable outcomes of a version, choosing a row applies those inputs. Compare shows the delta of two scenarios, two sets of inputs or two states (work tree, last commit, base) with reasons and a jump to the rule.
+- Template Studio: Propose changes shows what will change in the result. A Result will change in N of M scenarios block with counters by section and an expandable list of changes. If scenarios changed or failed, you tick I know the result of these scenarios will change, but sending is never blocked. A short summary goes into the PR description. The Result screen now has a Propose button.
+- Template Studio: scenarios on screen. The scenario picker shows the run status of each one, Save as scenario builds assertions from the current result, you can accept the current result as expected, duplicate and delete with a 10 second undo. The PDF preview opens right from a result document, with a choice of document variant and scenario, and auto build is toggled by a switch.
+- Template Studio: As a student mode shows three simplified blocks (which documents the student gets, what to fill in, who signs in what order) without service marks, Alt temporarily brings back the author view. Missing elements are shown pale with the reason and an Add in inputs button. The Result screen was rebuilt for phones: a compact top bar, a Parameters sheet, Inputs, Result and Why tabs, and unified bottom sheets.
+- MCP: the pack_outcome_compare and pack_outcome_impact tools compare the result of two sides and count in how many scenarios the result changes against the base. pack_preview_build accepts variant and scenario.
 
 ## [0.35.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.34.1...v0.35.0) - 2026-11-16
 

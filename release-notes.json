@@ -1,6 +1,36 @@
 {
   "releases": [
     {
+      "version": "0.36.0",
+      "date": "2026-11-17",
+      "notes": [
+        {
+          "ru": "Студия шаблонов: правка правила прямо на экране «Результат». В панели «Почему?» у пункта цепочки есть «Править правило»: виды работы, составы, языки, NDA, необязательность, условия анкет и слотов подписи, отключённые проверки. После записи видно, что изменилось в результате (плюс, тильда, минус), Ctrl+Z и Ctrl+Shift+Z отменяют и возвращают правки, удаление записи можно отменить в течение 10 секунд. Выпущенная версия неизменяема, для неё кнопка ведёт к мастеру новой версии.",
+          "en": "Template Studio: edit a rule right on the Result screen. In the Why panel every chain item has Edit rule: kinds of work, staffing, languages, NDA, optional flags, questionnaire and signature slot conditions, disabled checks. After saving you see what changed in the result (plus, tilde, minus), Ctrl+Z and Ctrl+Shift+Z undo and redo edits, and a deleted record can be restored within 10 seconds. A released version is immutable, for it the button leads to the new version wizard."
+        },
+        {
+          "ru": "Студия шаблонов: режимы «Матрица», «Атлас» и «Сравнить». Матрица показывает сценарии по разделам результата со статусом каждой клетки, в том числе относительно базы. Атлас перечисляет все различимые исходы версии, выбор строки применяет эти вводные. «Сравнить» показывает дельту двух сценариев, двух наборов вводных или двух состояний (рабочее дерево, последний коммит, база) с причинами и переходом к правилу.",
+          "en": "Template Studio: Matrix, Atlas and Compare modes. The matrix shows scenarios by result section with a status for every cell, including against the base. The atlas lists all distinguishable outcomes of a version, choosing a row applies those inputs. Compare shows the delta of two scenarios, two sets of inputs or two states (work tree, last commit, base) with reasons and a jump to the rule."
+        },
+        {
+          "ru": "Студия шаблонов: «Предложить изменения» показывает, что изменится в результате. Блок «Изменится результат в N из M сценариев» со счётчиками по разделам и раскрывающимся списком изменений. Если сценарии изменились или упали, нужна отметка «Я знаю, что результат этих сценариев изменится», но отправка не блокируется. Краткая сводка попадает в описание PR. На экране «Результат» появилась кнопка «Предложить».",
+          "en": "Template Studio: Propose changes shows what will change in the result. A Result will change in N of M scenarios block with counters by section and an expandable list of changes. If scenarios changed or failed, you tick I know the result of these scenarios will change, but sending is never blocked. A short summary goes into the PR description. The Result screen now has a Propose button."
+        },
+        {
+          "ru": "Студия шаблонов: сценарии на экране. Выбор сценария показывает статус прогона у каждого, «Сохранить как сценарий» собирает утверждения из текущего результата, можно принять текущий результат как ожидаемый, дублировать и удалять с отменой на 10 секунд. Предпросмотр PDF открывается прямо из документа результата, с выбором варианта документа и сценария, автосборка включается переключателем.",
+          "en": "Template Studio: scenarios on screen. The scenario picker shows the run status of each one, Save as scenario builds assertions from the current result, you can accept the current result as expected, duplicate and delete with a 10 second undo. The PDF preview opens right from a result document, with a choice of document variant and scenario, and auto build is toggled by a switch."
+        },
+        {
+          "ru": "Студия шаблонов: режим «Как студент» показывает упрощённо три блока (какие документы получит студент, что ему заполнить, кто и в каком порядке подписывает) без служебных пометок, Alt временно возвращает вид автора. Отсутствующие элементы показаны бледными с причиной и кнопкой «Добавить во вводных». Экран «Результат» заново собран для телефона: компактная верхняя панель, лист «Параметры», вкладки «Вводные», «Результат» и «Почему?», единые нижние листы.",
+          "en": "Template Studio: As a student mode shows three simplified blocks (which documents the student gets, what to fill in, who signs in what order) without service marks, Alt temporarily brings back the author view. Missing elements are shown pale with the reason and an Add in inputs button. The Result screen was rebuilt for phones: a compact top bar, a Parameters sheet, Inputs, Result and Why tabs, and unified bottom sheets."
+        },
+        {
+          "ru": "MCP: инструменты pack_outcome_compare и pack_outcome_impact сравнивают результат двух сторон и считают, в скольких сценариях изменится результат относительно базы. pack_preview_build принимает variant и scenario.",
+          "en": "MCP: the pack_outcome_compare and pack_outcome_impact tools compare the result of two sides and count in how many scenarios the result changes against the base. pack_preview_build accepts variant and scenario."
+        }
+      ]
+    },
+    {
       "version": "0.35.0",
       "date": "2026-11-16",
       "notes": [
