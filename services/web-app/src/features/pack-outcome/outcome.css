@@ -85,7 +85,7 @@
   width: auto;
 }
 .po-crumbs .po-select {
-  flex: 0 1 20rem;
+  flex: 0 1 14rem;
 }
 .po-crumbs #po-version {
   flex-basis: 11rem;
