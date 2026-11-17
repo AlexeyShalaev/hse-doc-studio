@@ -586,8 +586,7 @@
     "changed_other": "{{count}} inputs changed",
     "selected": "an element is selected",
     "openedResult": "The Outcome tab is open.",
-    "openedRules": "The Why? tab is open.",
-    "scrollHint": "The table scrolls sideways"
+    "openedRules": "The Why? tab is open."
   },
   "dev": {
     "label": "Outcome data (development only)",

@@ -158,6 +158,7 @@
   flex: 1;
   min-width: 0;
   min-height: var(--touch-lg);
+  padding-inline: 0.25rem;
   border: 1px solid transparent;
   border-radius: var(--r-2, 0.375rem);
   background: transparent;
@@ -170,6 +171,12 @@
   background: var(--accent-soft);
   color: var(--fg-0);
   font-weight: 600;
+}
+.po-tab > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .po-tab:focus-visible {
   outline-offset: -2px;
@@ -240,6 +247,7 @@
   .po-inputs-group-toggle {
     display: inline-flex;
     align-items: center;
+    text-align: left;
   }
   .po-center summary,
   .po-sheet summary {
@@ -275,5 +283,31 @@
   }
   .po-drawer .ps-tree-row {
     min-height: var(--touch-min);
+  }
+}
+
+/* ── крупный текст (до 140 %) на 360 px: метки и подписи переносятся, а не торчат за край ── */
+@media (max-width: 767.98px) {
+  .po-section-toggle {
+    flex-wrap: wrap;
+    row-gap: 0.125rem;
+  }
+  .po-screen .chip,
+  .po-sheet .chip {
+    max-width: 100%;
+    height: auto;
+    min-height: 1.25rem;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.25;
+  }
+  .po-route-meta,
+  .po-pick-badges {
+    max-width: 100%;
+  }
+  .po-disc-btn {
+    flex-wrap: wrap;
+    max-width: 100%;
+    text-align: left;
   }
 }

@@ -449,6 +449,15 @@ describe("телефон экрана «Результат»", () => {
     });
   });
 
+  describe("нет наведения", () => {
+    it("причина отключённого предпросмотра написана рядом, а не в title", async () => {
+      mount("state=head");
+      await screen.findByTestId("outcome-count-documents");
+      const why = await screen.findAllByTestId(/-preview-why$/);
+      expect(why[0]).toHaveTextContent(/рабочего дерева|рабочее дерево/i);
+    });
+  });
+
   describe("«К документу»", () => {
     it("открывает «Почему?» и тогда, когда документ уже выбран", async () => {
       mount();

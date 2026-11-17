@@ -1,5 +1,6 @@
 import { useRef, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { useScrollHint } from "@shared/lib/scrollHint";
 import { OUTCOME_VIEWS, type OutcomeView } from "../lib/urlState";
 import { useOutcomeModel } from "../model";
 import { VIEW_PANEL_ID, viewTabId } from "./modeIds";
@@ -16,6 +17,8 @@ export const ModeTabs = () => {
   const { url } = useOutcomeModel();
   const refs = useRef(new Map<OutcomeView, HTMLButtonElement>());
   const current = url.state.view;
+  // Не поместились (телефон, крупный текст): край затухает, выбранный режим не прячется за краем.
+  const hintRef = useScrollHint(current);
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const at = OUTCOME_VIEWS.indexOf(
@@ -45,7 +48,8 @@ export const ModeTabs = () => {
 
   return (
     <div
-      className="po-modes"
+      ref={hintRef}
+      className="po-modes scroll-hint"
       role="tablist"
       aria-label={t("modes.tabs.label")}
       onKeyDown={onKeyDown}

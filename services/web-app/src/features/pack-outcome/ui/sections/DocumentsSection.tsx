@@ -32,6 +32,7 @@ const DocumentCard = ({
   const { t, i18n } = useTranslation("packOutcome");
   const explain = useExplain(outcome);
   const preview = usePreviewUi();
+  const { phone } = useOutcomeModel();
   const lang = i18n.language;
   const name = pickLocalized(doc.name, lang, doc.id);
   const projectLang = outcome.inputs.lang ?? "";
@@ -89,6 +90,12 @@ const DocumentCard = ({
                 <FileSearch size="0.8125rem" aria-hidden="true" />
                 {t("preview.open")}
               </button>
+              {phone && preview.unavailableReason === "state" && (
+                // Подсказки по наведению на телефоне нет: причина написана рядом.
+                <span className="po-note" data-testid={`${testId}-preview-why`}>
+                  {t("preview.needWorkTree")}
+                </span>
+              )}
             </span>
           ) : undefined
         }
