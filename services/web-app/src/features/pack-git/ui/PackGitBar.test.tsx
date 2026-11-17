@@ -12,11 +12,14 @@ import {
   PackGitSchema,
   PackProposeResponseSchema,
   PackStudioErrorBodySchema,
+  packOutcomeApi,
   packStudioApi,
   type PackGit,
 } from "@entities/pack-studio";
 import { ApiError } from "@shared/api";
+import { referenceImpact } from "@entities/pack-studio/reference";
 import { i18n } from "@shared/lib";
+import { loadPackOutcomeNamespace } from "@shared/lib/i18n/packOutcomeNamespace";
 import { loadPackStudioNamespace } from "@shared/lib/i18n/packStudioNamespace";
 import { PackGitBar } from "./PackGitBar";
 
@@ -35,6 +38,12 @@ const apiError = (name: string, status = 409): ApiError => {
   const { detail, code, ...data } = body;
   return new ApiError(detail, code, status, data);
 };
+
+/** «До и после» считается при открытии диалога: отправка доступна, когда он ответил. */
+const submitReady = () =>
+  waitFor(() => {
+    expect(screen.getByTestId("git-propose-submit")).toBeEnabled();
+  });
 
 const DIRTY = fixture(PackGitSchema, "PackGit", "detached_dirty");
 const PUSHED = fixture(PackGitSchema, "PackGit", "pushed_without_pr");
@@ -58,6 +67,17 @@ const onBranch = (patch: Partial<PackGit> = {}): PackGit => ({
 
 /** `failure`: состояние git не читается, сервер отвечает этой ошибкой. */
 const mount = (git: PackGit, failure?: ApiError) => {
+  vi.spyOn(packStudioApi, "tree").mockResolvedValue({
+    workspace_id: "w",
+    base_sha: null,
+    packs: [],
+    files: [],
+    truncated: false,
+  });
+  vi.spyOn(packOutcomeApi, "impact").mockResolvedValue({
+    data: referenceImpact("impact_same"),
+    etag: null,
+  });
   const state = vi.spyOn(packStudioApi, "git");
   if (failure) state.mockRejectedValue(failure);
   else state.mockResolvedValue(git);
@@ -81,7 +101,7 @@ const mount = (git: PackGit, failure?: ApiError) => {
 
 describe("панель git рабочего пространства", () => {
   beforeAll(async () => {
-    await loadPackStudioNamespace();
+    await Promise.all([loadPackStudioNamespace(), loadPackOutcomeNamespace()]);
     await i18n.changeLanguage("ru");
   });
   afterEach(() => {
@@ -219,6 +239,7 @@ describe("панель git рабочего пространства", () => {
       screen.getByTestId("git-propose-title"),
       "fix(packs): заявка",
     );
+    await submitReady();
     await userEvent.click(screen.getByTestId("git-propose-submit"));
     await waitFor(() => {
       expect(propose).toHaveBeenCalledWith(DIRTY.workspace.id, {
@@ -243,6 +264,7 @@ describe("панель git рабочего пространства", () => {
     );
     const props = mount(onBranch());
     await userEvent.click(await screen.findByTestId("propose-changes"));
+    await submitReady();
     await userEvent.click(screen.getByTestId("git-propose-submit"));
     await waitFor(() => {
       expect(props.onLintFailed).toHaveBeenCalledWith({
@@ -276,6 +298,7 @@ describe("панель git рабочего пространства", () => {
       );
     mount(onBranch());
     await userEvent.click(await screen.findByTestId("propose-changes"));
+    await submitReady();
     await userEvent.click(screen.getByTestId("git-propose-submit"));
     expect(await screen.findByTestId("git-fork-step")).toBeInTheDocument();
     // can_create: форк можно создать токеном, вариант выбран сразу.
@@ -310,6 +333,7 @@ describe("панель git рабочего пространства", () => {
       .mockRejectedValueOnce(mismatch);
     mount(onBranch());
     await userEvent.click(await screen.findByTestId("propose-changes"));
+    await submitReady();
     await userEvent.click(screen.getByTestId("git-propose-submit"));
     await screen.findByTestId("git-fork-step");
     expect(screen.queryByTestId("git-fork-create")).not.toBeInTheDocument();
@@ -342,6 +366,7 @@ describe("панель git рабочего пространства", () => {
       workspace: { ...onBranch().workspace, credential_id: null },
     });
     await userEvent.click(await screen.findByTestId("propose-changes"));
+    await submitReady();
     await userEvent.click(screen.getByTestId("git-propose-submit"));
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("нет права записи");

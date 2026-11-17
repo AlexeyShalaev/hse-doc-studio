@@ -6,6 +6,7 @@ import {
   type PackOutcome,
   type PackOutcomeInputs,
   type PackOutcomeRequest,
+  type PackScenarioList,
   type PackTree,
   type PackVersionRef,
   type PackWorkspace,
@@ -19,7 +20,9 @@ import {
   VKR_CHECKS,
   VKR_INPUTS,
   VKR_OUTCOME,
+  VKR_PREVIEW_OPTIONS,
   explainFor,
+  previewBuildReference,
 } from "@entities/pack-studio/reference";
 import { ApiError } from "@shared/api";
 import type { GalleryGroup } from "@shared/lib/stateGallery";
@@ -29,13 +32,24 @@ import {
   type OutcomeSelection,
 } from "./lib/urlState";
 import { OutcomeBody } from "./OutcomeBody";
+import { getImpactGalleryEntries } from "./impact/gallery";
+import { seedModes, type ModesSeed } from "./modes/seed";
+import {
+  INPUTS_SOURCE,
+  filesKeyOf,
+  previewTarget,
+  runKeyOf,
+  type PreviewSource,
+} from "./lib/previewRequest";
+import { previewMemoryKey, writePreviewMemory } from "./lib/previewStore";
+import { PhoneFrame } from "./ui/phone/PhoneFrame";
 import type { ScenarioDialog } from "./ui/scenarios/context";
 
 // Галерея экрана «Результат» (/dev/server-screens): каркас во всех состояниях на эталонах
 // контракта, сервер не нужен. Каждая запись живёт в своём пространстве (свой кэш запросов), а
 // адрес экрана задан в MemoryRouter: состояние в query видно так же, как в настоящем адресе.
-// Телефон (360 px) галерея не показывает, он определяется шириной окна браузера: смотрите
-// страницу в узком окне.
+// Телефон определяется шириной окна браузера: записи po_phone_* в широком окне показывают
+// страницу галереи в рамке 360 px, в узком окне сразу сам экран.
 
 const NOW = "2026-11-16T09:30:00Z";
 const VKR_REF: PackVersionRef = {
@@ -51,9 +65,14 @@ const COURSEWORK_REF: PackVersionRef = {
 const VERSION_DIR = "hse-cs-se/templates/vkr/versions";
 
 /** Что показывает запись: ВКР бакалавра или курсовой проект магистратуры (эталоны контракта). */
-type Work = "vkr" | "coursework";
+type Work = "vkr" | "coursework" | "vkr_released";
+const VKR_RELEASED_REF: PackVersionRef = { ...VKR_REF, version: "2026.1.1" };
 const refOf = (work: Work): PackVersionRef =>
-  work === "vkr" ? VKR_REF : COURSEWORK_REF;
+  work === "vkr"
+    ? VKR_REF
+    : work === "vkr_released"
+      ? VKR_RELEASED_REF
+      : COURSEWORK_REF;
 
 const workspace = (id: string): PackWorkspace => ({
   id,
@@ -214,6 +233,105 @@ const seedWhy = (
   client.setQueryData(key, { data, etag: null });
 };
 
+/** Предпросмотр PDF, открытый сразу: документ, сценарий как источник и состояние сборки. */
+type PreviewSpec = {
+  document: string;
+  /** Сценарий как источник вводных; без него текущие вводные экрана. */
+  scenario?: string;
+  /**
+   * Сборка из эталонов контракта: нет, готова, готова с вариантом, со сценарием, из кэша, идёт,
+   * не удалась, готова, но файлы менялись после неё.
+   */
+  build?:
+    | "none"
+    | "succeeded"
+    | "variant"
+    | "scenario"
+    | "cached"
+    | "running"
+    | "failed"
+    | "stale";
+};
+
+const PREVIEW_BUILDS = {
+  succeeded: "succeeded",
+  variant: "with_variant",
+  scenario: "with_variant_and_scenario",
+  cached: "cached",
+  running: "running",
+  failed: "build_failed",
+  stale: "succeeded",
+} as const;
+
+/** Опции и сборка предпросмотра в кэше, а память экрана как будто сборка стартовала по этим вводным. */
+const seedPreview = (
+  client: QueryClient,
+  id: string,
+  ref: PackVersionRef,
+  outcome: PackOutcome,
+  list: PackScenarioList,
+  example: string | null,
+  spec: PreviewSpec,
+) => {
+  const options = { ...VKR_PREVIEW_OPTIONS, workspace_id: id };
+  const optionsKey = packStudioKeys.previewOptions(id, ref);
+  client.setQueryData(optionsKey, options);
+  client.setQueryDefaults(optionsKey, {
+    retryOnMount: false,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  });
+  const source: PreviewSource = spec.scenario
+    ? { kind: "scenario", id: spec.scenario }
+    : INPUTS_SOURCE;
+  const kind = spec.build ?? "succeeded";
+  let built: { buildId: string; key: string } | null = null;
+  if (kind !== "none") {
+    const entry = list.scenarios.find((e) => e.id === spec.scenario);
+    const build = {
+      ...previewBuildReference(PREVIEW_BUILDS[kind]),
+      workspace_id: id,
+      document: spec.document,
+      // Сценарий сборки из эталона заменён сценарием записи: имя и вводные берутся из списка.
+      ...(kind === "scenario" && entry
+        ? {
+            scenario: entry.id,
+            scenario_inputs: entry.scenario?.inputs ?? {},
+          }
+        : {}),
+    };
+    client.setQueryData(packStudioKeys.previewBuild(id, build.id), build);
+    const target = previewTarget({
+      options,
+      document: spec.document,
+      source,
+      variantPick: null,
+      inputs: outcome.inputs,
+      example,
+      shownExample: outcome.example,
+      scenarioLang: undefined,
+    });
+    const etag = entry?.etag ?? "";
+    const files = (n: number) =>
+      filesKeyOf({
+        revision: outcome.revision,
+        scenarioEtag: etag,
+        filesRevision: n,
+      });
+    // Устаревшая сборка стартовала до записи файла: счётчик записей тогда был на единицу меньше.
+    built = {
+      buildId: build.id,
+      key: runKeyOf(target, files(kind === "stale" ? -1 : 0)),
+    };
+  }
+  writePreviewMemory(previewMemoryKey(id, ref), {
+    document: spec.document,
+    source,
+    variants: {},
+    built,
+  });
+};
+
 /** Заполнить кэш так, чтобы экран видел данные без сервера, и запретить перечитывание. */
 const seedWorkspace = (
   client: QueryClient,
@@ -227,6 +345,7 @@ const seedWorkspace = (
   why: WhyKind = "ready",
   scenarioKind: ScenariosKind = "ok",
   runKind: RunKind = "ready",
+  preview?: PreviewSpec,
 ) => {
   const ref = refOf(work);
   const url = parseOutcomeSearch(new URLSearchParams(search));
@@ -245,7 +364,7 @@ const seedWorkspace = (
     refetchOnWindowFocus: false,
   });
   const inputsKey = packOutcomeKeys.inputs(id, ref, url.state);
-  const inputsBase = work === "vkr" ? VKR_INPUTS : COURSEWORK_INPUTS;
+  const inputsBase = work === "coursework" ? COURSEWORK_INPUTS : VKR_INPUTS;
   if (inputsKind === "ready" || inputsKind === "none") {
     client.setQueryData(inputsKey, {
       ...inputsBase,
@@ -321,7 +440,7 @@ const seedWorkspace = (
   const scenario = COURSEWORK_SCENARIOS.scenarios.find(
     (entry) => entry.id === url.scenario,
   )?.scenario;
-  const outcome = work === "vkr" ? VKR_OUTCOME : COURSEWORK_OUTCOME;
+  const outcome = work === "coursework" ? COURSEWORK_OUTCOME : VKR_OUTCOME;
   // Копия целиком: правки записей (`edit`) не должны просачиваться в общий эталон.
   const base: PackOutcome = {
     ...withIdentity(id, structuredClone(outcome)),
@@ -332,6 +451,7 @@ const seedWorkspace = (
     edit?.(base);
     client.setQueryData(key, base);
     seedWhy(client, id, ref, request, url.selected, base, why);
+    if (preview) seedPreview(client, id, ref, base, list, url.example, preview);
     // Правила проверок и ветки приходят отдельными запросами (`include`) раскрытых разделов.
     const partKey = (part: "checks" | "branches") =>
       packOutcomeKeys.result(id, ref, { ...request, include: [part] });
@@ -418,6 +538,12 @@ type Spec = {
   run?: RunKind;
   /** Окно сценариев, открытое сразу: список выбора, «Сохранить как сценарий», панель. */
   dialog?: ScenarioDialog;
+  /** Режим центра (`view` в адресе) и состояние его ответа: матрица, атлас, сравнение (срез F9). */
+  modes?: ModesSeed;
+  /** Предпросмотр PDF, открытый сразу (срез F12). */
+  preview?: PreviewSpec;
+  /** Телефонная запись (срез F14): в окне шире телефона это узкое окно с самой страницей галереи. */
+  phone?: boolean;
 };
 
 /** Команда из двух: личные документы по авторам, у одного нет редакции на язык проекта. */
@@ -712,11 +838,53 @@ const SPECS: Spec[] = [
     search: "selected=branches:kind",
   },
   {
+    id: "po_edit_ready",
+    title: "Правка по месту: курсовой проект, рабочее дерево",
+    note: "У правила слота подписи есть «Править правило». Нажмите: мини-форма, затем смените условие, и результат пересчитается с дельтой; Ctrl+Z и Ctrl+Shift+Z отменяют и повторяют (манифесты эталона живут в памяти страницы).",
+    kind: "ready",
+    work: "coursework",
+    search: "selected=route:topic-approval/step/2",
+  },
+  {
+    id: "po_edit_released",
+    title: "Правка по месту: выпущенная версия",
+    note: "Версия выпущена: «Править правило» неактивна, рядом объяснение и ссылка на мастер новой версии.",
+    kind: "ready",
+    work: "vkr_released",
+    search: "selected=documents:technical_specification",
+  },
+  {
     id: "po_student",
     title: "Режим «Как студент»",
-    note: "Правая панель с правилами скрыта, остаётся то, что видит студент.",
+    note: "Три упрощённых блока: документы с именами файлов, что заполнить (обязательные поля и анкеты), кто и в каком порядке подписывает. Без причин, источников, пресетов, предупреждений, идентификаторов и правой панели. Alt временно показывает вид автора.",
     kind: "ready",
     search: "mode=student",
+  },
+  {
+    id: "po_student_no_supervisor",
+    title: "Режим «Как студент»: руководителя нет",
+    note: "Участника, которого нет при этой комбинации, студент не видит: из маршрута пропадает его шаг, предупреждений автора нет.",
+    kind: "ready",
+    search: "mode=student",
+    edit: noSupervisor,
+  },
+  {
+    id: "po_student_team",
+    title: "Режим «Как студент»: команда и параллельный шаг",
+    note: "Файлы по авторам, шаг с двумя подписантами помечен «параллельно», необязательные подписи словами.",
+    kind: "ready",
+    search: "mode=student",
+    edit: (outcome) => {
+      teamOfTwo(outcome);
+      presetRoute(outcome);
+    },
+  },
+  {
+    id: "po_pale_slots",
+    title: "Бледные слоты: «Добавить во вводных»",
+    note: "Отсутствующий участник, выключенный и отсутствующий документы, выключенные пункты точек и пропущенные подписи стоят на своих местах бледными, с причиной. «Добавить во вводных» применяет одну вводную из «что если» сервера (здесь для второго руководителя ответ засеян, остальные ходят на сервер).",
+    kind: "ready",
+    search: "selected=participants:co_supervisor",
   },
   {
     id: "po_base",
@@ -826,6 +994,205 @@ const SPECS: Spec[] = [
     dialog: { kind: "saveInputs", id: "company-supervisor" },
   },
   {
+    id: "po_mode_matrix",
+    title: "Режим «Матрица»",
+    note: "Сценарии на разделы: значок, слово и число в клетке, буква у одинаковых клеток столбца, итог прогона.",
+    kind: "ready",
+    work: "coursework",
+    search: "view=matrix",
+    modes: "ready",
+  },
+  {
+    id: "po_mode_matrix_base",
+    title: "Режим «Матрица»: относительно базы",
+    note: "Пометка «~» у клеток, изменённых против базы (в пространстве с git).",
+    kind: "ready",
+    work: "coursework",
+    search: "view=matrix&against=base",
+    modes: "ready",
+  },
+  {
+    id: "po_mode_matrix_error_row",
+    title: "Режим «Матрица»: строка с ошибкой",
+    note: "Сценарий, чьи вводные не подходят версии: причина в строке, клетки без результата.",
+    kind: "ready",
+    work: "coursework",
+    search: "view=matrix",
+    modes: "error_row",
+  },
+  {
+    id: "po_mode_matrix_empty",
+    title: "Режим «Матрица»: нет сценариев",
+    note: "Подсказка создать сценарий.",
+    kind: "ready",
+    work: "coursework",
+    scenarios: "empty",
+    search: "view=matrix",
+    modes: "empty",
+  },
+  {
+    id: "po_mode_matrix_too_large",
+    title: "Режим «Матрица»: ответ слишком большой",
+    note: "outcome_too_large: числа и кнопка «Показать первые 20».",
+    kind: "ready",
+    work: "coursework",
+    search: "view=matrix",
+    modes: "too_large",
+  },
+  {
+    id: "po_mode_matrix_loading",
+    title: "Режим «Матрица»: загрузка",
+    note: "Скелет, пока сервер считает.",
+    kind: "ready",
+    work: "coursework",
+    search: "view=matrix",
+    modes: "loading",
+  },
+  {
+    id: "po_mode_atlas",
+    title: "Режим «Атлас»: курсовой",
+    note: "12 строк и 12 исходов, измерения с закреплением, не влияющие вводные приглушены.",
+    kind: "ready",
+    work: "coursework",
+    search: "view=atlas&i.supervisor=company&i.co_supervisor=yes",
+    modes: "ready",
+  },
+  {
+    id: "po_mode_atlas_vkr",
+    title: "Режим «Атлас»: ВКР, 864 строки",
+    note: "Строки листаются по 60 кнопкой, поиск и фильтры режут таблицу, исходы сгруппированы.",
+    kind: "ready",
+    work: "vkr",
+    search: "view=atlas",
+    modes: "ready",
+  },
+  {
+    id: "po_mode_atlas_pinned",
+    title: "Режим «Атлас»: закреплена вводная",
+    note: "Таблица порезана закреплением: измерение осталось с одним значением.",
+    kind: "ready",
+    work: "vkr",
+    search: "view=atlas&p.supervisor=company&p.meta.nda=yes",
+    modes: "ready",
+  },
+  {
+    id: "po_mode_atlas_loading",
+    title: "Режим «Атлас»: загрузка",
+    note: "Скелет и «Отмена»: атлас считается секунды.",
+    kind: "ready",
+    work: "vkr",
+    search: "view=atlas",
+    modes: "loading",
+  },
+  {
+    id: "po_mode_atlas_busy",
+    title: "Режим «Атлас»: сервер занят",
+    note: "outcome_busy: повтор через указанное число секунд.",
+    kind: "ready",
+    work: "vkr",
+    search: "view=atlas",
+    modes: "busy",
+  },
+  {
+    id: "po_mode_atlas_too_large",
+    title: "Режим «Атлас»: слишком много комбинаций",
+    note: "atlas_too_large: предел, число строк и выбор вводных, которые закрепить.",
+    kind: "ready",
+    work: "vkr",
+    search: "view=atlas",
+    modes: "too_large",
+  },
+  {
+    id: "po_mode_compare",
+    title: "Режим «Сравнить»: два сценария",
+    note: "Изменения по разделам с «+», «~», «-», словами и «было» и «стало»; причины раскрываются кнопкой «Почему?».",
+    kind: "ready",
+    work: "coursework",
+    search: "view=compare",
+    modes: "ready",
+  },
+  {
+    id: "po_mode_compare_identical",
+    title: "Режим «Сравнить»: различий нет",
+    note: "Результат обеих сторон совпадает по всем разделам.",
+    kind: "ready",
+    work: "coursework",
+    search: "view=compare",
+    modes: "identical",
+  },
+  {
+    id: "po_mode_compare_no_base",
+    title: "Режим «Сравнить»: нет базы",
+    note: "diff_base_unavailable: «Сравнивать не с чем» с причиной и переходом к двум сценариям.",
+    kind: "ready",
+    work: "coursework",
+    search: "view=compare&left=screen@base&right=screen@work_tree",
+    modes: "no_base",
+  },
+  {
+    id: "po_mode_compare_loading",
+    title: "Режим «Сравнить»: загрузка",
+    note: "Скелет, пока сервер сравнивает.",
+    kind: "ready",
+    work: "coursework",
+    search: "view=compare",
+    modes: "loading",
+  },
+  {
+    id: "po_preview_ready",
+    title: "Предпросмотр PDF: сборка готова",
+    note: "Панель справа открыта по кнопке «Предпросмотр PDF» у документа: вводные, вариант и набор данных, переключатель автосборки, «Что собрано» (вариант, итоговое имя файла, набор данных). Сам PDF в галерее не загружается: адрес файла не отвечает.",
+    kind: "ready",
+    preview: { document: "technical_specification", build: "succeeded" },
+  },
+  {
+    id: "po_preview_variant_scenario",
+    title: "Предпросмотр PDF: вариант и сценарий",
+    note: "Источник вводных «Сценарий», в ответе сборки вариант SRS, итоговое имя файла, сценарий и его вводные. Язык en: вариант SRS доступен только при нём.",
+    kind: "ready",
+    search: "i.lang=en",
+    preview: {
+      document: "technical_specification",
+      scenario: "company-supervisor",
+      build: "scenario",
+    },
+  },
+  {
+    id: "po_preview_running",
+    title: "Предпросмотр PDF: сборка идёт",
+    note: "Статус «Собирается» и «Отменить»; «Собрать» отключена, пока сборка не кончилась или не устарела.",
+    kind: "ready",
+    preview: { document: "technical_specification", build: "running" },
+  },
+  {
+    id: "po_preview_failed",
+    title: "Предпросмотр PDF: сборка не удалась",
+    note: "Код и причина из ответа, кнопка «Журнал».",
+    kind: "ready",
+    preview: { document: "technical_specification", build: "failed" },
+  },
+  {
+    id: "po_preview_cached",
+    title: "Предпросмотр PDF: из кэша",
+    note: "Сборка с такими же данными уже была: пометка «из кэша» и пояснение.",
+    kind: "ready",
+    preview: { document: "technical_specification", build: "cached" },
+  },
+  {
+    id: "po_preview_stale",
+    title: "Предпросмотр PDF: файлы менялись после сборки",
+    note: "PDF готов, но после сборки записан файл версии: плашка «Файлы менялись после сборки» и «Пересобрать».",
+    kind: "ready",
+    preview: { document: "technical_specification", build: "stale" },
+  },
+  {
+    id: "po_preview_empty",
+    title: "Предпросмотр PDF: сборки ещё не было",
+    note: "Автосборка выключена: подсказка «Нажмите «Собрать»». Документ с четырьмя вариантами презентации, вариант без PDF (Reveal) предупреждает.",
+    kind: "ready",
+    preview: { document: "presentation", build: "none" },
+  },
+  {
     id: "po_inputs_loading",
     title: "Вводные: загрузка",
     note: "Скелет панели, пока сервер не ответил на inputs.",
@@ -846,6 +1213,76 @@ const SPECS: Spec[] = [
     kind: "ready",
     inputs: "none",
   },
+];
+
+/** Запись галереи на основе готовой: те же данные, другая вкладка, телефонная рамка. */
+const phoneOf = (
+  from: string,
+  id: string,
+  title: string,
+  note: string,
+  extra: string,
+): Spec => {
+  const base = SPECS.find((spec) => spec.id === from);
+  if (!base) throw new Error(`gallery: no entry ${from}`);
+  const search = [base.search, extra].filter(Boolean).join("&");
+  return { ...base, id, title, note, search, phone: true };
+};
+
+/**
+ * Телефон (срез F14). Раскладка включается шириной окна, поэтому в окне шире 768 px запись
+ * показывает саму галерею в рамке 360 px (iframe), а в узком окне сразу экран.
+ */
+const PHONE_SPECS: Spec[] = [
+  phoneOf(
+    "po_result",
+    "po_phone_result",
+    "Телефон: результат",
+    "Две строки сверху (название и «Параметры», сценарий), результат колонкой, нижние вкладки «Вводные», «Результат», «Почему?».",
+    "",
+  ),
+  phoneOf(
+    "po_inputs_changed",
+    "po_phone_inputs",
+    "Телефон: лист «Вводные»",
+    "Лист до 90 % высоты с ручкой и крестиком, «Показать» закреплена у низа, на вкладке счётчик изменённых вводных.",
+    "tab=inputs",
+  ),
+  phoneOf(
+    "po_why_document_off",
+    "po_phone_why",
+    "Телефон: вкладка «Почему?»",
+    "Выбранный элемент открывает вкладку: цепочка правил страницей, «Назад» браузера возвращает результат, у вкладки метка выбора.",
+    "tab=rules",
+  ),
+  phoneOf(
+    "po_mode_matrix",
+    "po_phone_matrix",
+    "Телефон: матрица карточками",
+    "Сценарий это карточка с клетками по разделам, горизонтальной прокрутки нет.",
+    "",
+  ),
+  phoneOf(
+    "po_mode_atlas",
+    "po_phone_atlas",
+    "Телефон: атлас",
+    "Блок измерений свёрнут, строки списком чипов, фильтры и поиск на всю ширину.",
+    "",
+  ),
+  phoneOf(
+    "po_mode_compare",
+    "po_phone_compare",
+    "Телефон: сравнение",
+    "Стороны друг под другом, изменения списком по разделам.",
+    "",
+  ),
+  phoneOf(
+    "po_preview_ready",
+    "po_phone_preview",
+    "Телефон: предпросмотр PDF нижним листом",
+    "Лист поверх результата, закрывается крестиком, Esc и кнопкой «Назад».",
+    "",
+  ),
 ];
 
 /** Адрес записи в памяти: запись не трогает адрес страницы галереи. */
@@ -877,7 +1314,7 @@ export const getPackOutcomeGallery = (): GalleryGroup[] => [
     title: "Студия шаблонов: экран «Результат»",
     description:
       "Каркас экрана на эталонах контракта (contracts/pack-studio/fixtures). Данные в кэше запросов, сервер не нужен.",
-    entries: SPECS.map((spec) => {
+    entries: [...SPECS, ...PHONE_SPECS].map((spec) => {
       const id = `gallery-${spec.id}`;
       return {
         id: spec.id,
@@ -897,20 +1334,50 @@ export const getPackOutcomeGallery = (): GalleryGroup[] => [
             spec.why,
             spec.scenarios,
             spec.run,
+            spec.preview,
+          );
+          if (spec.modes) {
+            seedModes(
+              client,
+              {
+                id,
+                ref: refOf(spec.work ?? "vkr"),
+                search: spec.search ?? "",
+              },
+              spec.modes,
+            );
+          }
+        },
+        render: () => {
+          const screen = (
+            <GalleryUrl initial={spec.search ?? ""}>
+              <div
+                className="ps-shell ui-console"
+                style={{ minHeight: spec.phone ? 0 : "40rem" }}
+              >
+                <OutcomeBody
+                  workspace={workspace(id)}
+                  version={refOf(spec.work ?? "vkr")}
+                  scenarioDialog={spec.dialog ?? null}
+                  previewDocument={spec.preview?.document ?? null}
+                />
+              </div>
+            </GalleryUrl>
+          );
+          return spec.phone ? (
+            <PhoneFrame id={spec.id}>{screen}</PhoneFrame>
+          ) : (
+            screen
           );
         },
-        render: () => (
-          <GalleryUrl initial={spec.search ?? ""}>
-            <div className="ps-shell ui-console" style={{ minHeight: "40rem" }}>
-              <OutcomeBody
-                workspace={workspace(id)}
-                version={refOf(spec.work ?? "vkr")}
-                scenarioDialog={spec.dialog ?? null}
-              />
-            </div>
-          </GalleryUrl>
-        ),
       };
     }),
+  },
+  {
+    id: "pack-outcome-impact",
+    title: "Студия шаблонов: «Что изменится в результате»",
+    description:
+      "Блок «до и после» в диалоге «Предложить изменения»: ответ impact в кэше запросов, сервер не нужен.",
+    entries: getImpactGalleryEntries(),
   },
 ];

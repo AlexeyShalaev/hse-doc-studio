@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useMemo } from "react";
-import { useSearchParams } from "react-router";
+import { useLocation, useSearchParams } from "react-router";
+import { formatSide, parseSide, type CompareSide } from "./compareSide";
 import {
   OutcomeSectionSchema,
   OutcomeStateSchema,
@@ -10,10 +11,24 @@ import {
 // Состояние экрана «Результат» живёт в адресе (template-studio-outcome.md, R10): ссылку можно
 // отправить, перезагрузка возвращает тот же экран. Версия идёт в пути, остальное в query:
 //   ?state=head&scenario=company-supervisor&i.kind=research&mode=student&selected=documents:report
+// Режимы центра (срез F9): `view=matrix|atlas|compare` (результат это умолчание), закрепления атласа
+// `p.<вводная>=<значение>`, `against=base` у матрицы, стороны сравнения `left` и `right`.
 // Вводные пишутся только как отличие от умолчаний. Всё из адреса проверяется: чужой или
 // устаревший адрес даёт умолчания, а не поломанный экран.
 
 export type OutcomeMode = "author" | "student";
+
+/** Режим центра: результат, матрица сценариев, атлас комбинаций, сравнение двух сторон. */
+export type OutcomeView = "result" | "matrix" | "atlas" | "compare";
+export const OUTCOME_VIEWS: readonly OutcomeView[] = [
+  "result",
+  "matrix",
+  "atlas",
+  "compare",
+];
+
+/** С чем матрица сверяет клетки: с ожиданиями сценария или с базой (`against: base`). */
+export type MatrixAgainst = "expected" | "base";
 
 /**
  * Что можно выбрать в центре: элементы разделов контракта и вводная из блока «Ветки» (у веток
@@ -38,6 +53,14 @@ export type OutcomeUrlState = {
   selected: OutcomeSelection | null;
   /** Вкладка телефона. */
   tab: OutcomeTab;
+  /** Режим центра (срез F9). */
+  view: OutcomeView;
+  /** Закреплённые вводные атласа: режут таблицу, остаются в измерениях с одним значением. */
+  pin: Record<string, string>;
+  against: MatrixAgainst;
+  /** Стороны сравнения; `null`: экран берёт умолчание по числу сценариев и вид пространства. */
+  left: CompareSide | null;
+  right: CompareSide | null;
 };
 
 export const OUTCOME_DEFAULTS: OutcomeUrlState = {
@@ -48,6 +71,11 @@ export const OUTCOME_DEFAULTS: OutcomeUrlState = {
   mode: "author",
   selected: null,
   tab: "result",
+  view: "result",
+  pin: {},
+  against: "expected",
+  left: null,
+  right: null,
 };
 
 /** Те же пределы, что у сервера (раздел 4.6): до 64 вводных, значение до 128 знаков. */
@@ -55,6 +83,7 @@ export const MAX_INPUTS = 64;
 export const MAX_INPUT_VALUE = 128;
 
 const INPUT_PREFIX = "i.";
+const PIN_PREFIX = "p.";
 const INPUT_KEY = /^[a-z][a-z0-9_.-]{0,63}$/;
 const SCENARIO = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 const EXAMPLE = /^[A-Za-z0-9][A-Za-z0-9_:./-]{0,254}$/;
@@ -81,6 +110,30 @@ export const parseSelected = (raw: string | null): OutcomeSelection | null => {
 export const formatSelected = (ref: OutcomeSelection): string =>
   `${ref.section}:${ref.id}`;
 
+/** Вводные под префиксом (`i.` или `p.`): невалидное и лишнее сверх предела отбрасывается. */
+const readInputs = (
+  params: URLSearchParams,
+  prefix: string,
+): Record<string, string> => {
+  const out: Record<string, string> = {};
+  let count = 0;
+  params.forEach((value, name) => {
+    if (!name.startsWith(prefix) || count >= MAX_INPUTS) return;
+    const key = name.slice(prefix.length);
+    if (!INPUT_KEY.test(key) || key in out) return;
+    if (
+      value.length === 0 ||
+      value.length > MAX_INPUT_VALUE ||
+      CONTROL.test(value)
+    ) {
+      return;
+    }
+    out[key] = value;
+    count += 1;
+  });
+  return out;
+};
+
 /** Состояние экрана из адреса: невалидное отбрасывается, пустое даёт умолчание. */
 export const parseOutcomeSearch = (
   params: URLSearchParams,
@@ -90,22 +143,8 @@ export const parseOutcomeSearch = (
   const example = params.get("example");
   const mode = params.get("mode");
   const tab = params.get("tab");
-  const inputs: Record<string, string> = {};
-  let count = 0;
-  params.forEach((value, name) => {
-    if (!name.startsWith(INPUT_PREFIX) || count >= MAX_INPUTS) return;
-    const key = name.slice(INPUT_PREFIX.length);
-    if (!INPUT_KEY.test(key) || key in inputs) return;
-    if (
-      value.length === 0 ||
-      value.length > MAX_INPUT_VALUE ||
-      CONTROL.test(value)
-    ) {
-      return;
-    }
-    inputs[key] = value;
-    count += 1;
-  });
+  const inputs = readInputs(params, INPUT_PREFIX);
+  const pin = readInputs(params, PIN_PREFIX);
   return {
     state: state.success ? state.data : OUTCOME_DEFAULTS.state,
     scenario: scenario && SCENARIO.test(scenario) ? scenario : null,
@@ -114,6 +153,13 @@ export const parseOutcomeSearch = (
     mode: MODES.find((item) => item === mode) ?? OUTCOME_DEFAULTS.mode,
     selected: parseSelected(params.get("selected")),
     tab: TABS.find((item) => item === tab) ?? OUTCOME_DEFAULTS.tab,
+    view:
+      OUTCOME_VIEWS.find((item) => item === params.get("view")) ??
+      OUTCOME_DEFAULTS.view,
+    pin,
+    against: params.get("against") === "base" ? "base" : "expected",
+    left: parseSide(params.get("left")),
+    right: parseSide(params.get("right")),
   };
 };
 
@@ -136,14 +182,25 @@ export const writeOutcomeSearch = (
   put("example", next.example, null);
   put("mode", next.mode, OUTCOME_DEFAULTS.mode);
   put("tab", next.tab, OUTCOME_DEFAULTS.tab);
+  put("view", next.view, OUTCOME_DEFAULTS.view);
+  put("against", next.against, OUTCOME_DEFAULTS.against);
+  put("left", next.left ? formatSide(next.left) : null, null);
+  put("right", next.right ? formatSide(next.right) : null, null);
   put("selected", next.selected ? formatSelected(next.selected) : null, null);
   for (const name of [...out.keys()]) {
-    if (name.startsWith(INPUT_PREFIX)) out.delete(name);
+    if (name.startsWith(INPUT_PREFIX) || name.startsWith(PIN_PREFIX)) {
+      out.delete(name);
+    }
   }
-  for (const [key, value] of Object.entries(next.inputs).sort(([a], [b]) =>
-    a < b ? -1 : a > b ? 1 : 0,
-  )) {
-    out.set(`${INPUT_PREFIX}${key}`, value);
+  for (const [prefix, values] of [
+    [INPUT_PREFIX, next.inputs],
+    [PIN_PREFIX, next.pin],
+  ] as const) {
+    for (const [key, value] of Object.entries(values).sort(([a], [b]) =>
+      a < b ? -1 : a > b ? 1 : 0,
+    )) {
+      out.set(`${prefix}${key}`, value);
+    }
   }
   return out;
 };
@@ -160,15 +217,29 @@ export const OutcomeSearchContext = createContext<OutcomeSearchSource | null>(
   null,
 );
 
+// Счётчик записей в адрес экрана. Лист на телефоне по нему узнаёт, менялся ли адрес, пока он был
+// открыт: состояние роутера обновляется чуть позже самой записи, сравнивать адреса нельзя.
+let urlWrites = 0;
+export const outcomeUrlWrites = (): number => urlWrites;
+
 export type OutcomeUrlControls = {
   state: OutcomeUrlState;
-  /** Изменить часть состояния; `push` добавляет запись в историю (по умолчанию замена). */
-  update: (patch: Partial<OutcomeUrlState>, push?: boolean) => void;
+  /**
+   * Изменить часть состояния; `push` добавляет запись в историю (по умолчанию замена). `navState`
+   * кладётся в запись истории (телефон помечает так открытые листы: `lib/phoneNav.ts`); замена
+   * сохраняет состояние текущей записи, чтобы правка адреса внутри листа его не закрывала.
+   */
+  update: (
+    patch: Partial<OutcomeUrlState>,
+    push?: boolean,
+    navState?: unknown,
+  ) => void;
 };
 
 /** Состояние экрана «Результат» из адреса и запись обратно. */
 export const useOutcomeUrlState = (): OutcomeUrlControls => {
   const [params, setParams] = useSearchParams();
+  const location = useLocation();
   const override = useContext(OutcomeSearchContext);
   const key = override ? override.search : params.toString();
   const state = useMemo(
@@ -176,15 +247,20 @@ export const useOutcomeUrlState = (): OutcomeUrlControls => {
     [key],
   );
   const set = override?.set;
+  const here: unknown = location.state;
   const update = useCallback(
-    (patch: Partial<OutcomeUrlState>, push = false) => {
+    (patch: Partial<OutcomeUrlState>, push = false, navState?: unknown) => {
+      urlWrites += 1;
       if (set) {
         set(writeOutcomeSearch(new URLSearchParams(key), patch));
         return;
       }
-      setParams((prev) => writeOutcomeSearch(prev, patch), { replace: !push });
+      setParams((prev) => writeOutcomeSearch(prev, patch), {
+        replace: !push,
+        state: push ? navState : here,
+      });
     },
-    [key, set, setParams],
+    [here, key, set, setParams],
   );
   return { state, update };
 };

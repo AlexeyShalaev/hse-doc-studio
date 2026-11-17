@@ -16,6 +16,7 @@ import {
   isTextPath,
   languageForPackPath,
   lintTargetOf,
+  notifyPackFilesSaved,
   packErrorText,
   packStudioApi,
   packStudioKeys,
@@ -209,6 +210,7 @@ const LoadedEditor = ({
           queryKey: packStudioKeys.hints(workspaceId, versionDir),
         });
       }
+      notifyPackFilesSaved(workspaceId);
       onSaved();
     },
     onError: (error) => {

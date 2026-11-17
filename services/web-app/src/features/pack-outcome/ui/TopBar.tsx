@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useId, useState } from "react";
 import { FolderTree, Lock, RefreshCw } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { useTranslation } from "react-i18next";
@@ -15,7 +15,9 @@ import { pickLocalized } from "@shared/lib/i18n/pickLocalized";
 import { Select } from "@shared/ui";
 import { writeOutcomeSearch, type OutcomeMode } from "../lib/urlState";
 import { useOutcomeModel } from "../model";
-import { ScenarioPicker } from "./scenarios/ScenarioPicker";
+import { PhoneBar } from "./phone/PhoneBar";
+import { ProposeAction } from "./ProposeAction";
+import { ScenarioActions, ScenarioPicker } from "./scenarios/ScenarioPicker";
 
 // Переключатель данных только для разработки: в рабочей сборке этой ветки нет.
 const DevSwitch = import.meta.env.DEV
@@ -33,6 +35,10 @@ type TopBarProps = {
   location: OutcomeLocation;
   /** Правки после последнего коммита (git): «Есть несохранённые правки». */
   dirty: boolean;
+  /** Alt удерживается в режиме «Как студент»: центр временно показывает вид автора. */
+  peek: boolean;
+  /** Режим выбран кнопкой панели: экран объявляет его и переводит фокус в результат. */
+  onModeChange: (mode: OutcomeMode) => void;
   onOpenFiles: () => void;
 };
 
@@ -44,12 +50,20 @@ const MODES: readonly OutcomeMode[] = ["author", "student"];
  * переходы к файлам. Смена шаблона и версии это переход по адресу (в историю), остальное
  * записывается в query текущего адреса.
  */
-export const TopBar = ({ tree, location, dirty, onOpenFiles }: TopBarProps) => {
+export const TopBar = ({
+  tree,
+  location,
+  dirty,
+  peek,
+  onModeChange,
+  onOpenFiles,
+}: TopBarProps) => {
   const { t, i18n } = useTranslation("packOutcome");
   const navigate = useNavigate();
   const model = useOutcomeModel();
   const { workspaceId, url, outcome, ref, released } = model;
   const lang = i18n.language;
+  const hintId = useId();
 
   const nameOf = (
     dict: Record<string, string> | null | undefined,
@@ -76,6 +90,7 @@ export const TopBar = ({ tree, location, dirty, onOpenFiles }: TopBarProps) => {
       state: url.state.state,
       mode: url.state.mode,
       tab: url.state.tab,
+      view: url.state.view,
       scenario: sameTemplate ? url.state.scenario : null,
     }).toString();
     void navigate(packOutcomePath(workspaceId, target, search));
@@ -105,41 +120,171 @@ export const TopBar = ({ tree, location, dirty, onOpenFiles }: TopBarProps) => {
     base: t("bar.stateBase"),
   };
 
+  const templateSelect = (
+    <Select
+      id="po-template"
+      ariaLabel={t("bar.template")}
+      className="po-select"
+      value={`${ref.pack}/${ref.template}`}
+      options={templates.map(({ value, label }) => ({ value, label }))}
+      onValueChange={onTemplate}
+    />
+  );
+  const versionSelect = (
+    <Select
+      id="po-version"
+      ariaLabel={t("bar.version")}
+      className="po-select"
+      value={ref.version}
+      options={location.template.versions.map((v) => ({
+        value: v.version,
+        label: versionLabel(v),
+      }))}
+      onValueChange={(version) => {
+        go({ ...ref, version });
+      }}
+    />
+  );
+  const modeSwitch = (
+    <div
+      className="po-field"
+      role="group"
+      aria-label={t("bar.mode")}
+      aria-describedby={url.state.mode === "student" ? hintId : undefined}
+    >
+      <span className="po-field-label" aria-hidden="true">
+        {t("bar.mode")}
+      </span>
+      <div className="po-segmented">
+        {MODES.map((mode) => (
+          <button
+            key={mode}
+            type="button"
+            className="po-segment"
+            aria-pressed={url.state.mode === mode}
+            data-testid={`outcome-mode-${mode}`}
+            onClick={() => {
+              if (url.state.mode === mode) return;
+              url.update({ mode });
+              onModeChange(mode);
+            }}
+          >
+            {t(mode === "author" ? "bar.modeAuthor" : "bar.modeStudent")}
+          </button>
+        ))}
+      </div>
+      {url.state.mode === "student" && (
+        <span
+          id={hintId}
+          className="po-note po-mode-hint po-hide-phone"
+          data-peek={peek ? "true" : undefined}
+          data-testid="outcome-mode-hint"
+        >
+          {t(peek ? "bar.modePeek" : "bar.modeHint")}
+        </span>
+      )}
+    </div>
+  );
+  const stateSelect = (
+    <label className="po-field" htmlFor="po-state">
+      <span className="po-field-label">{t("bar.state")}</span>
+      <Select
+        id="po-state"
+        ariaLabel={t("bar.state")}
+        className="po-select"
+        value={url.state.state}
+        options={STATES.map((value) => ({
+          value,
+          label: stateLabel[value],
+        }))}
+        onValueChange={(next) => {
+          url.update({ state: next as OutcomeState });
+        }}
+      />
+    </label>
+  );
+  const lock = released && (
+    <span
+      className="ps-mark ps-mark-lock po-lock"
+      title={t("bar.releasedMark")}
+      data-testid="outcome-released-mark"
+    >
+      <Lock size="0.75rem" aria-hidden="true" />
+      <span className="sr-only">{t("bar.releasedMark")}</span>
+    </span>
+  );
+  const status = (quiet: boolean) => (
+    <SaveStatus
+      dirty={dirty}
+      fetching={outcome.isFetching}
+      failed={outcome.isError}
+      quiet={quiet}
+      onRetry={() => void outcome.refetch()}
+    />
+  );
+  const dev = DevSwitch && (
+    <Suspense fallback={null}>
+      <DevSwitch workspaceId={workspaceId} />
+    </Suspense>
+  );
+
+  if (model.phone) {
+    const templateName = nameOf(location.template.name, ref.template);
+    return (
+      <PhoneBar
+        title={templateName}
+        version={ref.version}
+        lock={lock}
+        status={status(true)}
+        studentMode={url.state.mode === "student"}
+        optionsActive={
+          url.state.state !== "work_tree" || url.state.mode === "student"
+        }
+        notice={released ? t("bar.released") : null}
+        controls={
+          <>
+            <div className="po-phone-field">
+              <span className="po-field-label">{t("bar.template")}</span>
+              {templateSelect}
+            </div>
+            <div className="po-phone-field">
+              <span className="po-field-label">{t("bar.version")}</span>
+              {versionSelect}
+            </div>
+            {modeSwitch}
+            {stateSelect}
+            <ScenarioActions />
+            <button
+              type="button"
+              className="btn"
+              data-testid="outcome-files-open"
+              onClick={onOpenFiles}
+            >
+              <FolderTree size="0.875rem" aria-hidden="true" />
+              {t("bar.files")}
+            </button>
+            <Link
+              className="btn"
+              to={packFilesPath(workspaceId)}
+              data-testid="outcome-files-mode"
+            >
+              {t("bar.filesMode")}
+            </Link>
+            {status(false)}
+            {dev}
+          </>
+        }
+      />
+    );
+  }
+
   return (
     <div className="po-bar" role="group" aria-label={t("bar.label")}>
       <div className="po-bar-row">
         <div className="po-crumbs" data-testid="outcome-crumbs">
-          <Select
-            id="po-template"
-            ariaLabel={t("bar.template")}
-            className="po-select"
-            value={`${ref.pack}/${ref.template}`}
-            options={templates.map(({ value, label }) => ({ value, label }))}
-            onValueChange={onTemplate}
-          />
-          <Select
-            id="po-version"
-            ariaLabel={t("bar.version")}
-            className="po-select"
-            value={ref.version}
-            options={location.template.versions.map((v) => ({
-              value: v.version,
-              label: versionLabel(v),
-            }))}
-            onValueChange={(version) => {
-              go({ ...ref, version });
-            }}
-          />
-          {released && (
-            <span
-              className="ps-mark ps-mark-lock po-lock"
-              title={t("bar.releasedMark")}
-              data-testid="outcome-released-mark"
-            >
-              <Lock size="0.75rem" aria-hidden="true" />
-              <span className="sr-only">{t("bar.releasedMark")}</span>
-            </span>
-          )}
+          {templateSelect}
+          {versionSelect}
+          {lock}
         </div>
         <div className="po-bar-actions">
           <button
@@ -159,64 +304,23 @@ export const TopBar = ({ tree, location, dirty, onOpenFiles }: TopBarProps) => {
           >
             {t("bar.filesMode")}
           </Link>
+          <ProposeAction />
         </div>
       </div>
       <div className="po-bar-row">
         <ScenarioPicker />
-        <div className="po-field" role="group" aria-label={t("bar.mode")}>
-          <span className="po-field-label" aria-hidden="true">
-            {t("bar.mode")}
-          </span>
-          <div className="po-segmented">
-            {MODES.map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                className="po-segment"
-                aria-pressed={url.state.mode === mode}
-                data-testid={`outcome-mode-${mode}`}
-                onClick={() => {
-                  url.update({ mode });
-                }}
-              >
-                {t(mode === "author" ? "bar.modeAuthor" : "bar.modeStudent")}
-              </button>
-            ))}
-          </div>
-        </div>
-        <label className="po-field" htmlFor="po-state">
-          <span className="po-field-label">{t("bar.state")}</span>
-          <Select
-            id="po-state"
-            ariaLabel={t("bar.state")}
-            className="po-select"
-            value={url.state.state}
-            options={STATES.map((value) => ({
-              value,
-              label: stateLabel[value],
-            }))}
-            onValueChange={(next) => {
-              url.update({ state: next as OutcomeState });
-            }}
-          />
-        </label>
-        <SaveStatus
-          dirty={dirty}
-          fetching={outcome.isFetching}
-          failed={outcome.isError}
-          onRetry={() => void outcome.refetch()}
-        />
-        {DevSwitch && (
-          <Suspense fallback={null}>
-            <DevSwitch workspaceId={workspaceId} />
-          </Suspense>
-        )}
+        {modeSwitch}
+        {stateSelect}
+        {status(false)}
+        {dev}
       </div>
     </div>
   );
 };
 
 type SaveStatusProps = {
+  /** Тихий вид (телефон): пока всё в порядке, статус слышат программы экрана, но не рисуется. */
+  quiet?: boolean;
   dirty: boolean;
   fetching: boolean;
   failed: boolean;
@@ -224,7 +328,13 @@ type SaveStatusProps = {
 };
 
 /** Состояние сохранения и пересчёта: объявляется программам экрана (role="status"). */
-const SaveStatus = ({ dirty, fetching, failed, onRetry }: SaveStatusProps) => {
+const SaveStatus = ({
+  quiet = false,
+  dirty,
+  fetching,
+  failed,
+  onRetry,
+}: SaveStatusProps) => {
   const { t } = useTranslation("packOutcome");
   const slow = useSlow(fetching && !failed);
   const text = failed
@@ -234,9 +344,10 @@ const SaveStatus = ({ dirty, fetching, failed, onRetry }: SaveStatusProps) => {
       : dirty
         ? t("status.dirty")
         : t("status.saved");
+  const calm = quiet && !failed && !fetching && !dirty;
   return (
     <div
-      className="po-status"
+      className={calm ? "po-status sr-only" : "po-status"}
       role="status"
       data-state={
         failed ? "failed" : fetching ? "busy" : dirty ? "dirty" : "ok"

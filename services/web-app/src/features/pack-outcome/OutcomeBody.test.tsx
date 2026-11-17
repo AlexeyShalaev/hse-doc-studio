@@ -225,7 +225,7 @@ describe("экран «Результат»: каркас на эталонах"
 
     it("режим «Как студент» из адреса прячет правила", async () => {
       mount("mode=student&selected=documents:report");
-      await screen.findByTestId("outcome-count-documents");
+      await screen.findByTestId("outcome-student");
       expect(screen.getByTestId("outcome-mode-student")).toHaveAttribute(
         "aria-pressed",
         "true",
@@ -549,12 +549,15 @@ describe("экран «Результат»: каркас на эталонах"
     it("клик по документу пишет selected в адрес и открывает правую панель", async () => {
       mount();
       const card = await screen.findByTestId("outcome-doc-operator_manual");
-      fireEvent.click(within(card).getByRole("button"));
+      const pick = within(card).getByRole("button", {
+        name: "Руководство оператора",
+      });
+      fireEvent.click(pick);
       expect(location()).toContain("selected=documents%3Aoperator_manual");
       expect(screen.getByTestId("outcome-selected")).toHaveTextContent(
         "operator_manual",
       );
-      fireEvent.click(within(card).getByRole("button"));
+      fireEvent.click(pick);
       expect(location()).not.toContain("selected");
     });
 
@@ -625,8 +628,12 @@ describe("экран «Результат»: каркас на эталонах"
         screen.getByRole("navigation", { name: "Разделы экрана" }),
       ).toBeInTheDocument();
       expect(screen.getByTestId("outcome-tab-result")).toHaveAttribute(
-        "aria-pressed",
-        "true",
+        "aria-current",
+        "page",
+      );
+      expect(screen.getByTestId("outcome-tab-inputs")).toHaveAttribute(
+        "aria-haspopup",
+        "dialog",
       );
     });
 
@@ -643,26 +650,34 @@ describe("экран «Результат»: каркас на эталонах"
       });
     });
 
-    it("ссылка с tab=rules открывает «Почему» сразу, правка недоступна", async () => {
+    it("ссылка с tab=rules открывает «Почему» сразу страницей, правка недоступна", async () => {
       mount("tab=rules&selected=documents:report");
-      const sheet = await screen.findByRole("dialog");
-      expect(within(sheet).getByTestId("outcome-selected")).toHaveTextContent(
+      const page = await screen.findByTestId("outcome-rules-page");
+      expect(within(page).getByTestId("outcome-selected")).toHaveTextContent(
         "report",
       );
-      expect(sheet).toHaveTextContent("Правка доступна на компьютере");
+      expect(page).toHaveTextContent("Правка доступна на компьютере");
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(screen.getByTestId("outcome-tab-rules")).toHaveAttribute(
+        "aria-current",
+        "page",
+      );
     });
 
     it("карточки на телефоне: клик выбирает элемент и открывает «Почему»", async () => {
       mount();
       const card = await screen.findByTestId("outcome-doc-thesis");
-      fireEvent.click(within(card).getByRole("button"));
+      // Первая кнопка карточки выбирает элемент, вторая открывает предпросмотр PDF.
+      const [pick] = within(card).getAllByRole("button");
+      if (!pick) throw new Error("the pick button is missing");
+      fireEvent.click(pick);
       expect(location()).toContain("selected=documents%3Athesis");
       expect(location()).toContain("tab=rules");
     });
 
     it("в режиме «Как студент» вкладки «Почему» нет", async () => {
       mount("mode=student");
-      await screen.findByTestId("outcome-count-documents");
+      await screen.findByTestId("outcome-student");
       expect(screen.queryByTestId("outcome-tab-rules")).not.toBeInTheDocument();
     });
   });

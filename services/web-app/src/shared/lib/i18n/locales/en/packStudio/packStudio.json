@@ -391,7 +391,16 @@
       },
       "classes": "Change class",
       "ciHint": "The hosting checks status shows up in the git bar and refreshes by itself.",
-      "close": "Done"
+      "close": "Done",
+      "impact": {
+        "ack": "I know the result of these scenarios will change",
+        "ackHint": "It does not block sending, but the confirmation is required while any scenario changed or failed.",
+        "anyway": "Propose anyway",
+        "waiting": "The before and after calculation is running: sending becomes available when it finishes or is cancelled.",
+        "include": "Add the before and after summary to the description",
+        "includeHint": "The summary goes at the end of the description: how many scenarios change and the list of changes.",
+        "extra": "More versions with changes: {{count}}. Their result is not calculated."
+      }
     },
     "access": {
       "title": "Repository access",

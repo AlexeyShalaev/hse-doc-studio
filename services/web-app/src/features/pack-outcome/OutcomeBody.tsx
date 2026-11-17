@@ -28,21 +28,31 @@ import { EmptyState, ErrorState, Modal, Spinner } from "@shared/ui";
 import { elementKey, linkedElements } from "./lib/inputs";
 import { useLastDefined } from "./lib/lastDefined";
 import { useOutcomePanels } from "./lib/panels";
-import { useOutcomeUrlState, type OutcomeSelection } from "./lib/urlState";
+import { usePhoneNav } from "./lib/phoneNav";
+import { useSheetHistory } from "./lib/useSheetHistory";
+import { useAltPeek } from "./lib/useAltPeek";
+import {
+  useOutcomeUrlState,
+  type OutcomeMode,
+  type OutcomeSelection,
+} from "./lib/urlState";
 import { summarize } from "./lib/summary";
 import { type OutcomeModel } from "./model";
 import { FilesDrawer } from "./ui/FilesDrawer";
 import { Footer } from "./ui/Footer";
 import { InputsPanel } from "./ui/InputsPanel";
+import { ModeTabs } from "./ui/ModeTabs";
 import { Notice } from "./ui/Notice";
 import { PanelShell } from "./ui/PanelShell";
 import { ResultCenter } from "./ui/ResultCenter";
 import { RulesPanel } from "./ui/RulesPanel";
 import type { ScenarioDialog } from "./ui/scenarios/context";
+import { PhoneTabs } from "./ui/phone/PhoneTabs";
 import { OutcomeProviders } from "./ui/scenarios/OutcomeProviders";
 import { Splitter } from "./ui/Splitter";
 import { TopBar, type OutcomeLocation } from "./ui/TopBar";
 import "./outcome.css";
+import "./ui/phone/phone.css";
 
 export type OutcomeBodyProps = {
   workspace: PackWorkspace;
@@ -50,6 +60,8 @@ export type OutcomeBodyProps = {
   version: PackVersionRef;
   /** Окно сценариев, открытое сразу (галерея состояний). */
   scenarioDialog?: ScenarioDialog | null;
+  /** Документ, чей предпросмотр PDF открыт сразу (галерея состояний). */
+  previewDocument?: string | null;
 };
 
 const findLocation = (
@@ -82,15 +94,25 @@ export const OutcomeBody = ({
   workspace,
   version,
   scenarioDialog = null,
+  previewDocument = null,
 }: OutcomeBodyProps) => {
   const { t } = useTranslation("packOutcome");
   const navigate = useNavigate();
   const phone = useIsPhoneWidth();
   const url = useOutcomeUrlState();
   const panels = useOutcomePanels();
+  // «Как студент»: пока удерживается Alt, центр и панели показывают вид автора.
+  const peek = useAltPeek(url.state.mode === "student");
+  const view = peek ? "author" : url.state.mode;
+  const nav = usePhoneNav(url, url.state.mode === "student");
+  // Объявление смены режима для программ экрана: фокус после выбора режима уходит в результат.
+  const [modeNote, setModeNote] = useState("");
   const tree = usePackTree(workspace.id);
   const git = usePackGit(workspace.id, workspace.kind === "git");
   const [filesOpen, setFilesOpen] = useState(false);
+  useSheetHistory("files", phone && filesOpen, () => {
+    setFilesOpen(false);
+  });
   const inputsRef = useRef<HTMLElement>(null);
   const resultRef = useRef<HTMLElement>(null);
   const rulesRef = useRef<HTMLElement>(null);
@@ -99,6 +121,24 @@ export const OutcomeBody = ({
   useEffect(() => {
     if (focusRules > 0) rulesRef.current?.focus();
   }, [focusRules]);
+
+  // Смена страницы телефона (вкладка, «Назад» браузера): объявление и фокус в страницу.
+  const phoneMain = nav.main;
+  const [seenMain, setSeenMain] = useState(phoneMain);
+  if (seenMain !== phoneMain) {
+    setSeenMain(phoneMain);
+    if (phone) {
+      setModeNote(
+        t(phoneMain === "rules" ? "phone.openedRules" : "phone.openedResult"),
+      );
+    }
+  }
+  const lastMain = useRef(phoneMain);
+  useEffect(() => {
+    if (lastMain.current === phoneMain) return;
+    lastMain.current = phoneMain;
+    if (phone) (phoneMain === "rules" ? rulesRef : resultRef).current?.focus();
+  }, [phone, phoneMain]);
 
   const location = findLocation(tree.data, version);
   const found = location !== null;
@@ -138,16 +178,29 @@ export const OutcomeBody = ({
   );
 
   const { update } = url;
+  const navTab = nav.tab;
   const select = useCallback(
     (element: OutcomeSelection | null) => {
       const next =
         element !== null && sameElement(url.state.selected, element)
           ? null
           : element;
-      // На телефоне «Почему?» отдельная вкладка: выбор открывает её.
-      update({ selected: next, ...(phone && next ? { tab: "rules" } : {}) });
+      // На телефоне «Почему?» отдельная вкладка: выбор открывает её, а «Назад» возвращает результат.
+      if (phone && next) {
+        update({ selected: next, tab: "rules" }, navTab === "result");
+      } else update({ selected: next });
     },
-    [phone, update, url.state.selected],
+    [navTab, phone, update, url.state.selected],
+  );
+  const reveal = useCallback(
+    (element: OutcomeSelection) => {
+      if (phone)
+        update({ selected: element, tab: "rules" }, navTab === "result");
+      else if (!sameElement(url.state.selected, element)) {
+        update({ selected: element });
+      }
+    },
+    [navTab, phone, update, url.state.selected],
   );
 
   const model: OutcomeModel = {
@@ -157,6 +210,7 @@ export const OutcomeBody = ({
     released: location?.version.released ?? false,
     phone,
     url,
+    view,
     request,
     outcome,
     shown,
@@ -164,6 +218,8 @@ export const OutcomeBody = ({
     inputs,
     scenarios,
     select,
+    reveal,
+    nav,
     highlight: {
       input: highlightInput,
       elements: highlightElements,
@@ -174,7 +230,22 @@ export const OutcomeBody = ({
   };
 
   // F6 и Shift+F6 переводят фокус между тремя областями, Alt+Z показывает и прячет «Почему?».
-  const student = url.state.mode === "student";
+  const student = view === "student";
+  useEffect(() => {
+    if (modeNote === "") return undefined;
+    const timer = setTimeout(() => {
+      setModeNote("");
+    }, 4000);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [modeNote]);
+  const onModeChange = (mode: OutcomeMode) => {
+    setModeNote(
+      t(mode === "student" ? "bar.modeNoteStudent" : "bar.modeNoteAuthor"),
+    );
+    resultRef.current?.focus();
+  };
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key === "F6") {
       const regions = [inputsRef, resultRef, rulesRef]
@@ -186,10 +257,13 @@ export const OutcomeBody = ({
       const step = event.shiftKey ? -1 : 1;
       const next = regions[(at + step + regions.length) % regions.length];
       next?.focus();
-    } else if (event.altKey && event.code === "KeyZ" && !student) {
+    } else if (
+      event.altKey &&
+      event.code === "KeyZ" &&
+      url.state.mode === "author"
+    ) {
       event.preventDefault();
-      if (phone)
-        update({ tab: url.state.tab === "rules" ? "result" : "rules" });
+      if (phone) nav.go(nav.main === "rules" ? "result" : "rules");
       else {
         if (panels.rightCollapsed) setFocusRules((n) => n + 1);
         // Панель, в которой стоял фокус, исчезает: фокус уходит в результат, а не в пустоту.
@@ -269,16 +343,23 @@ export const OutcomeBody = ({
       className="po-center"
       data-testid="outcome-center"
     >
+      {student ? null : <ModeTabs />}
       <ResultCenter />
+      {phone ? <Footer /> : null}
     </section>
   );
 
   return (
-    <OutcomeProviders model={model} scenarioDialog={scenarioDialog}>
+    <OutcomeProviders
+      model={model}
+      scenarioDialog={scenarioDialog}
+      previewDocument={previewDocument}
+    >
       <div
         className="po-screen"
         data-testid="outcome-screen"
-        data-mode={url.state.mode}
+        data-mode={view}
+        data-peek={peek ? "true" : undefined}
         data-phone={phone ? "true" : undefined}
         onKeyDown={onKeyDown}
       >
@@ -296,11 +377,13 @@ export const OutcomeBody = ({
           tree={tree.data}
           location={location}
           dirty={git.data?.dirty ?? false}
+          peek={peek}
+          onModeChange={onModeChange}
           onOpenFiles={() => {
             setFilesOpen(true);
           }}
         />
-        {model.released && (
+        {model.released && !phone && (
           <Notice
             tone="info"
             title={t("bar.released")}
@@ -309,52 +392,38 @@ export const OutcomeBody = ({
         )}
         {phone ? (
           <>
-            <div className="po-body po-body-phone">{center}</div>
-            <nav className="po-tabs" aria-label={t("phone.tabs")}>
-              {(
-                [
-                  ["inputs", t("phone.inputs")],
-                  ["result", t("phone.result")],
-                  ["rules", t("phone.rules")],
-                ] as const
-              )
-                .filter(([tab]) => !(student && tab === "rules"))
-                .map(([tab, label]) => (
-                  <button
-                    key={tab}
-                    type="button"
-                    className="po-tab"
-                    aria-pressed={url.state.tab === tab}
-                    data-testid={`outcome-tab-${tab}`}
-                    onClick={() => {
-                      update({ tab });
-                    }}
-                  >
-                    {label}
-                    {tab === "inputs" && changedInputs > 0 && (
-                      <span className="po-badge">{changedInputs}</span>
-                    )}
-                  </button>
-                ))}
-            </nav>
+            <div className="po-body po-body-phone">
+              {nav.main === "rules" && !student ? (
+                <section
+                  ref={rulesRef}
+                  id="po-rules"
+                  tabIndex={-1}
+                  aria-label={rulesTitle}
+                  className="po-center po-rules-page"
+                  data-testid="outcome-rules-page"
+                >
+                  <div className="po-rules-page-body">
+                    <RulesPanel />
+                    <p className="po-stub">{t("phone.readOnly")}</p>
+                  </div>
+                </section>
+              ) : (
+                center
+              )}
+            </div>
+            <PhoneTabs
+              nav={nav}
+              changedInputs={changedInputs}
+              hasSelection={url.state.selected !== null}
+              student={student}
+            />
             <Modal
-              isOpen={url.state.tab === "inputs"}
-              onClose={() => {
-                update({ tab: "result" });
-              }}
+              isOpen={nav.tab === "inputs"}
+              onClose={nav.closeSheet}
               title={inputsTitle}
+              className="po-sheet"
             >
               <InputsPanel />
-            </Modal>
-            <Modal
-              isOpen={url.state.tab === "rules" && !student}
-              onClose={() => {
-                update({ tab: "result" });
-              }}
-              title={rulesTitle}
-            >
-              <RulesPanel />
-              <p className="po-stub">{t("phone.readOnly")}</p>
             </Modal>
           </>
         ) : (
@@ -466,14 +535,14 @@ export const OutcomeBody = ({
             )}
           </div>
         )}
-        <Footer />
+        {phone ? null : <Footer />}
         <div
           className="sr-only"
           role="status"
           aria-live="polite"
           data-testid="outcome-live"
         >
-          {announce}
+          {modeNote === "" ? announce : `${modeNote} ${announce}`}
         </div>
         <FilesDrawer
           workspaceId={workspace.id}

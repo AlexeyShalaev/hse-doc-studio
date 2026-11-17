@@ -1,11 +1,20 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, fireEvent, render } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router";
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { i18n } from "@shared/lib";
 import { loadPackOutcomeNamespace } from "@shared/lib/i18n/packOutcomeNamespace";
 import { loadPackStudioNamespace } from "@shared/lib/i18n/packStudioNamespace";
+import { installViewport } from "@shared/lib/viewport/testing";
 import { getPackOutcomeGallery } from "./gallery";
+
+// pdf.js в jsdom не поднимается: просмотрщик подменён адресом файла.
+vi.mock("@shared/ui", async () => ({
+  ...(await vi.importActual<Record<string, unknown>>("@shared/ui")),
+  PdfViewer: ({ url }: { url: string }) => (
+    <div data-testid="pdf-viewer" data-url={url} />
+  ),
+}));
 
 describe("галерея экрана «Результат»", () => {
   beforeAll(async () => {
@@ -55,6 +64,28 @@ describe("галерея экрана «Результат»", () => {
         "po_why_error",
         "po_why_busy",
         "po_why_impact",
+        "po_mode_matrix",
+        "po_mode_matrix_error_row",
+        "po_mode_matrix_empty",
+        "po_mode_atlas",
+        "po_mode_atlas_vkr",
+        "po_mode_atlas_too_large",
+        "po_mode_compare",
+        "po_mode_compare_identical",
+        "po_mode_compare_no_base",
+        "po_student",
+        "po_student_no_supervisor",
+        "po_student_team",
+        "po_pale_slots",
+        "po_edit_ready",
+        "po_edit_released",
+        "po_preview_ready",
+        "po_preview_variant_scenario",
+        "po_preview_running",
+        "po_preview_failed",
+        "po_preview_cached",
+        "po_preview_stale",
+        "po_preview_empty",
       ]),
     );
   });
@@ -73,6 +104,12 @@ describe("галерея экрана «Результат»", () => {
             <MemoryRouter>{entry.render()}</MemoryRouter>
           </QueryClientProvider>,
         );
+        if (entry.id.startsWith("po_phone_")) {
+          // В окне шире телефона запись это рамка 360 px с самой галереей.
+          expect(container.querySelector("iframe"), entry.id).not.toBeNull();
+          unmount();
+          continue;
+        }
         expect(container.textContent.length, entry.id).toBeGreaterThan(0);
         // Ни одного ключа словаря вместо текста.
         expect(container.textContent, entry.id).not.toMatch(
@@ -85,6 +122,51 @@ describe("галерея экрана «Результат»", () => {
     },
     60_000,
   );
+
+  it("телефонные записи в узком окне рисуют экран с вкладками и листами", async () => {
+    await i18n.changeLanguage("ru");
+    const viewport = installViewport(360);
+    try {
+      const phoneEntries = entries.filter((e) => e.id.startsWith("po_phone_"));
+      expect(phoneEntries.map((e) => e.id)).toEqual([
+        "po_phone_result",
+        "po_phone_inputs",
+        "po_phone_why",
+        "po_phone_matrix",
+        "po_phone_atlas",
+        "po_phone_compare",
+        "po_phone_preview",
+      ]);
+      for (const entry of phoneEntries) {
+        const client = new QueryClient({
+          defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+        });
+        entry.seed?.(client);
+        const { unmount } = render(
+          <QueryClientProvider client={client}>
+            <MemoryRouter>{entry.render()}</MemoryRouter>
+          </QueryClientProvider>,
+        );
+        const screenEl = await screen.findByTestId("outcome-screen");
+        expect(screenEl, entry.id).toHaveAttribute("data-phone", "true");
+        expect(
+          screen.getByTestId("outcome-tabs"),
+          entry.id,
+        ).toBeInTheDocument();
+        if (entry.id === "po_phone_inputs") {
+          expect(await screen.findByRole("dialog")).toBeInTheDocument();
+        }
+        if (entry.id === "po_phone_why") {
+          expect(
+            await screen.findByTestId("outcome-rules-page"),
+          ).toBeInTheDocument();
+        }
+        unmount();
+      }
+    } finally {
+      viewport.restore();
+    }
+  });
 
   it("запись с адресом показывает состояние из query", async () => {
     await i18n.changeLanguage("ru");
@@ -292,5 +374,199 @@ describe("галерея «Почему?»", () => {
         '[data-testid="outcome-chain-empty"]',
       ),
     ).not.toBeNull();
+  });
+
+  it.each([
+    ["po_mode_matrix", "outcome-matrix-cell-company-supervisor-route"],
+    ["po_mode_matrix_error_row", "outcome-matrix-message-company-supervisor"],
+    ["po_mode_matrix_empty", "outcome-matrix-empty"],
+    ["po_mode_matrix_too_large", "outcome-mode-too-large"],
+    ["po_mode_matrix_loading", "outcome-matrix-loading"],
+    ["po_mode_atlas", "outcome-atlas-detail"],
+    ["po_mode_atlas_vkr", "outcome-atlas-more"],
+    ["po_mode_atlas_pinned", "outcome-atlas-pins"],
+    ["po_mode_atlas_loading", "outcome-atlas-cancel"],
+    ["po_mode_atlas_busy", "outcome-mode-busy"],
+    ["po_mode_atlas_too_large", "outcome-atlas-pinchoose"],
+    ["po_mode_compare", "outcome-compare-section-route"],
+    ["po_mode_compare_identical", "outcome-compare-identical"],
+    ["po_mode_compare_no_base", "outcome-mode-no-base"],
+    ["po_mode_compare_loading", "outcome-compare-loading"],
+  ])("режим «%s» рисуется из кэша без сервера", async (id, testId) => {
+    await i18n.changeLanguage("ru");
+    const entry = getPackOutcomeGallery()
+      .flatMap((g) => g.entries)
+      .find((e) => e.id === id);
+    expect(entry).toBeDefined();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    entry?.seed?.(client);
+    render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>{entry?.render()}</MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByTestId(testId)).toBeInTheDocument();
+  });
+});
+
+describe("галерея режима «Как студент» и бледных слотов", () => {
+  beforeAll(async () => {
+    await Promise.all([loadPackOutcomeNamespace(), loadPackStudioNamespace()]);
+    await i18n.changeLanguage("ru");
+  });
+  afterEach(cleanup);
+
+  const entries = getPackOutcomeGallery().flatMap((g) => g.entries);
+  const draw = (id: string) => {
+    const entry = entries.find((e) => e.id === id);
+    expect(entry).toBeDefined();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    entry?.seed?.(client);
+    return render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>{entry?.render()}</MemoryRouter>
+      </QueryClientProvider>,
+    );
+  };
+  const find = (root: HTMLElement, testId: string) =>
+    root.querySelector(`[data-testid="${testId}"]`);
+
+  it("po_student: три блока, секций автора и правил нет", () => {
+    const { container } = draw("po_student");
+    expect(find(container, "outcome-student")).not.toBeNull();
+    expect(find(container, "outcome-student-route")).not.toBeNull();
+    expect(find(container, "outcome-section-documents")).toBeNull();
+    expect(find(container, "outcome-rules-panel")).toBeNull();
+  });
+
+  it("po_student_no_supervisor: шага отсутствующего руководителя нет", () => {
+    const { container } = draw("po_student_no_supervisor");
+    expect(
+      find(container, "outcome-student-step-pdp-application-1"),
+    ).not.toBeNull();
+    expect(
+      find(container, "outcome-student-step-pdp-application-2"),
+    ).toBeNull();
+    expect(container.querySelector(".po-person-warn")).toBeNull();
+  });
+
+  it("po_student_team: параллельный шаг помечен словами", () => {
+    const { container } = draw("po_student_team");
+    expect(
+      find(container, "outcome-student-step-pdp-application-2")?.textContent,
+    ).toContain("параллельно");
+  });
+
+  it("po_pale_slots: бледный участник и «Добавить во вводных» на месте", () => {
+    const { container } = draw("po_pale_slots");
+    expect(
+      find(container, "outcome-participant-co_supervisor")?.getAttribute(
+        "data-pale",
+      ),
+    ).toBe("true");
+    expect(
+      find(container, "outcome-pale-add-participants-co_supervisor"),
+    ).not.toBeNull();
+  });
+});
+
+describe("галерея: правка по месту", () => {
+  beforeAll(async () => {
+    await Promise.all([loadPackOutcomeNamespace(), loadPackStudioNamespace()]);
+    await i18n.changeLanguage("ru");
+  });
+  afterEach(cleanup);
+  const entry = (id: string) =>
+    getPackOutcomeGallery()
+      .flatMap((g) => g.entries)
+      .find((e) => e.id === id);
+  const show = (id: string) => {
+    const found = entry(id);
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    found?.seed?.(client);
+    return render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>{found?.render()}</MemoryRouter>
+      </QueryClientProvider>,
+    );
+  };
+
+  it("рабочее дерево: «Править правило» доступна", async () => {
+    const { findByTestId } = show("po_edit_ready");
+    expect(await findByTestId("outcome-chain-t14-edit")).toBeEnabled();
+  });
+
+  it("выпущенная версия: кнопка неактивна, есть объяснение и ссылка на новую версию", async () => {
+    const { findByTestId } = show("po_edit_released");
+    expect(await findByTestId("outcome-chain-t1-edit")).toBeDisabled();
+    expect(await findByTestId("outcome-chain-t1-new-version")).toHaveAttribute(
+      "href",
+      expect.stringContaining("newVersion=hse-cs-se%2Fvkr"),
+    );
+  });
+});
+
+describe("галерея предпросмотра PDF (срез F12)", () => {
+  beforeAll(async () => {
+    await Promise.all([loadPackOutcomeNamespace(), loadPackStudioNamespace()]);
+    await i18n.changeLanguage("ru");
+  });
+  afterEach(cleanup);
+
+  const show = (id: string) => {
+    const entry = getPackOutcomeGallery()
+      .flatMap((g) => g.entries)
+      .find((e) => e.id === id);
+    expect(entry, id).toBeDefined();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    entry?.seed?.(client);
+    return render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter>{entry?.render()}</MemoryRouter>
+      </QueryClientProvider>,
+    );
+  };
+  const has = (testId: string) =>
+    document.body.querySelector(`[data-testid="${testId}"]`) !== null;
+
+  it("готовая сборка: PDF и данные сборки без сервера", () => {
+    show("po_preview_ready");
+    expect(has("outcome-preview")).toBe(true);
+    expect(has("pdf-viewer")).toBe(true);
+    expect(has("outcome-preview-info-example")).toBe(true);
+    expect(has("outcome-preview-stale")).toBe(false);
+  });
+
+  it("вариант и сценарий из ответа сборки", () => {
+    show("po_preview_variant_scenario");
+    expect(
+      document.body.querySelector(
+        '[data-testid="outcome-preview-info-scenario"]',
+      )?.textContent,
+    ).toContain("Научрук из компании");
+    expect(has("outcome-preview-info-inputs")).toBe(true);
+    expect(
+      document.body.querySelector('[data-testid="outcome-preview-info-file"]')
+        ?.textContent,
+    ).toContain(".pdf");
+  });
+
+  it.each([
+    ["po_preview_running", "preview-running"],
+    ["po_preview_failed", "preview-failed"],
+    ["po_preview_cached", "outcome-preview-cached"],
+    ["po_preview_stale", "outcome-preview-stale"],
+    ["po_preview_empty", "outcome-preview-hint"],
+  ])("запись %s показывает %s", (id, testId) => {
+    show(id);
+    expect(has(testId)).toBe(true);
   });
 });

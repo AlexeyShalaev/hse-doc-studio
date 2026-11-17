@@ -88,7 +88,10 @@ export const OutcomeRoute = () => {
             <h1 className="ps-ws-name truncate">{ws.label}</h1>
             <WorkspaceStateBadge workspace={ws} />
           </div>
-          <div className="ps-ws-meta mono truncate" title={workspaceSource(ws)}>
+          <div
+            className="ps-ws-meta mono truncate ps-hide-phone"
+            title={workspaceSource(ws)}
+          >
             {workspaceSource(ws)}
           </div>
         </div>

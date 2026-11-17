@@ -32,7 +32,20 @@ const EntryBody = ({ entry }: { entry: GalleryEntry }) => {
   );
 };
 
-const frameStyle = (entry: GalleryEntry): React.CSSProperties => {
+const frameStyle = (
+  entry: GalleryEntry,
+  embedded = false,
+): React.CSSProperties => {
+  // Запись в рамке (?entry=): экран занимает всё окно рамки.
+  if (embedded && entry.frame === "screen") {
+    return {
+      height: "100dvh",
+      display: "flex",
+      flexDirection: "column",
+      background: "var(--bg-0)",
+      overflow: "hidden",
+    };
+  }
   switch (entry.frame ?? "plain") {
     case "window":
       return {
@@ -79,6 +92,8 @@ export type GalleryEntryCardProps = {
   activeRun: number | null;
   onOpenLive: (entry: GalleryEntry) => void;
   onCloseLive: () => void;
+  /** Запись в рамке (?entry=): без заголовка и подписи, чтобы экран получил всю высоту. */
+  embedded?: boolean;
 };
 
 export const GalleryEntryCard = ({
@@ -87,6 +102,7 @@ export const GalleryEntryCard = ({
   activeRun,
   onOpenLive,
   onCloseLive,
+  embedded = false,
 }: GalleryEntryCardProps) => {
   const isLive = entry.scenario !== undefined;
   const isActive = isLive && activeRun !== null;
@@ -104,7 +120,11 @@ export const GalleryEntryCard = ({
     >
       <header
         className="flex items-start"
-        style={{ gap: "0.75rem", marginBottom: "0.625rem" }}
+        style={{
+          gap: "0.75rem",
+          marginBottom: "0.625rem",
+          ...(embedded ? { display: "none" } : {}),
+        }}
       >
         <div style={{ minWidth: 0, flex: 1 }}>
           <h4
@@ -182,14 +202,14 @@ export const GalleryEntryCard = ({
 
       {!isLive && (
         <LazyMount>
-          <div style={frameStyle(entry)}>
+          <div style={frameStyle(entry, embedded)}>
             <EntryBody entry={entry} />
           </div>
         </LazyMount>
       )}
 
       {isActive && (
-        <div style={frameStyle(entry)}>
+        <div style={frameStyle(entry, embedded)}>
           <EntryBody key={activeRun} entry={entry} />
         </div>
       )}

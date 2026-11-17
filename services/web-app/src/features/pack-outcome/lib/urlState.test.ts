@@ -22,6 +22,7 @@ describe("состояние экрана в адресе", () => {
         "&i.kind=research&i.meta.manuals=%D0%9F&selected=documents:operator_manual",
     );
     expect(state).toEqual({
+      ...OUTCOME_DEFAULTS,
       state: "head",
       scenario: "company-supervisor",
       example: "auto:long",
@@ -131,5 +132,50 @@ describe("состояние экрана в адресе", () => {
     expect(
       parseOutcomeSearch(new URLSearchParams("selected=branches:")).selected,
     ).toBeNull();
+  });
+
+  it("режимы центра: view, закрепления, against и стороны сравнения", () => {
+    const state = parse(
+      "view=compare&p.kind=research&p.meta.nda=yes&against=base" +
+        "&left=scenario:company-supervisor@head&right=screen",
+    );
+    expect(state.view).toBe("compare");
+    expect(state.pin).toEqual({ kind: "research", "meta.nda": "yes" });
+    expect(state.against).toBe("base");
+    expect(state.left).toEqual({
+      source: { kind: "scenario", id: "company-supervisor" },
+      state: "head",
+    });
+    expect(state.right).toEqual({ source: { kind: "screen" }, state: null });
+  });
+
+  it("чужой режим, закрепление и сторона отбрасываются", () => {
+    const state = parse(
+      "view=cinema&p.Bad%20Key=1&p.kind=&against=maybe&left=scenario:../x&right=inputs:Bad=1",
+    );
+    expect(state.view).toBe("result");
+    expect(state.pin).toEqual({});
+    expect(state.against).toBe("expected");
+    expect(state.left).toBeNull();
+    expect(state.right).toBeNull();
+  });
+
+  it("запись режимов: умолчания не пишутся, закрепления отдельно от вводных", () => {
+    const out = writeOutcomeSearch(new URLSearchParams("view=matrix"), {
+      view: "atlas",
+      pin: { staffing: "solo" },
+      inputs: { kind: "research" },
+      left: { source: { kind: "scenario", id: "a" }, state: "base" },
+    });
+    expect(out.get("view")).toBe("atlas");
+    expect(out.get("p.staffing")).toBe("solo");
+    expect(out.get("i.kind")).toBe("research");
+    expect(out.get("left")).toBe("scenario:a@base");
+    const back = writeOutcomeSearch(out, {
+      view: "result",
+      pin: {},
+      left: null,
+    });
+    expect(back.toString()).toBe("i.kind=research");
   });
 });

@@ -9,6 +9,7 @@ import { personaLabel } from "../../lib/personas";
 import { summarize } from "../../lib/summary";
 import { useOutcomeModel } from "../../model";
 import "../../outcomeRoute.css";
+import { AddInputAction } from "./PaleSlot";
 import { SectionShell } from "./SectionShell";
 import { Disclosure, FilterBar, PickButton, Reason, Stats } from "./parts";
 import { matches, onArrowNav, useIsSelected } from "./helpers";
@@ -30,7 +31,7 @@ const DocLink = ({
   name: string;
 }) => {
   const { t } = useTranslation("packOutcome");
-  const { select } = useOutcomeModel();
+  const { reveal } = useOutcomeModel();
   const selected = useIsSelected({ section: "documents", id: doc });
   return (
     <button
@@ -41,8 +42,9 @@ const DocLink = ({
       aria-pressed={selected}
       data-testid={`outcome-doc-link-${point}-${doc}`}
       onClick={() => {
-        // Повторный клик не снимает выбор: ссылка ведёт к документу, а не переключает его.
-        if (!selected) select({ section: "documents", id: doc });
+        // Повторный клик не снимает выбор: ссылка ведёт к документу, а не переключает его;
+        // на телефоне она открывает вкладку «Почему?» и тогда, когда документ уже выбран.
+        reveal({ section: "documents", id: doc });
       }}
     >
       <ArrowUpRight size="0.8125rem" aria-hidden="true" />
@@ -81,6 +83,7 @@ const ItemRow = ({
     <li
       className="po-item po-row"
       data-muted={item.active ? undefined : "true"}
+      data-pale={item.active ? undefined : "true"}
       data-selected={selected ? "true" : undefined}
       data-testid={`outcome-item-${point.id}-${item.doc_id}`}
     >
@@ -104,8 +107,10 @@ const ItemRow = ({
           />
         )}
       </PickButton>
-      {item.active && (
+      {item.active ? (
         <DocLink point={point.id} doc={item.doc_id} name={name} />
+      ) : (
+        <AddInputAction el={{ section: "points", id }} name={name} />
       )}
     </li>
   );
@@ -129,6 +134,7 @@ const ExtraRow = ({
     <li
       className="po-item po-row"
       data-muted={extra.active ? undefined : "true"}
+      data-pale={extra.active ? undefined : "true"}
       data-selected={selected ? "true" : undefined}
       data-testid={`outcome-extra-${point.id}-${extra.output_name}`}
     >
@@ -152,6 +158,12 @@ const ExtraRow = ({
           />
         )}
       </PickButton>
+      {!extra.active && (
+        <AddInputAction
+          el={{ section: "points", id }}
+          name={extra.output_name}
+        />
+      )}
     </li>
   );
 };

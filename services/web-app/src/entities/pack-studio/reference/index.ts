@@ -1,5 +1,9 @@
 export {
+  COURSEWORK_ATLAS,
+  COURSEWORK_COMPARE,
+  COURSEWORK_IMPACT,
   COURSEWORK_INPUTS,
+  COURSEWORK_MATRIX,
   COURSEWORK_OUTCOME,
   COURSEWORK_RUN,
   COURSEWORK_SCENARIOS,
@@ -7,7 +11,17 @@ export {
   VKR_CHECKS,
   VKR_INPUTS,
   VKR_OUTCOME,
+  VKR_PREVIEW_OPTIONS,
+  previewBuildReference,
 } from "./fixtures";
+export {
+  buildVkrAtlas,
+  modesCalls,
+  pinnedAtlas,
+  referenceImpact,
+  setModesBehavior,
+} from "./modes";
+export type { ModesBehavior } from "./modes";
 export { elementInfos, explainFor, realExplains } from "./explain";
 export {
   REFERENCE_BEHAVIORS,
@@ -22,3 +36,13 @@ export type {
   ReferenceBehavior,
   ReferenceSource,
 } from "./routes";
+export { resetPreviewReference } from "./previewRoutes";
+export {
+  patchReferenceModel,
+  readReferenceFile,
+  referenceManifest,
+  referenceModel,
+  resetReferenceManifests,
+  touchReferenceManifest,
+  writeReferenceFile,
+} from "./manifests";

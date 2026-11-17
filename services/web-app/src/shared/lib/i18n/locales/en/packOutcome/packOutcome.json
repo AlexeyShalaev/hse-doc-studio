@@ -29,7 +29,17 @@
     "filesModeHint": "File tree, editor and preview",
     "released": "The version is released and cannot be edited: create a new one.",
     "releasedMark": "Version released",
-    "reference": "Data from reference fixtures"
+    "reference": "Data from reference fixtures",
+    "modeHint": "Hold Alt to see the author view",
+    "modePeek": "Alt is held: the author view is shown",
+    "modeNoteStudent": "Mode \"As a student\": showing what the student will see.",
+    "modeNoteAuthor": "Mode \"Author\": reasons and rules are shown.",
+    "propose": "Propose",
+    "proposeHint": "Propose changes: checks, commit, push and a PR",
+    "proposeLint": "Pack checks failed: {{count}} findings. Fix them in Files mode.",
+    "proposeLintOpen": "Open files",
+    "proposeLintTitle": "Pack checks failed",
+    "proposeLintClose": "Close"
   },
   "status": {
     "saved": "Saved",
@@ -543,7 +553,8 @@
       "noLinks": "In this combination the input's decisions are tied to no element. It changes the sections: {{sections}}.",
       "rules": "Rules that read it",
       "rulesHere": "{{here}} of {{total}} fired in this combination."
-    }
+    },
+    "editRule": "Edit rule"
   },
   "footer": {
     "note": "A calculation on test data, nothing is sent.",
@@ -574,8 +585,14 @@
     "tabs": "Screen sections",
     "inputs": "Inputs",
     "result": "Outcome",
-    "rules": "Why",
-    "readOnly": "Editing is available on a computer."
+    "rules": "Why?",
+    "readOnly": "Editing is available on a computer.",
+    "options": "Options",
+    "changed_one": "{{count}} input changed",
+    "changed_other": "{{count}} inputs changed",
+    "selected": "an element is selected",
+    "openedResult": "The Outcome tab is open.",
+    "openedRules": "The Why? tab is open."
   },
   "dev": {
     "label": "Outcome data (development only)",
@@ -879,6 +896,443 @@
       "example": "Example data set: {{value}}",
       "refresh": "Update the snapshot for the new inputs",
       "assertions": "Assertions stay as they are: the run will show which ones stopped holding."
+    }
+  },
+  "pale": {
+    "add": "Add in inputs",
+    "addLabel": "Add in inputs: {{name}}",
+    "searching": "Looking for an input...",
+    "none": "No single input brings this in",
+    "failed": "Could not find an input, press again"
+  },
+  "student": {
+    "label": "Student view",
+    "summary": "This is how the student's project looks with the chosen inputs.",
+    "optional": "optional",
+    "perAuthor": "each author",
+    "documents": {
+      "title": "Documents",
+      "lead_one": "The student gets {{count}} document.",
+      "lead_other": "The student gets {{count}} documents.",
+      "empty": "There are no documents in this combination.",
+      "other": "Other"
+    },
+    "fields": {
+      "title": "What to fill in",
+      "lead": "Required project fields and questionnaires the student has to fill in.",
+      "create": "When creating the project",
+      "finalize": "At finalization",
+      "empty": "Nothing to fill in."
+    },
+    "forms": {
+      "title": "Questionnaires",
+      "required": "required",
+      "fieldRequired": "required"
+    },
+    "route": {
+      "title": "Who signs",
+      "lead": "Signing order for each submission point.",
+      "step": "Step {{n}}",
+      "parallel": "in parallel",
+      "optional": "optional",
+      "deadline": "Deadline: {{hint}}",
+      "empty": "There are no signatures in this combination."
+    }
+  },
+  "edit": {
+    "title": "Edit the rule",
+    "close": "Close the editor",
+    "undo": "Undo",
+    "redo": "Redo",
+    "undoHint": "Undo the last edit (Ctrl+Z)",
+    "redoHint": "Redo the undone edit (Ctrl+Shift+Z)",
+    "dismiss": "Got it",
+    "loading": "Loading the manifest record",
+    "loadFailed": "Could not read the manifest",
+    "newVersion": "Create a new version",
+    "blocked": {
+      "released": "The version is released and immutable: editing is off.",
+      "state": "Only the working tree can be edited: switch the state to Working tree.",
+      "registry": "Registry releases are read-only."
+    },
+    "removeCondition": "Remove the condition",
+    "delete": {
+      "slot": "Delete the slot",
+      "item": "Delete the item",
+      "extra": "Delete the point file"
+    },
+    "record": {
+      "slot": "signature slot",
+      "item": "point item",
+      "extra": "extra point file",
+      "condition": "condition"
+    },
+    "removed": {
+      "condition": "Condition removed.",
+      "record": "Deleted: {{what}}."
+    },
+    "confirm": {
+      "condition": "Remove the condition?",
+      "record": "Delete the {{what}}?",
+      "noOutcome": "The outcome is not loaded yet, so the number of affected elements is unknown.",
+      "none": "In the current combination of inputs the rule decides no outcome element.",
+      "count_one": "Affects {{count}} outcome element in the current combination.",
+      "count_other": "Affects {{count}} outcome elements in the current combination.",
+      "more_one": "and {{count}} more",
+      "more_other": "and {{count}} more",
+      "scope": "The number comes from the trace of the shown outcome; the server did not compute other input combinations. A deletion can be undone for 10 seconds, then from the edit history.",
+      "yes": "Yes, remove",
+      "no": "Keep it"
+    },
+    "notice": {
+      "driftTitle": "The record changed after this edit",
+      "driftLead": "It was changed outside this screen or by another edit. Undo or redo will overwrite those changes.",
+      "forceUndo": "Undo anyway",
+      "forceRedo": "Redo anyway",
+      "staleTitle": "The file changed while you were editing",
+      "staleLead": "The record was reread from disk. Check the value and repeat the edit.",
+      "missingTitle": "The record is no longer in the manifest",
+      "missingLead": "The manifest was changed outside this screen. The model was reread; choose the element again.",
+      "errorTitle": "The edit was not saved"
+    },
+    "bar": {
+      "label": "Edits on this screen"
+    },
+    "delta": {
+      "same": "The outcome did not change",
+      "dismiss": "Hide the comparison",
+      "title": {
+        "apply": "The outcome changed",
+        "undo": "After the undo the outcome changed",
+        "redo": "After the redo the outcome changed"
+      },
+      "symbol": {
+        "+": "Added",
+        "~": "Changed",
+        "-": "Removed"
+      },
+      "from": "was {{before}}, now {{after}}"
+    },
+    "history": {
+      "title_one": "Edit history ({{count}})",
+      "title_other": "Edit history ({{count}})",
+      "applied": "in effect",
+      "undone": "undone"
+    },
+    "entry": {
+      "set": "{{rule}}: changed",
+      "setAt": "{{rule}} ({{place}}): changed",
+      "remove": "{{rule}}: removed",
+      "removeAt": "{{rule}} ({{place}}): removed",
+      "delete": "Deleted: {{rule}}",
+      "deleteAt": "Deleted: {{rule}} ({{place}})"
+    },
+    "live": {
+      "saved": "The edit is saved, the outcome is being recalculated.",
+      "undone": "Undone.",
+      "redone": "Redone.",
+      "same": "The outcome did not change.",
+      "delta": "The outcome changed: {{added}} added, {{changed}} changed, {{removed}} removed."
+    }
+  },
+  "preview": {
+    "open": "PDF preview",
+    "openFor": "PDF preview of “{{name}}”",
+    "needWorkTree": "The preview builds the working tree: pick “Working tree” in “Result from”.",
+    "title": "PDF preview",
+    "titleFor": "PDF preview: {{name}}",
+    "close": "Close the preview",
+    "lead": "Built on test data, nothing is sent. The server builds the PDF.",
+    "noDocument": "The preview does not build this document.",
+    "source": "Inputs for the build",
+    "sourceInputs": "Current inputs of the screen",
+    "sourceScenario": "Scenario: {{name}}",
+    "variant": "Document variant",
+    "variantFromInputs": "As in the inputs",
+    "variantFromScenario": "As in the scenario",
+    "variantOnly": "{{name}} (only {{langs}})",
+    "variantLangHint": "Unavailable variants are greyed out: the project language is {{lang}}.",
+    "variantNoPdf": "This variant does not produce a PDF: the build will end without one.",
+    "example": "Data set",
+    "build": "Build",
+    "rebuild": "Rebuild",
+    "auto": "Auto-build",
+    "autoHint": "Rebuild after the inputs, scenario or files change. Off until you turn it on.",
+    "hint": "Press “Build” to see the PDF. Auto-build rebuilds it after edits.",
+    "staleFiles": "Files changed after the build: the PDF may be out of date. Build again.",
+    "staleInputs": "The inputs, scenario or variant changed after the build: the PDF shows the earlier choice.",
+    "quota": "{{limit}} preview builds are already running, no more are allowed.",
+    "quotaRetry": "Retrying in {{seconds}} s.",
+    "retryNow": "Build now",
+    "cachedLead": "From cache: a build with the same data already existed, the document was not built again.",
+    "live": {
+      "running": "The PDF is building",
+      "done_one": "The PDF is ready, {{count}} page",
+      "done_other": "The PDF is ready, {{count}} pages",
+      "failed": "The build failed",
+      "cancelled": "The build was cancelled"
+    },
+    "info": {
+      "variant": "Variant",
+      "file": "File name",
+      "example": "Data set",
+      "scenario": "Scenario",
+      "scenarioInputs": "Scenario inputs",
+      "noInputs": "the scenario sets no inputs"
+    }
+  },
+  "modes": {
+    "loading": "Loading the view",
+    "tabs": {
+      "label": "Screen views",
+      "result": "Result",
+      "matrix": "Matrix",
+      "atlas": "Atlas",
+      "compare": "Compare"
+    },
+    "failure": {
+      "busyTitle": "The server is busy calculating",
+      "busyLead": "Try again in {{seconds}} s. Calculations are rate limited: if the error stays, wait a minute.",
+      "atlasTitle": "Too many combinations",
+      "atlasLead": "The table would have {{rows}} rows with a limit of {{limit}}. Pin some inputs: pinned values cut the table.",
+      "atlasLeadPlain": "Pin some inputs: pinned values cut the table.",
+      "tooLargeTitle": "The answer is too large",
+      "tooLargeLead": "The answer would take {{size}} MiB with a limit of {{limit}} MiB. Choose fewer scenarios.",
+      "tooLargeLeadPlain": "The answer is over the limit. Choose fewer scenarios.",
+      "noBaseTitle": "Nothing to compare with",
+      "noBase": {
+        "no_git": "The workspace is a plain folder without git: it has neither a last commit nor a base.",
+        "no_base": "The workspace has no base branch. Fetch it in the Files section or compare two scenarios.",
+        "new_version": "This version is not on the base: it is new, so there is nothing to compare it with. Compare two scenarios.",
+        "unknown": "The version is not on the base, or the workspace has no git."
+      },
+      "inputsTitle": "The inputs do not fit the version",
+      "inputsField": "Field {{field}}, value “{{value}}”.",
+      "matrixFailed": "Could not build the matrix",
+      "atlasFailed": "Could not build the atlas",
+      "compareFailed": "Could not compare"
+    },
+    "matrix": {
+      "against": "Against",
+      "against_expected": "Expected",
+      "against_base": "Base",
+      "againstNoGit": "Needs a workspace with git: a plain folder has no base",
+      "rerun": "Run again",
+      "scenario": "Scenario",
+      "gridLabel": "Matrix: scenarios and result sections",
+      "cell": {
+        "matched": "Matched",
+        "changed": "Changed",
+        "unchecked": "Not checked",
+        "error": "Error"
+      },
+      "changedBase": "changed against the base",
+      "group": "group {{letter}}: the section result is the same in these scenarios",
+      "legend": "Cells: {{matched}} matched, {{changed}} changed, {{unchecked}} not checked, {{error}} with an error. The same letters in a column mean the scenarios do not differ in that section; the “~” mark means the section changed against the base.",
+      "emptyTitle": "No scenarios yet",
+      "emptyLead": "Save the current inputs as a scenario, and after edits the Studio will show what changed.",
+      "create": "Save as a scenario",
+      "firstN": "Show the first {{count}}",
+      "subset": "Not all scenarios are shown: {{count}}.",
+      "allScenarios": "Show all",
+      "toExpected": "Check against the expected",
+      "detail": "Mismatch: {{name}}, {{section}}",
+      "noDiff": "The section matches the expectation, no mismatch.",
+      "noDiffList": "There is no detailed change list for this cell: open the scenario.",
+      "show": "Show the result",
+      "compare": "Compare with another",
+      "openScenario": "Open the scenario",
+      "count_one": "{{count}} item",
+      "count_other": "{{count}} items",
+      "emptyBroken_one": "No readable scenarios, one file has an error. Open the scenario list and fix it.",
+      "emptyBroken_other": "No readable scenarios, {{count}} files have errors. Open the scenario list and fix them."
+    },
+    "atlas": {
+      "summary": "{{outcomes}} in {{rows}} (from {{combinations}})",
+      "elapsed": "The calculation took {{seconds}} s.",
+      "loading": "Calculating the atlas, this may take a few seconds",
+      "busyRetry": "The server is busy, retrying (attempt {{count}})",
+      "cancel": "Cancel",
+      "cancelledTitle": "Calculation cancelled",
+      "cancelledLead": "The atlas is not calculated. Calculate it again when you need it.",
+      "again": "Calculate again",
+      "noDimensions": "The result does not depend on inputs: there are no dimensions and the atlas has one row.",
+      "dimensions": "Dimensions: {{count}}",
+      "dimensionsLead": "Inputs whose value changes something in the result. The rest are collected below under “No effect”.",
+      "defaultValue": "default: {{value}}",
+      "affects": "Changes:",
+      "pin": "Pin",
+      "pinNone": "Do not pin",
+      "pinned": "Pinned:",
+      "unpin": "Unpin: {{input}}, {{value}}",
+      "ignored": "No effect: {{count}}",
+      "reason": {
+        "no_effect": "changes nothing",
+        "cosmetic": "changes only file names, the edition language or document variants"
+      },
+      "search": "Search the atlas",
+      "searchPlaceholder": "Search by value, input or outcome (key /)",
+      "group": "Show",
+      "group_rows": "Rows",
+      "group_outcomes": "Outcomes",
+      "sort": "Order",
+      "sort_table": "As in the table",
+      "sort_rows": "By outcome row count",
+      "filters": "Dimension filters",
+      "filterAll": "All",
+      "onlyOutcome": "Only rows of outcome {{outcome}}.",
+      "resetOutcome": "Show all outcomes",
+      "shownRows": "Rows shown: {{shown}} of {{total}}",
+      "shownOutcomes": "Outcomes shown: {{shown}} of {{total}}",
+      "reset": "Reset search and filters",
+      "noResults": "Nothing found. Reset the search or filters.",
+      "showRows": "Show rows",
+      "more": "Show {{count}} more",
+      "outcomeFilter": "Show rows of outcome {{outcome}}",
+      "current": "on screen now",
+      "applied": "Applied the inputs of outcome {{outcome}}",
+      "mini": "{{documents}} documents, {{participants}} people, {{points}} points, {{steps}} steps",
+      "detail": "Outcome {{outcome}}",
+      "none": "none",
+      "pointLine": "{{name}}: {{items}} items, {{steps}} steps",
+      "openResult": "Open the result",
+      "detailNone": "The current inputs are not in the table: some inputs are pinned to other values.",
+      "pinChoose": "What to pin",
+      "pinChooseLead": "Choose the input values that need no enumeration: the atlas will be calculated again with fewer rows.",
+      "outcomes_one": "{{count}} distinct outcome",
+      "outcomes_other": "{{count}} distinct outcomes",
+      "rows_one": "{{count}} row",
+      "rows_other": "{{count}} rows",
+      "combinations_one": "{{count}} combination",
+      "combinations_other": "{{count}} combinations",
+      "valuesCount_one": "{{count}} value",
+      "valuesCount_other": "{{count}} values",
+      "outcomeRows_one": "{{count}} row",
+      "outcomeRows_other": "{{count}} rows",
+      "detailDocs_one": "In the set: {{count}} document",
+      "detailDocs_other": "In the set: {{count}} documents",
+      "detailOff_one": "Switched off: {{count}} document",
+      "detailOff_other": "Switched off: {{count}} documents",
+      "detailPeople_one": "Participant: {{count}}",
+      "detailPeople_other": "Participants: {{count}}",
+      "detailPoints_one": "Checkpoint: {{count}}",
+      "detailPoints_other": "Checkpoints: {{count}}"
+    },
+    "compare": {
+      "presets": "Quick choice of sides",
+      "presetScenarios": "Two scenarios",
+      "presetBase": "Base and working tree",
+      "presetHead": "Last commit and working tree",
+      "swap": "Swap",
+      "needTwo": "Needs two readable scenarios",
+      "needGit": "Needs a workspace with git",
+      "left": "Left",
+      "right": "Right",
+      "source": "Inputs",
+      "source_screen": "Screen inputs",
+      "source_defaults": "Version defaults",
+      "source_inputs": "Own inputs",
+      "sourceScenario": "Scenario: {{name}}",
+      "state": "Version from",
+      "stateSame": "As on screen ({{state}})",
+      "stateScreen": "as on screen",
+      "freeze": "Freeze the screen inputs",
+      "frozenCount": "Inputs frozen: {{count}}",
+      "fallback": "Compare two scenarios",
+      "identicalTitle": "No differences",
+      "identicalLead": "The result on the left ({{left}}) and on the right ({{right}}) is the same in every section.",
+      "identicalSame": "Both sides are the same. Choose different scenarios, inputs or states.",
+      "summary": "Differences: {{total}}, sections affected: {{sections}}",
+      "onlyDiff": "Show only differences",
+      "sectionSame": "No changes.",
+      "why": "Why?",
+      "whyHide": "Hide reasons",
+      "noDecision": "no decision",
+      "absent": "none"
+    }
+  },
+  "impact": {
+    "title": "What changes in the result",
+    "headChanged_one": "The result will change in {{changed}} of {{total}} scenario",
+    "headChanged_other": "The result will change in {{changed}} of {{total}} scenarios",
+    "headSame_one": "The result will not change in the only scenario",
+    "headSame_other": "The result will not change in any of {{total}} scenarios",
+    "headNoScenarios": "The template has no scenarios: nothing to compare the result against",
+    "atlas": "Atlas: {{changed}} of {{total}} rows will change, outcomes {{before}} before and {{after}} after.",
+    "atlasSame": "Atlas: {{total}} rows, {{outcomes}} outcomes, unchanged.",
+    "atlasNull": "The atlas is too large, compared by scenarios only.",
+    "scenarios": "Scenarios",
+    "status": {
+      "unchanged": "Unchanged",
+      "changed": "Changed",
+      "error": "Error"
+    },
+    "counts": {
+      "added": "Added: {{count}}",
+      "changed": "Changed: {{count}}",
+      "removed": "Removed: {{count}}"
+    },
+    "scenarioErrorPlain": "The scenario cannot be read on one of the sides.",
+    "loading": "Computing the result on the base and in the work tree, {{seconds}} s...",
+    "progress": "Calculation progress",
+    "cancel": "Cancel calculation",
+    "run": "Calculate",
+    "busyRetry": "The server is busy, retrying in {{seconds}} s...",
+    "busyTitle": "The server is busy calculating",
+    "busyLead": "Retry in {{seconds}} s. Calculations are rate limited: if the error stays, wait a minute.",
+    "tooLargeTitle": "The comparison is too large",
+    "tooLargeLead": "The response exceeds the limit. Open Matrix and Compare on the Result screen to see differences per scenario.",
+    "offlineTitle": "No connection to the server",
+    "offlineLead": "Check the connection and retry.",
+    "failedTitle": "Could not compute before and after",
+    "notBlocking": "You can still propose the changes.",
+    "cancelled": {
+      "title": "Calculation cancelled",
+      "lead": "You can propose the changes without it."
+    },
+    "released": {
+      "title": "The version is released and immutable",
+      "lead": "Edits do not reach version {{version}}, so there is nothing to compare."
+    },
+    "noBase": {
+      "no_git": {
+        "title": "A folder without git",
+        "lead": "The workspace has no last commit and no base, so there is nothing to compare with. You can propose the changes without a comparison."
+      },
+      "no_base": {
+        "title": "No base",
+        "lead": "The workspace has no base branch. Fetch it in the Files section and the comparison will appear here."
+      },
+      "new_version": {
+        "title": "The version is new, nothing to compare",
+        "lead": "This version is not on the base, so there is no \"before\". You can propose the changes without a comparison."
+      },
+      "unknown": {
+        "title": "Nothing to compare with",
+        "lead": "The version is not on the base, or the workspace has no git."
+      }
+    },
+    "noScenarios": {
+      "title": "No scenarios",
+      "lead": "Scenarios are checks of the result: without them a condition edit goes unnoticed. Create at least one.",
+      "create": "Create a scenario",
+      "open": "Open the result"
+    },
+    "findings": "New result linter warnings",
+    "severity": {
+      "error": "Error",
+      "warning": "Warning",
+      "info": "Note"
+    },
+    "warning": "The result of these scenarios will change. Review the differences above: a confirmation is required to continue.",
+    "pr": {
+      "head_one": "**The result will change in {{changed}} of {{total}} scenario**",
+      "head_other": "**The result will change in {{changed}} of {{total}} scenarios**",
+      "headNone": "Scenario results are unchanged ({{total}} in total)",
+      "atlas": "Atlas: {{changed}} of {{total}} rows will change, outcomes {{before}} before and {{after}} after",
+      "error": "inputs error",
+      "more": "and {{count}} more",
+      "findings": "New result linter warnings: {{count}}"
     }
   }
 }

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type {
   OutcomeInput,
@@ -9,6 +10,7 @@ import { pickLocalized } from "@shared/lib/i18n/pickLocalized";
 import { emptySteps } from "../../lib/routeSteps";
 import { summarize } from "../../lib/summary";
 import { useOutcomeModel } from "../../model";
+import { PaleSlot } from "./PaleSlot";
 import { SectionShell } from "./SectionShell";
 import { PickItem, Reason, StepWarning, Stats } from "./parts";
 import { onArrowNav } from "./helpers";
@@ -37,31 +39,37 @@ const ParticipantCard = ({
   const input = inputs?.find((i) => i.id === person.role);
   const reasons = person.present ? [] : explain.reasons(person.why);
   const value = outcome.inputs[person.role];
-  return (
-    <PickItem
-      el={{ section: "participants", id: person.persona }}
-      muted={!person.present}
-      testId={`outcome-participant-${person.persona}`}
-      title={role}
-      badges={
-        <>
-          {person.org && (
-            <Badge variant={person.org === "company" ? "info" : "default"}>
-              {t(`participants.org.${person.org}`)}
-            </Badge>
-          )}
-          {field ? (
-            <Badge
-              variant={field.required_at === "create" ? "accent" : "subtle"}
-            >
-              {t(`participants.required.${field.required_at}`)}
-            </Badge>
-          ) : (
-            <Badge variant="subtle">{t("participants.always")}</Badge>
-          )}
-        </>
-      }
-    >
+  const el = { section: "participants", id: person.persona } as const;
+  const testId = `outcome-participant-${person.persona}`;
+  const badges = (
+    <>
+      {person.org && (
+        <Badge variant={person.org === "company" ? "info" : "default"}>
+          {t(`participants.org.${person.org}`)}
+        </Badge>
+      )}
+      {field ? (
+        <Badge variant={field.required_at === "create" ? "accent" : "subtle"}>
+          {t(`participants.required.${field.required_at}`)}
+        </Badge>
+      ) : (
+        <Badge variant="subtle">{t("participants.always")}</Badge>
+      )}
+    </>
+  );
+  // Участника, которого нет при этой комбинации, показывает бледный слот с «Добавить во вводных».
+  const card = (children: ReactNode) =>
+    person.present ? (
+      <PickItem el={el} testId={testId} title={role} badges={badges}>
+        {children}
+      </PickItem>
+    ) : (
+      <PaleSlot el={el} name={role} testId={testId} badges={badges}>
+        {children}
+      </PaleSlot>
+    );
+  return card(
+    <>
       {person.present ? (
         <span className="po-person-name">{person.name}</span>
       ) : (
@@ -86,7 +94,7 @@ const ParticipantCard = ({
         />
       )}
       <span className="po-mono po-note">{person.persona}</span>
-    </PickItem>
+    </>,
   );
 };
 

@@ -161,6 +161,7 @@ export const ScenarioPanel = ({ id, onClose }: ScenarioPanelProps) => {
       isOpen
       onClose={onClose}
       width={640}
+      className="po-sheet"
       title={title}
       description={entry?.path}
     >

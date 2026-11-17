@@ -67,6 +67,7 @@ export const ScenarioSaveInputsDialog = ({
       isOpen
       onClose={onClose}
       width={520}
+      className="po-sheet"
       title={t("scenarios.saveInputs.title", { name })}
       description={t("scenarios.saveInputs.lead")}
       footer={

@@ -96,9 +96,32 @@ export const StateGalleryPage = ({
   // ?section=conflicts оставляет один раздел: удобно показать его целиком.
   const [searchParams] = useSearchParams();
   const only = searchParams.get("section");
-  const visible = sections.some((section) => section.id === only)
+  const visibleSections = sections.some((section) => section.id === only)
     ? sections.filter((section) => section.id === only)
     : sections;
+  // ?entry=po_phone_result показывает одну запись без шапки и навигации: так галерея вставляется
+  // рамкой (iframe) в окно шире телефона, чтобы раскладка телефона была настоящей.
+  const entryId = searchParams.get("entry");
+  const embedded =
+    entryId !== null &&
+    sections.some((section) =>
+      section.groups.some((group) =>
+        group.entries.some((entry) => entry.id === entryId),
+      ),
+    );
+  const visible = embedded
+    ? sections
+        .map((section) => ({
+          ...section,
+          groups: section.groups
+            .map((group) => ({
+              ...group,
+              entries: group.entries.filter((entry) => entry.id === entryId),
+            }))
+            .filter((group) => group.entries.length > 0),
+        }))
+        .filter((section) => section.groups.length > 0)
+    : visibleSections;
 
   // Живая запись ставит демо-мир в свой сценарий и собирается заново.
   const openLive = useCallback(
@@ -141,45 +164,47 @@ export const StateGalleryPage = ({
       data-dev-gallery={marker}
       style={{ flex: 1, minHeight: 0, background: "var(--bg-0)" }}
     >
-      <header
-        className="flex items-center flex-wrap"
-        style={{
-          gap: "1rem",
-          padding: "0.625rem 1.25rem",
-          borderBottom: "1px solid var(--border)",
-          background: "var(--bg-1)",
-        }}
-      >
-        <div style={{ flex: 1, minWidth: "13.75rem" }}>
-          <h1 style={{ margin: 0, fontSize: "0.9375rem", fontWeight: 600 }}>
-            {title}
-          </h1>
-          <p
-            className="dim"
-            style={{ margin: "0.125rem 0 0", fontSize: "0.75rem" }}
-          >
-            {total} состояний. Страница есть только в разработке.
-          </p>
-        </div>
-        <Segmented
-          label="Язык"
-          value={lang}
-          options={[
-            { value: "ru", label: "RU" },
-            { value: "en", label: "EN" },
-          ]}
-          onChange={setLang}
-        />
-        <Segmented
-          label="Тема"
-          value={theme}
-          options={THEMES}
-          onChange={setTheme}
-        />
-        <Link to="/" className="btn sm" style={{ textDecoration: "none" }}>
-          К приложению
-        </Link>
-      </header>
+      {!embedded && (
+        <header
+          className="flex items-center flex-wrap"
+          style={{
+            gap: "1rem",
+            padding: "0.625rem 1.25rem",
+            borderBottom: "1px solid var(--border)",
+            background: "var(--bg-1)",
+          }}
+        >
+          <div style={{ flex: 1, minWidth: "13.75rem" }}>
+            <h1 style={{ margin: 0, fontSize: "0.9375rem", fontWeight: 600 }}>
+              {title}
+            </h1>
+            <p
+              className="dim"
+              style={{ margin: "0.125rem 0 0", fontSize: "0.75rem" }}
+            >
+              {total} состояний. Страница есть только в разработке.
+            </p>
+          </div>
+          <Segmented
+            label="Язык"
+            value={lang}
+            options={[
+              { value: "ru", label: "RU" },
+              { value: "en", label: "EN" },
+            ]}
+            onChange={setLang}
+          />
+          <Segmented
+            label="Тема"
+            value={theme}
+            options={THEMES}
+            onChange={setTheme}
+          />
+          <Link to="/" className="btn sm" style={{ textDecoration: "none" }}>
+            К приложению
+          </Link>
+        </header>
+      )}
 
       <div
         className="flex"
@@ -190,73 +215,78 @@ export const StateGalleryPage = ({
         }}
       >
         {/* На телефоне навигация ложится над содержимым и не отнимает ширину */}
-        <nav
-          aria-label="Разделы галереи"
-          className="flex flex-col"
-          data-testid="gallery-nav"
-          style={{
-            flexShrink: 0,
-            overflowY: "auto",
-            padding: "0.875rem 0.625rem",
-            gap: "0.875rem",
-            background: "var(--bg-1)",
-            ...(isPhone
-              ? {
-                  width: "100%",
-                  maxHeight: "10rem",
-                  borderBottom: "1px solid var(--border)",
-                }
-              : { width: "15.625rem", borderRight: "1px solid var(--border)" }),
-          }}
-        >
-          <Link
-            to={basePath}
-            aria-current={
-              visible.length === sections.length ? "page" : undefined
-            }
+        {!embedded && (
+          <nav
+            aria-label="Разделы галереи"
+            className="flex flex-col"
+            data-testid="gallery-nav"
             style={{
-              padding: "0.125rem 0.5rem",
-              fontSize: "0.75rem",
-              textDecoration: "none",
-              color: "var(--fg-2)",
+              flexShrink: 0,
+              overflowY: "auto",
+              padding: "0.875rem 0.625rem",
+              gap: "0.875rem",
+              background: "var(--bg-1)",
+              ...(isPhone
+                ? {
+                    width: "100%",
+                    maxHeight: "10rem",
+                    borderBottom: "1px solid var(--border)",
+                  }
+                : {
+                    width: "15.625rem",
+                    borderRight: "1px solid var(--border)",
+                  }),
             }}
           >
-            Все разделы
-          </Link>
-          {sections.map((section) => (
-            <div key={section.id}>
-              <Link
-                to={`${basePath}?section=${section.id}`}
-                style={{
-                  display: "block",
-                  padding: "0.125rem 0.5rem",
-                  fontSize: "0.78125rem",
-                  fontWeight: 600,
-                  color: "var(--fg-0)",
-                  textDecoration: "none",
-                }}
-              >
-                {section.title}
-              </Link>
-              {visible.includes(section) &&
-                section.groups.map((group) => (
-                  <a
-                    key={group.id}
-                    href={`#group-${group.id}`}
-                    className="dim"
-                    style={{
-                      display: "block",
-                      padding: "0.125rem 0.5rem 0.125rem 1.125rem",
-                      fontSize: "0.75rem",
-                      textDecoration: "none",
-                    }}
-                  >
-                    {group.title}
-                  </a>
-                ))}
-            </div>
-          ))}
-        </nav>
+            <Link
+              to={basePath}
+              aria-current={
+                visibleSections.length === sections.length ? "page" : undefined
+              }
+              style={{
+                padding: "0.125rem 0.5rem",
+                fontSize: "0.75rem",
+                textDecoration: "none",
+                color: "var(--fg-2)",
+              }}
+            >
+              Все разделы
+            </Link>
+            {sections.map((section) => (
+              <div key={section.id}>
+                <Link
+                  to={`${basePath}?section=${section.id}`}
+                  style={{
+                    display: "block",
+                    padding: "0.125rem 0.5rem",
+                    fontSize: "0.78125rem",
+                    fontWeight: 600,
+                    color: "var(--fg-0)",
+                    textDecoration: "none",
+                  }}
+                >
+                  {section.title}
+                </Link>
+                {visibleSections.includes(section) &&
+                  section.groups.map((group) => (
+                    <a
+                      key={group.id}
+                      href={`#group-${group.id}`}
+                      className="dim"
+                      style={{
+                        display: "block",
+                        padding: "0.125rem 0.5rem 0.125rem 1.125rem",
+                        fontSize: "0.75rem",
+                        textDecoration: "none",
+                      }}
+                    >
+                      {group.title}
+                    </a>
+                  ))}
+              </div>
+            ))}
+          </nav>
+        )}
 
         <main
           data-gallery-scroll
@@ -265,14 +295,22 @@ export const StateGalleryPage = ({
             minWidth: 0,
             minHeight: 0,
             overflowY: "auto",
-            padding: isPhone ? "1.25rem 0.75rem 5rem" : "1.25rem 1.75rem 5rem",
+            padding: embedded
+              ? 0
+              : isPhone
+                ? "1.25rem 0.75rem 5rem"
+                : "1.25rem 1.75rem 5rem",
           }}
         >
           {visible.map((section) => (
-            <div key={section.id} style={{ marginBottom: "3.5rem" }}>
+            <div
+              key={section.id}
+              style={{ marginBottom: embedded ? 0 : "3.5rem" }}
+            >
               <h2
                 id={`section-${section.id}`}
                 style={{
+                  ...(embedded ? { display: "none" } : {}),
                   margin: "0 0 1.125rem",
                   fontSize: "1.25rem",
                   fontWeight: 650,
@@ -282,10 +320,14 @@ export const StateGalleryPage = ({
                 {section.title}
               </h2>
               {section.groups.map((group) => (
-                <div key={group.id} style={{ marginBottom: "2.25rem" }}>
+                <div
+                  key={group.id}
+                  style={{ marginBottom: embedded ? 0 : "2.25rem" }}
+                >
                   <h3
                     id={`group-${group.id}`}
                     style={{
+                      ...(embedded ? { display: "none" } : {}),
                       margin: "0 0 0.25rem",
                       fontSize: "0.8125rem",
                       fontWeight: 600,
@@ -297,7 +339,7 @@ export const StateGalleryPage = ({
                   >
                     {group.title}
                   </h3>
-                  {group.description && (
+                  {group.description && !embedded && (
                     <p
                       className="dim"
                       style={{ margin: "0 0 0.875rem", fontSize: "0.78125rem" }}
@@ -313,6 +355,7 @@ export const StateGalleryPage = ({
                       <GalleryEntryCard
                         key={entry.id}
                         entry={entry}
+                        embedded={embedded}
                         demo={demo}
                         activeRun={active?.id === entry.id ? active.run : null}
                         onOpenLive={openLive}

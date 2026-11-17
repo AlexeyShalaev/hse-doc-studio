@@ -5,6 +5,7 @@ import {
   screen,
   within,
 } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, useLocation } from "react-router";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import type { PackOutcome } from "@entities/pack-studio";
@@ -24,6 +25,10 @@ import { ParticipantsSection } from "./ParticipantsSection";
 // Три секции результата на эталонах ВКР и курсовой: сервер не нужен, модель собрана вручную,
 // адрес живёт в MemoryRouter. Выбор элемента пишется в `selected`, как в настоящем экране.
 
+const client = new QueryClient({
+  defaultOptions: { queries: { retry: false } },
+});
+
 const Probe = () => {
   const { search } = useLocation();
   return <output data-testid="search">{search}</output>;
@@ -41,6 +46,7 @@ const Harness = ({
   const url = useOutcomeUrlState();
   const model = {
     workspaceId: "w",
+    request: { state: "work_tree", scenario: null, example: null, inputs: {} },
     ref: { pack: "p", template: "t", version: "v" },
     released: false,
     phone: false,
@@ -55,14 +61,19 @@ const Harness = ({
         url.state.selected.id === el.id;
       url.update({ selected: same ? null : (el as never) });
     },
+    reveal: (el: { section: string; id: string }) => {
+      url.update({ selected: el as never });
+    },
   } as unknown as OutcomeModel;
   return (
-    <OutcomeModelContext.Provider value={model}>
-      <DocumentsSection />
-      <MetaSection />
-      <ParticipantsSection />
-      <Probe />
-    </OutcomeModelContext.Provider>
+    <QueryClientProvider client={client}>
+      <OutcomeModelContext.Provider value={model}>
+        <DocumentsSection />
+        <MetaSection />
+        <ParticipantsSection />
+        <Probe />
+      </OutcomeModelContext.Provider>
+    </QueryClientProvider>
   );
 };
 

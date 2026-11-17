@@ -162,9 +162,23 @@ export default defineConfig(({ mode }) => {
             if (id.endsWith("/src/features/pack-outcome/index.ts")) {
               return "assets/pack-outcome-[hash].js";
             }
+            // Режимы «Матрица», «Атлас», «Сравнить» экрана «Результат» (срез F9): открывают реже результата.
+            if (id.endsWith("/src/features/pack-outcome/modes/index.ts")) {
+              return "assets/pack-outcome-modes-[hash].js";
+            }
             // Формы манифестов Студии шаблонов (срезы T11-T14): грузятся вкладкой «Форма».
             if (id.endsWith("/src/features/pack-submission-form/index.ts")) {
               return "assets/pack-submission-form-[hash].js";
+            }
+            // Мини-форма правила и полоса правок экрана «Результат» (срез F7): грузятся по требованию.
+            if (
+              id.endsWith("/src/features/pack-outcome/ui/edit/EditPanels.tsx")
+            ) {
+              return "assets/outcome-edit-[hash].js";
+            }
+            // Мини-форма одной записи (правка по месту на экране «Результат», срез F7).
+            if (id.endsWith("/src/features/pack-forms/rule.ts")) {
+              return "assets/pack-rule-form-[hash].js";
             }
             if (id.endsWith("/src/features/pack-checks-form/index.ts")) {
               return "assets/pack-checks-form-[hash].js";

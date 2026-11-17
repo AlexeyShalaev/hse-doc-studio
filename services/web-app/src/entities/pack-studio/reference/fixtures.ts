@@ -2,17 +2,31 @@ import { z } from "zod";
 import {
   OutcomeBranchSchema,
   OutcomeCheckRuleSchema,
+  PackOutcomeAtlasSchema,
+  PackOutcomeCompareSchema,
+  PackOutcomeImpactSchema,
   PackOutcomeInputsSchema,
+  PackOutcomeMatrixSchema,
   PackOutcomeSchema,
   PackScenarioListSchema,
   PackScenarioRunSchema,
   type OutcomeBranch,
   type OutcomeCheckRule,
   type PackOutcome,
+  type PackOutcomeAtlas,
+  type PackOutcomeCompare,
+  type PackOutcomeImpact,
   type PackOutcomeInputs,
+  type PackOutcomeMatrix,
   type PackScenarioList,
   type PackScenarioRun,
 } from "../api/outcome";
+import {
+  PackPreviewBuildSchema,
+  PackPreviewOptionsSchema,
+  type PackPreviewBuild,
+  type PackPreviewOptions,
+} from "../api/schemas";
 
 // Эталоны контракта вычислителя (contracts/pack-studio/fixtures), собранные в браузере. Модуль
 // только для разработки и тестов: в рабочую сборку не попадает (его подключают динамическим
@@ -67,6 +81,42 @@ export const COURSEWORK_SCENARIOS: PackScenarioList =
 export const COURSEWORK_RUN: PackScenarioRun = PackScenarioRunSchema.parse(
   load(runFiles, "PackScenarioRun", "coursework_after_edit"),
 );
+
+const atlasFiles = import.meta.glob<unknown>(
+  "../../../../../../contracts/pack-studio/fixtures/PackOutcomeAtlas/*.json",
+  { eager: true, import: "default" },
+);
+const compareFiles = import.meta.glob<unknown>(
+  "../../../../../../contracts/pack-studio/fixtures/PackOutcomeCompare/*.json",
+  { eager: true, import: "default" },
+);
+const impactFiles = import.meta.glob<unknown>(
+  "../../../../../../contracts/pack-studio/fixtures/PackOutcomeImpact/*.json",
+  { eager: true, import: "default" },
+);
+const matrixFiles = import.meta.glob<unknown>(
+  "../../../../../../contracts/pack-studio/fixtures/PackOutcomeMatrix/*.json",
+  { eager: true, import: "default" },
+);
+
+/** Атлас курсового (12 строк, 12 исходов). */
+export const COURSEWORK_ATLAS: PackOutcomeAtlas = PackOutcomeAtlasSchema.parse(
+  load(atlasFiles, "PackOutcomeAtlas", "coursework"),
+);
+/** Сравнение двух сценариев курсового: научрук из ВШЭ против компании с консультантом. */
+export const COURSEWORK_COMPARE: PackOutcomeCompare =
+  PackOutcomeCompareSchema.parse(
+    load(compareFiles, "PackOutcomeCompare", "two_scenarios"),
+  );
+/** «До и после» правки слота курсового: изменится 1 из 3 сценариев. */
+export const COURSEWORK_IMPACT: PackOutcomeImpact =
+  PackOutcomeImpactSchema.parse(
+    load(impactFiles, "PackOutcomeImpact", "coursework"),
+  );
+export const COURSEWORK_MATRIX: PackOutcomeMatrix =
+  PackOutcomeMatrixSchema.parse(
+    load(matrixFiles, "PackOutcomeMatrix", "coursework"),
+  );
 
 const STANDARD_INPUT_IDS = [
   "lang",
@@ -366,3 +416,25 @@ export const VKR_BRANCHES: OutcomeBranch[] = z
       ],
     },
   ]);
+
+// Эталоны предпросмотра PDF (срез F12): опции версии с вариантами документов и сборки в разных
+// состояниях. Опции у ВКР с теми же документами, что в результате `VKR_OUTCOME`.
+const previewOptionsFiles = import.meta.glob<unknown>(
+  "../../../../../../contracts/pack-studio/fixtures/PackPreviewOptions/*.json",
+  { eager: true, import: "default" },
+);
+const previewBuildFiles = import.meta.glob<unknown>(
+  "../../../../../../contracts/pack-studio/fixtures/PackPreviewBuild/*.json",
+  { eager: true, import: "default" },
+);
+
+export const VKR_PREVIEW_OPTIONS: PackPreviewOptions =
+  PackPreviewOptionsSchema.parse(
+    load(previewOptionsFiles, "PackPreviewOptions", "with_variants"),
+  );
+
+/** Сборка предпросмотра из эталона: `queued`, `running`, `succeeded`, `cached`, `build_failed`... */
+export const previewBuildReference = (name: string): PackPreviewBuild =>
+  PackPreviewBuildSchema.parse(
+    load(previewBuildFiles, "PackPreviewBuild", name),
+  );
