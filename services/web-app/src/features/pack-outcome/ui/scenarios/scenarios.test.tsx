@@ -931,8 +931,17 @@ describe("английский и телефон", () => {
       await user.click(
         screen.getByTestId("scenario-option-company-supervisor"),
       );
+      // Выбор в листе не откатывается закрытием листа (шаг «Назад» вернул бы прежний адрес).
+      await waitFor(() => {
+        expect(where()).toContain("scenario=company-supervisor");
+      });
+      // «Управление» живёт в листе «Параметры».
+      await user.click(await screen.findByTestId("outcome-options-open"));
       await user.click(await screen.findByTestId("scenario-manage"));
-      const sheet = await screen.findByRole("dialog");
+      const sheet = await screen
+        .findByTestId("scenario-panel")
+        .then((el) => el.closest<HTMLElement>("[role=dialog]"));
+      if (!sheet) throw new Error("the scenario sheet is missing");
       expect(sheet).toHaveAttribute("data-form", "sheet");
       expect(within(sheet).getByTestId("scenario-panel")).toBeInTheDocument();
     } finally {

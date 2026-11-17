@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { expect, test, type Page, type Route } from "@playwright/test";
 import { LANGS, shot, type Lang } from "./helpers";
-import { expectNoHorizontalScroll, loginOnPhone } from "./phoneHelpers";
+import { expectNoHorizontalScroll, expectTouchTarget, loginOnPhone, overflowing } from "./phoneHelpers";
 
 /**
  * Студия шаблонов (срезы T6, T7, T8) на стенде server-lite: админ включает раздел настоящим API (у админа установки
@@ -960,6 +960,67 @@ for (const lang of LANGS) {
         );
         await expectNoHorizontalScroll(page);
         await shot(page, L, "ps-84-outcome-scenarios-phone");
+      });
+
+      test("экран «Результат»: две строки сверху, лист «Параметры», вкладки и «Назад», режимы", async ({ page }) => {
+        await mockWorkspaces(page);
+        await login(page);
+        await setSection(page, true);
+        await page.goto("/pack-studio");
+        await page.getByTestId("ws-create-empty").click();
+        await page.getByTestId("ws-create-url").fill("https://github.com/e2e/packs");
+        await page.getByTestId("ws-create-submit").click();
+        await expect(page.getByTestId("outcome-summary")).toContainText(text("4 документа", "4 documents"), {
+          timeout: 15_000,
+        });
+
+        // Верхняя панель в две строки (плюс строка статуса, пока идёт пересчёт): раньше она занимала почти весь экран.
+        const bar = page.getByTestId("outcome-phone-bar");
+        await expect(bar).toBeVisible();
+        expect((await bar.boundingBox())?.height ?? 999).toBeLessThan(190);
+        await expect(page.getByTestId("outcome-mode-author")).toBeHidden();
+        await expectTouchTarget(page, page.getByTestId("outcome-options-open"), "кнопка «Параметры»");
+        for (const tab of ["inputs", "result", "rules"]) {
+          await expectTouchTarget(page, page.getByTestId(`outcome-tab-${tab}`), `вкладка ${tab}`);
+        }
+
+        // Лист «Параметры»: до 90 % высоты, режим и «Результат из» внутри, Esc закрывает.
+        await page.getByTestId("outcome-options-open").click();
+        const sheet = page.getByRole("dialog");
+        await expect(sheet.getByTestId("outcome-mode-student")).toBeVisible();
+        const sheetBox = await sheet.boundingBox();
+        const viewport = page.viewportSize();
+        expect(sheetBox?.height ?? 9999).toBeLessThanOrEqual((viewport?.height ?? 0) * 0.9 + 1);
+        await expectNoHorizontalScroll(page);
+        await shot(page, L, "ps-88-outcome-phone-options");
+        await page.keyboard.press("Escape");
+        await expect(sheet).toBeHidden();
+
+        // «Почему?» это страница: выбор документа открывает её, «Назад» браузера возвращает результат.
+        await page.getByTestId("outcome-doc-project_proposal").getByRole("button").first().click();
+        await expect(page).toHaveURL(/tab=rules/);
+        await expect(page.getByTestId("outcome-rules-page")).toBeVisible();
+        await expect(page.getByTestId("outcome-tab-rules")).toHaveAttribute("aria-current", "page");
+        await expectNoHorizontalScroll(page);
+        await shot(page, L, "ps-89-outcome-phone-why");
+        await page.goBack();
+        await expect(page.getByTestId("outcome-center")).toBeVisible();
+        await expect(page).not.toHaveURL(/tab=rules/);
+
+        // Лист «Вводные» закрывается «Назад» и вкладка остаётся прежней.
+        await page.getByTestId("outcome-tab-inputs").click();
+        await expect(sheet.getByTestId("outcome-inputs")).toBeVisible();
+        await page.goBack();
+        await expect(sheet).toBeHidden();
+        await expect(page.getByTestId("outcome-center")).toBeVisible();
+
+        // Режимы центра на 360 px: без горизонтальной прокрутки.
+        for (const view of ["matrix", "atlas", "compare"]) {
+          await page.getByTestId(`outcome-view-${view}`).click();
+          await expect(page.getByTestId(`outcome-view-panel-${view}`)).toBeVisible();
+          await expect.poll(() => overflowing(page)).toEqual([]);
+          await expectNoHorizontalScroll(page);
+        }
       });
     });
   });

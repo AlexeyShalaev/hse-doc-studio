@@ -306,7 +306,7 @@
       "!dist/assets/pack-outcome-modes-*.js"
     ],
     "gzip": true,
-    "limit": "48.4 kB"
+    "limit": "50.2 kB"
   },
   {
     "name": "Режимы «Матрица», «Атлас», «Сравнить» экрана «Результат» (lazy, features/pack-outcome/modes)",

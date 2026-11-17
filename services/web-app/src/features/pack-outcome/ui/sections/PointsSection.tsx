@@ -31,7 +31,7 @@ const DocLink = ({
   name: string;
 }) => {
   const { t } = useTranslation("packOutcome");
-  const { select } = useOutcomeModel();
+  const { reveal } = useOutcomeModel();
   const selected = useIsSelected({ section: "documents", id: doc });
   return (
     <button
@@ -42,8 +42,9 @@ const DocLink = ({
       aria-pressed={selected}
       data-testid={`outcome-doc-link-${point}-${doc}`}
       onClick={() => {
-        // Повторный клик не снимает выбор: ссылка ведёт к документу, а не переключает его.
-        if (!selected) select({ section: "documents", id: doc });
+        // Повторный клик не снимает выбор: ссылка ведёт к документу, а не переключает его;
+        // на телефоне она открывает вкладку «Почему?» и тогда, когда документ уже выбран.
+        reveal({ section: "documents", id: doc });
       }}
     >
       <ArrowUpRight size="0.8125rem" aria-hidden="true" />

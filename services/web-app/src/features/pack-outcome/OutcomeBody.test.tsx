@@ -628,8 +628,12 @@ describe("экран «Результат»: каркас на эталонах"
         screen.getByRole("navigation", { name: "Разделы экрана" }),
       ).toBeInTheDocument();
       expect(screen.getByTestId("outcome-tab-result")).toHaveAttribute(
-        "aria-pressed",
-        "true",
+        "aria-current",
+        "page",
+      );
+      expect(screen.getByTestId("outcome-tab-inputs")).toHaveAttribute(
+        "aria-haspopup",
+        "dialog",
       );
     });
 
@@ -646,13 +650,18 @@ describe("экран «Результат»: каркас на эталонах"
       });
     });
 
-    it("ссылка с tab=rules открывает «Почему» сразу, правка недоступна", async () => {
+    it("ссылка с tab=rules открывает «Почему» сразу страницей, правка недоступна", async () => {
       mount("tab=rules&selected=documents:report");
-      const sheet = await screen.findByRole("dialog");
-      expect(within(sheet).getByTestId("outcome-selected")).toHaveTextContent(
+      const page = await screen.findByTestId("outcome-rules-page");
+      expect(within(page).getByTestId("outcome-selected")).toHaveTextContent(
         "report",
       );
-      expect(sheet).toHaveTextContent("Правка доступна на компьютере");
+      expect(page).toHaveTextContent("Правка доступна на компьютере");
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(screen.getByTestId("outcome-tab-rules")).toHaveAttribute(
+        "aria-current",
+        "page",
+      );
     });
 
     it("карточки на телефоне: клик выбирает элемент и открывает «Почему»", async () => {

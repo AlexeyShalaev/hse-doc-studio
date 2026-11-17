@@ -62,6 +62,9 @@ const Harness = ({
         url.state.selected.id === el.id;
       url.update({ selected: same ? null : (el as never) });
     },
+    reveal: (el: { section: string; id: string }) => {
+      url.update({ selected: el as never });
+    },
   } as unknown as OutcomeModel;
   return (
     <QueryClientProvider client={client}>

@@ -585,8 +585,14 @@
     "tabs": "Screen sections",
     "inputs": "Inputs",
     "result": "Outcome",
-    "rules": "Why",
-    "readOnly": "Editing is available on a computer."
+    "rules": "Why?",
+    "readOnly": "Editing is available on a computer.",
+    "options": "Options",
+    "changed_one": "{{count}} input changed",
+    "changed_other": "{{count}} inputs changed",
+    "selected": "an element is selected",
+    "openedResult": "The Outcome tab is open.",
+    "openedRules": "The Why? tab is open."
   },
   "dev": {
     "label": "Outcome data (development only)",

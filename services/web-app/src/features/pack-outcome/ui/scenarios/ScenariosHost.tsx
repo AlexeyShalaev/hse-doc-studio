@@ -14,6 +14,7 @@ import {
   scenarioName,
   tallyOf,
 } from "../../lib/scenarios";
+import { useSheetHistory } from "../../lib/useSheetHistory";
 import { useOutcomeModel } from "../../model";
 import {
   ScenarioUiContext,
@@ -50,6 +51,10 @@ export const ScenariosHost = ({
     student: model.url.state.mode === "student",
   };
   const [dialog, setDialog] = useState<ScenarioDialog | null>(initialDialog);
+  // Телефон: окна и список сценариев закрываются кнопкой «Назад» браузера.
+  useSheetHistory("scenarios", model.phone && dialog !== null, () => {
+    setDialog(null);
+  });
 
   const entries = scenarios.data?.scenarios ?? EMPTY;
   const runnable = entries.some((entry) => entry.error === null);

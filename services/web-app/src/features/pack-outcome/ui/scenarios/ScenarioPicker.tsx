@@ -184,11 +184,63 @@ const ScenarioList = ({ ui, close }: ListProps) => {
 };
 
 /**
+ * «Сохранить как сценарий» и «Управление» выбранным сценарием. На телефоне живут в листе
+ * «Параметры», на компьютере рядом с выбором сценария.
+ */
+export const ScenarioActions = () => {
+  const { t } = useTranslation("packOutcome");
+  const { url } = useOutcomeModel();
+  const ui = useScenarioUi();
+  if (!ui || ui.readOnlyReason === "student") return null;
+  const chosen = url.state.scenario;
+  const entry = ui.entries.find((item) => item.id === chosen);
+  const writeHint =
+    ui.readOnlyReason === "state"
+      ? t("scenarios.readOnlyState")
+      : t("scenarios.readOnlyStudent");
+  return (
+    <div className="po-sc-actions">
+      <button
+        type="button"
+        className="btn sm"
+        disabled={!ui.canWrite}
+        title={ui.canWrite ? undefined : writeHint}
+        data-testid="scenario-save-as"
+        onClick={() => {
+          ui.open({ kind: "create" });
+        }}
+      >
+        <BookmarkPlus size="0.875rem" aria-hidden="true" />
+        {t("scenarios.saveAs")}
+      </button>
+      {chosen !== null && entry && (
+        <button
+          type="button"
+          className="btn sm"
+          data-testid="scenario-manage"
+          onClick={() => {
+            ui.open({ kind: "panel", id: chosen });
+          }}
+        >
+          <Settings2 size="0.875rem" aria-hidden="true" />
+          {t("scenarios.manage")}
+        </button>
+      )}
+    </div>
+  );
+};
+
+/**
  * Выбор сценария в верхней панели. Кнопка показывает выбранный сценарий и счётчик «1 из 3»,
  * список открывается панелью (листом на телефоне): статус прогона у каждого, итог и «Прогнать
  * все». Рядом «Сохранить как сценарий» и «Управление» выбранным сценарием.
  */
-export const ScenarioPicker = () => {
+export const ScenarioPicker = ({
+  withActions = true,
+}: {
+  /** Телефон показывает действия отдельно, в листе «Параметры». */
+  withActions?: boolean;
+}) => {
   const { t, i18n } = useTranslation("packOutcome");
   const { url } = useOutcomeModel();
   const ui = useScenarioUi();
@@ -213,10 +265,6 @@ export const ScenarioPicker = () => {
         : entry
           ? scenarioName(entry, i18n.language)
           : t("bar.scenarioMissing", { id: chosen });
-  const writeHint =
-    ui.readOnlyReason === "state"
-      ? t("scenarios.readOnlyState")
-      : t("scenarios.readOnlyStudent");
 
   return (
     <div className="po-sc" data-testid="scenario-picker">
@@ -300,36 +348,7 @@ export const ScenarioPicker = () => {
           </PopoverContent>
         </Popover>
       </div>
-      {ui.readOnlyReason !== "student" && (
-        <div className="po-sc-actions">
-          <button
-            type="button"
-            className="btn sm"
-            disabled={!ui.canWrite}
-            title={ui.canWrite ? undefined : writeHint}
-            data-testid="scenario-save-as"
-            onClick={() => {
-              ui.open({ kind: "create" });
-            }}
-          >
-            <BookmarkPlus size="0.875rem" aria-hidden="true" />
-            {t("scenarios.saveAs")}
-          </button>
-          {chosen !== null && entry && (
-            <button
-              type="button"
-              className="btn sm"
-              data-testid="scenario-manage"
-              onClick={() => {
-                ui.open({ kind: "panel", id: chosen });
-              }}
-            >
-              <Settings2 size="0.875rem" aria-hidden="true" />
-              {t("scenarios.manage")}
-            </button>
-          )}
-        </div>
-      )}
+      {withActions && <ScenarioActions />}
     </div>
   );
 };
