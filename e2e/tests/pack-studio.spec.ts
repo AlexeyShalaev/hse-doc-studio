@@ -974,10 +974,10 @@ for (const lang of LANGS) {
           timeout: 15_000,
         });
 
-        // Верхняя панель в две строки: результат получает почти весь экран.
+        // Верхняя панель в две строки (плюс строка статуса, пока идёт пересчёт): раньше она занимала почти весь экран.
         const bar = page.getByTestId("outcome-phone-bar");
         await expect(bar).toBeVisible();
-        expect((await bar.boundingBox())?.height ?? 999).toBeLessThan(150);
+        expect((await bar.boundingBox())?.height ?? 999).toBeLessThan(190);
         await expect(page.getByTestId("outcome-mode-author")).toBeHidden();
         await expectTouchTarget(page, page.getByTestId("outcome-options-open"), "кнопка «Параметры»");
         for (const tab of ["inputs", "result", "rules"]) {
