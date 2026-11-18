@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -130,7 +131,7 @@ def test__model__reads_a_pack_with_cyrillic_in_a_non_utf8_locale(tmp_path: Path)
     """Windows (cp1252) и C-локаль: модель обязана читать паки в UTF-8, а не в кодировке системы."""
     root = _pack(tmp_path)
     env = {
-        "PATH": "",
+        **os.environ,  # на Windows без SYSTEMROOT не импортируется asyncio
         "PYTHONUTF8": "0",
         "PYTHONCOERCECLOCALE": "0",
         "LC_ALL": "C",
