@@ -5,6 +5,8 @@ import { useTranslation } from "react-i18next";
 import { localeTag } from "@shared/lib";
 import { Badge, Button, DataTable, Section } from "@shared/ui";
 import type { RunStatus, UpdateRun, UpdateRunPage } from "../api/schemas";
+import { reasonOf } from "../lib/failureReason";
+import { formatDuration } from "../lib/progress";
 import { RUNS_PAGE_SIZE } from "../api/queries";
 
 const TONE: Record<RunStatus, "info" | "success" | "error" | "warning"> = {
@@ -51,8 +53,14 @@ export const HistoryTable = ({
         id: "kind",
         header: t("history.cols.kind"),
         enableSorting: false,
-        cell: ({ row }) =>
-          `${t(`history.kind.${row.original.kind}`)} · ${t(`history.trigger.${row.original.trigger}`)}`,
+        cell: ({ row }) => {
+          const run = row.original;
+          const who =
+            run.trigger === "manual" && run.requested_by_name
+              ? ` (${run.requested_by_name})`
+              : "";
+          return `${t(`history.kind.${run.kind}`)} · ${t(`history.trigger.${run.trigger}`)}${who}`;
+        },
       },
       {
         id: "versions",
@@ -78,12 +86,30 @@ export const HistoryTable = ({
         ),
       },
       {
+        id: "duration",
+        header: t("history.cols.duration"),
+        enableSorting: false,
+        cell: ({ row }) =>
+          row.original.duration_s === null
+            ? "—"
+            : formatDuration(row.original.duration_s, {
+                h: t("units.h"),
+                min: t("units.min"),
+                s: t("units.s"),
+              }),
+      },
+      {
         id: "result",
         header: t("history.cols.result"),
         enableSorting: false,
         cell: ({ row }) => {
           const run = row.original;
           const parts: string[] = [];
+          if (run.status !== "succeeded" && (run.error || run.error_code)) {
+            parts.push(
+              t(`reason.${reasonOf(run.error_code, run.error)}.title`),
+            );
+          }
           if (run.db_restored) parts.push(t("history.dbRestored"));
           if (run.error) parts.push(run.error);
           return parts.length ? (

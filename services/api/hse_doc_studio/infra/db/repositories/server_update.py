@@ -20,6 +20,7 @@ from hse_doc_studio.core.server_update.entities import (
     Verify,
 )
 from hse_doc_studio.core.server_update.versions import known_revisions
+from hse_doc_studio.infra.db.orm.identity import UserRow
 from hse_doc_studio.infra.db.orm.server_update import UpdateRunRow
 from hse_doc_studio.infra.db.session import SessionProvider
 
@@ -40,7 +41,7 @@ def _event_from_json(raw: dict[str, Any]) -> RunEvent:
     )
 
 
-def _run(row: UpdateRunRow) -> UpdateRun:
+def _run(row: UpdateRunRow, names: dict[str, str] | None = None) -> UpdateRun:
     return UpdateRun(
         id=str(row.id),
         kind=RunKind(row.kind),
@@ -55,6 +56,7 @@ def _run(row: UpdateRunRow) -> UpdateRun:
         started_at=row.started_at,
         finished_at=row.finished_at,
         requested_by=row.requested_by,
+        requested_by_name=(names or {}).get(row.requested_by) if row.requested_by else None,
         backup_run_id=str(row.backup_run_id) if row.backup_run_id else None,
         restore_db=row.restore_db,
         db_restored=row.db_restored,
@@ -93,6 +95,15 @@ def _values(run: UpdateRun) -> dict[str, Any]:
     }
 
 
+async def _names(session: Any, rows: list[UpdateRunRow]) -> dict[str, str]:
+    """Имена инициаторов запусков одним запросом (удалённый пользователь: имени нет, строка остаётся)."""
+    ids = {r.requested_by for r in rows if r.requested_by}
+    if not ids:
+        return {}
+    found = await session.execute(select(UserRow.id, UserRow.name).where(UserRow.id.in_(ids)))
+    return {str(i): str(n) for i, n in found.all()}
+
+
 class SqlUpdateRunRepository:
     def __init__(self, sessions: SessionProvider) -> None:
         self._sessions = sessions
@@ -106,7 +117,8 @@ class SqlUpdateRunRepository:
     async def get(self, run_id: str) -> UpdateRun | None:
         async with self._sessions.use() as session:
             row = await session.get(UpdateRunRow, UUID(run_id))
-        return _run(row) if row else None
+            names = await _names(session, [row] if row else [])
+        return _run(row, names) if row else None
 
     async def lock(self, run_id: str) -> UpdateRun | None:
         async with self._sessions.use() as session:
@@ -123,7 +135,8 @@ class SqlUpdateRunRepository:
         stmt = select(UpdateRunRow).where(UpdateRunRow.status.in_(_ACTIVE)).limit(1)
         async with self._sessions.use() as session:
             row = (await session.execute(stmt)).scalar_one_or_none()
-        return _run(row) if row else None
+            names = await _names(session, [row] if row else [])
+        return _run(row, names) if row else None
 
     async def claim_next(self, *, now_iso: str) -> UpdateRun | None:
         now = datetime.fromisoformat(now_iso)
@@ -154,14 +167,16 @@ class SqlUpdateRunRepository:
         )
         async with self._sessions.use() as session:
             total = (await session.execute(select(func.count()).select_from(UpdateRunRow))).scalar_one()
-            rows = (await session.execute(stmt)).scalars().all()
-        return Found(items=[_run(r) for r in rows], total=int(total))
+            rows = list((await session.execute(stmt)).scalars().all())
+            names = await _names(session, rows)
+        return Found(items=[_run(r, names) for r in rows], total=int(total))
 
     async def _one(self, *conditions: Any) -> UpdateRun | None:
         stmt = select(UpdateRunRow).where(*conditions).order_by(UpdateRunRow.created_at.desc()).limit(1)
         async with self._sessions.use() as session:
             row = (await session.execute(stmt)).scalar_one_or_none()
-        return _run(row) if row else None
+            names = await _names(session, [row] if row else [])
+        return _run(row, names) if row else None
 
     async def last_finished(self) -> UpdateRun | None:
         return await self._one(UpdateRunRow.status.not_in(_ACTIVE))

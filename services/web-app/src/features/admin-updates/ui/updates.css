@@ -1,0 +1,205 @@
+/* Ход обновления, экран перезапуска и итог. Цвета только из токенов темы: работает во всех трёх темах. */
+.upd-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: var(--r-3);
+  border: 1px solid var(--border);
+  background: var(--bg-1);
+}
+.upd-card[data-tone="ok"] {
+  border-color: color-mix(in oklch, var(--c-ok) 45%, var(--border));
+  background: color-mix(in oklch, var(--c-ok-soft) 70%, var(--bg-1));
+}
+.upd-card[data-tone="warn"] {
+  border-color: color-mix(in oklch, var(--c-warn) 45%, var(--border));
+  background: color-mix(in oklch, var(--c-warn-soft) 70%, var(--bg-1));
+}
+.upd-card[data-tone="err"] {
+  border-color: color-mix(in oklch, var(--c-err) 45%, var(--border));
+  background: color-mix(in oklch, var(--c-err-soft) 70%, var(--bg-1));
+}
+.upd-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+}
+.upd-card-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.upd-card[data-tone="ok"] .upd-card-icon {
+  color: var(--c-ok);
+}
+.upd-card[data-tone="warn"] .upd-card-icon {
+  color: var(--c-warn);
+}
+.upd-card[data-tone="err"] .upd-card-icon {
+  color: var(--c-err);
+}
+.upd-card-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--fg-0);
+  overflow-wrap: anywhere;
+}
+.upd-card-sub {
+  margin: 0.125rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--fg-1);
+  overflow-wrap: anywhere;
+}
+.upd-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+/* пошаговый индикатор */
+.upd-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.upd-step {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr) auto;
+  column-gap: 0.625rem;
+  row-gap: 0.125rem;
+  padding: 0.4375rem 0;
+  border-top: 1px solid var(--border);
+}
+.upd-step:first-child {
+  border-top: 0;
+}
+.upd-step-icon {
+  grid-row: 1;
+  margin-top: 2px;
+  color: var(--fg-3);
+}
+.upd-step[data-state="active"] .upd-step-icon {
+  color: var(--c-info);
+}
+.upd-step[data-state="done"] .upd-step-icon {
+  color: var(--c-ok);
+}
+.upd-step[data-state="failed"] .upd-step-icon {
+  color: var(--c-err);
+}
+.upd-step-title {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--fg-0);
+  overflow-wrap: anywhere;
+}
+.upd-step[data-state="pending"] .upd-step-title,
+.upd-step[data-state="skipped"] .upd-step-title {
+  color: var(--fg-2);
+  font-weight: 400;
+}
+.upd-step-state {
+  margin-left: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--fg-2);
+}
+.upd-step[data-state="failed"] .upd-step-state {
+  color: var(--c-err);
+  font-weight: 600;
+}
+.upd-step-time {
+  grid-row: 1;
+  grid-column: 3;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-2);
+  white-space: nowrap;
+}
+.upd-step-detail {
+  grid-column: 2 / -1;
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--fg-1);
+  overflow-wrap: anywhere;
+}
+.upd-step-sub {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  grid-column: 2 / -1;
+}
+.upd-live {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--fg-1);
+}
+.upd-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--fg-2);
+}
+.upd-details {
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  background: var(--bg-0);
+}
+.upd-details > summary {
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--fg-0);
+}
+.upd-details > summary:focus-visible {
+  outline: 2px solid var(--c-info);
+  outline-offset: 2px;
+}
+.upd-details-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0 0.75rem 0.75rem;
+}
+.upd-notes {
+  margin: 0.25rem 0 0 1rem;
+  padding: 0;
+  font-size: 0.8125rem;
+  color: var(--fg-1);
+}
+.upd-spin {
+  animation: upd-spin 1s linear infinite;
+}
+@keyframes upd-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .upd-spin {
+    animation: none;
+  }
+}
+@media (max-width: 480px) {
+  .upd-card {
+    padding: 0.75rem;
+  }
+  .upd-step {
+    grid-template-columns: 1.25rem minmax(0, 1fr);
+  }
+  .upd-step-time {
+    grid-row: 2;
+    grid-column: 2;
+  }
+  .upd-actions > * {
+    flex: 1 1 100%;
+  }
+}

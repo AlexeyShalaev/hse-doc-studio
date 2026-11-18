@@ -31,6 +31,7 @@ from hse_doc_studio.core.server_update.entities import (
     UpdateSettings,
     Verify,
 )
+from hse_doc_studio.core.server_update.redact import redact
 from hse_doc_studio.core.server_update.status import UpdateStatus
 from hse_doc_studio.use_cases.server_update.admin import UpdateAdmin
 
@@ -62,8 +63,11 @@ def _run(r: UpdateRun) -> RunOut:
         restore_db=r.restore_db,
         db_restored=r.db_restored,
         error_code=r.error_code,
-        error=r.error,
-        events=[RunEventOut(seq=e.seq, at=e.at, phase=e.phase, level=e.level, message=e.message) for e in r.events],
+        error=redact(r.error) if r.error else None,
+        requested_by_name=r.requested_by_name,
+        events=[
+            RunEventOut(seq=e.seq, at=e.at, phase=e.phase, level=e.level, message=redact(e.message)) for e in r.events
+        ],
     )
 
 

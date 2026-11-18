@@ -75,6 +75,7 @@ class RunOut(StrictModel):
     db_restored: bool
     error_code: str | None
     error: str | None
+    requested_by_name: str | None
     events: list[RunEventOut]
 
 

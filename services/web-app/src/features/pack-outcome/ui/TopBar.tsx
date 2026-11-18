@@ -46,8 +46,8 @@ const STATES: readonly OutcomeState[] = ["work_tree", "head", "base"];
 const MODES: readonly OutcomeMode[] = ["author", "student"];
 
 /**
- * Верхняя панель: пак, шаблон, версия, сценарий, режим, откуда считать, состояние расчёта и
- * переходы к файлам. Смена шаблона и версии это переход по адресу (в историю), остальное
+ * Верхняя панель: пак, шаблон (из выбранного пака), версия, сценарий, режим, откуда считать, состояние расчёта и
+ * переходы к файлам. Смена пака, шаблона и версии это переход по адресу (в историю), остальное
  * записывается в query текущего адреса.
  */
 export const TopBar = ({
@@ -70,16 +70,22 @@ export const TopBar = ({
     fallback: string,
   ) => pickLocalized(dict ?? undefined, lang, fallback);
 
-  const templates = tree.packs.flatMap((pack) =>
-    pack.templates
-      .filter((template) => template.versions.length > 0)
-      .map((template) => ({
-        value: `${pack.id}/${template.id}`,
-        label: `${nameOf(pack.name, pack.id)} / ${nameOf(template.name, template.id)}`,
-        pack,
-        template,
-      })),
-  );
+  // Паки в порядке каталога, шаблоны в паке в порядке манифеста; без версий шаблон не выбрать.
+  const packs = tree.packs
+    .map((pack) => ({
+      pack,
+      templates: pack.templates.filter(
+        (template) => template.versions.length > 0,
+      ),
+    }))
+    .filter((item) => item.templates.length > 0);
+  const packLabel = (pack: PackTreePack) => {
+    const name = nameOf(pack.name, pack.id);
+    return name === pack.id ? pack.id : `${pack.id} · ${name}`;
+  };
+  const currentTemplates =
+    packs.find((item) => item.pack.id === ref.pack)?.templates ??
+    location.pack.templates;
 
   const go = (target: { pack: string; template: string; version: string }) => {
     // Вводные, набор данных и выбор привязаны к словарю версии: при переходе не переносятся.
@@ -96,19 +102,28 @@ export const TopBar = ({
     void navigate(packOutcomePath(workspaceId, target, search));
   };
 
-  const onTemplate = (value: string) => {
-    const found = templates.find((item) => item.value === value);
-    if (!found) return;
-    const versions = found.template.versions;
+  const goTemplate = (pack: PackTreePack, template: PackTreeTemplate) => {
+    const versions = template.versions;
     const version =
-      versions.find((v) => v.version === found.template.default_version) ??
+      versions.find((v) => v.version === template.default_version) ??
       versions[versions.length - 1];
     if (!version) return;
-    go({
-      pack: found.pack.id,
-      template: found.template.id,
-      version: version.version,
-    });
+    go({ pack: pack.id, template: template.id, version: version.version });
+  };
+
+  const onPack = (packId: string) => {
+    const found = packs.find((item) => item.pack.id === packId);
+    if (!found || packId === ref.pack) return;
+    // Тот же шаблон в новом паке, если он там есть, иначе первый шаблон пака.
+    const next =
+      found.templates.find((template) => template.id === ref.template) ??
+      found.templates[0];
+    if (next) goTemplate(found.pack, next);
+  };
+
+  const onTemplate = (templateId: string) => {
+    const found = currentTemplates.find((item) => item.id === templateId);
+    if (found && templateId !== ref.template) goTemplate(location.pack, found);
   };
 
   const versionLabel = (v: PackTreeVersion) =>
@@ -120,13 +135,29 @@ export const TopBar = ({
     base: t("bar.stateBase"),
   };
 
+  const packSelect = (
+    <Select
+      id="po-pack"
+      ariaLabel={t("bar.pack")}
+      className="po-select"
+      value={ref.pack}
+      options={packs.map(({ pack }) => ({
+        value: pack.id,
+        label: packLabel(pack),
+      }))}
+      onValueChange={onPack}
+    />
+  );
   const templateSelect = (
     <Select
       id="po-template"
       ariaLabel={t("bar.template")}
       className="po-select"
-      value={`${ref.pack}/${ref.template}`}
-      options={templates.map(({ value, label }) => ({ value, label }))}
+      value={ref.template}
+      options={currentTemplates.map((template) => ({
+        value: template.id,
+        label: nameOf(template.name, template.id),
+      }))}
       onValueChange={onTemplate}
     />
   );
@@ -244,6 +275,10 @@ export const TopBar = ({
         controls={
           <>
             <div className="po-phone-field">
+              <span className="po-field-label">{t("bar.pack")}</span>
+              {packSelect}
+            </div>
+            <div className="po-phone-field">
               <span className="po-field-label">{t("bar.template")}</span>
               {templateSelect}
             </div>
@@ -282,6 +317,7 @@ export const TopBar = ({
     <div className="po-bar" role="group" aria-label={t("bar.label")}>
       <div className="po-bar-row">
         <div className="po-crumbs" data-testid="outcome-crumbs">
+          {packSelect}
           {templateSelect}
           {versionSelect}
           {lock}
