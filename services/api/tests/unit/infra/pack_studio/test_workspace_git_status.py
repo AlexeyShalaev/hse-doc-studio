@@ -149,7 +149,7 @@ async def test__local_failure__is_a_workspace_error_with_a_safe_hint(tmp_path: P
     assert runner.network == []
 
 
-def _ignore_rules_missing_once() -> _Runner:
+def _ignore_rules_missing_once(refusal: str = _PROMISOR_MISS) -> _Runner:
     """Свежий клон: `status` читает корневой `.gitignore` из индекса, а его блоба нет, пока его не догрузили."""
     fetched: set[str] = set()
 
@@ -161,7 +161,7 @@ def _ignore_rules_missing_once() -> _Runner:
     def status(_args: list[str]) -> GitResult:
         if _IGNORE_OID in fetched:
             return GitResult(0, b" M packs/demo/edited.tex\0", "")
-        return GitResult(128, b"", _PROMISOR_MISS)
+        return GitResult(128, b"", refusal)
 
     def ls_tree(_args: list[str]) -> GitResult:
         return GitResult(
@@ -187,8 +187,20 @@ def _ignore_rules_missing_once() -> _Runner:
     )
 
 
-async def test__status__missing_ignore_rules_blob__is_fetched_with_access_and_status_repeats(tmp_path: Path) -> None:
-    runner = _ignore_rules_missing_once()
+@pytest.mark.parametrize(
+    "refusal",
+    [
+        _PROMISOR_MISS,
+        # Часть версий git (и путей чтения) называет только запрет сети: объект неизвестен, догрузка по путям.
+        "fatal: transport 'https' not allowed\n",
+        "error: could not fetch from promisor remote\n",
+    ],
+    ids=["names_the_object", "only_the_transport_refusal", "promisor_without_an_oid"],
+)
+async def test__status__missing_ignore_rules_blob__is_fetched_with_access_and_status_repeats(
+    tmp_path: Path, refusal: str
+) -> None:
+    runner = _ignore_rules_missing_once(refusal)
     git = PackWorkspaceGit(runner, GitConfig())  # type: ignore[arg-type]
     dirs = workspace_dirs(tmp_path)
     (dirs.git / "info").mkdir(parents=True)
@@ -207,6 +219,23 @@ async def test__status__missing_ignore_rules_blob__is_fetched_with_access_and_st
     # Пути для догрузки: папка паков и файлы правил на пути к ней.
     ls_tree = next(args for args in runner.local if _subcommand(args) == "ls-tree")
     assert ls_tree[ls_tree.index("--") + 1 :][:3] == ["packs", ".gitignore", ".gitattributes"]
+
+
+async def test__local_failure__refusal_without_an_oid_and_nothing_to_fetch__fails_at_once(tmp_path: Path) -> None:
+    runner = _Runner(
+        {
+            "rev-parse": lambda _a: GitResult(0, f"{_HEAD}\n".encode(), ""),
+            "status": lambda _a: GitResult(128, b"", "fatal: transport 'https' not allowed\n"),
+        }
+    )
+    git = PackWorkspaceGit(runner, GitConfig())  # type: ignore[arg-type]
+
+    with pytest.raises(PackStudioError) as caught:
+        await git.status(workspace_dirs(tmp_path), _TARGET, base_branch="main", packs_path="packs")
+
+    assert caught.value.code is PackStudioErrorCode.workspace_git_failed
+    assert runner.network == []
+    assert len([a for a in runner.local if _subcommand(a) == "status"]) == 1
 
 
 async def test__local_failure__object_never_arrives__stops_after_a_few_rounds(tmp_path: Path) -> None:

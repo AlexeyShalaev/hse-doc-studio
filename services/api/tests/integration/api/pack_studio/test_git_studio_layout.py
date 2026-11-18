@@ -259,10 +259,11 @@ async def test__https_with_token__fresh_clone_and_refresh_of_the_studio_layout(
     refreshed = await _refresh(stand, ws_id)
     moved = await stand.client.get(_git_url(ws_id))
 
-    assert fresh.status_code == 200, fresh.text
-    assert healed.status_code == 200, healed.text
-    assert refreshed["error"] is None, refreshed
-    assert moved.status_code == 200, moved.text
+    version = run_git("--version")  # при сбое видно, на какой версии git он случился (прод: 2.39)
+    assert fresh.status_code == 200, f"{version}: {fresh.text}"
+    assert healed.status_code == 200, f"{version}: {healed.text}"
+    assert refreshed["error"] is None, f"{version}: {refreshed}"
+    assert moved.status_code == 200, f"{version}: {moved.text}"
     assert moved.json()["behind"] == 1
     token = str(server.token)
     for resp in (fresh, healed, moved):

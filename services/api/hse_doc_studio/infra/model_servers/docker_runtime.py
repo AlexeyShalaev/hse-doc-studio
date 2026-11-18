@@ -90,7 +90,7 @@ class DockerContainerRuntime:
     @staticmethod
     def _write_env_file(spec: ContainerSpec) -> str:
         fd, path = tempfile.mkstemp(prefix="hse-ms-", suffix=".env")
-        with os.fdopen(fd, "w") as handle:  # mkstemp создаёт файл с правами 0600
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as handle:  # mkstemp создаёт файл с правами 0600
             for key, value in spec.secret_env.items():
                 handle.write(f"{key}={value}\n")
         return path

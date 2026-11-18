@@ -86,6 +86,9 @@ _SHA = re.compile(r"[0-9a-f]{40}(?:[0-9a-f]{24})?")
 # Блобов, которые читаются из хранилища одновременно.
 _READ_PARALLEL = 8
 _PROMISOR_MISS = re.compile(r"could not fetch ([0-9a-f]{40}(?:[0-9a-f]{24})?) from promisor remote")
+# Ленивая подгрузка заблокирована `GIT_ALLOW_PROTOCOL=none`, а строки про объект нет: разные версии git и пути чтения
+# (status, add, clean) сообщают об одном и том же то «could not fetch ... from promisor remote», то только это.
+_LAZY_REFUSED = re.compile(r"transport '[^']*' not allowed|from promisor remote|promisor remote", re.IGNORECASE)
 # Подсказка к workspace_git_failed: без адресов и путей сервера, не длиннее этого.
 _HINT_LINES = 2
 _HINT_MAX = 300
@@ -201,6 +204,11 @@ def _promised_object(stderr: str) -> str | None:
     """Идентификатор объекта, за которым локальный git пытался сходить в promisor remote."""
     found = _PROMISOR_MISS.search(stderr)
     return found.group(1) if found else None
+
+
+def _needs_lazy_fetch(stderr: str) -> bool:
+    """Сбой локальной команды из-за того, что ленивой подгрузке блоба запретили сеть (объект может быть неизвестен)."""
+    return _PROMISOR_MISS.search(stderr) is not None or _LAZY_REFUSED.search(stderr) is not None
 
 
 def _control_paths(packs_path: str) -> list[str]:
@@ -727,10 +735,12 @@ class PackWorkspaceGit:
             if result.returncode == 0:
                 return result
             missing = _promised_object(result.stderr)
-            if missing is None or target is None or dirs is None or round_ == _LAZY_ROUNDS:
+            if not _needs_lazy_fetch(result.stderr) or target is None or dirs is None or round_ == _LAZY_ROUNDS:
                 break
             logger.info("pack studio: local git needs a missing object", command=command, round=round_ + 1)
-            await self._hydrate(dirs, target, extra=(missing,))
+            fetched = await self._hydrate(dirs, target, extra=(missing,) if missing else ())
+            if not fetched and missing is None:
+                break  # git не назвал объект, и по известным путям догружать нечего: повтор не поможет
         if not check:
             return result
         logger.warning(
@@ -742,10 +752,11 @@ class PackWorkspaceGit:
 
     async def _hydrate(
         self, dirs: WorkspaceDirs, target: RemoteTarget, *, packs_path: str | None = None, extra: Sequence[str] = ()
-    ) -> None:
+    ) -> int:
         """Догрузить блобы, которые может прочитать локальный git: папка паков в HEAD и в выбранных ветках сервера,
         файлы `.gitignore`, `.gitattributes`, `.gitmodules` на пути к ней и `extra`. Паки маленькие, поэтому для
-        их папки блобы держатся целиком. Сеть только когда чего-то нет; проверка наличия ничего не подгружает."""
+        их папки блобы держатся целиком. Сеть только когда чего-то нет; проверка наличия ничего не подгружает.
+        Возвращает число запрошенных объектов."""
         packs = packs_path if packs_path is not None else self._packs_path(dirs)
         tips = await self._tips(dirs)
         wanted: set[str] = set(extra)
@@ -755,9 +766,11 @@ class PackWorkspaceGit:
             if listed.returncode == 0:
                 wanted |= _blob_oids(listed.stdout)
         if not wanted:
-            return
+            return 0
         missing = await self._missing(dirs, tips)
-        await self._fetch_objects(dirs, target, sorted(oid for oid in wanted if oid in missing or oid in extra))
+        oids = sorted(oid for oid in wanted if oid in missing or oid in extra)
+        await self._fetch_objects(dirs, target, oids)
+        return len(oids)
 
     async def _fetch_objects(self, dirs: WorkspaceDirs, target: RemoteTarget, oids: Sequence[str]) -> None:
         """Догрузить объекты по идентификаторам пачками (сеть только через запускатель, с доступом `target`)."""

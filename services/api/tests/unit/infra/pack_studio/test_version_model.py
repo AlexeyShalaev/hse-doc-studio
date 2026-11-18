@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -30,7 +33,9 @@ def _pack(root: Path, version: str = _VERSION) -> Path:
     vdir = root / VDIR
     (vdir / "files/report").mkdir(parents=True)
     (vdir / "version.yaml").write_text(version, encoding="utf-8")
-    (vdir / "files/report/doc.yaml").write_text("name: { ru: Отчёт }\nsource_file: report/main.tex\n")
+    (vdir / "files/report/doc.yaml").write_text(
+        "name: { ru: Отчёт }\nsource_file: report/main.tex\n", encoding="utf-8", newline="\n"
+    )
     (vdir / "files/report/main.ru.tex").write_text("ru\n", encoding="utf-8")
     (vdir / "files/report/logo.png").write_bytes(b"\x89PNG")
     return root
@@ -56,7 +61,7 @@ def test__check_edit__old_problems_do_not_block(tmp_path: Path) -> None:
 
 def test__check_edit__doc_manifest_schema(tmp_path: Path) -> None:
     root = _pack(tmp_path)
-    before = (root / VDIR / "files/report/doc.yaml").read_text()
+    before = (root / VDIR / "files/report/doc.yaml").read_text(encoding="utf-8")
 
     with pytest.raises(ModelEditError, match="scope"):
         PackVersionModel().check_edit(root, VDIR, "files/report/doc.yaml", before, before + "scope: team\n")
@@ -107,3 +112,38 @@ def test__add_document__source_outside_a_version_refused(tmp_path: Path) -> None
 
     with pytest.raises(ModelEditError, match="not a document folder"):
         PackVersionModel().plan(root, VDIR, action)
+
+
+_ASCII_PROBE = """
+import sys
+from pathlib import Path
+from hse_doc_studio.core.pack_studio.model import ModelAction, ModelActionKind
+from hse_doc_studio.infra.pack_studio.version_model import PackVersionModel
+
+root, vdir = Path(sys.argv[1]), sys.argv[2]
+model = PackVersionModel()
+assert model.describe(root, vdir).documents
+model.plan(root, vdir, ModelAction(ModelActionKind.add_translation, document="report", lang="en"))
+"""
+
+
+def test__model__reads_a_pack_with_cyrillic_in_a_non_utf8_locale(tmp_path: Path) -> None:
+    """Windows (cp1252) и C-локаль: модель обязана читать паки в UTF-8, а не в кодировке системы."""
+    root = _pack(tmp_path)
+    env = {
+        **os.environ,  # на Windows без SYSTEMROOT не импортируется asyncio
+        "PYTHONUTF8": "0",
+        "PYTHONCOERCECLOCALE": "0",
+        "LC_ALL": "C",
+        "PYTHONIOENCODING": "ascii",
+    }
+    done = subprocess.run(  # noqa: S603
+        [sys.executable, "-X", "utf8=0", "-c", _ASCII_PROBE, str(root), VDIR],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+
+    assert done.returncode == 0, done.stderr

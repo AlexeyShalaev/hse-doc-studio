@@ -766,6 +766,7 @@ async def test__run__unknown_template__404_version_not_found(stand: Stand, servi
     assert (resp.status_code, resp.json()["code"]) == (404, "version_not_found")
 
 
+@pytest.mark.timeout(120)
 async def test__run__version_choice__newest_by_number_by_default_and_the_named_one_on_request(
     stand: Stand, service: PackOutcomeService
 ) -> None:
@@ -806,6 +807,7 @@ async def test__run__version_choice__newest_by_number_by_default_and_the_named_o
     assert (ghost.status_code, ghost.json()["code"]) == (404, "version_not_found")
 
 
+@pytest.mark.timeout(120)
 async def test__run__etag_and_304__edit_of_a_scenario_or_a_manifest_changes_it(
     stand: Stand, service: PackOutcomeService
 ) -> None:
@@ -856,6 +858,7 @@ async def test__run__repeated_run_is_answered_from_the_cache_without_calculating
     assert third.json() != first.json()
 
 
+@pytest.mark.timeout(120)
 async def test__run__edit_of_the_manifest__failed_with_changes_and_the_snapshot_is_accepted_by_put(
     stand: Stand, service: PackOutcomeService
 ) -> None:

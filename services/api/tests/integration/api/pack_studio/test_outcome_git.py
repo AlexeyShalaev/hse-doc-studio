@@ -216,8 +216,9 @@ async def test__partial_clone__head_and_base_blobs_missing__fetched_by_the_works
     base = await post_outcome(stand, ws, VKR, {"state": "base"})
     dictionary = await get_inputs(stand, ws, VKR, "head")
 
-    assert head.status_code == 200, head.text
-    assert base.status_code == 200, base.text
+    version = run_git("--version")  # при сбое видно, на какой версии git он случился (прод: 2.39)
+    assert head.status_code == 200, f"{version}: {head.text}"
+    assert base.status_code == 200, f"{version}: {base.text}"
     assert dictionary.status_code == 200, dictionary.text
     parse_outcome(head)
     # Недостающие блобы версии догружены: теперь они есть.

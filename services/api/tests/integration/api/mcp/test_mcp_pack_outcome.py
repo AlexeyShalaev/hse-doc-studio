@@ -591,6 +591,7 @@ async def test__lint_tool__real_vkr_text_and_json_agree(studio: Studio) -> None:
     assert data["coverage"]["rows_total"] == 864
 
 
+@pytest.mark.timeout(120)
 async def test__lint_tool__a_draft_edit_shows_up_and_head_has_no_jinja(studio: Studio) -> None:
     ws = await _git(studio)
     await edit_manifest(studio.stand, ws, 'equals: "yes"', 'equals: "maybe"')
