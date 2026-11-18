@@ -170,6 +170,16 @@ def _summary(result: CheckResult) -> str:
     )
 
 
+def _scenario_line(item: Any) -> str:
+    """Строка сводки сценариев шаблона: прогон и покрытие правил."""
+    return (
+        f"сценарии {item.template}@{item.version}: {item.scenarios} (прошли {item.passed}, упали {item.failed}, "
+        f"ошибок {item.errors}, без ожидания {item.unchecked}); покрытие правил {item.percent:g}% "
+        f"(полностью {item.rules_covered}, наполовину {item.rules_half}, не покрыто {item.rules_uncovered}), "
+        f"комбинаций затронуто {item.rows_touched} из {item.rows_total}"
+    )
+
+
 def _lint(args: argparse.Namespace) -> int:
     result = lint_tree(discover(args.paths))
     if args.json:
@@ -187,6 +197,8 @@ def _check(args: argparse.Namespace) -> int:
         _json({"command": "check", "base": args.base, **result.to_dict(strict=args.strict)})
     else:
         _print_findings(result, tagged=True, every_version=False)
+        for scenario in result.scenarios:
+            _out(_scenario_line(scenario))
         for item in result.classes:
             report = item.report
             number = report.by_number.value if report.by_number else "-"

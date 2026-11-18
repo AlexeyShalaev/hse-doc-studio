@@ -6,720 +6,359 @@
   "state": "work_tree",
   "revision": "sha256-99e5f70b531e4d96",
   "errors": 0,
-  "warnings": 7,
+  "warnings": 12,
+  "infos": 0,
   "findings": [
     {
       "rule_id": "slot-never-routed",
       "severity": "warning",
-      "message": "Слот «co_supervisor» не попадает в маршрут ни одной точки сдачи ни при какой комбинации вводных.",
+      "message": "Слот «co_supervisor» не попадает в маршрут ни одной точки сдачи ни при какой комбинации вводных. Слот не назван ни в подписях пунктов, ни в signing_slots, ни в порядке маршрута.",
+      "hint": "Добавьте слот в signatures пункта или в signing_slots точки либо удалите его из каталога signatures.slots.",
       "file": "version.yaml",
       "pointer": "/signatures/slots/2",
-      "line": null,
+      "line": 548,
       "elements": [],
       "witnesses": []
     },
     {
+      "rule_id": "route-step-without-person",
+      "severity": "warning",
+      "message": "Маршрут точки «checkpoint-1» ждёт подписи от персон, которых нет в проекте: supervisor (в 144 из 864 строк атласа). Шаг остаётся в маршруте, и закрыть его некому.",
+      "hint": "Если персона обязательна, не допускайте проект без неё (вводная supervisor: none). Если нет, поставьте слот сверх точки с условием when, чтобы шаг появлялся только при наличии человека.",
+      "file": "version.yaml",
+      "pointer": "/pack_submission/profiles/0",
+      "line": 576,
+      "elements": [
+        {
+          "section": "route",
+          "id": "checkpoint-1"
+        }
+      ],
+      "witnesses": [
+        {
+          "kind": "research",
+          "staffing": "solo",
+          "supervisor": "none",
+          "co_supervisor": "no",
+          "academic_supervisor": "yes",
+          "meta.manuals": "Программиста и оператора",
+          "meta.nda": "no",
+          "answer.ai_declaration.used_ai": "no"
+        },
+        {
+          "kind": "research",
+          "staffing": "solo",
+          "supervisor": "none",
+          "co_supervisor": "no",
+          "academic_supervisor": "yes",
+          "meta.manuals": "Программиста и оператора",
+          "meta.nda": "no",
+          "answer.ai_declaration.used_ai": "yes"
+        },
+        {
+          "kind": "research",
+          "staffing": "solo",
+          "supervisor": "none",
+          "co_supervisor": "no",
+          "academic_supervisor": "yes",
+          "meta.manuals": "Программиста и оператора",
+          "meta.nda": "yes",
+          "answer.ai_declaration.used_ai": "no"
+        }
+      ]
+    },
+    {
+      "rule_id": "route-step-without-person",
+      "severity": "warning",
+      "message": "Маршрут точки «checkpoint-2» ждёт подписи от персон, которых нет в проекте: supervisor (в 144 из 864 строк атласа). Шаг остаётся в маршруте, и закрыть его некому.",
+      "hint": "Если персона обязательна, не допускайте проект без неё (вводная supervisor: none). Если нет, поставьте слот сверх точки с условием when, чтобы шаг появлялся только при наличии человека.",
+      "file": "version.yaml",
+      "pointer": "/pack_submission/profiles/1",
+      "line": 601,
+      "elements": [
+        {
+          "section": "route",
+          "id": "checkpoint-2"
+        }
+      ],
+      "witnesses": [
+        {
+          "kind": "research",
+          "staffing": "solo",
+          "supervisor": "none",
+          "co_supervisor": "no",
+          "academic_supervisor": "yes",
+          "meta.manuals": "Программиста и оператора",
+          "meta.nda": "no",
+          "answer.ai_declaration.used_ai": "no"
+        },
+        {
+          "kind": "research",
+          "staffing": "solo",
+          "supervisor": "none",
+          "co_supervisor": "no",
+          "academic_supervisor": "yes",
+          "meta.manuals": "Программиста и оператора",
+          "meta.nda": "no",
+          "answer.ai_declaration.used_ai": "yes"
+        },
+        {
+          "kind": "research",
+          "staffing": "solo",
+          "supervisor": "none",
+          "co_supervisor": "no",
+          "academic_supervisor": "yes",
+          "meta.manuals": "Программиста и оператора",
+          "meta.nda": "yes",
+          "answer.ai_declaration.used_ai": "no"
+        }
+      ]
+    },
+    {
+      "rule_id": "route-step-without-person",
+      "severity": "warning",
+      "message": "Маршрут точки «pdp-application» ждёт подписи от персон, которых нет в проекте: supervisor (в 288 из 864 строк атласа). Шаг остаётся в маршруте, и закрыть его некому.",
+      "hint": "Если персона обязательна, не допускайте проект без неё (вводная supervisor: none). Если нет, поставьте слот сверх точки с условием when, чтобы шаг появлялся только при наличии человека.",
+      "file": "version.yaml",
+      "pointer": "/pack_submission/profiles/3",
+      "line": 671,
+      "elements": [
+        {
+          "section": "route",
+          "id": "pdp-application"
+        }
+      ],
+      "witnesses": [
+        {
+          "kind": "project",
+          "staffing": "solo",
+          "supervisor": "none",
+          "co_supervisor": "no",
+          "academic_supervisor": "yes",
+          "meta.manuals": "Программиста и оператора",
+          "meta.nda": "no",
+          "answer.ai_declaration.used_ai": "no"
+        },
+        {
+          "kind": "project",
+          "staffing": "solo",
+          "supervisor": "none",
+          "co_supervisor": "no",
+          "academic_supervisor": "yes",
+          "meta.manuals": "Программиста и оператора",
+          "meta.nda": "no",
+          "answer.ai_declaration.used_ai": "yes"
+        },
+        {
+          "kind": "project",
+          "staffing": "solo",
+          "supervisor": "none",
+          "co_supervisor": "no",
+          "academic_supervisor": "yes",
+          "meta.manuals": "Программиста и оператора",
+          "meta.nda": "yes",
+          "answer.ai_declaration.used_ai": "no"
+        }
+      ]
+    },
+    {
+      "rule_id": "route-step-without-person",
+      "severity": "warning",
+      "message": "Маршрут точки «final» ждёт подписи от персон, которых нет в проекте: supervisor (в 288 из 864 строк атласа). Шаг остаётся в маршруте, и закрыть его некому.",
+      "hint": "Если персона обязательна, не допускайте проект без неё (вводная supervisor: none). Если нет, поставьте слот сверх точки с условием when, чтобы шаг появлялся только при наличии человека.",
+      "file": "version.yaml",
+      "pointer": "/pack_submission/profiles/4",
+      "line": 680,
+      "elements": [
+        {
+          "section": "route",
+          "id": "final"
+        }
+      ],
+      "witnesses": [
+        {
+          "kind": "project",
+          "staffing": "solo",
+          "supervisor": "none",
+          "co_supervisor": "no",
+          "academic_supervisor": "yes",
+          "meta.manuals": "Программиста и оператора",
+          "meta.nda": "no",
+          "answer.ai_declaration.used_ai": "no"
+        },
+        {
+          "kind": "project",
+          "staffing": "solo",
+          "supervisor": "none",
+          "co_supervisor": "no",
+          "academic_supervisor": "yes",
+          "meta.manuals": "Программиста и оператора",
+          "meta.nda": "no",
+          "answer.ai_declaration.used_ai": "yes"
+        },
+        {
+          "kind": "project",
+          "staffing": "solo",
+          "supervisor": "none",
+          "co_supervisor": "no",
+          "academic_supervisor": "yes",
+          "meta.manuals": "Программиста и оператора",
+          "meta.nda": "yes",
+          "answer.ai_declaration.used_ai": "no"
+        }
+      ]
+    },
+    {
+      "rule_id": "route-step-without-person",
+      "severity": "warning",
+      "message": "Маршрут точки «gia» ждёт подписи от персон, которых нет в проекте: supervisor (в 288 из 864 строк атласа). Шаг остаётся в маршруте, и закрыть его некому.",
+      "hint": "Если персона обязательна, не допускайте проект без неё (вводная supervisor: none). Если нет, поставьте слот сверх точки с условием when, чтобы шаг появлялся только при наличии человека.",
+      "file": "version.yaml",
+      "pointer": "/pack_submission/profiles/5",
+      "line": 741,
+      "elements": [
+        {
+          "section": "route",
+          "id": "gia"
+        }
+      ],
+      "witnesses": [
+        {
+          "kind": "project",
+          "staffing": "solo",
+          "supervisor": "none",
+          "co_supervisor": "no",
+          "academic_supervisor": "yes",
+          "meta.manuals": "Программиста и оператора",
+          "meta.nda": "no",
+          "answer.ai_declaration.used_ai": "no"
+        },
+        {
+          "kind": "project",
+          "staffing": "solo",
+          "supervisor": "none",
+          "co_supervisor": "no",
+          "academic_supervisor": "yes",
+          "meta.manuals": "Программиста и оператора",
+          "meta.nda": "no",
+          "answer.ai_declaration.used_ai": "yes"
+        },
+        {
+          "kind": "project",
+          "staffing": "solo",
+          "supervisor": "none",
+          "co_supervisor": "no",
+          "academic_supervisor": "yes",
+          "meta.manuals": "Программиста и оператора",
+          "meta.nda": "yes",
+          "answer.ai_declaration.used_ai": "no"
+        }
+      ]
+    },
+    {
       "rule_id": "translation-missing",
       "severity": "warning",
-      "message": "У поля «name_en» нет английского перевода подсказки help.",
+      "message": "У поля проекта «name_en» нет перевода подсказки help на en (языки версии: ru, en).",
+      "hint": "Добавьте подсказки help на en или уберите язык из langs версии.",
       "file": "version.yaml",
       "pointer": "/meta_fields/name_en/help",
-      "line": null,
-      "elements": [{"section": "meta", "id": "name_en"}],
+      "line": 223,
+      "elements": [
+        {
+          "section": "meta",
+          "id": "name_en"
+        }
+      ],
       "witnesses": []
     },
     {
       "rule_id": "translation-missing",
       "severity": "warning",
-      "message": "У поля «name_short» нет английского перевода подсказки help.",
+      "message": "У поля проекта «name_short» нет перевода подсказки help на en (языки версии: ru, en).",
+      "hint": "Добавьте подсказки help на en или уберите язык из langs версии.",
       "file": "version.yaml",
       "pointer": "/meta_fields/name_short/help",
-      "line": null,
-      "elements": [{"section": "meta", "id": "name_short"}],
+      "line": 232,
+      "elements": [
+        {
+          "section": "meta",
+          "id": "name_short"
+        }
+      ],
       "witnesses": []
     },
     {
       "rule_id": "translation-missing",
       "severity": "warning",
-      "message": "У поля «udc» нет английского перевода подсказки help.",
+      "message": "У поля проекта «udc» нет перевода подсказки help на en (языки версии: ru, en).",
+      "hint": "Добавьте подсказки help на en или уберите язык из langs версии.",
       "file": "version.yaml",
       "pointer": "/meta_fields/udc/help",
-      "line": null,
-      "elements": [{"section": "meta", "id": "udc"}],
+      "line": 268,
+      "elements": [
+        {
+          "section": "meta",
+          "id": "udc"
+        }
+      ],
       "witnesses": []
     },
     {
       "rule_id": "translation-missing",
       "severity": "warning",
-      "message": "У поля «program_code» нет английского перевода подсказки help.",
+      "message": "У поля проекта «program_code» нет перевода подсказки help на en (языки версии: ru, en).",
+      "hint": "Добавьте подсказки help на en или уберите язык из langs версии.",
       "file": "version.yaml",
       "pointer": "/meta_fields/program_code/help",
-      "line": null,
-      "elements": [{"section": "meta", "id": "program_code"}],
+      "line": 278,
+      "elements": [
+        {
+          "section": "meta",
+          "id": "program_code"
+        }
+      ],
       "witnesses": []
     },
     {
       "rule_id": "translation-missing",
       "severity": "warning",
-      "message": "У поля «academic_supervisor» нет английского перевода подсказки help.",
+      "message": "У поля проекта «academic_supervisor» нет перевода подсказки help на en (языки версии: ru, en).",
+      "hint": "Добавьте подсказки help на en или уберите язык из langs версии.",
       "file": "version.yaml",
       "pointer": "/meta_fields/academic_supervisor/help",
-      "line": null,
-      "elements": [{"section": "meta", "id": "academic_supervisor"}],
+      "line": 291,
+      "elements": [
+        {
+          "section": "meta",
+          "id": "academic_supervisor"
+        }
+      ],
       "witnesses": []
     },
     {
       "rule_id": "translation-missing",
       "severity": "warning",
-      "message": "У поля «doc_code_base» нет английского перевода подсказки help.",
+      "message": "У поля проекта «doc_code_base» нет перевода подсказки help на en (языки версии: ru, en).",
+      "hint": "Добавьте подсказки help на en или уберите язык из langs версии.",
       "file": "version.yaml",
       "pointer": "/meta_fields/doc_code_base/help",
-      "line": null,
-      "elements": [{"section": "meta", "id": "doc_code_base"}],
+      "line": 302,
+      "elements": [
+        {
+          "section": "meta",
+          "id": "doc_code_base"
+        }
+      ],
       "witnesses": []
     }
   ],
   "coverage": {
-    "scenarios": 1,
+    "scenarios": 4,
     "rules_total": 67,
-    "rules_covered": 1,
-    "rules_half": 63,
-    "rules_uncovered": 3,
+    "rules_covered": 62,
+    "rules_half": 5,
+    "rules_uncovered": 0,
     "rules": [
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/technical_specification/doc.yaml",
-          "pointer": "/supported_kinds",
-          "builtin": null
-        },
-        "kind": "supported_kinds",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/technical_specification/doc.yaml",
-          "pointer": "/supported_staffing",
-          "builtin": null
-        },
-        "kind": "supported_staffing",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/technical_specification/doc.yaml",
-          "pointer": "/supported_langs",
-          "builtin": null
-        },
-        "kind": "supported_langs",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/technical_specification/doc.yaml",
-          "pointer": "/variants/1/supported_langs",
-          "builtin": null
-        },
-        "kind": "variant_langs",
-        "seen": ["not_held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/shared_technical_specification/doc.yaml",
-          "pointer": "/supported_kinds",
-          "builtin": null
-        },
-        "kind": "supported_kinds",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/shared_technical_specification/doc.yaml",
-          "pointer": "/supported_staffing",
-          "builtin": null
-        },
-        "kind": "supported_staffing",
-        "seen": ["not_held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/shared_technical_specification/doc.yaml",
-          "pointer": "/supported_langs",
-          "builtin": null
-        },
-        "kind": "supported_langs",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/test_program_and_methodology/doc.yaml",
-          "pointer": "/supported_kinds",
-          "builtin": null
-        },
-        "kind": "supported_kinds",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/test_program_and_methodology/doc.yaml",
-          "pointer": "/supported_staffing",
-          "builtin": null
-        },
-        "kind": "supported_staffing",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/test_program_and_methodology/doc.yaml",
-          "pointer": "/supported_langs",
-          "builtin": null
-        },
-        "kind": "supported_langs",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/test_program_and_methodology/doc.yaml",
-          "pointer": "/variants/1/supported_langs",
-          "builtin": null
-        },
-        "kind": "variant_langs",
-        "seen": ["not_held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/shared_test_program_and_methodology/doc.yaml",
-          "pointer": "/supported_kinds",
-          "builtin": null
-        },
-        "kind": "supported_kinds",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/shared_test_program_and_methodology/doc.yaml",
-          "pointer": "/supported_staffing",
-          "builtin": null
-        },
-        "kind": "supported_staffing",
-        "seen": ["not_held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/shared_test_program_and_methodology/doc.yaml",
-          "pointer": "/supported_langs",
-          "builtin": null
-        },
-        "kind": "supported_langs",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/source_listing/doc.yaml",
-          "pointer": "/supported_kinds",
-          "builtin": null
-        },
-        "kind": "supported_kinds",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/source_listing/doc.yaml",
-          "pointer": "/supported_staffing",
-          "builtin": null
-        },
-        "kind": "supported_staffing",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/source_listing/doc.yaml",
-          "pointer": "/supported_langs",
-          "builtin": null
-        },
-        "kind": "supported_langs",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/programmer_manual/doc.yaml",
-          "pointer": "/supported_kinds",
-          "builtin": null
-        },
-        "kind": "supported_kinds",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/programmer_manual/doc.yaml",
-          "pointer": "/supported_staffing",
-          "builtin": null
-        },
-        "kind": "supported_staffing",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/programmer_manual/doc.yaml",
-          "pointer": "/supported_langs",
-          "builtin": null
-        },
-        "kind": "supported_langs",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/operator_manual/doc.yaml",
-          "pointer": "/supported_kinds",
-          "builtin": null
-        },
-        "kind": "supported_kinds",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/operator_manual/doc.yaml",
-          "pointer": "/supported_staffing",
-          "builtin": null
-        },
-        "kind": "supported_staffing",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/operator_manual/doc.yaml",
-          "pointer": "/supported_langs",
-          "builtin": null
-        },
-        "kind": "supported_langs",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/operator_manual/doc.yaml",
-          "pointer": "/variants/1/supported_langs",
-          "builtin": null
-        },
-        "kind": "variant_langs",
-        "seen": ["not_held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/annotation/doc.yaml",
-          "pointer": "/supported_kinds",
-          "builtin": null
-        },
-        "kind": "supported_kinds",
-        "seen": ["not_held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/annotation/doc.yaml",
-          "pointer": "/supported_staffing",
-          "builtin": null
-        },
-        "kind": "supported_staffing",
-        "seen": [],
-        "scenarios": []
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/annotation/doc.yaml",
-          "pointer": "/supported_langs",
-          "builtin": null
-        },
-        "kind": "supported_langs",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/shared_annotation/doc.yaml",
-          "pointer": "/supported_kinds",
-          "builtin": null
-        },
-        "kind": "supported_kinds",
-        "seen": ["not_held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/shared_annotation/doc.yaml",
-          "pointer": "/supported_staffing",
-          "builtin": null
-        },
-        "kind": "supported_staffing",
-        "seen": [],
-        "scenarios": []
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/shared_annotation/doc.yaml",
-          "pointer": "/supported_langs",
-          "builtin": null
-        },
-        "kind": "supported_langs",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/interim_report/doc.yaml",
-          "pointer": "/supported_kinds",
-          "builtin": null
-        },
-        "kind": "supported_kinds",
-        "seen": ["not_held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/interim_report/doc.yaml",
-          "pointer": "/supported_staffing",
-          "builtin": null
-        },
-        "kind": "supported_staffing",
-        "seen": [],
-        "scenarios": []
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/interim_report/doc.yaml",
-          "pointer": "/supported_langs",
-          "builtin": null
-        },
-        "kind": "supported_langs",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/pdp_assignment/doc.yaml",
-          "pointer": "/supported_kinds",
-          "builtin": null
-        },
-        "kind": "supported_kinds",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/pdp_assignment/doc.yaml",
-          "pointer": "/supported_staffing",
-          "builtin": null
-        },
-        "kind": "supported_staffing",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/pdp_assignment/doc.yaml",
-          "pointer": "/supported_langs",
-          "builtin": null
-        },
-        "kind": "supported_langs",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/pdp_work_plan/doc.yaml",
-          "pointer": "/supported_kinds",
-          "builtin": null
-        },
-        "kind": "supported_kinds",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/pdp_work_plan/doc.yaml",
-          "pointer": "/supported_staffing",
-          "builtin": null
-        },
-        "kind": "supported_staffing",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/pdp_work_plan/doc.yaml",
-          "pointer": "/supported_langs",
-          "builtin": null
-        },
-        "kind": "supported_langs",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/pdp_report_title/doc.yaml",
-          "pointer": "/supported_kinds",
-          "builtin": null
-        },
-        "kind": "supported_kinds",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/pdp_report_title/doc.yaml",
-          "pointer": "/supported_staffing",
-          "builtin": null
-        },
-        "kind": "supported_staffing",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/pdp_report_title/doc.yaml",
-          "pointer": "/supported_langs",
-          "builtin": null
-        },
-        "kind": "supported_langs",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/pdp_review/doc.yaml",
-          "pointer": "/supported_kinds",
-          "builtin": null
-        },
-        "kind": "supported_kinds",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/pdp_review/doc.yaml",
-          "pointer": "/supported_staffing",
-          "builtin": null
-        },
-        "kind": "supported_staffing",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/pdp_review/doc.yaml",
-          "pointer": "/supported_langs",
-          "builtin": null
-        },
-        "kind": "supported_langs",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/topic_presentation/doc.yaml",
-          "pointer": "/supported_kinds",
-          "builtin": null
-        },
-        "kind": "supported_kinds",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/topic_presentation/doc.yaml",
-          "pointer": "/supported_staffing",
-          "builtin": null
-        },
-        "kind": "supported_staffing",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/topic_presentation/doc.yaml",
-          "pointer": "/supported_langs",
-          "builtin": null
-        },
-        "kind": "supported_langs",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/presentation/doc.yaml",
-          "pointer": "/supported_kinds",
-          "builtin": null
-        },
-        "kind": "supported_kinds",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/presentation/doc.yaml",
-          "pointer": "/supported_staffing",
-          "builtin": null
-        },
-        "kind": "supported_staffing",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/presentation/doc.yaml",
-          "pointer": "/supported_langs",
-          "builtin": null
-        },
-        "kind": "supported_langs",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/thesis/doc.yaml",
-          "pointer": "/supported_kinds",
-          "builtin": null
-        },
-        "kind": "supported_kinds",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/thesis/doc.yaml",
-          "pointer": "/supported_staffing",
-          "builtin": null
-        },
-        "kind": "supported_staffing",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/thesis/doc.yaml",
-          "pointer": "/supported_langs",
-          "builtin": null
-        },
-        "kind": "supported_langs",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {"origin": "manifest", "file": "files/nda/doc.yaml", "pointer": "/supported_kinds", "builtin": null},
-        "kind": "supported_kinds",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "files/nda/doc.yaml",
-          "pointer": "/supported_staffing",
-          "builtin": null
-        },
-        "kind": "supported_staffing",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {"origin": "builtin", "file": null, "pointer": null, "builtin": "nda_gate"},
-        "kind": "builtin_gate",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {"origin": "manifest", "file": "files/nda/doc.yaml", "pointer": "/supported_langs", "builtin": null},
-        "kind": "supported_langs",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "version.yaml",
-          "pointer": "/meta_fields/manuals/supported_kinds",
-          "builtin": null
-        },
-        "kind": "field_kinds",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
       {
         "rule": {
           "origin": "manifest",
@@ -728,8 +367,29 @@
           "builtin": null
         },
         "kind": "visible_if",
-        "seen": ["not_held"],
-        "scenarios": ["nda-programmer"]
+        "seen": [
+          "not_held"
+        ],
+        "possible": [
+          "held",
+          "not_held"
+        ],
+        "scenarios": [
+          "nda-programmer-manual-only",
+          "research-company-supervisor",
+          "solo-university-supervisor",
+          "team-of-three-nda"
+        ],
+        "witness": {
+          "kind": "project",
+          "staffing": "solo",
+          "supervisor": "university",
+          "co_supervisor": "no",
+          "academic_supervisor": "yes",
+          "meta.manuals": "Программиста и оператора",
+          "meta.nda": "no",
+          "answer.ai_declaration.used_ai": "yes"
+        }
       },
       {
         "rule": {
@@ -739,8 +399,29 @@
           "builtin": null
         },
         "kind": "visible_if",
-        "seen": ["not_held"],
-        "scenarios": ["nda-programmer"]
+        "seen": [
+          "not_held"
+        ],
+        "possible": [
+          "held",
+          "not_held"
+        ],
+        "scenarios": [
+          "nda-programmer-manual-only",
+          "research-company-supervisor",
+          "solo-university-supervisor",
+          "team-of-three-nda"
+        ],
+        "witness": {
+          "kind": "project",
+          "staffing": "solo",
+          "supervisor": "university",
+          "co_supervisor": "no",
+          "academic_supervisor": "yes",
+          "meta.manuals": "Программиста и оператора",
+          "meta.nda": "no",
+          "answer.ai_declaration.used_ai": "yes"
+        }
       },
       {
         "rule": {
@@ -750,8 +431,29 @@
           "builtin": null
         },
         "kind": "visible_if",
-        "seen": ["not_held"],
-        "scenarios": ["nda-programmer"]
+        "seen": [
+          "not_held"
+        ],
+        "possible": [
+          "held",
+          "not_held"
+        ],
+        "scenarios": [
+          "nda-programmer-manual-only",
+          "research-company-supervisor",
+          "solo-university-supervisor",
+          "team-of-three-nda"
+        ],
+        "witness": {
+          "kind": "project",
+          "staffing": "solo",
+          "supervisor": "university",
+          "co_supervisor": "no",
+          "academic_supervisor": "yes",
+          "meta.manuals": "Программиста и оператора",
+          "meta.nda": "no",
+          "answer.ai_declaration.used_ai": "yes"
+        }
       },
       {
         "rule": {
@@ -761,37 +463,82 @@
           "builtin": null
         },
         "kind": "visible_if",
-        "seen": ["not_held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {"origin": "builtin", "file": null, "pointer": null, "builtin": "builtin_route"},
-        "kind": "route_order",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
+        "seen": [
+          "not_held"
+        ],
+        "possible": [
+          "held",
+          "not_held"
+        ],
+        "scenarios": [
+          "nda-programmer-manual-only",
+          "research-company-supervisor",
+          "solo-university-supervisor",
+          "team-of-three-nda"
+        ],
+        "witness": {
+          "kind": "project",
+          "staffing": "solo",
+          "supervisor": "university",
+          "co_supervisor": "no",
+          "academic_supervisor": "yes",
+          "meta.manuals": "Программиста и оператора",
+          "meta.nda": "no",
+          "answer.ai_declaration.used_ai": "yes"
+        }
       },
       {
         "rule": {
           "origin": "manifest",
-          "file": "version.yaml",
-          "pointer": "/pack_submission/profiles/1/items/3/supported_kinds",
+          "file": "files/shared_annotation/doc.yaml",
+          "pointer": "/supported_staffing",
           "builtin": null
         },
-        "kind": "item_kinds",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
-      },
-      {
-        "rule": {
-          "origin": "manifest",
-          "file": "version.yaml",
-          "pointer": "/pack_submission/profiles/2/items/2/supported_kinds",
-          "builtin": null
-        },
-        "kind": "item_kinds",
-        "seen": ["held"],
-        "scenarios": ["nda-programmer"]
+        "kind": "supported_staffing",
+        "seen": [
+          "not_held"
+        ],
+        "possible": [
+          "held",
+          "not_held"
+        ],
+        "scenarios": [
+          "research-company-supervisor"
+        ],
+        "witness": {
+          "kind": "research",
+          "staffing": "team2",
+          "supervisor": "university",
+          "co_supervisor": "no",
+          "academic_supervisor": "yes",
+          "meta.manuals": "Программиста и оператора",
+          "meta.nda": "no",
+          "answer.ai_declaration.used_ai": "no"
+        }
       }
-    ]
-  }
+    ],
+    "percent": 94.4,
+    "rows_total": 864,
+    "rows_touched": 4,
+    "uncovered_rows": [
+      {
+        "inputs": {
+          "kind": "research",
+          "staffing": "team2",
+          "supervisor": "university",
+          "co_supervisor": "no",
+          "academic_supervisor": "yes",
+          "meta.manuals": "Программиста и оператора",
+          "meta.nda": "no",
+          "answer.ai_declaration.used_ai": "yes"
+        },
+        "gain": 5
+      }
+    ],
+    "rules_omitted": 0,
+    "approximate": false
+  },
+  "jinja": "not_run",
+  "atlas_skipped": false,
+  "elapsed_ms": 2640
 }

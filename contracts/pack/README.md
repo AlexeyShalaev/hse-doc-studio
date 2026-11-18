@@ -9,6 +9,7 @@ JSON Schema (draft 2020-12) манифестов пака (`docs/design/template
 | `template.schema.json` | `templates/<шаблон>/template.yaml` |
 | `releases.schema.json` | `templates/<шаблон>/releases.yaml` |
 | `pack.schema.json` | `pack.yaml` |
+| `scenario.schema.json` | `templates/<шаблон>/scenarios/<id>.yaml`: сценарий шаблона (вводные, утверждения, снимок); файл вне каталога версии, лоадер паков его не читает, проверяют `pack check` и Студия |
 | `common.schema.json` | общие определения: локализованные строки, id, места и метки даты |
 
 Правила проверок `checks/*.yaml` схемы пока не имеют.

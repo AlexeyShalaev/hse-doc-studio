@@ -106,6 +106,7 @@ def test_next_number_follows_the_class(latest: str, cls: TemplateUpdateClass, ex
 # ── check и lint ──
 
 
+@pytest.mark.timeout(300)
 def test_check_on_the_repository_packs_passes() -> None:
     """Паки репозитория проходят `pack check`: на этом стоит джоб CI (T18)."""
     assert main(["pack", "check", str(PACKS_ROOT)]) == 0

@@ -75,7 +75,7 @@ snapshot: { ... }             # optional: the compact outcome, written by the bu
 
 - **Inputs** lie between the version defaults and the request inputs: first the defaults (and the data set), then the scenario, then what is chosen on the screen. An input that the version does not have, or a value outside the list, makes the scenario an `error` instead of refusing the write: a scenario outlives versions.
 - **The expectation** is assertions (`document_state`, `document_count`, `meta_visible`, `participant_present`, `item_active`, `route_steps`, `route_pair`) and/or a snapshot. Assertions are robust against unrelated edits, a snapshot catches everything and is noisy, so it is updated on purpose.
-- **A run** calculates the outcome for the scenario inputs on the chosen version and state (working tree, last commit, base; scenarios are read from the same state) and gives a status: `passed`, `failed` (a list of mismatches "expected, got" and of `+`, `~`, `-` changes against the snapshot), `error` (the inputs do not fit the version or the file cannot be read) and `unchecked` (no assertions and no snapshot, or the version is outside `versions`). The coverage comes with it: which rules of the version saw both outcomes (held and not held), which saw one.
+- **A run** calculates the outcome for the scenario inputs on the chosen version and state (working tree, last commit, base; scenarios are read from the same state) and gives a status: `passed`, `failed` (a list of mismatches "expected, got" and of `+`, `~`, `-` changes against the snapshot), `error` (the inputs do not fit the version or the file cannot be read) and `unchecked` (no assertions and no snapshot, or the version is outside `versions`). The coverage over the outcome table rows comes with it: which rules of the version and which combinations the scenarios check and which not ([Outcome linter and coverage](#outcome-lint)).
 - **Delete** is soft: the file is removed, git keeps it in history, and writing the scenario again (without `If-Match`) brings the same bytes back.
 - Up to 200 scenarios per template, up to 64 assertions per scenario, an `id` is lowercase Latin letters, digits and hyphens. The calculation has the same five-second limit and the same rate as the version outcome.
 
@@ -88,6 +88,43 @@ Three requests show what will change in the outcome. All of them only read: they
 - **The matrix** is the table "scenarios by sections": a cell has the fingerprint of the section structure, the element count and a status: `matched` (the scenario expectation for this section holds), `changed` (does not hold, or the section differs from the base when compared with the base), `unchecked` (the section has no expectation), `error` (there is no outcome). Cells with one fingerprint in different scenarios show that the scenarios do not tell the section apart. When compared with the base, a cell also shows whether it changed against the base.
 
 The base may be missing: a folder on disk has no git (`no_git`), the workspace has no base branch (`no_base`), the version is not in the base because it is new (`new_version`). Then a request with the state `base` or `head` answers "Nothing to compare with" (`diff_base_unavailable` with the reason); the working tree is always calculated. "Before and after" and the matrix calculate each scenario twice, so they have a 20-second limit, at most two such calculations at a time per server and a rate of 6 requests per minute per person; comparing two sides runs under the outcome limit (5 seconds, 20 per second). A response over 8 MiB is refused (`outcome_too_large`): choose fewer scenarios. Responses are cached while the version, the base and the scenario files stay the same.
+
+## Outcome linter and coverage { #outcome-lint }
+
+The outcome linter finds what only shows up on the outcome: a slot that gets into no route, a step that waits for a person who is not there, a condition that never holds. The static analysis works on the closed condition language, so the answer is exact rather than "looks like".
+
+Findings come two ways. The static rules (instant, no calculation) land in the **Problems** panel next to the linter findings, tagged "outcome". The full set (static rules, rules over the outcome table and the scenario coverage) is returned by `GET .../outcome/lint`: errors first, each finding has a rule code, a severity, a clear message, a file, a manifest path and a line (the screen opens the place by them), a "how to fix" hint, the affected elements and up to three input combinations where it shows. The Jinja rules run on request (`jinja=true`) and only on the working tree: templates are rendered in a separate process with time and memory limits.
+
+| Rule | Severity | What it catches |
+|---|---|---|
+| `slot-never-routed` | warning | a signature catalogue slot gets into no point's route for any combination |
+| `route-step-without-person` | warning | a route step waits for a persona who is absent from the combination (for example `supervisor: none`) |
+| `route-gap` | warning | a point needs signatures and nobody can sign |
+| `visible-if-unknown-field` | error | `visible_if` names a field the form does not have |
+| `visible-if-value-not-in-options` | error | `visible_if.equals` is outside the `select` options or not `true`/`false` for a `bool` (including unquoted `yes`, which YAML reads as `true`) |
+| `required-hidden` | error | a field or form field is required but hidden in every combination |
+| `field-never-visible` | warning | an optional field is hidden in every combination |
+| `variant-lang-outside-langs` | error | `supported_langs` of a document or variant names a language outside the version `langs` |
+| `skip-if-nda-without-nda` | warning | `skip_if_nda` in a version without NDA |
+| `when-unknown-person` | error | `signing_slots[].when.person` is not one of three personas, the slot is not in the catalogue or the document is not in the roster |
+| `when-never-held` | warning | a `when` condition holds in no combination |
+| `when-always-held` | info | a `when` condition always holds, it is redundant |
+| `slot-when-overlap` | warning | two `signing_slots` entries of one slot with different `when` hold together |
+| `document-never-active` | warning | a document is active in no combination |
+| `item-never-active` | warning | a point item is submitted in no combination although the document exists |
+| `point-empty` | info | a point has no items (in some combinations or in all) |
+| `translation-missing` | warning | a field, form, document, variant or slot has no translation of its label or hint into a language of `langs` |
+| `builtin-gate-mismatch` | warning | a rule built into the engine (NDA, manuals) disagrees with the manifest |
+| `dimension-no-effect` | info | a `select` or `bool` field affects nothing |
+| `jinja-fail-open` | error | a template fails to render and the project loader silently copies the file as is |
+| `jinja-unknown-meta-key` | warning | a template reads `project.meta.<key>` that is not in `meta_fields` |
+| `atlas-skipped` | info | the outcome table is over the limit, only the static rules are left |
+
+If the outcome table is over 2000 rows, the table rules are skipped: the answer carries the static findings and `atlas-skipped`.
+
+**Coverage** answers "what do my scenarios check". The universe is the rows of the outcome table (each row is calculated with a trace), not just the defaults and one-at-a-time switches. A rule is fully covered if the scenarios saw all its reachable outcomes (held and not held; if the table reaches only one, for example an always-held condition, that one is enough), half covered if they saw part, uncovered if none. The percentage is the share of seen reachable outcomes of all rules. The answer names the uncovered rules (up to 200) with a combination where the missing outcome shows, the number of combinations the scenarios touched (the scenario inputs matched the row key) and up to ten combinations that would close the most gaps: the "Add scenarios" hint is built from them.
+
+The calculation is limited to 30 seconds, at most two at a time per process and 6 requests a minute per person (429 with `Retry-After`); the answer is cached and gives 304 by `ETag`. The rights are those of the whole section. In MCP the same is `pack_outcome_lint`.
 
 ## Official packs
 

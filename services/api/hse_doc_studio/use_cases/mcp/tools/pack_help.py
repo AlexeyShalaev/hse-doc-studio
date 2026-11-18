@@ -65,6 +65,7 @@ GROUPS: Final[dict[str, tuple[str, tuple[str, ...]]]] = {
             "pack_outcome_matrix",
             "pack_outcome_compare",
             "pack_outcome_impact",
+            "pack_outcome_lint",
             "pack_scenario_list",
             "pack_scenario_write",
             "pack_scenario_delete",
@@ -105,7 +106,8 @@ FLOW_RU: Final = (
     "5. pack_lint: ошибки не дадут предложить изменения; pack_classify: класс версии.",
     (
         "6. pack_outcome_inputs и pack_outcome: что получится при вводных; pack_outcome_atlas и pack_outcome_explain: "
-        "какие вводные что меняют и почему. pack_scenario_write фиксирует ожидания, pack_scenario_run проверяет их."
+        "какие вводные что меняют и почему. pack_scenario_write фиксирует ожидания, pack_scenario_run проверяет их; "
+        "pack_outcome_lint ищет дефекты правил и показывает покрытие сценариями."
     ),
     "7. pack_preview_build: настоящая сборка PDF на раннере (по необходимости).",
     "8. pack_git_commit: сохранить версию; pack_git_diff и pack_outcome_impact: что изменится против базы.",
@@ -133,7 +135,8 @@ FLOW_EN: Final = (
     (
         "6. pack_outcome_inputs and pack_outcome: what results for given inputs; pack_outcome_atlas and "
         "pack_outcome_explain: which inputs change what and why. pack_scenario_write pins expectations, "
-        "pack_scenario_run checks them."
+        "pack_scenario_run checks them; "
+        "pack_outcome_lint finds rule defects and shows the scenario coverage."
     ),
     "7. pack_preview_build: a real PDF build on a runner (when needed).",
     "8. pack_git_commit: save; pack_git_diff and pack_outcome_impact: what changes against the base.",

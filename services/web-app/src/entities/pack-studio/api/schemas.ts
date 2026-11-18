@@ -148,7 +148,7 @@ export const PackStudioErrorBodySchema = z
 
 export const PackDiagnosticSchema = z.strictObject({
   severity: z.enum(["error", "warning"]),
-  check: z.enum(["lint", "schema"]),
+  check: z.enum(["lint", "schema", "outcome"]),
   message: z.string(),
   // Файл находки от папки паков; null: версия целиком.
   path: z.string().nullable(),

@@ -538,9 +538,19 @@ export const PackScenarioRunRequestSchema = z.strictObject({
 export const RuleCoverageSchema = z.strictObject({
   rule: OutcomeRuleRefSchema,
   kind: OutcomeRuleKindSchema,
-  // Какие исходы правила видели сценарии; покрыто полностью, когда видели оба.
+  // Какие исходы правила видели сценарии; покрыто полностью, когда видели все достижимые.
   seen: z.array(z.enum(["held", "not_held"])),
   scenarios: z.array(z.string()),
+  // Исходы, достижимые в строках атласа (у условия, которое всегда выполнено, один).
+  possible: z.array(z.enum(["held", "not_held"])).optional(),
+  // Строка атласа (значения измерений), где виден первый недостающий исход.
+  witness: InputsSchema.nullish(),
+});
+
+// Строка атласа, которую стоит закрыть сценарием, и сколько исходов правил она добавит.
+export const UncoveredRowSchema = z.strictObject({
+  inputs: InputsSchema,
+  gain: z.number().int().min(1),
 });
 
 export const OutcomeCoverageSchema = z.strictObject({
@@ -549,14 +559,26 @@ export const OutcomeCoverageSchema = z.strictObject({
   rules_covered: z.number().int().min(0),
   rules_half: z.number().int().min(0),
   rules_uncovered: z.number().int().min(0),
-  // Только правила, покрытые не полностью.
+  // Только правила, покрытые не полностью (не больше 200, `rules_omitted` остальные).
   rules: z.array(RuleCoverageSchema),
+  // Доля увиденных достижимых исходов правил, процентов.
+  percent: z.number().min(0).max(100).optional(),
+  // Строки атласа и сколько из них затронуто сценариями.
+  rows_total: z.number().int().min(0).optional(),
+  rows_touched: z.number().int().min(0).optional(),
+  // До десяти строк, которые закрывают больше всего недостающих исходов.
+  uncovered_rows: z.array(UncoveredRowSchema).max(10).optional(),
+  rules_omitted: z.number().int().min(0).optional(),
+  // Атлас слишком большой: универсум правил приближённый, цифры это нижняя граница.
+  approximate: z.boolean().optional(),
 });
 
 export const OutcomeFindingSchema = z.strictObject({
   rule_id: z.string().min(1).max(64),
   severity: z.enum(["error", "warning", "info"]),
   message: z.string(),
+  // Как исправить.
+  hint: z.string().nullish(),
   file: z.string().nullable(),
   pointer: z.string().nullable(),
   line: z.number().int().nullable(),
@@ -576,6 +598,12 @@ export const PackOutcomeLintSchema = z.strictObject({
   warnings: z.number().int().min(0),
   findings: z.array(OutcomeFindingSchema),
   coverage: OutcomeCoverageSchema,
+  infos: z.number().int().min(0).optional(),
+  // Правила Jinja запускались (`ran`), не запускались (`not_run`) или их просили не на рабочем дереве.
+  jinja: z.enum(["not_run", "ran", "unavailable"]).optional(),
+  // Таблица исходов больше предела: остались статические правила.
+  atlas_skipped: z.boolean().optional(),
+  elapsed_ms: z.number().int().min(0).optional(),
 });
 
 // ── Изменения, прогон сценариев, сравнения, матрица ──────────────────────────

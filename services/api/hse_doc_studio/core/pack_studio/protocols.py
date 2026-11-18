@@ -37,6 +37,7 @@ from hse_doc_studio.core.pack_studio.git_flow import (
     WorkGitStatus,
 )
 from hse_doc_studio.core.pack_studio.model import FileChange, LibraryDocument, ModelAction, VersionModel
+from hse_doc_studio.core.pack_studio.outcome.lint import LintFinding
 from hse_doc_studio.core.pack_studio.paths import VersionRef
 from hse_doc_studio.core.pack_studio.places import PlaceOp, VersionPlaces
 from hse_doc_studio.core.pack_studio.preview import (
@@ -530,6 +531,13 @@ class IPackPreviewRenderer(Protocol):
     async def materialize(
         self, root: Path, ref: VersionRef, request: MaterializeRequest, dest: Path
     ) -> MaterializedDoc: ...
+
+
+class IPackJinjaProbe(Protocol):
+    """Правила линтера результата по файлам шаблонов (`jinja-fail-open`, `jinja-unknown-meta-key`): рендер шаблонов
+    рабочего дерева в отдельном процессе с пределами времени и памяти. Сбой процесса это `PreviewRenderError`."""
+
+    async def probe(self, root: Path, ref: VersionRef, today: date) -> tuple[LintFinding, ...]: ...
 
 
 @dataclass(frozen=True)

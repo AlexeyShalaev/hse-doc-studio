@@ -30,6 +30,7 @@ from hse_doc_studio.core.pack_studio.official import official_repo as make_offic
 from hse_doc_studio.core.pack_studio.protocols import (
     IPackChecker,
     IPackHosting,
+    IPackJinjaProbe,
     IPackPreviewRenderer,
     IPackScaffolder,
     IPackStudioSectionStore,
@@ -57,6 +58,7 @@ from hse_doc_studio.infra.pack_studio.checks_form import PackChecksFormEditor
 from hse_doc_studio.infra.pack_studio.hosting import HttpPackHosting
 from hse_doc_studio.infra.pack_studio.inspector import PackInspector
 from hse_doc_studio.infra.pack_studio.local_store import JsonPackWorkspaceRepository, LocalSectionStore
+from hse_doc_studio.infra.pack_studio.outcome_lint_files import JinjaProbeLimits, PackJinjaProbe
 from hse_doc_studio.infra.pack_studio.places import PackPlacesEditor
 from hse_doc_studio.infra.pack_studio.plumbing import PackGitPlumbing
 from hse_doc_studio.infra.pack_studio.preview_dispatch import PreviewJobDispatcher
@@ -83,6 +85,7 @@ from hse_doc_studio.use_cases.pack_studio.model import PackModelService
 from hse_doc_studio.use_cases.pack_studio.official import OfficialPacks
 from hse_doc_studio.use_cases.pack_studio.outcome_atlas import PackAtlasService
 from hse_doc_studio.use_cases.pack_studio.outcome_compare import PackCompareService
+from hse_doc_studio.use_cases.pack_studio.outcome_lint import PackOutcomeLintService
 from hse_doc_studio.use_cases.pack_studio.outcome_service import OutcomeLimits, PackOutcomeService
 from hse_doc_studio.use_cases.pack_studio.places import PackPlacesService
 from hse_doc_studio.use_cases.pack_studio.preview import PackPreviewService, PreviewLimits
@@ -256,8 +259,10 @@ class PackStudioProvider(Provider):
         return PackFilesService(workspaces, files, PackYamlEditor())
 
     @provide
-    def get_insight_service(self, workspaces: PackWorkspaceService) -> PackInsightService:
-        return PackInsightService(workspaces, PackInspector())
+    def get_insight_service(
+        self, workspaces: PackWorkspaceService, outcome_lint: PackOutcomeLintService
+    ) -> PackInsightService:
+        return PackInsightService(workspaces, PackInspector(), outcome_lint)
 
     @provide
     def get_pack_versions(self) -> IPackVersions:
@@ -359,13 +364,31 @@ class PackStudioProvider(Provider):
         files: PackFilesService,
         workspaces: PackWorkspaceService,
         port: IPackWorkspaceFiles,
+        lint: PackOutcomeLintService,
     ) -> PackScenarioService:
-        return PackScenarioService(outcome, files, workspaces, port)
+        return PackScenarioService(outcome, files, workspaces, port, lint=lint)
 
     @provide
     def get_atlas_service(self, outcome: PackOutcomeService) -> PackAtlasService:
         # Один на процесс: держит кэш атласов, семафор расчётов и общие расчёты одинаковых запросов.
         return PackAtlasService(outcome)
+
+    @provide
+    def get_jinja_probe(self) -> IPackJinjaProbe:
+        cfg = settings.pack_studio
+        limits = JinjaProbeLimits(
+            timeout_s=cfg.preview_render_timeout_s,
+            memory_bytes=cfg.preview_render_memory_bytes,
+            stage=StageLimits(max_bytes=cfg.max_tree_bytes, max_files=cfg.max_tree_files),
+        )
+        return PackJinjaProbe(previews_root() / "tmp", limits)
+
+    @provide
+    def get_outcome_lint_service(
+        self, outcome: PackOutcomeService, workspaces: PackWorkspaceService, probe: IPackJinjaProbe
+    ) -> PackOutcomeLintService:
+        # Один на процесс: держит кэш находок, универсум правил, семафор расчётов и общие расчёты одинаковых запросов.
+        return PackOutcomeLintService(outcome, workspaces, probe)
 
     @provide
     def get_compare_service(self, outcome: PackOutcomeService, atlas: PackAtlasService) -> PackCompareService:

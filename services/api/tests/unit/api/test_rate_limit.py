@@ -157,6 +157,16 @@ def test__pack_outcome_routes__share_one_rule_of_20_per_second() -> None:
     assert RULES["pack_outcome"] is PACK_OUTCOME
 
 
+def test__pack_outcome_lint_route__has_its_own_rule_of_6_per_minute() -> None:
+    from hse_doc_studio.core.rate_limit import PACK_OUTCOME_LINT  # noqa: PLC0415
+
+    base = "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/outcome"
+
+    assert EXPENSIVE_ROUTES[("GET", f"{base}/lint")] is PACK_OUTCOME_LINT
+    assert (PACK_OUTCOME_LINT.limit, PACK_OUTCOME_LINT.window_s) == (6, 60)
+    assert RULES["pack_outcome_lint"] is PACK_OUTCOME_LINT
+
+
 def test__outcome_compare_routes__compare_follows_the_calculation_rule_impact_and_matrix_the_heavy_one() -> None:
     base = "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/outcome"
 

@@ -4,7 +4,9 @@
 * `check`: lint, неизменность выпущенных версий (`releases check`), схемы манифестов (`contracts/pack`), отчёт
   классификатора для версий, которые сверяются с предыдущей выпущенной, и при `--base` сверка реестра выпусков с
   базовой веткой (4.5); в CLI ещё разбор лоадером этой Студии (`load`, срез T18): пак, шаблон или версия, которые
-  каталог не покажет, это ошибка, пропущенные лоадером куски манифеста предупреждения.
+  каталог не покажет, это ошибка, пропущенные лоадером куски манифеста предупреждения; и проверки результата
+  (`outcome_check.py`, срез O8): формат файлов сценариев (ошибка), линтер результата и прогон сценариев (предупреждения,
+  ошибки только у правил-ошибок невыпущенных версий).
 
 Ошибка схемы в выпущенной версии это предупреждение: её каталог неизменен, исправляется новой версией. Выпущенной
 считается версия из `releases.yaml` базовой ветки (с `--base`) или рабочего дерева (без него).
@@ -30,6 +32,7 @@ from hse_doc_studio.infra.pack_studio.layout import (
     PackTree,
     template_of,
 )
+from hse_doc_studio.infra.pack_studio.outcome_check import ScenarioSummary, check_outcome
 from hse_doc_studio.infra.template.pack_lint import class_base, lint_version_dir
 from hse_doc_studio.infra.template.releases import RELEASES_FILE, ReleaseEntry, check_template, load_releases
 from hse_doc_studio.infra.template.yaml_template_repository import (
@@ -39,7 +42,7 @@ from hse_doc_studio.infra.template.yaml_template_repository import (
 )
 
 Severity = Literal["error", "warning"]
-CheckName = Literal["lint", "releases", "schema", "base", "load"]
+CheckName = Literal["lint", "releases", "schema", "base", "load", "outcome", "scenario"]
 
 
 @dataclass(frozen=True)
@@ -79,6 +82,8 @@ class CheckResult:
     tree: PackTree
     findings: list[Finding] = field(default_factory=list)
     classes: list[VersionClass] = field(default_factory=list)
+    # Прогон сценариев и покрытие правил по шаблонам (`check_tree(load=True)`).
+    scenarios: list[ScenarioSummary] = field(default_factory=list)
 
     @property
     def errors(self) -> int:
@@ -106,6 +111,7 @@ class CheckResult:
             },
             "findings": [f.to_dict() for f in self.findings],
             "classes": [c.to_dict() for c in self.classes],
+            "scenarios": [s.to_dict() for s in self.scenarios],
         }
 
 
@@ -299,4 +305,9 @@ def check_tree(tree: PackTree, base: BaseReleases | None = None, *, load: bool =
         _check_version(result, version_dir, released)
     if load:
         _load_check(result, tree, released)
+        outcome = check_outcome(tree, released.of)
+        result.findings.extend(
+            Finding(sev, check, str(path), message) for sev, check, path, message in outcome.findings
+        )
+        result.scenarios.extend(outcome.summaries)
     return result

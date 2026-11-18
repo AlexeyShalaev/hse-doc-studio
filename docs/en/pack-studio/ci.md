@@ -29,7 +29,7 @@ docker run --rm -v "$PWD:/repo" -w /repo ghcr.io/alexeyshalaev/hse-doc-studio:<v
 
 ## CI for your packs repository { #ci }
 
-The check for every PR is `hse-doc-studio pack check <packs folder> --base <base branch>`: the linter, immutability of released versions, manifest schemas, the class of unreleased versions. With `--base` the released versions are those in `releases.yaml` of the base branch: a PR can neither remove nor recompute their entries. Run it in the Studio image of the version your authors use. No TeX and no secrets are needed.
+The check for every PR is `hse-doc-studio pack check <packs folder> --base <base branch>`: the linter, immutability of released versions, manifest schemas, the class of unreleased versions, the scenario files and the outcome linter. The job prints a failed scenario and warning findings and does not fail on them; it fails on errors (including a format violation of a scenario file). With `--base` the released versions are those in `releases.yaml` of the base branch: a PR can neither remove nor recompute their entries. Run it in the Studio image of the version your authors use. No TeX and no secrets are needed.
 
 `hse-doc-studio pack ci init` in the root of the packs repository puts a ready CI file there: `--provider github` (default) writes `.github/workflows/hse-packs.yml`, `--provider gitlab` writes `.gitlab-ci.yml`. The job runs `pack check` in the Studio image of the same version as the command, against the base branch on PRs and MRs. Options and details: [Packs and templates, CI for a packs repository](../reference/pack.md#pack-ci). After a Studio update run the command again with `--force` so that CI takes the new image.
 

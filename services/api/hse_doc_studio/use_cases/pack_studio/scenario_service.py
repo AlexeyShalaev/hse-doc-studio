@@ -22,12 +22,13 @@ import asyncio
 import hashlib
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
-from typing import Any
+from typing import Any, Protocol
 from uuid import UUID
 
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.file_version import file_etag
 from hse_doc_studio.core.pack_studio.errors import PackStudioError, PackStudioErrorCode
+from hse_doc_studio.core.pack_studio.outcome.coverage import RuleUniverse
 from hse_doc_studio.core.pack_studio.outcome.model import Digest
 from hse_doc_studio.core.pack_studio.outcome.payload import to_json
 from hse_doc_studio.core.pack_studio.outcome.scenarios import (
@@ -57,10 +58,17 @@ from hse_doc_studio.use_cases.pack_studio.outcome_service import (
     OutcomeReply,
     OutcomeState,
     PackOutcomeService,
+    ScenarioContext,
 )
 from hse_doc_studio.use_cases.pack_studio.workspaces import PackWorkspaceService
 
 _RUN_CACHE_ENTRIES = 64
+
+
+class UniverseSource(Protocol):
+    """Универсум правил версии по строкам атласа для покрытия прогона (`PackOutcomeLintService`)."""
+
+    async def universe(self, ctx: ScenarioContext) -> RuleUniverse: ...
 
 
 @dataclass(frozen=True)
@@ -158,7 +166,9 @@ class PackScenarioService:
         port: IPackWorkspaceFiles,
         *,
         cache_entries: int = _RUN_CACHE_ENTRIES,
+        lint: UniverseSource | None = None,
     ) -> None:
+        self._lint = lint
         self._outcome = outcome
         self._files = files
         self._workspaces = workspaces
@@ -267,7 +277,9 @@ class PackScenarioService:
             return OutcomeReply(etag, cached)
         parsed = parse_scenario_files(pack, template, files, selected)
         model, examples, today = ctx.source.desc.version, ctx.examples, ctx.today
-        run = await self._outcome.compute(lambda: run_scenarios(model, examples, parsed, today))
+        # Покрытие по строкам атласа: универсум правил считает и кэширует служба линтера (дольше самого прогона).
+        universe = await self._lint.universe(ctx) if self._lint is not None else None
+        run = await self._outcome.compute(lambda: run_scenarios(model, examples, parsed, today, universe=universe))
         body: dict[str, Any] = {
             "workspace_id": str(ctx.ws.id),
             "pack": ctx.ref.pack,

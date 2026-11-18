@@ -222,6 +222,22 @@ def parse_scenario(text: str) -> Scenario:
     return scenario_from_data(data)
 
 
+def parse_scenario_files(files: Mapping[str, bytes]) -> dict[str, Scenario | str]:
+    """Файлы папки сценариев (имя файла -> содержимое) в разобранные сценарии по id; значение `str` это ошибка файла.
+    Файлы не `*.yaml` сценарием не считаются, не больше `MAX_SCENARIOS` по порядку имён."""
+    parsed: dict[str, Scenario | str] = {}
+    for name in sorted(n for n in files if n.endswith(SCENARIO_SUFFIX))[:MAX_SCENARIOS]:
+        stem = name.removesuffix(SCENARIO_SUFFIX)
+        try:
+            check_scenario_id(stem)
+            parsed[stem] = parse_scenario(files[name].decode("utf-8"))
+        except ScenarioError as exc:
+            parsed[stem] = exc.reason
+        except UnicodeDecodeError:
+            parsed[stem] = "the file is not UTF-8"
+    return parsed
+
+
 def scenario_from_data(data: Data) -> Scenario:
     """Сценарий из словаря: из разобранного YAML или тела запроса (там пустые ключи могут быть `None`)."""
     _only(data, ("format", "name", "description", "example", "inputs", "versions", "snapshot", "assertions"), "")
@@ -580,6 +596,7 @@ __all__ = [
     "check_scenario_id",
     "is_scenario_id",
     "parse_scenario",
+    "parse_scenario_files",
     "scenario_file_name",
     "scenario_from_data",
     "scenario_id_of",

@@ -1,4 +1,5 @@
-"""Результат версии шаблона через MCP: `pack_outcome_inputs` и `pack_outcome` (template-studio-outcome.md, 4.7, O3).
+"""Результат версии шаблона через MCP: `pack_outcome_inputs`, `pack_outcome` (template-studio-outcome.md, 4.7, O3) и
+`pack_outcome_lint` (линтер результата и покрытие правил сценариями, O8).
 
 Тулы зовут ту же службу `PackOutcomeService`, что эндпоинты `outcome/inputs` и `outcome`, с теми же проверками:
 раздел включён, право «Автор шаблонов», область токена `packs` (`PackTool.handle`), пространство только своё. Частота
@@ -13,7 +14,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Final
+from typing import Any, Final
 
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.agent.entities import ToolResult, ToolSpec
@@ -39,6 +40,7 @@ from hse_doc_studio.use_cases.mcp.tools.packs import (
     refusal,
     version_arg,
 )
+from hse_doc_studio.use_cases.pack_studio.outcome_lint import PackOutcomeLintService
 from hse_doc_studio.use_cases.pack_studio.outcome_service import OutcomeRequest, OutcomeState, PackOutcomeService
 
 # Пределы вводных те же, что у запроса эндпоинта (`PackOutcomeRequest`): 64 ключа, значение до 128 знаков.
@@ -362,3 +364,127 @@ class PackOutcomeTool(PackTool):
         if layout == "json":
             return ToolResult.ok(dump(view.data), truncated=view.truncated)
         return ToolResult.ok(dump({"text": view.text, "data": view.data}), truncated=view.truncated)
+
+
+_SEVERITIES: Final = ("error", "warning", "info")
+_MAX_FINDINGS: Final = 40
+_MAX_UNCOVERED: Final = 8
+
+
+def _finding_lines(item: Mapping[str, Any]) -> list[str]:
+    where = f" {item['file']}" + (f":{item['line']}" if item.get("line") else "") if item.get("file") else ""
+    pointer = f" ({item['pointer']})" if item.get("pointer") else ""
+    lines = [f"- [{item['severity']}] {item['rule_id']}{where}{pointer}: {item['message']}"]
+    if item.get("hint"):
+        lines.append(f"    как исправить: {item['hint']}")
+    if item.get("witnesses"):
+        sample = ", ".join(f"{k}={v}" for k, v in item["witnesses"][0].items())
+        lines.append(f"    комбинация: {sample}")
+    return lines
+
+
+def _coverage_lines(cover: Mapping[str, Any]) -> list[str]:
+    summary = (
+        f"Покрытие правил сценариями: {cover.get('percent', 0)}% исходов "
+        f"(правил {cover['rules_total']}: полностью {cover['rules_covered']}, наполовину {cover['rules_half']}, "
+        f"не покрыто {cover['rules_uncovered']}); сценариев {cover['scenarios']}, комбинаций затронуто "
+        f"{cover.get('rows_touched', 0)} из {cover.get('rows_total', 0)}."
+    )
+    lines = [summary]
+    if cover.get("approximate"):
+        lines.append("  Атлас слишком большой: цифры приближённые (нижняя граница).")
+    rows = cover.get("uncovered_rows") or []
+    if rows:
+        lines.append("Чем закрыть пробелы (комбинации по убыванию пользы):")
+        for row in rows[:_MAX_UNCOVERED]:
+            sample = ", ".join(f"{k}={v}" for k, v in row["inputs"].items())
+            lines.append(f"  +{row['gain']} исходов: {sample}")
+    return lines
+
+
+def lint_text(body: Mapping[str, Any], severity: str, limit: int) -> tuple[str, bool]:
+    """Текстовый вид ответа линтера: сводка, находки не мягче `severity` и покрытие; `True`, если находки обрезаны."""
+    order = {name: index for index, name in enumerate(_SEVERITIES)}
+    shown = [f for f in body["findings"] if order[f["severity"]] <= order[severity]]
+    header = (
+        f"Линтер результата {body['pack']}/{body['template']}/{body['version']} ({body['state']}): "
+        f"ошибок {body['errors']}, предупреждений {body['warnings']}, информации {body.get('infos', 0)}."
+    )
+    lines = [header]
+    if body.get("atlas_skipped"):
+        lines.append("Таблица исходов слишком большая: только статические правила.")
+    if body.get("jinja") == "unavailable":
+        lines.append("Правила Jinja только на рабочем дереве (state=work_tree).")
+    for item in shown[:limit]:
+        lines.extend(_finding_lines(item))
+    if not shown:
+        lines.append("Находок нет.")
+    lines.extend(_coverage_lines(body["coverage"]))
+    return "\n".join(lines), len(shown) > limit
+
+
+class PackOutcomeLintTool(PackTool):
+    spec = ToolSpec(
+        name="pack_outcome_lint",
+        description=(
+            "Студия шаблонов: линтер результата версии. Находит в манифесте слоты, которые не попадают в маршрут, "
+            "шаги маршрута без человека, условия visible_if и when, которые не выполнятся никогда, обязательные, но "
+            "скрытые поля, документы и пункты, которых не бывает, недостающие переводы, зашитые правила движка, не "
+            "согласованные с манифестом, и (jinja: true, рабочее дерево) шаблоны Jinja, которые падают при рендере и "
+            "молча копируются как есть. У каждой находки файл, указатель, строка и подсказка. Плюс покрытие правил "
+            "пака сценариями (процент достижимых исходов, какие правила и комбинации ничего не проверяет, какие "
+            "сценарии добавить). severity: error, warning (по умолчанию) или info. format: text (по умолчанию), "
+            "json или both. Только чтение. Пример: "
+            '{"workspace_id": "<uuid>", "version": "hse-cs-se/vkr/2026.1.2", "jinja": true}.'
+        ),
+        parameters=_schema(
+            {
+                "workspace_id": _WORKSPACE_ID,
+                "version": _VERSION,
+                "state": _STATE,
+                "jinja": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": "Добавить правила по файлам шаблонов (Jinja): дольше, только state=work_tree",
+                },
+                "severity": {"type": "string", "enum": list(_SEVERITIES), "default": "warning"},
+                "limit": {"type": "integer", "default": _MAX_FINDINGS, "description": "Находок в тексте не больше"},
+                "format": {"type": "string", "enum": ["text", "json", "both"], "default": "text"},
+            },
+            ("workspace_id", "version"),
+        ),
+    )
+    kind = ToolKind.read
+
+    async def run(self, actor: Actor, args: dict[str, object]) -> ToolResult:
+        ref = version_arg(args)
+        state = _state_arg(args)
+        severity = _choice(args, "severity", _SEVERITIES, "warning")
+        layout = _choice(args, "format", ("text", "json", "both"), "text")
+        raw_limit = args.get("limit", _MAX_FINDINGS)
+        limit = (
+            raw_limit
+            if isinstance(raw_limit, int) and not isinstance(raw_limit, bool) and raw_limit > 0
+            else _MAX_FINDINGS
+        )
+        service = await self._deps.get(PackOutcomeLintService)
+        try:
+            reply = await service.lint(
+                actor,
+                uuid_arg(args, "workspace_id"),
+                ref.pack,
+                ref.template,
+                ref.version,
+                state,
+                jinja=_flag(args, "jinja"),
+            )
+        except PackStudioError as exc:
+            return refusal(exc, hint=outcome_hint(exc))
+        if reply.body is None:
+            raise ArgumentError("empty reply")
+        text, truncated = lint_text(reply.body, severity, limit)
+        if layout == "text":
+            return ToolResult.ok(text, truncated=truncated)
+        if layout == "json":
+            return ToolResult.ok(dump(reply.body), truncated=False)
+        return ToolResult.ok(dump({"text": text, "data": reply.body}), truncated=truncated)

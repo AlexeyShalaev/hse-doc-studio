@@ -166,6 +166,7 @@
 | packs | `pack_preview_read` | R | раздел, область `packs` | новый (M26): текст PDF или журнал |
 | packs | `pack_outcome_inputs` | R | раздел, область `packs`; частота `pack_outcome` | новый (O3): вводные версии, умолчания, наборы данных |
 | packs | `pack_outcome` | R | раздел, область `packs`; частота `pack_outcome` | новый (O3): результат версии для вводных, `state`, `include`, `trace`, компактный и подробный вид |
+| packs | `pack_outcome_lint` | R | раздел, область `packs`; частота `pack_outcome_lint` | новый (O8): находки линтера результата, `jinja`, покрытие правил сценариями |
 | packs | `pack_set_placement` | W | раздел, область `packs` | новый (M26) |
 | packs | `pack_new_version` | W | раздел, область `packs` | новый (M26) |
 | packs | `pack_version_notes` | W | раздел, область `packs` | новый (M26) |

@@ -313,6 +313,8 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("PUT", "/pack-studio/workspaces/{workspace_id}/templates/{pack}/{template}/scenarios/{scenario_id}"): _A,
     ("DELETE", "/pack-studio/workspaces/{workspace_id}/templates/{pack}/{template}/scenarios/{scenario_id}"): _A,
     ("POST", "/pack-studio/workspaces/{workspace_id}/templates/{pack}/{template}/scenarios/run"): _A,
+    # Срез O8: линтер результата и покрытие правил сценариями (только чтение)
+    ("GET", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/outcome/lint"): _A,
     # Срез O5: «Почему?» одного элемента результата (только чтение)
     ("POST", "/pack-studio/workspaces/{workspace_id}/versions/{pack}/{template}/{version}/outcome/explain"): _A,
     # Срез O7: сравнение двух сторон, «до и после» и матрица сценариев (только чтение)

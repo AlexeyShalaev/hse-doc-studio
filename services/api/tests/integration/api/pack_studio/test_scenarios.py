@@ -1030,6 +1030,9 @@ async def test__run__over_the_time_limit__503_outcome_busy_and_nothing_is_cached
     ws = await folder_with_real_packs(stand)
     await _seed(stand, ws)
     await get_inputs(stand, ws, VKR)  # разбор версии в отдельном процессе не входит в предел расчёта
+    # Универсум покрытия (строки атласа) считает служба линтера под своим сроком и кэширует: прогреваем его, чтобы
+    # проверить предел расчёта самого прогона.
+    assert (await stand.client.get(outcome_url(ws, VKR, "/lint"))).status_code == 200
     monkeypatch.setattr(service, "_limits", replace(service._limits, timeout_s=0.1))
     started = time.perf_counter()
 

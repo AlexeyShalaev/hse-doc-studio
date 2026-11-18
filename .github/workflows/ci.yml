@@ -81,8 +81,15 @@ jobs:
               - "services/api/hse_doc_studio/cli_pack.py"
               - "services/api/hse_doc_studio/infra/pack_studio/**"
               - "services/api/hse_doc_studio/infra/template/**"
+              - "services/api/hse_doc_studio/infra/project_init/**"
               - "services/api/hse_doc_studio/core/template_diff.py"
               - "services/api/hse_doc_studio/core/template_versions.py"
+              # Линтер результата и прогон сценариев в `pack check` (O8): ядро результата, предикаты и маршрут.
+              - "services/api/hse_doc_studio/core/pack_studio/**"
+              - "services/api/hse_doc_studio/core/signing_route/**"
+              - "services/api/hse_doc_studio/core/catalog.py"
+              - "services/api/hse_doc_studio/core/team.py"
+              - "services/api/hse_doc_studio/use_cases/pack_studio/**"
             # Справка сверяется с маршрутами приложения, а verified.sources статей могут указывать на любой файл
             # репозитория: удаление или переименование где угодно тоже повод для проверки (переименование
             # paths-filter отдаёт как удаление старого пути).
@@ -412,7 +419,9 @@ jobs:
   # ── Паки ─────────────────────────────────────────────────────────────────
   # Быстрый ответ на правку паков (template-studio.md, 4.4, срез T18): `hse-doc-studio pack check` без extras, Postgres
   # и TeX, минута вместо полного бэкенда. Lint всех версий, `releases check` (дайджест каталога выпущенной версии
-  # совпадает с releases.yaml), схемы манифестов, класс невыпущенных версий, разбор лоадером Студии и на PR сверка
+  # совпадает с releases.yaml), схемы манифестов, класс невыпущенных версий, разбор лоадером Студии, файлы сценариев и
+  # линтер результата (срез O8: нарушение формата сценария это ошибка, упавший сценарий и находки-предупреждения
+  # джоб печатает и не падает), и на PR сверка
   # реестров выпусков с базовой веткой: запись выпущенной версии нельзя ни убрать, ни пересчитать. Полный бэкенд на
   # правку паков всё равно идёт (снимки рендера и пресеты подписей читают настоящие паки), этот джоб не ждёт его lint.
 
