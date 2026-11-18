@@ -47,7 +47,6 @@ def _rules(body: PackOutcomeLintResponse) -> dict[str, int]:
     return counts
 
 
-@pytest.mark.timeout(120)
 async def test__vkr__known_findings_coverage_and_the_strict_model(stand: Stand) -> None:
     ws = await folder_with_real_packs(stand)
 
@@ -70,7 +69,6 @@ async def test__vkr__known_findings_coverage_and_the_strict_model(stand: Stand) 
     assert resp.headers["ETag"].startswith('"')
 
 
-@pytest.mark.timeout(120)
 async def test__coursework__scenarios_of_the_template_give_the_coverage(stand: Stand) -> None:
     ws = await folder_with_real_packs(stand)
     # В копии паков сценариев ещё нет: кладём один через запись сценария, как это делает экран.
@@ -97,7 +95,6 @@ async def test__coursework__scenarios_of_the_template_give_the_coverage(stand: S
     assert all(set(r.witness) == {"supervisor", "co_supervisor", "academic_supervisor"} for r in partial)
 
 
-@pytest.mark.timeout(120)
 async def test__etag__if_none_match_answers_304_and_jinja_has_its_own_etag(stand: Stand) -> None:
     ws = await folder_with_real_packs(stand)
     first = await _lint(stand, ws, COURSEWORK)
@@ -113,7 +110,6 @@ async def test__etag__if_none_match_answers_304_and_jinja_has_its_own_etag(stand
     assert _parse(jinja).jinja == "ran"
 
 
-@pytest.mark.timeout(120)
 async def test__scenario_edit__changes_the_etag_and_the_coverage(stand: Stand) -> None:
     ws = await folder_with_real_packs(stand)
     before = await _lint(stand, ws, COURSEWORK)
@@ -128,7 +124,6 @@ async def test__scenario_edit__changes_the_etag_and_the_coverage(stand: Stand) -
     assert _parse(after).coverage.scenarios == 1
 
 
-@pytest.mark.timeout(120)
 async def test__draft__an_unsaved_edit_adds_a_finding_and_changes_the_etag(stand: Stand) -> None:
     ws, _ = await folder_with_draft(stand)
     clean = await _lint(stand, ws, DRAFT_VKR)
@@ -149,7 +144,6 @@ async def test__draft__an_unsaved_edit_adds_a_finding_and_changes_the_etag(stand
     assert {"required-hidden", "field-never-visible"} & set(_rules(body))
 
 
-@pytest.mark.timeout(120)
 async def test__draft__a_langs_edit_is_seen_by_the_translation_rule(stand: Stand) -> None:
     ws, _ = await folder_with_draft(stand)
 
@@ -190,7 +184,6 @@ async def test__jinja__on_real_packs_the_button_finds_nothing(stand: Stand) -> N
     assert not [f for f in body.findings if f.rule_id.startswith("jinja-")]
 
 
-@pytest.mark.timeout(120)
 async def test__lint_endpoint__static_outcome_findings_join_the_problems_panel(stand: Stand) -> None:
     ws, _ = await folder_with_draft(stand)
     await edit_manifest(stand, ws, _VISIBLE_IF, 'equals: "maybe"')
@@ -214,7 +207,6 @@ async def test__lint_endpoint__static_outcome_findings_join_the_problems_panel(s
     assert report["errors"] >= 1
 
 
-@pytest.mark.timeout(120)
 async def test__lint_endpoint__released_version_outcome_errors_are_warnings(stand: Stand) -> None:
     ws = await folder_with_real_packs(stand)
 
@@ -228,7 +220,6 @@ async def test__lint_endpoint__released_version_outcome_errors_are_warnings(stan
     assert {f["severity"] for f in outcome} == {"warning"}
 
 
-@pytest.mark.timeout(120)
 async def test__errors__missing_version_head_without_git_and_a_closed_section(stand: Stand) -> None:
     ws = await folder_with_real_packs(stand)
 
@@ -245,7 +236,6 @@ async def test__errors__missing_version_head_without_git_and_a_closed_section(st
     assert (closed.status_code, closed.json()["code"]) == (404, "pack_studio_disabled")
 
 
-@pytest.mark.timeout(120)
 async def test__jinja_on_a_non_work_tree_state_is_unavailable_and_not_an_error(stand: Stand) -> None:
     from .test_outcome_git import _ready  # noqa: PLC0415
 
@@ -258,7 +248,6 @@ async def test__jinja_on_a_non_work_tree_state_is_unavailable_and_not_an_error(s
     assert head.coverage.rows_total == 12
 
 
-@pytest.mark.timeout(120)
 async def test__rate__seventh_request_in_a_minute_is_refused_with_retry_after(stand: Stand) -> None:
     ws = await folder_with_real_packs(stand)
     app = stand.client._transport.app  # type: ignore[attr-defined]

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import sys
 import tarfile
 import zipfile
 from pathlib import Path
@@ -59,12 +60,42 @@ def test__zip__extracts_regular_files(tmp_path: Path) -> None:
     assert packs_root(tmp_path / "out", ".") == tmp_path / "out" / "repo-main" / "packs"
 
 
-@pytest.mark.parametrize("name", ["../evil.txt", "/abs.txt", "a/../../b", "c:/x", "a\\b"])
+@pytest.mark.parametrize(
+    "name",
+    ["../evil.txt", "/abs.txt", "a/../../b", "c:/x", "..\\evil.txt", "a\\..\\..\\b", "\\abs.txt", "c:\\x"],
+)
 def test__zip__path_traversal_is_refused(tmp_path: Path, name: str) -> None:
     archive = _zip(tmp_path / "a.zip", {name: b"x", "ok.txt": b"y"})
 
     with pytest.raises(CatalogError) as exc:
         extract_zip(archive, tmp_path / "out", LIMITS)
+
+    assert _code(exc) is CatalogErrorCode.archive_unsafe
+    assert not (tmp_path / "out" / "ok.txt").exists()
+
+
+@pytest.mark.skipif(
+    sys.platform == "win32",
+    reason=(
+        "zipfile на Windows читает `\\` как `/`: имя `a\\b` неотличимо от вложенного `a/b`, "
+        "а выходы за папку остаются `..` и отвергаются"
+    ),
+)
+def test__zip__backslash_in_a_name_is_refused_on_posix(tmp_path: Path) -> None:
+    archive = _zip(tmp_path / "a.zip", {"a\\b": b"x"})
+
+    with pytest.raises(CatalogError) as exc:
+        extract_zip(archive, tmp_path / "out", LIMITS)
+
+    assert _code(exc) is CatalogErrorCode.archive_unsafe
+
+
+@pytest.mark.parametrize("name", ["../evil.txt", "/abs.txt", "..\\evil.txt", "a\\b", "c:\\x"])
+def test__tar__path_traversal_and_backslashes_are_refused(tmp_path: Path, name: str) -> None:
+    archive = _tar(tmp_path / "a.tgz", {name: b"x", "ok.txt": b"y"})
+
+    with pytest.raises(CatalogError) as exc:
+        extract_tar(archive, tmp_path / "out", LIMITS)
 
     assert _code(exc) is CatalogErrorCode.archive_unsafe
     assert not (tmp_path / "out" / "ok.txt").exists()
