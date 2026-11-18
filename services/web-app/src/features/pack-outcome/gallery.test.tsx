@@ -73,6 +73,16 @@ describe("галерея экрана «Результат»", () => {
         "po_mode_compare",
         "po_mode_compare_identical",
         "po_mode_compare_no_base",
+        "po_lint",
+        "po_lint_vkr",
+        "po_lint_empty",
+        "po_lint_skipped",
+        "po_lint_released",
+        "po_lint_loading",
+        "po_lint_busy",
+        "po_lint_rate_limited",
+        "po_lint_unreadable",
+        "po_phone_lint",
         "po_student",
         "po_student_no_supervisor",
         "po_student_team",
@@ -135,6 +145,7 @@ describe("галерея экрана «Результат»", () => {
         "po_phone_matrix",
         "po_phone_atlas",
         "po_phone_compare",
+        "po_phone_lint",
         "po_phone_preview",
       ]);
       for (const entry of phoneEntries) {
@@ -392,6 +403,15 @@ describe("галерея «Почему?»", () => {
     ["po_mode_compare_identical", "outcome-compare-identical"],
     ["po_mode_compare_no_base", "outcome-mode-no-base"],
     ["po_mode_compare_loading", "outcome-compare-loading"],
+    ["po_lint", "outcome-lint-coverage"],
+    ["po_lint_vkr", "outcome-lint-groups"],
+    ["po_lint_empty", "outcome-lint-empty"],
+    ["po_lint_skipped", "outcome-lint-atlas-skipped"],
+    ["po_lint_released", "outcome-lint-released"],
+    ["po_lint_loading", "outcome-lint-loading"],
+    ["po_lint_busy", "outcome-mode-busy"],
+    ["po_lint_rate_limited", "outcome-mode-rate-limited"],
+    ["po_lint_unreadable", "outcome-mode-unreadable"],
   ])("режим «%s» рисуется из кэша без сервера", async (id, testId) => {
     await i18n.changeLanguage("ru");
     const entry = getPackOutcomeGallery()

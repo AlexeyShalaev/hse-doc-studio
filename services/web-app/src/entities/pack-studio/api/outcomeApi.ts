@@ -7,6 +7,7 @@ import {
   PackOutcomeExplainSchema,
   PackOutcomeImpactSchema,
   PackOutcomeInputsSchema,
+  PackOutcomeLintSchema,
   PackOutcomeMatrixSchema,
   PackOutcomeSchema,
   PackScenarioEntrySchema,
@@ -22,6 +23,7 @@ import {
   type PackOutcomeImpact,
   type PackOutcomeImpactRequest,
   type PackOutcomeInputs,
+  type PackOutcomeLint,
   type PackOutcomeMatrix,
   type PackOutcomeMatrixRequest,
   type PackOutcomeRequest,
@@ -74,6 +76,20 @@ export type PackOutcomeAtlasRequest = {
   scenario?: string | null;
   /** Закреплённые вводные (вводная, значение): режут таблицу, измерение остаётся с одним значением. */
   pin?: Record<string, string>;
+};
+
+/** Запрос линтера результата: источник и проверка Jinja-шаблонов (только рабочее дерево, дольше). */
+export type PackOutcomeLintRequest = {
+  state?: OutcomeState;
+  jinja?: boolean;
+};
+
+/** Адрес линтера: `jinja=true` ставится только когда Jinja просят. */
+export const lintQuery = (request: PackOutcomeLintRequest): string => {
+  const params = new URLSearchParams();
+  params.set("state", request.state ?? "work_tree");
+  if (request.jinja) params.set("jinja", "true");
+  return params.toString();
 };
 
 /** Адрес атласа: `pin` повторяемый (`pin=kind:research&pin=staffing:team`), в порядке имён. */
@@ -253,6 +269,25 @@ export const packOutcomeApi = {
         conditional(known, signal),
       )
       .then((response) => settle(PackOutcomeAtlasSchema, known, response)),
+  /**
+   * Линтер результата: находки по правилам версии и атласа, покрытие правил сценариями.
+   * `jinja: true` добавляет рендер шаблонов (рабочее дерево, дольше, лимит 6 в минуту).
+   * Отказы: `outcome_busy` 503, `rate_limited` 429 (`retry_after`), `version_unreadable`,
+   * `diff_base_unavailable` (состояние `base` без базы).
+   */
+  lint: (
+    id: string,
+    ref: PackVersionRef,
+    request: PackOutcomeLintRequest,
+    known?: OutcomeReply<PackOutcomeLint> | null,
+    signal?: AbortSignal,
+  ): Promise<OutcomeReply<PackOutcomeLint>> =>
+    apiClient
+      .get(
+        `${outcomeBase(id, ref)}/lint?${lintQuery(request)}`,
+        conditional(known, signal),
+      )
+      .then((response) => settle(PackOutcomeLintSchema, known, response)),
   /**
    * Сравнение двух сторон (состояние, сценарий, набор данных, вводные): изменения `+`, `~`, `-` по
    * разделам с причинами `why`. Отказы: `diff_base_unavailable` 409 (`reason`), `inputs_invalid`.

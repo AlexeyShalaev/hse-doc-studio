@@ -628,6 +628,13 @@ const ImpactResult = ({
           data-testid="impact-findings"
         >
           <h5 className="imp-section-title">{t("impact.findings")}</h5>
+          <Link
+            className="po-link"
+            to={packOutcomePath(workspaceId, version, "view=lint")}
+            data-testid="impact-findings-open"
+          >
+            {t("lint.brief.open")}
+          </Link>
           <ul>
             {data.new_findings.map((finding, index) => (
               <li

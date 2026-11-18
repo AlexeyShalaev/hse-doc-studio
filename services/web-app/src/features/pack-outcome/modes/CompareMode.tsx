@@ -27,7 +27,7 @@ import { useOutcomeModel } from "../model";
 import { ModeSkeleton } from "../ui/ModeSkeleton";
 import { useScenarioUi } from "../ui/scenarios/context";
 import { ChangeList } from "./ChangeList";
-import { ModeFailure } from "./ModeFailure";
+import { ModeFailure } from "../ui/ModeFailure";
 
 const STATES: readonly OutcomeState[] = ["work_tree", "head", "base"];
 const SAME = "same";

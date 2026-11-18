@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import { useScrollHint } from "@shared/lib/scrollHint";
 import { OUTCOME_VIEWS, type OutcomeView } from "../lib/urlState";
 import { useOutcomeModel } from "../model";
+import { LintBadge } from "./LintBadge";
+import { useLintCounts } from "./useLintCounts";
 import { VIEW_PANEL_ID, viewTabId } from "./modeIds";
 import "./modeTabs.css";
 
@@ -19,6 +21,7 @@ export const ModeTabs = () => {
   const current = url.state.view;
   // Не поместились (телефон, крупный текст): край затухает, выбранный режим не прячется за краем.
   const hintRef = useScrollHint(current);
+  const counts = useLintCounts();
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const at = OUTCOME_VIEWS.indexOf(
@@ -75,6 +78,9 @@ export const ModeTabs = () => {
           }}
         >
           {t(`modes.tabs.${view}`)}
+          {view === "lint" && counts && (
+            <LintBadge counts={counts} inline testId="outcome-lint-tab-badge" />
+          )}
         </button>
       ))}
     </div>

@@ -1088,7 +1088,8 @@
       "result": "Result",
       "matrix": "Matrix",
       "atlas": "Atlas",
-      "compare": "Compare"
+      "compare": "Compare",
+      "lint": "Check"
     },
     "failure": {
       "busyTitle": "The server is busy calculating",
@@ -1110,7 +1111,10 @@
       "inputsField": "Field {{field}}, value “{{value}}”.",
       "matrixFailed": "Could not build the matrix",
       "atlasFailed": "Could not build the atlas",
-      "compareFailed": "Could not compare"
+      "compareFailed": "Could not compare",
+      "lintFailed": "Could not check the pack",
+      "rateTitle": "Too many checks",
+      "rateLead": "The linter is limited to 6 requests per minute. Retry in {{seconds}} s or wait a minute."
     },
     "matrix": {
       "against": "Against",
@@ -1333,6 +1337,136 @@
       "error": "inputs error",
       "more": "and {{count}} more",
       "findings": "New result linter warnings: {{count}}"
+    }
+  },
+  "lint": {
+    "title": "Pack check",
+    "findingsTitle": "Findings",
+    "loading": "Checking the pack (a few seconds; the atlas rules take longer than the static ones)...",
+    "busyRetry": "The server is busy, retrying the check (attempt {{count}})...",
+    "rateWait": "Too many checks (limit 6 per minute). Retrying on its own in {{seconds}} s.",
+    "cancel": "Cancel",
+    "cancelledTitle": "Check cancelled",
+    "cancelledLead": "Run it again when you need it.",
+    "again": "Check",
+    "recheck": "Check again",
+    "stale": "Showing the previous check result: a new one could not be fetched.",
+    "elapsed": "The check took {{seconds}} s.",
+    "summary": "{{errors}}, {{warnings}}, {{infos}}",
+    "live": "Check finished: {{errors}}, {{warnings}}, {{infos}}.",
+    "released": "The version is released and immutable: the check is read-only, fixes go into a new version.",
+    "atlasSkippedTitle": "The pack is too large for the atlas check",
+    "atlasSkippedLead": "Rules that enumerate combinations were skipped, only the static ones ran. Pin inputs in the Atlas view so the table fits the limit.",
+    "emptyTitle": "No findings",
+    "emptyLead": "The linter found no problems in the pack rules.",
+    "noMatchTitle": "Nothing matches the filters",
+    "noMatchLead": "Relax the filters or clear the search.",
+    "severity": {
+      "error": "Error",
+      "warning": "Warning",
+      "info": "Information"
+    },
+    "group": {
+      "error": "Errors",
+      "warning": "Warnings",
+      "info": "Information",
+      "listOf": "Findings of rule {{rule}}"
+    },
+    "filters": {
+      "search": "Search findings",
+      "searchPlaceholder": "Rule, text, file, element",
+      "severity": "Level",
+      "severity_all": "All",
+      "severity_error": "Errors",
+      "severity_warning": "Warnings",
+      "severity_info": "Information",
+      "rule": "Rule",
+      "ruleAll": "All rules",
+      "selectedOnly": "Only the selected element ({{id}})",
+      "reset": "Reset filters"
+    },
+    "finding": {
+      "hint": "How to fix:",
+      "line": "line {{line}}",
+      "elements": "Affects:",
+      "witnesses": "Seen with:",
+      "openRule": "Open the rule",
+      "showCombo": "Show the combination",
+      "showInResult": "Show in the outcome",
+      "showInResultOf": "Show in the outcome: {{section}}, {{id}}",
+      "moreElements_one": "and {{count}} more",
+      "moreElements_other": "and {{count}} more"
+    },
+    "jinja": {
+      "run": "Check Jinja templates",
+      "done": "Jinja templates checked",
+      "running": "Checking Jinja templates (sandbox render, takes longer)...",
+      "lead": "Renders templates in a sandbox: slower, work tree only, at most 6 times a minute.",
+      "notWorkTree": "Jinja is only checked in the work tree.",
+      "unavailable": "Jinja templates are only checked in the work tree; the check did not run for this state."
+    },
+    "badge": {
+      "open": "Open the pack check",
+      "clean": "Pack check: no errors or warnings",
+      "spoken": "Pack check: {{errors}}, {{warnings}}"
+    },
+    "brief": {
+      "percent": "Scenario coverage {{percent}}%",
+      "approximate": "approximate",
+      "details": "Details in the check",
+      "open": "Open the pack check"
+    },
+    "rules": {
+      "title": "Pack check",
+      "count_one": "{{count}} finding for this element",
+      "count_other": "{{count}} findings for this element",
+      "open": "Open in the check",
+      "more": "and {{count}} more"
+    },
+    "coverage": {
+      "title": "Rule coverage by scenarios",
+      "percent": "{{percent}}%",
+      "percentLabel": "Rule coverage by scenarios: {{percent}}%",
+      "approximate": "Coverage is approximate: the atlas is too large, the numbers are a lower bound.",
+      "rulesLabel": "Rules by coverage",
+      "outcome": {
+        "held": "held",
+        "not_held": "not held"
+      },
+      "stateNone": "Not covered",
+      "stateHalf": "Half covered",
+      "seen": "Scenarios saw: {{outcomes}}.",
+      "seenNone": "Scenarios saw no outcome.",
+      "missing": "Missing: {{outcomes}}.",
+      "byScenarios_one": "Scenarios that read the rule: {{count}}.",
+      "byScenarios_other": "Scenarios that read the rule: {{count}}.",
+      "scenarios_one": "Scenarios: {{count}}.",
+      "scenarios_other": "Scenarios: {{count}}.",
+      "rows": "Atlas rows touched: {{touched}} of {{total}}.",
+      "rulesTitle": "Rules without full coverage",
+      "showAll": "Show all ({{count}})",
+      "omitted_one": "{{count}} more rule is not shown.",
+      "omitted_other": "{{count}} more rules are not shown.",
+      "addMany": "Add scenarios ({{count}})",
+      "addOne": "Add a scenario",
+      "addRow": "Add as a scenario",
+      "rowsLabel": "Combinations that close the most outcomes",
+      "gain_one": "Closes {{count}} rule outcome.",
+      "gain_other": "Closes {{count}} rule outcomes.",
+      "covered_one": "Fully covered: {{count}}",
+      "covered_other": "Fully covered: {{count}}",
+      "half_one": "Half covered: {{count}}",
+      "half_other": "Half covered: {{count}}",
+      "uncovered_one": "Not covered: {{count}}",
+      "uncovered_other": "Not covered: {{count}}"
+    },
+    "counts": {
+      "errors_one": "{{count}} error",
+      "errors_other": "{{count}} errors",
+      "warnings_one": "{{count}} warning",
+      "warnings_other": "{{count}} warnings",
+      "infos_one": "{{count}} note",
+      "infos_other": "{{count}} notes"
     }
   }
 }

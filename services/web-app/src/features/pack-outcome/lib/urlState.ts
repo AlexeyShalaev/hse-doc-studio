@@ -18,13 +18,14 @@ import {
 
 export type OutcomeMode = "author" | "student";
 
-/** Режим центра: результат, матрица сценариев, атлас комбинаций, сравнение двух сторон. */
-export type OutcomeView = "result" | "matrix" | "atlas" | "compare";
+/** Режим центра: результат, матрица сценариев, атлас комбинаций, сравнение двух сторон, проверка пака (линтер, срез F11). */
+export type OutcomeView = "result" | "matrix" | "atlas" | "compare" | "lint";
 export const OUTCOME_VIEWS: readonly OutcomeView[] = [
   "result",
   "matrix",
   "atlas",
   "compare",
+  "lint",
 ];
 
 /** С чем матрица сверяет клетки: с ожиданиями сценария или с базой (`against: base`). */

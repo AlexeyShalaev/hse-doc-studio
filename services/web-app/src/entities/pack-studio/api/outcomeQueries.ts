@@ -19,6 +19,7 @@ import type {
   PackOutcomeImpact,
   PackOutcomeImpactRequest,
   PackOutcomeInputs,
+  PackOutcomeLint,
   PackOutcomeMatrix,
   PackOutcomeMatrixRequest,
   PackOutcomeRequest,
@@ -32,6 +33,7 @@ import {
   type OutcomeExplainReply,
   type OutcomeReply,
   type PackOutcomeAtlasRequest,
+  type PackOutcomeLintRequest,
 } from "./outcomeApi";
 import type { PackVersionRef } from "./packStudioApi";
 import { packStudioKeys } from "./queries";
@@ -85,6 +87,16 @@ export const normalizeAtlasRequest = (
   const pin = sortedInputs(request.pin);
   if (pin) out.pin = pin;
   return out;
+};
+
+/** Запрос линтера в каноническом виде: Jinja только на рабочем дереве (сервер иначе отвечает `unavailable`). */
+export const normalizeLintRequest = (
+  request: PackOutcomeLintRequest,
+): PackOutcomeLintRequest => {
+  const state = request.state ?? "work_tree";
+  return state === "work_tree" && request.jinja
+    ? { state, jinja: true }
+    : { state };
 };
 
 /** Сторона сравнения в каноническом виде: одинаковые по смыслу стороны дают один ключ и один ETag. */
@@ -161,6 +173,13 @@ export const packOutcomeKeys = {
       ...packOutcomeKeys.version(id, ref),
       "atlas",
       normalizeAtlasRequest(request),
+    ] as const,
+  /** Линтер результата (срез F11): под общим префиксом версии, правка файла и запись сценария его сбрасывают. */
+  lint: (id: string, ref: PackVersionRef, request: PackOutcomeLintRequest) =>
+    [
+      ...packOutcomeKeys.version(id, ref),
+      "lint",
+      normalizeLintRequest(request),
     ] as const,
   compare: (
     id: string,
@@ -361,6 +380,7 @@ const refreshScenarioViews = (
       // Прогон, матрица и «до и после» считают по всем сценариям шаблона.
       if (
         queryKey[7] === "scenario-run" ||
+        queryKey[7] === "lint" ||
         queryKey[7] === "matrix" ||
         queryKey[7] === "impact"
       ) {
@@ -552,6 +572,10 @@ const useConditionalOutcome = <T>(
     signal: AbortSignal,
   ) => Promise<OutcomeReply<T>>,
   enabled: boolean,
+  policy: {
+    retry: (count: number, error: unknown) => boolean;
+    retryDelay: (count: number, error: unknown) => number;
+  } = { retry: retryOutcomeOrBusy, retryDelay: busyRetryDelay },
 ) => {
   const client = useQueryClient();
   return useQuery<OutcomeReply<T>, Error, T>({
@@ -560,8 +584,8 @@ const useConditionalOutcome = <T>(
       fetcher(client.getQueryData<OutcomeReply<T>>(queryKey) ?? null, signal),
     select: (reply) => reply.data,
     enabled,
-    retry: retryOutcomeOrBusy,
-    retryDelay: busyRetryDelay,
+    retry: policy.retry,
+    retryDelay: policy.retryDelay,
     refetchOnWindowFocus: false,
     staleTime: 15_000,
   });
@@ -594,6 +618,65 @@ export const usePackOutcomeAtlas = (
       );
     },
     enabled && ref !== null,
+  );
+
+const MAX_RATE_WAIT_S = 30;
+
+/** Отказ по частоте (429, у линтера 6 в минуту). */
+export const isRateLimited = (error: unknown): boolean =>
+  error instanceof ApiError && error.status === 429;
+
+/** Через сколько секунд повторять после 429: `retry_after` из заголовка Retry-After, 5..30 с, без него 10. */
+export const rateLimitSeconds = (error: unknown): number => {
+  const raw = error instanceof ApiError ? error.data?.retry_after : undefined;
+  const seconds = typeof raw === "number" && raw > 0 ? raw : 10;
+  return Math.min(Math.max(seconds, 1), MAX_RATE_WAIT_S);
+};
+
+/** Линтер повторяется сам: занятый сервер до трёх раз, лимит частоты до двух, сеть и 5xx один раз. */
+const lintPolicy = {
+  retry: (count: number, error: unknown): boolean =>
+    isOutcomeBusy(error)
+      ? count < 3
+      : isRateLimited(error)
+        ? count < 2
+        : retryOutcome(count, error),
+  retryDelay: (_count: number, error: unknown): number =>
+    isOutcomeBusy(error)
+      ? busyDelaySeconds(error) * 1000
+      : isRateLimited(error)
+        ? rateLimitSeconds(error) * 1000
+        : 1000,
+};
+
+/**
+ * Линтер результата (панель «Проверка пака»): находки, покрытие правил сценариями. Статические
+ * правила мгновенны, правила по атласу идут секунды, Jinja (`jinja: true`, только рабочее дерево)
+ * дольше и ограничена 6 запросами в минуту. Включается только на открытом режиме (`enabled`);
+ * с `enabled: false` хук отдаёт то, что уже есть в кэше (значок с числом находок). Ошибки:
+ * `outcome_busy`, `rate_limited` (`rate_limited` в `classifyOutcomeFailure`), `version_unreadable`,
+ * `diff_base_unavailable`.
+ */
+export const usePackOutcomeLint = (
+  id: string,
+  ref: PackVersionRef | null,
+  request: PackOutcomeLintRequest,
+  enabled = true,
+) =>
+  useConditionalOutcome<PackOutcomeLint>(
+    packOutcomeKeys.lint(id, ref ?? NO_VERSION, request),
+    (known, signal) => {
+      if (!ref) throw noVersion();
+      return packOutcomeApi.lint(
+        id,
+        ref,
+        normalizeLintRequest(request),
+        known,
+        signal,
+      );
+    },
+    enabled && ref !== null,
+    lintPolicy,
   );
 
 /**
@@ -686,6 +769,7 @@ export type DiffBaseReason = "no_git" | "no_base" | "new_version";
  */
 export type OutcomeFailure =
   | { kind: "busy"; retryAfterS: number }
+  | { kind: "rate_limited"; retryAfterS: number }
   | { kind: "atlas_too_large"; limit: number | null; rows: number | null }
   | { kind: "diff_base_unavailable"; reason: DiffBaseReason | null }
   | { kind: "outcome_too_large"; limit: number | null; size: number | null }
@@ -710,6 +794,9 @@ export const classifyOutcomeFailure = (error: unknown): OutcomeFailure => {
   const data = error.data;
   if (isOutcomeBusy(error)) {
     return { kind: "busy", retryAfterS: busyDelaySeconds(error) };
+  }
+  if (isRateLimited(error)) {
+    return { kind: "rate_limited", retryAfterS: rateLimitSeconds(error) };
   }
   if (error.code === "atlas_too_large") {
     return {

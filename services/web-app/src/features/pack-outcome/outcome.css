@@ -1624,3 +1624,45 @@
   font-size: 0.75rem;
   overflow-wrap: anywhere;
 }
+
+/* Значок линтера результата (срез F11): в верхней панели и на вкладке режима «Проверка». */
+.ln-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.ln-badge[data-inline="true"] {
+  margin-left: 0.375rem;
+}
+.ln-badge-part {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1875rem;
+  color: var(--fg-1);
+}
+.ln-badge-part[data-severity="error"] {
+  color: var(--c-err);
+}
+.ln-badge-part[data-severity="warning"] {
+  color: var(--c-warn);
+}
+.ln-badge-part[data-zero="true"],
+.ln-badge[data-clean="true"] .ln-badge-part {
+  color: var(--fg-2);
+}
+.ln-badge-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.75rem;
+  padding: 0.125rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-1);
+  font: inherit;
+  cursor: pointer;
+}
+.ln-badge-btn:hover {
+  background: var(--accent-soft);
+}

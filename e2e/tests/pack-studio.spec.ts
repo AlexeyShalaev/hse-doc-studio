@@ -1015,7 +1015,7 @@ for (const lang of LANGS) {
         await expect(page.getByTestId("outcome-center")).toBeVisible();
 
         // Режимы центра на 360 px: без горизонтальной прокрутки.
-        for (const view of ["matrix", "atlas", "compare"]) {
+        for (const view of ["matrix", "atlas", "compare", "lint"]) {
           await page.getByTestId(`outcome-view-${view}`).click();
           await expect(page.getByTestId(`outcome-view-panel-${view}`)).toBeVisible();
           await expect.poll(() => overflowing(page)).toEqual([]);

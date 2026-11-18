@@ -5,13 +5,13 @@ import {
   packErrorText,
   type OutcomeFailure,
 } from "@entities/pack-studio";
-import { Notice } from "../ui/Notice";
+import { Notice } from "./Notice";
 
 type ModeFailureProps = {
   error: unknown;
   onRetry: () => void;
   /** Какой режим считал: подпись заголовка. */
-  mode: "matrix" | "atlas" | "compare";
+  mode: "matrix" | "atlas" | "compare" | "lint";
   /** Дополнительные действия по виду отказа (закрепить вводные, выбрать меньше сценариев). */
   extra?: Partial<Record<OutcomeFailure["kind"], ReactNode>>;
   /** Ничего не считалось слишком большим для повтора: кнопка «Повторить» не нужна. */
@@ -62,6 +62,16 @@ export const ModeFailure = ({
           testId="outcome-mode-busy"
         >
           {t("modes.failure.busyLead", { seconds: failure.retryAfterS })}
+        </Notice>
+      );
+    case "rate_limited":
+      return (
+        <Notice
+          {...common}
+          title={t("modes.failure.rateTitle")}
+          testId="outcome-mode-rate-limited"
+        >
+          {t("modes.failure.rateLead", { seconds: failure.retryAfterS })}
         </Notice>
       );
     case "atlas_too_large":

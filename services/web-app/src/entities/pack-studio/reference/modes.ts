@@ -10,6 +10,7 @@ import type {
   PackOutcomeCompare,
   PackOutcomeCompareRequest,
   PackOutcomeImpact,
+  PackOutcomeLint,
   PackOutcomeMatrix,
   PackOutcomeMatrixRequest,
   PackScenarioEntry,
@@ -18,8 +19,10 @@ import {
   COURSEWORK_ATLAS,
   COURSEWORK_COMPARE,
   COURSEWORK_IMPACT,
+  COURSEWORK_LINT,
   COURSEWORK_MATRIX,
   VKR_INPUTS,
+  VKR_LINT,
   VKR_OUTCOME,
 } from "./fixtures";
 
@@ -45,7 +48,13 @@ export type ModesBehavior =
   | "impact_same"
   | "impact_error"
   | "impact_atlas_null"
-  | "impact_empty";
+  | "impact_empty"
+  // Линтер (F11): находок нет; атлас слишком большой (остались статические правила); лимит частоты
+  // 429 один раз (затем нормально); версия не читается.
+  | "lint_empty"
+  | "lint_atlas_skipped"
+  | "lint_rate_limited"
+  | "lint_unreadable";
 
 let modesBehavior: ModesBehavior = "normal";
 /** Для тестов и галереи: как отвечают режимы; `busy` срабатывает один раз. */
@@ -54,13 +63,14 @@ export const setModesBehavior = (next: ModesBehavior): void => {
 };
 
 /** Закладка для тестов: сколько раз каждый эндпоинт режимов получил запрос. */
-const calls = { atlas: 0, compare: 0, impact: 0, matrix: 0 };
+const calls = { atlas: 0, compare: 0, impact: 0, lint: 0, matrix: 0 };
 export const modesCalls = {
   count: (name: keyof typeof calls): number => calls[name],
   reset: (): void => {
     calls.atlas = 0;
     calls.compare = 0;
     calls.impact = 0;
+    calls.lint = 0;
     calls.matrix = 0;
   },
 };
@@ -373,8 +383,79 @@ export const referenceImpact = (
 ): PackOutcomeImpact =>
   impactFor({ id: "ws", pack: "", template: "", version: "" }, behavior);
 
+/** Линтер по состоянию подмены: эталон ВКР или курсового, пустой, с пропущенным атласом (F11). */
+const lintFor = (
+  where: Where,
+  state: PackOutcomeLint["state"],
+  jinjaAsked: boolean,
+  behavior: ModesBehavior = modesBehavior,
+): PackOutcomeLint => {
+  const out = structuredClone(
+    where.template === "vkr" ? VKR_LINT : COURSEWORK_LINT,
+  );
+  out.workspace_id = where.id;
+  out.pack = where.pack || out.pack;
+  out.template = where.template || out.template;
+  out.version = where.version || out.version;
+  out.state = state;
+  out.jinja =
+    state !== "work_tree" ? "unavailable" : jinjaAsked ? "ran" : "not_run";
+  if (behavior === "lint_empty") {
+    out.findings = [];
+    out.errors = 0;
+    out.warnings = 0;
+    out.infos = 0;
+    out.coverage = {
+      ...out.coverage,
+      rules_covered: out.coverage.rules_total,
+      rules_half: 0,
+      rules_uncovered: 0,
+      rules: [],
+      percent: 100,
+      uncovered_rows: [],
+      rules_omitted: 0,
+    };
+  } else if (behavior === "lint_atlas_skipped") {
+    out.findings = out.findings.filter((f) => f.witnesses.length === 0);
+    out.findings.push({
+      rule_id: "atlas-skipped",
+      severity: "info",
+      message:
+        "Таблица исходов больше предела: правила по атласу пропущены, остались статические.",
+      hint: "Закрепите часть вводных, чтобы таблица поместилась в предел.",
+      file: null,
+      pointer: null,
+      line: null,
+      elements: [],
+      witnesses: [],
+    });
+    out.errors = out.findings.filter((f) => f.severity === "error").length;
+    out.warnings = out.findings.filter((f) => f.severity === "warning").length;
+    out.infos = out.findings.filter((f) => f.severity === "info").length;
+    out.atlas_skipped = true;
+    out.coverage = {
+      ...out.coverage,
+      approximate: true,
+      uncovered_rows: [],
+    };
+  }
+  return out;
+};
+
+/** Для тестов и галереи: линтер результата курсового в выбранном виде. */
+export const referenceLint = (
+  behavior: ModesBehavior = "normal",
+  template = "coursework",
+): PackOutcomeLint =>
+  lintFor(
+    { id: "ws", pack: "", template, version: "" },
+    "work_tree",
+    false,
+    behavior,
+  );
+
 /** Сбой, который режимы показывают вместо ответа (по состоянию подмены). */
-const failure = (kind: "atlas" | "compare" | "impact" | "matrix") => {
+const failure = (kind: "atlas" | "compare" | "impact" | "lint" | "matrix") => {
   const behavior = modesBehavior;
   if (behavior === "busy") {
     modesBehavior = "normal";
@@ -385,6 +466,23 @@ const failure = (kind: "atlas" | "compare" | "impact" | "matrix") => {
   }
   if (behavior === "fail") {
     return demoError(500, "internal_error", "Внутренняя ошибка.");
+  }
+  if (behavior === "lint_rate_limited" && kind === "lint") {
+    modesBehavior = "normal";
+    return demoError(
+      429,
+      "rate_limited",
+      "Слишком часто: не больше 6 проверок в минуту.",
+      { retry_after: 1 },
+    );
+  }
+  if (behavior === "lint_unreadable" && kind === "lint") {
+    return demoError(
+      422,
+      "version_unreadable",
+      "Версию не удалось прочитать.",
+      { reason: "version.yaml: строка 14, неверный отступ" },
+    );
   }
   if (behavior === "atlas_too_large" && kind === "atlas") {
     return demoError(
@@ -430,7 +528,7 @@ export const createModesRoutes = (state: ModesState): DemoRoute[] => {
   const route = (
     method: DemoRoute["method"],
     suffix: string,
-    kind: "atlas" | "compare" | "impact" | "matrix",
+    kind: "atlas" | "compare" | "impact" | "lint" | "matrix",
     build: (req: DemoRequest) => unknown,
   ): DemoRoute => ({
     method,
@@ -447,6 +545,9 @@ export const createModesRoutes = (state: ModesState): DemoRoute[] => {
   });
   return [
     route("GET", "atlas", "atlas", atlasFor),
+    route("GET", "lint", "lint", (req) =>
+      lintFor(whereOf(req), stateOf(req), req.query.jinja === "true"),
+    ),
     route("POST", "compare", "compare", (req) =>
       compareFor(whereOf(req), req.body as PackOutcomeCompareRequest),
     ),

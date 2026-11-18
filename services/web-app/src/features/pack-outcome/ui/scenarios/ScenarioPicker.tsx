@@ -12,6 +12,7 @@ import {
 import { useOutcomeModel } from "../../model";
 import { Notice } from "../Notice";
 import { useScenarioUi, type ScenarioUi } from "./context";
+import { CoverageBrief } from "./CoverageBrief";
 import { ScenarioStatus } from "./ScenarioStatus";
 
 /** Значение «без сценария»: его выбор убирает сценарий из адреса. */
@@ -109,6 +110,7 @@ const ScenarioList = ({ ui, close }: ListProps) => {
           {packErrorText(ui.runError)}
         </Notice>
       )}
+      <CoverageBrief onOpen={close} />
       <div
         ref={listRef}
         className="po-sc-list"

@@ -26,10 +26,11 @@ import {
 import { tallyText } from "../lib/scenarios";
 import { useOutcomeModel } from "../model";
 import { ModeSkeleton } from "../ui/ModeSkeleton";
+import { CoverageBrief } from "../ui/scenarios/CoverageBrief";
 import { ScenarioStatus } from "../ui/scenarios/ScenarioStatus";
 import { useScenarioUi } from "../ui/scenarios/context";
 import { ChangeList } from "./ChangeList";
-import { ModeFailure } from "./ModeFailure";
+import { ModeFailure } from "../ui/ModeFailure";
 
 const CELL_ICON = {
   matched: CheckCircle2,
@@ -255,6 +256,7 @@ export const MatrixMode = () => {
           <span className="po-note"> {t("result.updating")}</span>
         )}
       </p>
+      <CoverageBrief />
       {matrix.isError && (
         <p className="po-note" role="alert" data-testid="outcome-matrix-stale">
           {t("result.stale")}

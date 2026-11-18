@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router";
 import {
+  packFormKind,
   packOutcomePath,
   packRulePath,
   type OutcomeRuleRef,
@@ -25,6 +26,30 @@ export const useOpenRule = () => {
   return {
     /** Место правила и вкладка по умолчанию (форма, если файл её имеет). */
     locate: (rule: OutcomeRuleRef) => ruleLocation(versionPath, rule),
+    /**
+     * Место находки линтера: файл от каталога версии и указатель из ответа сервера. Файл вне
+     * каталога версии (`..`, абсолютный путь) не открывается: возвращает `false`.
+     */
+    openPlace: (file: string, pointer: string | null): boolean => {
+      if (
+        versionPath === "" ||
+        file === "" ||
+        file.startsWith("/") ||
+        file.split("/").includes("..")
+      ) {
+        return false;
+      }
+      const path = `${versionPath}/${file}`;
+      void navigate(
+        packRulePath(workspaceId, path, {
+          pointer,
+          pane:
+            pointer !== null && packFormKind(path) !== null ? "form" : "source",
+          from: back,
+        }),
+      );
+      return true;
+    },
     open: (rule: OutcomeRuleRef, pane?: RulePane) => {
       const where = ruleLocation(versionPath, rule);
       if (!where) return;
