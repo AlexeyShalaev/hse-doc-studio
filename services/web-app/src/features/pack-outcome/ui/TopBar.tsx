@@ -15,6 +15,7 @@ import { pickLocalized } from "@shared/lib/i18n/pickLocalized";
 import { Select } from "@shared/ui";
 import { writeOutcomeSearch, type OutcomeMode } from "../lib/urlState";
 import { useOutcomeModel } from "../model";
+import { LintBadgeButton } from "./LintBadge";
 import { PhoneBar } from "./phone/PhoneBar";
 import { ProposeAction } from "./ProposeAction";
 import { ScenarioActions, ScenarioPicker } from "./scenarios/ScenarioPicker";
@@ -289,6 +290,7 @@ export const TopBar = ({
             {modeSwitch}
             {stateSelect}
             <ScenarioActions />
+            <LintBadgeButton />
             <button
               type="button"
               className="btn"
@@ -347,6 +349,7 @@ export const TopBar = ({
         <ScenarioPicker />
         {modeSwitch}
         {stateSelect}
+        <LintBadgeButton />
         {status(false)}
         {dev}
       </div>

@@ -197,7 +197,7 @@ describe("режимы центра: Матрица, Атлас, Сравнит�
   });
 
   describe("вкладки", () => {
-    it("tablist: четыре режима, выбран «Результат», клик пишет view в адрес", async () => {
+    it("tablist: пять режимов, выбран «Результат», клик пишет view в адрес", async () => {
       const user = userEvent.setup();
       mount("");
       const list = await screen.findByRole("tablist", {
@@ -209,6 +209,7 @@ describe("режимы центра: Матрица, Атлас, Сравнит�
         "Матрица",
         "Атлас",
         "Сравнить",
+        "Проверка",
       ]);
       expect(tabs[0]).toHaveAttribute("aria-selected", "true");
       expect(tabs[0]).toHaveAttribute("tabindex", "0");
@@ -237,11 +238,11 @@ describe("режимы центра: Матрица, Атлас, Сравнит�
       expect(screen.getByTestId("outcome-view-matrix")).toHaveFocus();
       expect(where()).not.toContain("view=");
       await user.keyboard("{End}");
-      expect(screen.getByTestId("outcome-view-compare")).toHaveFocus();
+      expect(screen.getByTestId("outcome-view-lint")).toHaveFocus();
       await user.keyboard("{ArrowRight}");
       expect(screen.getByTestId("outcome-view-result")).toHaveFocus();
       await user.keyboard("{ArrowLeft}");
-      expect(screen.getByTestId("outcome-view-compare")).toHaveFocus();
+      expect(screen.getByTestId("outcome-view-lint")).toHaveFocus();
       await user.keyboard("{Home}{ArrowRight}{Enter}");
       await waitFor(() => {
         expect(where()).toContain("view=matrix");
@@ -1002,6 +1003,7 @@ describe("режимы центра: Матрица, Атлас, Сравнит�
           "Matrix",
           "Atlas",
           "Compare",
+          "Check",
         ]);
         expect(
           await screen.findByTestId(

@@ -6,6 +6,7 @@ import {
   PackOutcomeCompareSchema,
   PackOutcomeImpactSchema,
   PackOutcomeInputsSchema,
+  PackOutcomeLintSchema,
   PackOutcomeMatrixSchema,
   PackOutcomeSchema,
   PackScenarioListSchema,
@@ -17,6 +18,7 @@ import {
   type PackOutcomeCompare,
   type PackOutcomeImpact,
   type PackOutcomeInputs,
+  type PackOutcomeLint,
   type PackOutcomeMatrix,
   type PackScenarioList,
   type PackScenarioRun,
@@ -97,6 +99,20 @@ const impactFiles = import.meta.glob<unknown>(
 const matrixFiles = import.meta.glob<unknown>(
   "../../../../../../contracts/pack-studio/fixtures/PackOutcomeMatrix/*.json",
   { eager: true, import: "default" },
+);
+
+const lintFiles = import.meta.glob<unknown>(
+  "../../../../../../contracts/pack-studio/fixtures/PackOutcomeLint/*.json",
+  { eager: true, import: "default" },
+);
+
+/** Линтер ВКР: двенадцать предупреждений (слот без маршрута, шаги без персоны, переводы), покрытие 94 %. */
+export const VKR_LINT: PackOutcomeLint = PackOutcomeLintSchema.parse(
+  load(lintFiles, "PackOutcomeLint", "vkr"),
+);
+/** Линтер курсового: ошибка, два предупреждения, информация, Jinja проверена, покрытие 78 %. */
+export const COURSEWORK_LINT: PackOutcomeLint = PackOutcomeLintSchema.parse(
+  load(lintFiles, "PackOutcomeLint", "coursework"),
 );
 
 /** Атлас курсового (12 строк, 12 исходов). */

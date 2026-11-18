@@ -4,6 +4,7 @@ import { EmptyState } from "@shared/ui";
 import { useOutcomeModel } from "../model";
 import { EditBarSlot } from "./edit/lazy";
 import { InputImpact } from "./rules/InputImpact";
+import { LintHints } from "./rules/LintHints";
 import { WhyView } from "./rules/WhyView";
 import type { AppliedWhatIf } from "./rules/WhatIf";
 import "../rules.css";
@@ -46,6 +47,9 @@ export const RulesPanel = () => {
           applied={applied}
           onApplied={setApplied}
         />
+      )}
+      {section !== "branches" && (
+        <LintHints element={{ section, id: selected.id }} />
       )}
       <button
         type="button"

@@ -3,6 +3,7 @@ import {
   packOutcomeKeys,
   type PackOutcomeAtlas,
   type PackOutcomeCompare,
+  type PackOutcomeLint,
   type PackOutcomeMatrix,
   type PackVersionRef,
 } from "@entities/pack-studio";
@@ -13,6 +14,7 @@ import {
   COURSEWORK_SCENARIOS,
   buildVkrAtlas,
   pinnedAtlas,
+  referenceLint,
 } from "@entities/pack-studio/reference";
 import { ApiError } from "@shared/api";
 import { resolveSides, subjectOf } from "../lib/compare";
@@ -30,7 +32,11 @@ export type ModesSeed =
   | "no_base"
   | "error_row"
   | "empty"
-  | "identical";
+  | "identical"
+  // Режим «Проверка» (F11): атлас пропущен, лимит частоты, версия не читается.
+  | "skipped"
+  | "rate_limited"
+  | "unreadable";
 
 type Where = { id: string; ref: PackVersionRef; search: string };
 
@@ -174,6 +180,69 @@ export const seedModes = (
     );
     atlas.state = url.state;
     client.setQueryData(key, { data: atlas, etag: null });
+    return;
+  }
+  if (url.view === "lint") {
+    const key = packOutcomeKeys.lint(id, ref, { state: url.state });
+    if (seed === "loading") {
+      hang(client, key);
+      return;
+    }
+    if (seed === "busy") {
+      fail(
+        client,
+        key,
+        new ApiError("Сервер занят расчётом.", "outcome_busy", 503, {
+          reason: "overloaded",
+          retry_after_s: 4,
+        }),
+      );
+      return;
+    }
+    if (seed === "rate_limited") {
+      fail(
+        client,
+        key,
+        new ApiError(
+          "Слишком часто: не больше 6 проверок в минуту.",
+          "rate_limited",
+          429,
+          {
+            retry_after: 20,
+          },
+        ),
+      );
+      return;
+    }
+    if (seed === "unreadable") {
+      fail(
+        client,
+        key,
+        new ApiError(
+          "Версию не удалось прочитать.",
+          "version_unreadable",
+          422,
+          {
+            reason: "version.yaml: строка 14, неверный отступ",
+          },
+        ),
+      );
+      return;
+    }
+    const lint: PackOutcomeLint = withIdentity(
+      referenceLint(
+        seed === "empty"
+          ? "lint_empty"
+          : seed === "skipped"
+            ? "lint_atlas_skipped"
+            : "normal",
+        ref.template,
+      ),
+      id,
+      ref,
+    );
+    lint.state = url.state;
+    client.setQueryData(key, { data: lint, etag: null });
     return;
   }
   if (url.view === "compare") {

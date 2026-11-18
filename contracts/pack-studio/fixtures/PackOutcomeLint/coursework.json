@@ -1,0 +1,265 @@
+{
+  "workspace_id": "6f1c1c8e-1b7a-4d51-9a43-0a5b2f3c4d10",
+  "pack": "hse-cs-sse",
+  "template": "coursework",
+  "version": "2026.1.6",
+  "state": "work_tree",
+  "revision": "sha256-3c41d0a77be29f10",
+  "errors": 1,
+  "warnings": 2,
+  "infos": 1,
+  "findings": [
+    {
+      "rule_id": "visible-if-value-not-in-options",
+      "severity": "error",
+      "message": "Условие поля «proposal_stage» ждёт значение «Финальная», которого нет среди options поля meta.proposal_stage. Поле не станет видимым никогда.",
+      "hint": "Добавьте значение в options поля или исправьте equals в visible_if.",
+      "file": "version.yaml",
+      "pointer": "/forms/0/sections/1/fields/2/visible_if",
+      "line": 212,
+      "elements": [
+        {
+          "section": "meta",
+          "id": "proposal_stage"
+        }
+      ],
+      "witnesses": []
+    },
+    {
+      "rule_id": "when-never-held",
+      "severity": "warning",
+      "message": "Условие when слота «academic_supervisor» документа «project_proposal» не выполнено ни в одной строке атласа (12 строк). Слот мёртвый.",
+      "hint": "Проверьте условие when: значение вводной не достижимо. Уберите слот или поправьте условие.",
+      "file": "files/project_proposal/doc.yaml",
+      "pointer": "/signing_slots/1/when",
+      "line": 41,
+      "elements": [
+        {
+          "section": "documents",
+          "id": "project_proposal"
+        }
+      ],
+      "witnesses": [
+        {
+          "supervisor": "none",
+          "co_supervisor": "no",
+          "academic_supervisor": "no"
+        },
+        {
+          "supervisor": "university",
+          "co_supervisor": "no",
+          "academic_supervisor": "no"
+        }
+      ]
+    },
+    {
+      "rule_id": "translation-missing",
+      "severity": "warning",
+      "message": "У поля «proposal_stage» нет перевода help на язык en (langs: ru, en).",
+      "hint": "Добавьте help.en у поля в version.yaml.",
+      "file": "version.yaml",
+      "pointer": "/forms/0/sections/1/fields/2/help",
+      "line": 218,
+      "elements": [
+        {
+          "section": "meta",
+          "id": "proposal_stage"
+        }
+      ],
+      "witnesses": []
+    },
+    {
+      "rule_id": "when-always-held",
+      "severity": "info",
+      "message": "Условие when слота «supervisor» документа «topic_application» выполнено во всех 12 строках атласа: условие лишнее.",
+      "hint": "Уберите when или сузьте его, если слот нужен не всегда.",
+      "file": "files/topic_application/doc.yaml",
+      "pointer": "/signing_slots/0/when",
+      "line": 33,
+      "elements": [
+        {
+          "section": "documents",
+          "id": "topic_application"
+        }
+      ],
+      "witnesses": [
+        {
+          "supervisor": "company",
+          "co_supervisor": "yes",
+          "academic_supervisor": "yes"
+        }
+      ]
+    }
+  ],
+  "coverage": {
+    "scenarios": 3,
+    "rules_total": 16,
+    "rules_covered": 10,
+    "rules_half": 4,
+    "rules_uncovered": 2,
+    "rules": [
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/project_proposal/doc.yaml",
+          "pointer": "/signing_slots/1/when",
+          "builtin": null
+        },
+        "kind": "slot_when",
+        "seen": [],
+        "possible": [
+          "not_held"
+        ],
+        "scenarios": [],
+        "witness": {
+          "supervisor": "none",
+          "co_supervisor": "no",
+          "academic_supervisor": "no"
+        }
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/report/doc.yaml",
+          "pointer": "/signing_slots/0/when",
+          "builtin": null
+        },
+        "kind": "slot_when",
+        "seen": [],
+        "possible": [
+          "held",
+          "not_held"
+        ],
+        "scenarios": [],
+        "witness": {
+          "supervisor": "company",
+          "co_supervisor": "yes",
+          "academic_supervisor": "no"
+        }
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "version.yaml",
+          "pointer": "/forms/0/sections/0/fields/1/visible_if",
+          "builtin": null
+        },
+        "kind": "visible_if",
+        "seen": [
+          "held"
+        ],
+        "possible": [
+          "held",
+          "not_held"
+        ],
+        "scenarios": [
+          "company-supervisor"
+        ],
+        "witness": {
+          "supervisor": "university",
+          "co_supervisor": "no",
+          "academic_supervisor": "yes"
+        }
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/presentation/doc.yaml",
+          "pointer": "/supported_staffing",
+          "builtin": null
+        },
+        "kind": "supported_staffing",
+        "seen": [
+          "not_held"
+        ],
+        "possible": [
+          "held",
+          "not_held"
+        ],
+        "scenarios": [
+          "no-supervisor"
+        ],
+        "witness": {
+          "supervisor": "company",
+          "co_supervisor": "no",
+          "academic_supervisor": "yes"
+        }
+      },
+      {
+        "rule": {
+          "origin": "manifest",
+          "file": "files/topic_application/doc.yaml",
+          "pointer": "/supported_staffing",
+          "builtin": null
+        },
+        "kind": "supported_staffing",
+        "seen": [
+          "held"
+        ],
+        "possible": [
+          "held",
+          "not_held"
+        ],
+        "scenarios": [
+          "company-supervisor",
+          "university-supervisor"
+        ],
+        "witness": {
+          "supervisor": "none",
+          "co_supervisor": "no",
+          "academic_supervisor": "no"
+        }
+      },
+      {
+        "rule": {
+          "origin": "builtin",
+          "file": null,
+          "pointer": null,
+          "builtin": "nda_gate"
+        },
+        "kind": "builtin_gate",
+        "seen": [
+          "not_held"
+        ],
+        "possible": [
+          "held",
+          "not_held"
+        ],
+        "scenarios": [
+          "company-supervisor"
+        ],
+        "witness": {
+          "supervisor": "company",
+          "co_supervisor": "yes",
+          "academic_supervisor": "yes"
+        }
+      }
+    ],
+    "percent": 78.1,
+    "rows_total": 12,
+    "rows_touched": 3,
+    "uncovered_rows": [
+      {
+        "inputs": {
+          "supervisor": "company",
+          "co_supervisor": "yes",
+          "academic_supervisor": "no"
+        },
+        "gain": 3
+      },
+      {
+        "inputs": {
+          "supervisor": "university",
+          "co_supervisor": "no",
+          "academic_supervisor": "yes"
+        },
+        "gain": 2
+      }
+    ],
+    "rules_omitted": 0,
+    "approximate": false
+  },
+  "jinja": "ran",
+  "atlas_skipped": false,
+  "elapsed_ms": 4120
+}

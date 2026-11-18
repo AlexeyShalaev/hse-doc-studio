@@ -166,6 +166,10 @@ export default defineConfig(({ mode }) => {
             if (id.endsWith("/src/features/pack-outcome/modes/index.ts")) {
               return "assets/pack-outcome-modes-[hash].js";
             }
+            // Режим «Проверка» экрана «Результат» (срез F11): линтер результата и покрытие, открывают редко.
+            if (id.endsWith("/src/features/pack-outcome/lint/index.ts")) {
+              return "assets/pack-outcome-lint-[hash].js";
+            }
             // Формы манифестов Студии шаблонов (срезы T11-T14): грузятся вкладкой «Форма».
             if (id.endsWith("/src/features/pack-submission-form/index.ts")) {
               return "assets/pack-submission-form-[hash].js";

@@ -36,35 +36,13 @@ import { personaLabel } from "../lib/personas";
 import { mergedInputs } from "../lib/scenarios";
 import { useOutcomeModel } from "../model";
 import { ModeSkeleton } from "../ui/ModeSkeleton";
-import { useInputLabels } from "../ui/inputs/useLabels";
-import { ModeFailure } from "./ModeFailure";
+import { useLabeler, type Labeler } from "../ui/inputs/useLabeler";
+import { ModeFailure } from "../ui/ModeFailure";
 
 /** Сколько строк показывать за раз: сотни строк ВКР листаются кнопкой, страница не тормозит. */
 const PAGE = 60;
 /** Сколько вводных предлагать закрепить, когда атлас слишком большой. */
 const PIN_CHOICES = 12;
-
-type Labeler = {
-  input: (id: string) => string;
-  value: (id: string, value: string) => string;
-};
-
-const useLabeler = (inputs: readonly OutcomeInput[] | undefined): Labeler => {
-  const { inputLabel, valueLabel } = useInputLabels();
-  return useMemo(() => {
-    const byId = new Map((inputs ?? []).map((item) => [item.id, item]));
-    return {
-      input: (id) => {
-        const found = byId.get(id);
-        return found ? inputLabel(found) : id;
-      },
-      value: (id, value) => {
-        const found = byId.get(id);
-        return found ? valueLabel(found, value) : value;
-      },
-    };
-  }, [inputs, inputLabel, valueLabel]);
-};
 
 /**
  * Режим «Атлас»: таблица исходов по вводным, которые реально что-то меняют (template-studio-outcome.md,

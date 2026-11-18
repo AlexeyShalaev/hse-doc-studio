@@ -15,25 +15,29 @@ export { cacheModelResult, refreshAfterFileWrite } from "./lib/modelCache";
 // эндпоинтов (outcomeApi, хуки). Сервер результата приходит срезами O1 и O2; до них клиент
 // живёт на эталонах контракта (reference/, только разработка и тесты).
 export * from "./api/outcome";
-export { atlasQuery, packOutcomeApi } from "./api/outcomeApi";
+export { atlasQuery, lintQuery, packOutcomeApi } from "./api/outcomeApi";
 export type {
   OutcomeExplainReply,
   OutcomeReply,
   PackOutcomeAtlasRequest,
+  PackOutcomeLintRequest,
 } from "./api/outcomeApi";
 export {
   busyDelaySeconds,
   classifyOutcomeFailure,
   isElementGone,
   isOutcomeBusy,
+  isRateLimited,
   normalizeAtlasRequest,
   normalizeCompareRequest,
   normalizeExplainRequest,
   normalizeImpactRequest,
+  normalizeLintRequest,
   normalizeMatrixRequest,
   normalizeOutcomeRequest,
   normalizeSubject,
   packOutcomeKeys,
+  rateLimitSeconds,
   retryOutcome,
   usePackOutcome,
   useDeletePackScenario,
@@ -41,6 +45,7 @@ export {
   usePackOutcomeCompare,
   usePackOutcomeExplain,
   usePackOutcomeImpact,
+  usePackOutcomeLint,
   usePackOutcomeMatrix,
   usePackOutcomeInputs,
   usePackScenarioRun,

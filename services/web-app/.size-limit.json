@@ -303,7 +303,8 @@
     "name": "Студия шаблонов, экран «Результат» (lazy, features/pack-outcome)",
     "path": [
       "dist/assets/pack-outcome-*.js",
-      "!dist/assets/pack-outcome-modes-*.js"
+      "!dist/assets/pack-outcome-modes-*.js",
+      "!dist/assets/pack-outcome-lint-*.js"
     ],
     "gzip": true,
     "limit": "50.2 kB"
@@ -315,10 +316,16 @@
     "limit": "12 kB"
   },
   {
+    "name": "Режим «Проверка» экрана «Результат»: линтер и покрытие (lazy, features/pack-outcome/lint)",
+    "path": "dist/assets/pack-outcome-lint-*.js",
+    "gzip": true,
+    "limit": "6 kB"
+  },
+  {
     "name": "Словарь экрана «Результат» (ru и en, features/pack-outcome)",
     "path": "dist/assets/locale-packOutcome-*.js",
     "gzip": true,
-    "limit": "31 kB"
+    "limit": "34 kB"
   },
   {
     "name": "Блок «Что изменится в результате» в «Предложить изменения» (lazy, features/pack-outcome/impact)",

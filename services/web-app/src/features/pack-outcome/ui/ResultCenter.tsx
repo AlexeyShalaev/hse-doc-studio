@@ -27,6 +27,11 @@ const OutcomeModes = lazy(() =>
   import("../modes").then((module) => ({ default: module.OutcomeModes })),
 );
 
+// Режим «Проверка» (линтер результата и покрытие, срез F11): свой чанк, откроют его ещё реже.
+const OutcomeLint = lazy(() =>
+  import("../lint").then((module) => ({ default: module.LintPanel })),
+);
+
 /** Причина, по которой лоадер не прочитал версию (`reason` в теле ошибки), если сервер её прислал. */
 const reasonOf = (error: unknown): string | null => {
   if (!(error instanceof ApiError)) return null;
@@ -55,7 +60,11 @@ export const ResultCenter = () => {
         data-testid={`outcome-view-panel-${centerView}`}
       >
         <Suspense fallback={<ModeSkeleton />}>
-          <OutcomeModes view={centerView} />
+          {centerView === "lint" ? (
+            <OutcomeLint />
+          ) : (
+            <OutcomeModes view={centerView} />
+          )}
         </Suspense>
       </div>
     );
