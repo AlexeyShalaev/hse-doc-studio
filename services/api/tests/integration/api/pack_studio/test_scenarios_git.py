@@ -120,6 +120,7 @@ async def test__fresh_clone__run_in_three_states_gives_the_same_result_with_its_
     assert again.status_code == 304
 
 
+@pytest.mark.timeout(180)
 async def test__uncommitted_scenario_edits__work_tree_changes_head_and_base_stay(stand: Stand) -> None:
     _, ws = await _ready(stand)
     committed = parse_list(await list_scenarios(stand, ws, VKR_TEMPLATE, "head")).scenarios[0]
