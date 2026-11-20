@@ -95,7 +95,7 @@ RUN install -d /usr/share/postgresql-common/pgdg \
 # на Apple Silicon образ должен идти нативным arm64, иначе Docker Desktop крутит
 # его через эмуляцию. Имена каталогов у download.docker.com — x86_64/aarch64.
 ARG TARGETARCH
-ARG DOCKER_CLI_VERSION=29.9.2
+ARG DOCKER_CLI_VERSION=29.10.0
 RUN set -eux; \
     case "${TARGETARCH}" in \
       amd64) dockerArch='x86_64' ;; \
