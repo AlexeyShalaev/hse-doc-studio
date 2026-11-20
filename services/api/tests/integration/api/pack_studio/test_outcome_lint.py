@@ -30,6 +30,9 @@ from .scenario_support import COURSEWORK_TEMPLATE, put_scenario, scenario_body
 
 _VISIBLE_IF = 'equals: "yes"'
 
+# Линтер результата считает атлас реальных паков, на медленных раннерах CI это дольше 30 с по умолчанию.
+pytestmark = pytest.mark.timeout(120)
+
 
 async def _lint(stand: Stand, ws: str, ref: tuple[str, str, str], **params: Any) -> Response:
     return await stand.client.get(outcome_url(ws, ref, "/lint"), params=params or None)
