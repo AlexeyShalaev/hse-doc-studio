@@ -6,6 +6,29 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.37.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.36.0...v0.37.0) (2026-11-20)
+
+
+### Features
+
+* **admin:** visible progress, journal and errors for the update button ([026958e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/026958e40aaa60080d36681a2d483b40565ccf84))
+* **admin:** visible progress, journal and errors for the update button ([8fe14aa](https://github.com/AlexeyShalaev/hse-doc-studio/commit/8fe14aa5a85b069d10ede3d51241aa42dd2c251e))
+* **mcp:** full Template Studio parity for AI agents ([02ba943](https://github.com/AlexeyShalaev/hse-doc-studio/commit/02ba94364fcff1233ffc6a65865e6822701c1f7c))
+* **mcp:** full Template Studio parity for AI agents ([8045883](https://github.com/AlexeyShalaev/hse-doc-studio/commit/8045883c39a6a67ef3cae7b12d78ca2d20b83292))
+* **pack-studio:** outcome linter and rule coverage (O8) ([239947e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/239947e5e4259a5f4fe3a1922eb52007ad09f163))
+* **pack-studio:** outcome linter and rule coverage on screen (F11) ([9ed61ae](https://github.com/AlexeyShalaev/hse-doc-studio/commit/9ed61aeb4071f655afccdc24c0007c35db745522))
+* **pack-studio:** outcome linter and rule coverage on screen (F11) ([3d501cb](https://github.com/AlexeyShalaev/hse-doc-studio/commit/3d501cb0aee325ab2455b60e99b93736fb97a452))
+* **pack-studio:** separate pack and template selects ([b296fad](https://github.com/AlexeyShalaev/hse-doc-studio/commit/b296fad5e28ff16ed836273e977c279d9d06e798))
+* **pack-studio:** separate pack and template selects ([773b57f](https://github.com/AlexeyShalaev/hse-doc-studio/commit/773b57f9bd1f205b66fea0ae1b0e0299cab30e13))
+
+
+### Bug Fixes
+
+* green master CI (Windows tests, git https layout test) ([0ef1cd1](https://github.com/AlexeyShalaev/hse-doc-studio/commit/0ef1cd1c3da50fed89af8748bed6c19324352566))
+* green master CI (Windows tests, git https layout test) ([bbed93d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/bbed93da87f3bfdc6177361be6145173a9788bb5))
+* **image:** docker CLI 29.10.0 built with Go 1.27.4 (CVE-2026-97054) ([44889bc](https://github.com/AlexeyShalaev/hse-doc-studio/commit/44889bc919167f5751beb8169eb63b0f7cb8a048))
+* **image:** docker CLI 29.10.0 built with Go 1.27.4 (CVE-2026-97054) ([6da9ed0](https://github.com/AlexeyShalaev/hse-doc-studio/commit/6da9ed01ded9bb3934cd23307dcb07bf63eaf18a))
+
 ## [0.36.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.35.0...v0.36.0) - 2026-11-17
 
 - Template Studio: edit a rule right on the Result screen. In the Why panel every chain item has Edit rule: kinds of work, staffing, languages, NDA, optional flags, questionnaire and signature slot conditions, disabled checks. After saving you see what changed in the result (plus, tilde, minus), Ctrl+Z and Ctrl+Shift+Z undo and redo edits, and a deleted record can be restored within 10 seconds. A released version is immutable, for it the button leads to the new version wizard.
