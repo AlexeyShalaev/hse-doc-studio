@@ -6,28 +6,14 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.37.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.36.0...v0.37.0) (2026-11-20)
+## [0.37.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.36.0...v0.37.0) - 2026-11-20
 
-
-### Features
-
-* **admin:** visible progress, journal and errors for the update button ([026958e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/026958e40aaa60080d36681a2d483b40565ccf84))
-* **admin:** visible progress, journal and errors for the update button ([8fe14aa](https://github.com/AlexeyShalaev/hse-doc-studio/commit/8fe14aa5a85b069d10ede3d51241aa42dd2c251e))
-* **mcp:** full Template Studio parity for AI agents ([02ba943](https://github.com/AlexeyShalaev/hse-doc-studio/commit/02ba94364fcff1233ffc6a65865e6822701c1f7c))
-* **mcp:** full Template Studio parity for AI agents ([8045883](https://github.com/AlexeyShalaev/hse-doc-studio/commit/8045883c39a6a67ef3cae7b12d78ca2d20b83292))
-* **pack-studio:** outcome linter and rule coverage (O8) ([239947e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/239947e5e4259a5f4fe3a1922eb52007ad09f163))
-* **pack-studio:** outcome linter and rule coverage on screen (F11) ([9ed61ae](https://github.com/AlexeyShalaev/hse-doc-studio/commit/9ed61aeb4071f655afccdc24c0007c35db745522))
-* **pack-studio:** outcome linter and rule coverage on screen (F11) ([3d501cb](https://github.com/AlexeyShalaev/hse-doc-studio/commit/3d501cb0aee325ab2455b60e99b93736fb97a452))
-* **pack-studio:** separate pack and template selects ([b296fad](https://github.com/AlexeyShalaev/hse-doc-studio/commit/b296fad5e28ff16ed836273e977c279d9d06e798))
-* **pack-studio:** separate pack and template selects ([773b57f](https://github.com/AlexeyShalaev/hse-doc-studio/commit/773b57f9bd1f205b66fea0ae1b0e0299cab30e13))
-
-
-### Bug Fixes
-
-* green master CI (Windows tests, git https layout test) ([0ef1cd1](https://github.com/AlexeyShalaev/hse-doc-studio/commit/0ef1cd1c3da50fed89af8748bed6c19324352566))
-* green master CI (Windows tests, git https layout test) ([bbed93d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/bbed93da87f3bfdc6177361be6145173a9788bb5))
-* **image:** docker CLI 29.10.0 built with Go 1.27.4 (CVE-2026-97054) ([44889bc](https://github.com/AlexeyShalaev/hse-doc-studio/commit/44889bc919167f5751beb8169eb63b0f7cb8a048))
-* **image:** docker CLI 29.10.0 built with Go 1.27.4 (CVE-2026-97054) ([6da9ed0](https://github.com/AlexeyShalaev/hse-doc-studio/commit/6da9ed01ded9bb3934cd23307dcb07bf63eaf18a))
+- Admin: the Update button now shows the progress of an update. A step by step indicator (version check, image pull, image check, stop, migrations, restart and rollout, health check), with the time and details of each step. While the application restarts, the previous progress stays on screen with a waiting message, and the result is shown on its own once the server is back.
+- Admin: when an update fails, the reason is shown in plain language (image not pulled or not found by tag, no rights on the cluster, rollout did not finish in time, migration or health check failed and others), a What to do hint, a Details for support block with copying and a Retry the update button. If the executor is lost, it says so: the status is unknown. The update history shows who pressed the button, the duration and the outcome, and the confirmation screen shows the release notes. Tokens, addresses and paths are removed from the event texts.
+- Template Studio: the top bar of the Result screen has two linked lists instead of one common list: first the pack, then a template of the selected pack. The default version is chosen automatically, and a pack change resets the scenario and the inputs.
+- Template Studio: a result linter and rule coverage by scenarios. The Result screen has a new Pack check tab: findings by severity and rule with a How to fix hint, a jump to the rule and to the combination, a Check Jinja templates button and a Coverage block with an Add scenarios hint. The number of errors and warnings is shown in the top bar. 22 rules find slots that never reach the route in any combination, steps without a person, route gaps, conditions on missing fields and values, missing translations and silent Jinja render failures. pack check validates scenario files.
+- MCP: every action of the Template Studio is available to AI agents. New tools: workspaces (create, delete, refresh the base, official packs), the file tree, a targeted YAML edit by JSON Pointer with conflict protection, deleting and moving files, the version model, hints, the document library, submission points and routes, scenarios (list, write, delete, run), the atlas, Why, the matrix, the result linter, git step by step (branches, commit, diff, checks, update from the base, start over), and the pack_help catalog with the typical order of actions. Access tokens are never passed through MCP, destructive actions need confirm, and sending a PR is still off by default.
+- Fixed: fetching missing files in Official packs workspaces worked only when git named the missing object. It now also runs when git prints a single transport 'https' not allowed line, as happens on older git versions. Also fixed: writing the model server env file without an explicit encoding, and tests for Windows.
 
 ## [0.36.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.35.0...v0.36.0) - 2026-11-17
 

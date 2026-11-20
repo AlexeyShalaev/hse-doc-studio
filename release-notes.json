@@ -1,6 +1,36 @@
 {
   "releases": [
     {
+      "version": "0.37.0",
+      "date": "2026-11-20",
+      "notes": [
+        {
+          "ru": "Админка: у кнопки «Обновить» появился видимый ход обновления. Пошаговый индикатор (проверка версии, скачивание образа, проверка образа, остановка, миграции, перезапуск и раскатка, проверка здоровья), время и подробности каждого этапа. Пока приложение перезапускается, на экране остаётся прежний ход и сообщение с временем ожидания, а после возврата сервера сам показывается итог.",
+          "en": "Admin: the Update button now shows the progress of an update. A step by step indicator (version check, image pull, image check, stop, migrations, restart and rollout, health check), with the time and details of each step. While the application restarts, the previous progress stays on screen with a waiting message, and the result is shown on its own once the server is back."
+        },
+        {
+          "ru": "Админка: если обновление не прошло, показывается причина человеческим языком (образ не скачан или не найден по тегу, нет прав на кластере, раскатка не завершилась за таймаут, миграция или проверка здоровья не прошли и другие), подсказка «Что делать», блок «Подробности для поддержки» с копированием и кнопка «Повторить обновление». Если исполнитель потерян, так и написано: статус неизвестен. История обновлений показывает, кто нажал, длительность и итог, на экране подтверждения видны заметки версии. Из текстов событий убираются токены, адреса и пути.",
+          "en": "Admin: when an update fails, the reason is shown in plain language (image not pulled or not found by tag, no rights on the cluster, rollout did not finish in time, migration or health check failed and others), a What to do hint, a Details for support block with copying and a Retry the update button. If the executor is lost, it says so: the status is unknown. The update history shows who pressed the button, the duration and the outcome, and the confirmation screen shows the release notes. Tokens, addresses and paths are removed from the event texts."
+        },
+        {
+          "ru": "Студия шаблонов: в верхней панели экрана «Результат» два связанных списка вместо одного общего: сначала пак, затем шаблон выбранного пака. Версия по умолчанию выбирается сама, при смене пака сценарий и вводные сбрасываются.",
+          "en": "Template Studio: the top bar of the Result screen has two linked lists instead of one common list: first the pack, then a template of the selected pack. The default version is chosen automatically, and a pack change resets the scenario and the inputs."
+        },
+        {
+          "ru": "Студия шаблонов: линтер результата и покрытие правил сценариями. На экране «Результат» появилась вкладка «Проверка пака»: находки по серьёзности и правилу с подсказкой «Как исправить», переход к правилу и к комбинации, кнопка «Проверить Jinja-шаблоны» и блок «Покрытие» с подсказкой «Добавить сценарии». Число ошибок и предупреждений видно в верхней панели. 22 правила находят слоты, которые не попадают в маршрут ни при какой комбинации, шаги без человека, пробелы маршрута, условия на несуществующие поля и значения, пропущенные переводы и тихие сбои рендера Jinja. `pack check` проверяет файлы сценариев.",
+          "en": "Template Studio: a result linter and rule coverage by scenarios. The Result screen has a new Pack check tab: findings by severity and rule with a How to fix hint, a jump to the rule and to the combination, a Check Jinja templates button and a Coverage block with an Add scenarios hint. The number of errors and warnings is shown in the top bar. 22 rules find slots that never reach the route in any combination, steps without a person, route gaps, conditions on missing fields and values, missing translations and silent Jinja render failures. pack check validates scenario files."
+        },
+        {
+          "ru": "MCP: все действия Студии шаблонов доступны ИИ-агентам. Новые инструменты: пространства (создать, удалить, обновить базу, официальные паки), дерево файлов, точечная правка YAML по JSON Pointer с защитой от конфликтов, удаление и перенос файлов, модель версии, подсказки, библиотека документов, точки сдачи и маршруты, сценарии (список, запись, удаление, прогон), атлас, «Почему?», матрица, линтер результата, git по шагам (ветки, коммит, diff, проверки, обновление из базы, начать заново), каталог pack_help с типовым порядком действий. Токены доступа через MCP не передаются, разрушающие действия требуют confirm, отправка PR по-прежнему выключена по умолчанию.",
+          "en": "MCP: every action of the Template Studio is available to AI agents. New tools: workspaces (create, delete, refresh the base, official packs), the file tree, a targeted YAML edit by JSON Pointer with conflict protection, deleting and moving files, the version model, hints, the document library, submission points and routes, scenarios (list, write, delete, run), the atlas, Why, the matrix, the result linter, git step by step (branches, commit, diff, checks, update from the base, start over), and the pack_help catalog with the typical order of actions. Access tokens are never passed through MCP, destructive actions need confirm, and sending a PR is still off by default."
+        },
+        {
+          "ru": "Исправлено: догрузка недостающих файлов в пространствах «Официальные паки» срабатывала, только если git называл недостающий объект. Теперь она запускается и тогда, когда git пишет одну строку «transport 'https' not allowed», как это бывает на старых версиях git. Исправлены также запись env-файла модельного сервера без явной кодировки и тесты для Windows.",
+          "en": "Fixed: fetching missing files in Official packs workspaces worked only when git named the missing object. It now also runs when git prints a single transport 'https' not allowed line, as happens on older git versions. Also fixed: writing the model server env file without an explicit encoding, and tests for Windows."
+        }
+      ]
+    },
+    {
       "version": "0.36.0",
       "date": "2026-11-17",
       "notes": [
