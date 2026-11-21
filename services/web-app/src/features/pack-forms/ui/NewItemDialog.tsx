@@ -39,7 +39,8 @@ export const NewItemDialog = ({
   // Своё короткое имя: пока человек его не трогал, имя следует за названием.
   const [typed, setTyped] = useState<string | null>(null);
   const [label, setLabel] = useState<Record<string, string>>({});
-  const named = label.ru?.trim() || label.en?.trim() || "";
+  const named =
+    [label.ru, label.en].map((text) => text?.trim() ?? "").find(Boolean) ?? "";
   const generated = (() => {
     const base = slugify(named, "_");
     const safe = pattern === "key" && /^[0-9]/.test(base) ? `f_${base}` : base;

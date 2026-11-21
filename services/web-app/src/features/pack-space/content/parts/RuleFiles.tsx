@@ -56,9 +56,10 @@ export const RuleFiles = ({
                 data-testid={`ct-rule-file-${name}`}
               >
                 <span title={name}>
-                  {titles.get(name) ||
-                    titles.get(name.replace(/\.ya?ml$/, "")) ||
-                    name}
+                  {[
+                    titles.get(name),
+                    titles.get(name.replace(/\.ya?ml$/, "")),
+                  ].find(Boolean) ?? name}
                 </span>
                 <span className="sp-ct-part-open">
                   {t("content.parts.rules.open")}
