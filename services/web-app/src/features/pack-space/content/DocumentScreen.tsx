@@ -1,10 +1,12 @@
 import { Suspense, useEffect } from "react";
-import { Lock } from "lucide-react";
+import { Eye, Lock } from "lucide-react";
 import { clsx } from "clsx";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import { EmptyState, Spinner } from "@shared/ui";
 import { writeUi } from "../context/memory";
+import { useSpaceNav } from "../context/useSpaceNav";
+import { previewPatch } from "../preview/link";
 import {
   DOC_SEGMENTS,
   type ContentDocument,
@@ -31,6 +33,7 @@ export const DocumentScreen = ({
 }) => {
   const { t } = useTranslation("packSpace");
   const nav = useContentNav();
+  const spaceNav = useSpaceNav();
   const doc: ContentDocument | undefined = data.docs.find(
     (item) => item.id === docId,
   );
@@ -74,6 +77,18 @@ export const DocumentScreen = ({
             )}
           </h1>
         </div>
+        {/* Правая колонка с PDF на узком экране выезжает; на широком она и так на месте. */}
+        <button
+          type="button"
+          className="btn sm sp-ct-pv-btn"
+          data-testid="ct-preview-open"
+          onClick={() => {
+            spaceNav.go(previewPatch(true), { push: true });
+          }}
+        >
+          <Eye size="0.875rem" aria-hidden="true" />
+          {t("preview.show")}
+        </button>
         <nav className="sp-ct-seg" aria-label={t("content.doc.segments")}>
           {DOC_SEGMENTS.map((item) => (
             <Link

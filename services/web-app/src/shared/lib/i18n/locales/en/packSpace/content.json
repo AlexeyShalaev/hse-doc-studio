@@ -13,7 +13,6 @@
     "search": "Find a document",
     "searchEmpty": "No such document",
     "noDocuments": "This version has no documents yet.",
-    "current": "What we edit: {{name}}",
     "documentsHint": "Document list: add, remove, reorder"
   },
   "doc": {

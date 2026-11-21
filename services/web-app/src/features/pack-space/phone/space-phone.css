@@ -1,0 +1,300 @@
+/* Телефон (pack-studio-ux.md, 4.5 и 5.8). Область: phone. Префикс sp-ph-, только токены темы.
+   Включает атрибут data-phone каркаса (не окно): рамка галереи и настоящий экран устроены одинаково. */
+
+.sp-ph-tabs {
+  display: flex;
+  min-height: var(--tabbar-h);
+}
+.sp-ph-tab {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--touch-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.125rem;
+  color: var(--fg-2);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+.sp-ph-tab[aria-current="page"] {
+  color: var(--accent);
+}
+.sp-ph-icon {
+  position: relative;
+  display: inline-flex;
+}
+.sp-ph-badge {
+  position: absolute;
+  top: -0.3125rem;
+  left: 100%;
+  margin-left: -0.375rem;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.25rem;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 0.5rem;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 0.625rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* ── зоны касания: 44 px (--touch-lg) у всего, на что нажимают пальцем ──
+   Общие правила телефона из index.css дают 40 px; экран пространства строже. Правила действуют на
+   телефоне (`data-phone`, он же рамка галереи) и там, где основной указатель палец (`pointer:
+   coarse`, планшет); у мыши ничего не меняется. Редактор текста со своими жестами сюда не входит,
+   остальным, кому нужен свой размер, класс `sp-keep-size`. Два блока ниже одинаковы: селектор
+   телефона и медиазапрос нельзя объединить в один. */
+.sp-root[data-phone]
+  :is(button, a[href], summary, select, [role="tab"]):not(
+    .cm-editor *,
+    .sp-keep-size
+  ) {
+  min-height: var(--touch-lg);
+}
+.sp-root[data-phone] button:not(.cm-editor *, .sp-keep-size) {
+  min-width: var(--touch-lg);
+}
+.sp-root[data-phone]
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(
+    [type="file"]
+  ):not([type="hidden"]) {
+  min-height: var(--touch-lg);
+  min-width: var(--touch-lg);
+}
+.sp-root[data-phone]
+  label:has(> input[type="checkbox"], > input[type="radio"]) {
+  min-height: var(--touch-lg);
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+@media (pointer: coarse) {
+  .sp-root
+    :is(button, a[href], summary, select, [role="tab"]):not(
+      .cm-editor *,
+      .sp-keep-size
+    ) {
+    min-height: var(--touch-lg);
+  }
+  .sp-root button:not(.cm-editor *, .sp-keep-size) {
+    min-width: var(--touch-lg);
+  }
+  .sp-root
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(
+      [type="file"]
+    ):not([type="hidden"]) {
+    min-height: var(--touch-lg);
+    min-width: var(--touch-lg);
+  }
+  .sp-root label:has(> input[type="checkbox"], > input[type="radio"]) {
+    min-height: var(--touch-lg);
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
+}
+/* Ссылки-кнопки в тексте: строка не ниже пальца. */
+.sp-root[data-phone] :is(.sp-link, .sp-ch-link) {
+  display: inline-flex;
+  align-items: center;
+}
+.sp-root[data-phone] .sp-back {
+  min-width: var(--touch-lg);
+  justify-content: center;
+}
+
+/* ── «Подробности» шторкой (5.4, 5.8) ──
+   Ручку и крестик рисует каркас (`sp-side-bar`), своя ручка «Подробностей» не нужна. Главная
+   кнопка шторки («Изменить условия» или «Править копию») и кнопки формы остаются у нижнего края,
+   пока середина прокручивается: путь «документ, изменить условия» не требует искать кнопку. */
+.sp-root[data-phone] .sp-side .sp-details-handle {
+  display: none;
+}
+.sp-root[data-phone] .sp-side .sp-details {
+  padding-bottom: 0;
+}
+.sp-root[data-phone] .sp-details-actions:has(.btn.primary),
+.sp-root[data-phone] .sp-details-form > .sp-details-row:last-child {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+}
+.sp-root[data-phone] .sp-details-actions:has(.btn.primary) {
+  margin: 0 -1rem;
+  padding: 0.625rem 1rem calc(0.625rem + var(--safe-bottom, 0px));
+  background: var(--bg-1);
+  border-top: 1px solid var(--border);
+}
+.sp-root[data-phone] .sp-details-form > .sp-details-row:last-child {
+  margin: 0 -0.75rem -0.75rem;
+  padding: 0.625rem 0.75rem;
+  background:
+    linear-gradient(var(--accent-soft), var(--accent-soft)), var(--bg-1);
+  border-top: 1px solid var(--accent-line);
+  border-radius: 0 0 var(--r-3) var(--r-3);
+}
+.sp-root[data-phone] .sp-details-actions .sp-details-row > .btn {
+  flex: 1 1 auto;
+  justify-content: center;
+}
+/* Чипы условия и подпись флага: рука попадает, а не целится. */
+.sp-root[data-phone] .sp-chips .sp-chip,
+.sp-root[data-phone] .sp-flag {
+  min-height: var(--touch-lg);
+}
+
+/* ── «Изменения» страницей (5.6, 5.8) ──
+   Главная кнопка внизу на всю ширину, закрывать страницу нечем рядом с ней: вкладки на месте. */
+.sp-root[data-phone] .sp-ch-foot {
+  flex-wrap: nowrap;
+}
+.sp-root[data-phone] .sp-ch-foot > .btn:first-child:not(:last-of-type) {
+  flex: 1;
+  justify-content: center;
+}
+.sp-root[data-phone] .sp-ch-foot-close {
+  display: none;
+}
+.sp-root[data-phone] .sp-ch-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+.sp-root[data-phone] .sp-ch-head .btn.xs {
+  min-width: var(--touch-lg);
+}
+
+/* ── «Содержимое» (5.5, 5.8) ── */
+.sp-root[data-phone] :is(.sp-ct-chip, .sp-ct-seg-btn, .sp-ck-chip) {
+  display: inline-flex;
+  align-items: center;
+}
+.sp-root[data-phone] .sp-ct-seg-btn {
+  justify-content: center;
+}
+
+/* ── шторки и окна, открытые из экрана пространства ──
+   Они рисуются порталом вне `.sp-root`, поэтому ищем экран на странице: пока он на телефоне,
+   кнопки в шторках тоже не ниже 44 px. */
+@media (max-width: 767.98px) {
+  body:has(.sp-root[data-phone])
+    :is(.modal-panel, [data-form="sheet"])
+    :is(
+      button,
+      a[href],
+      summary,
+      select,
+      [role="tab"],
+      [role="menuitem"],
+      [role="option"]
+    ) {
+    min-height: var(--touch-lg);
+  }
+  body:has(.sp-root[data-phone]) .modal-panel .modal-close {
+    min-width: var(--touch-lg);
+  }
+  body:has(.sp-root[data-phone])
+    :is(.modal-panel, [data-form="sheet"])
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(
+      [type="file"]
+    ) {
+    min-height: var(--touch-lg);
+  }
+  body:has(.sp-root[data-phone])
+    :is(.modal-panel, [data-form="sheet"])
+    label:has(> input[type="checkbox"], > input[type="radio"]) {
+    min-height: var(--touch-lg);
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
+}
+
+/* ── «Для какого студента»: ряд прокручивается от края до края (5.3, 5.8) ──
+   Ряд выходит за поля страницы, чтобы кнопки уходили под край экрана, а не обрывались у поля;
+   полоса прокрутки скрыта, край с продолжением затухает (`scroll-hint`), «Ещё N» открывает шторку. */
+.sp-root[data-phone] .sp-main-top {
+  padding-inline: 0;
+}
+.sp-root[data-phone] .sp-sit-top > :not(.sp-sit) {
+  margin-inline: var(--page-gutter);
+}
+.sp-root[data-phone] .sp-sit {
+  padding-inline: var(--page-gutter);
+  scroll-padding-inline: var(--page-gutter);
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.sp-root[data-phone] .sp-sit::-webkit-scrollbar {
+  display: none;
+}
+.sp-root[data-phone] .sp-sit > .sp-chip {
+  scroll-snap-align: start;
+}
+
+/* ── предпросмотр PDF шторкой (5.5, 5.8) ──
+   Шторка с предпросмотром выше обычной, страница PDF сразу под названием, а условия, пример
+   данных и «Собрать заново» под ней: на телефоне смотрят на страницу, а не на настройки. */
+.sp-root[data-phone] .sp-side:has(.sp-pv) {
+  height: 92%;
+  max-height: 92%;
+}
+.sp-root[data-phone] .sp-pv > * {
+  order: 1;
+}
+.sp-root[data-phone] .sp-pv > .sp-pv-top {
+  order: 0;
+}
+.sp-root[data-phone] .sp-pv > :is(.sp-pv-block, .sp-pv-fields, .sp-pv-run) {
+  order: 2;
+}
+.sp-root[data-phone] .sp-pv > .sp-pv-findings {
+  order: 3;
+}
+.sp-root[data-phone] .sp-pv-viewer {
+  height: min(60vh, 32rem);
+}
+
+/* ── формы версии (прежние `pack-forms`) на узкой ширине ──
+   Формы рассчитаны на колонку шире телефона: ряды переносятся, а не растягивают страницу. */
+.sp-root[data-phone]
+  .sp-ct-legacy
+  :is(
+    .psf-chip,
+    .psf-actions,
+    .psf-inline-field,
+    .psf-step-head,
+    .psf-step-new
+  ) {
+  flex-wrap: wrap;
+  max-width: 100%;
+  min-width: 0;
+}
+.sp-root[data-phone] .sp-ct-legacy .psf-chip > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.sp-root[data-phone] .sp-ct-title > .sp-ct-kicker {
+  display: none;
+}
+/* Файлы документа по языкам: одна строка, которая прокручивается, а не две по 44 px. */
+.sp-root[data-phone] .sp-ct-files {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  margin-inline: calc(var(--page-gutter) * -1);
+  padding-inline: var(--page-gutter);
+  scrollbar-width: none;
+}
+.sp-root[data-phone] .sp-ct-files::-webkit-scrollbar {
+  display: none;
+}
+.sp-root[data-phone] .sp-ct-files > * {
+  flex-shrink: 0;
+}

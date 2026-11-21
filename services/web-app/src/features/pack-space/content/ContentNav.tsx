@@ -19,6 +19,7 @@ import type { ContentRoute } from "./route";
 import { useContentData, type ContentData } from "./useContentData";
 import { useContentNav } from "./useContentNav";
 import { useContentRoute } from "./useContentRoute";
+import { useSpacePhone } from "../shell/phoneContext";
 import "./space-content.css";
 
 // Левая навигация «Что редактируем» (pack-studio-ux.md, 5.5): документы списком, дальше разделы
@@ -48,6 +49,9 @@ export const ContentNavView = ({
 }: Props & { data: ContentData; route: ContentRoute }) => {
   const { t } = useTranslation("packSpace");
   const nav = useContentNav();
+  // На телефоне список это страница первого уровня: переход к документу ложится в историю, и
+  // «назад» браузера возвращает к списку. На широком экране документы листают заменой записи.
+  const replace = !useSpacePhone();
   const [query, setQuery] = useState("");
   const needle = query.trim().toLowerCase();
   const docs = needle
@@ -75,7 +79,7 @@ export const ContentNavView = ({
       <div className="sp-ct-kicker">{t("content.nav.label")}</div>
       {/* Заголовок списка ведёт в «Состав документов»: добавить, убрать, переставить документы. */}
       <Link
-        replace
+        replace={replace}
         to={nav.partHref("documents")}
         className={clsx(
           "sp-ct-item",
@@ -121,7 +125,7 @@ export const ContentNavView = ({
                 }
               >
                 <Link
-                  replace
+                  replace={replace}
                   to={nav.documentHref(doc.id)}
                   className={clsx("sp-ct-sub", doc.id === activeDoc && "on")}
                   aria-current={doc.id === activeDoc ? "page" : undefined}
@@ -142,7 +146,7 @@ export const ContentNavView = ({
       {PARTS.map(({ part, icon: Icon }) => (
         <Link
           key={part}
-          replace
+          replace={replace}
           to={nav.partHref(part)}
           className={clsx("sp-ct-item", part === activePart && "on")}
           aria-current={part === activePart ? "page" : undefined}
@@ -156,7 +160,7 @@ export const ContentNavView = ({
       ))}
       <hr className="sp-ct-rule" />
       <Link
-        replace
+        replace={replace}
         to={nav.partHref("files")}
         className={clsx("sp-ct-item", activePart === "files" && "on")}
         aria-current={activePart === "files" ? "page" : undefined}

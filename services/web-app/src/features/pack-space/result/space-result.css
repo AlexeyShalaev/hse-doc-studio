@@ -462,3 +462,13 @@
 .sp-root[data-phone] .sp-row-acts:has(> .sp-pdf:only-child) {
   display: none;
 }
+/* И то, что тоже есть в подробностях строки или в «Ещё N условий»: «Показать при …» (в подробностях
+   это «Что изменится, если…») и выбор варианта (условие `variant.<документ>`). У строки на телефоне
+   одна кнопка, а экран со списком «Не вошло» остаётся в пределах 16 элементов управления (S11). */
+.sp-root[data-phone] :is(.sp-show, .sp-variant) {
+  display: none;
+}
+.sp-root[data-phone]
+  .sp-row-acts:not(:has(> :not(.sp-show, .sp-variant, .sp-pdf))) {
+  display: none;
+}

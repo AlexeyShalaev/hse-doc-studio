@@ -28,6 +28,7 @@ import {
   Spinner,
   type RevealRequest,
 } from "@shared/ui";
+import { useSpacePhone } from "../../shell/phoneContext";
 import { setContentDirty } from "../contentGuard";
 import { onRevealLine, takePendingReveal } from "./revealLine";
 import { pickFinding, suggestFix } from "./finding";
@@ -71,6 +72,7 @@ const Loaded = ({
 }) => {
   const { t } = useTranslation("packSpace");
   const client = useQueryClient();
+  const phone = useSpacePhone();
   const path = file.path;
   // Записи файлов пространства: проверки читаются заново после каждой (тот же ключ у списка
   // «Замечания к файлу» справа, поэтому запрос один).
@@ -228,6 +230,8 @@ const Loaded = ({
               setCaret(stats.line);
             }}
             readOnly={locked}
+            // Телефон: строка переносится, а не уезжает вбок (горизонтальной прокрутки нет).
+            wrapLines={phone}
             language={language}
             diagnostics={diagnostics}
             {...(reveal ? { reveal } : {})}

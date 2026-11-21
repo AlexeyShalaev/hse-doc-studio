@@ -759,7 +759,11 @@ export const ChangesPanel = ({
       <div className="sp-ch-foot">
         {primary}
         {foot}
-        <Button variant="secondary" onClick={onClose}>
+        <Button
+          variant="secondary"
+          className="sp-ch-foot-close"
+          onClick={onClose}
+        >
           {t("changes.footer.close")}
         </Button>
         <span className="sp-ch-foot-grow" />

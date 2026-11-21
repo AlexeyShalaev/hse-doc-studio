@@ -1,6 +1,7 @@
 import type { KeyboardEvent, ReactNode } from "react";
 import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { SpacePhoneContext } from "./phoneContext";
 import "./space-shell.css";
 
 export type SpaceShellProps = {
@@ -57,69 +58,83 @@ export const SpaceShell = ({
     if (event.key === "Escape" && sideOpen) onSideClose?.();
   };
   return (
-    <div
-      className="sp-root"
-      data-testid="sp-shell"
-      data-phone={phone ? "" : undefined}
-    >
-      <header className="sp-bar" data-testid="sp-bar">
-        <div className="sp-bar-lead">{header}</div>
-        {actions ? <div className="sp-bar-actions">{actions}</div> : null}
-      </header>
-      {contextBar ? (
-        <div className="sp-context" data-testid="sp-context">
-          {contextBar}
-        </div>
-      ) : null}
-      {phone && showChanges ? (
-        <div className="sp-page" data-testid="sp-changes-page">
-          {changes}
-        </div>
-      ) : (
-        <div className="sp-grid" data-nav={!phone && nav ? "" : undefined}>
-          {!phone && nav ? (
-            <aside className="sp-nav" data-testid="sp-nav">
-              {nav}
-            </aside>
-          ) : null}
-          <section className="sp-center">
-            {mainTop ? (
-              <div className="sp-main-top" data-testid="sp-main-top">
-                {mainTop}
-              </div>
+    <SpacePhoneContext.Provider value={phone}>
+      <div
+        className="sp-root"
+        data-testid="sp-shell"
+        data-phone={phone ? "" : undefined}
+      >
+        <header className="sp-bar" data-testid="sp-bar">
+          <div className="sp-bar-lead">{header}</div>
+          {actions ? <div className="sp-bar-actions">{actions}</div> : null}
+        </header>
+        {contextBar ? (
+          <div className="sp-context" data-testid="sp-context">
+            {contextBar}
+          </div>
+        ) : null}
+        {phone && showChanges ? (
+          <div className="sp-page" data-testid="sp-changes-page">
+            {changes}
+          </div>
+        ) : (
+          <div className="sp-grid" data-nav={!phone && nav ? "" : undefined}>
+            {!phone && nav ? (
+              <aside className="sp-nav" data-testid="sp-nav">
+                {nav}
+              </aside>
             ) : null}
-            <div className="sp-main" data-testid="sp-main">
-              {main}
-            </div>
-          </section>
-          {side ? (
-            <aside
-              className="sp-side"
-              data-testid="sp-side"
-              data-open={sideOpen}
-              onKeyDown={onKeyDown}
-            >
-              {!showChanges && onSideClose ? (
-                <button
-                  type="button"
-                  className="icon-btn sp-side-close"
-                  aria-label={t("shell.close")}
-                  title={t("shell.close")}
-                  onClick={onSideClose}
-                >
-                  <X size="0.9375rem" />
-                </button>
+            <section className="sp-center">
+              {mainTop ? (
+                <div className="sp-main-top" data-testid="sp-main-top">
+                  {mainTop}
+                </div>
               ) : null}
-              {side}
-            </aside>
-          ) : null}
-        </div>
-      )}
-      {phone && bottomTabs ? (
-        <div className="sp-bottom" data-testid="sp-bottom">
-          {bottomTabs}
-        </div>
-      ) : null}
-    </div>
+              <div className="sp-main" data-testid="sp-main">
+                {main}
+              </div>
+            </section>
+            {side && phone && sideOpen && !showChanges && onSideClose ? (
+              // Затемнение под шторкой: касание вне неё закрывает её (для скринридера есть крестик).
+              <div
+                className="sp-scrim"
+                data-testid="sp-scrim"
+                aria-hidden="true"
+                onClick={onSideClose}
+              />
+            ) : null}
+            {side ? (
+              <aside
+                className="sp-side"
+                data-testid="sp-side"
+                data-open={sideOpen}
+                onKeyDown={onKeyDown}
+              >
+                {!showChanges && onSideClose ? (
+                  <div className="sp-side-bar">
+                    <span className="sp-side-handle" aria-hidden="true" />
+                    <button
+                      type="button"
+                      className="icon-btn sp-side-close"
+                      aria-label={t("shell.close")}
+                      title={t("shell.close")}
+                      onClick={onSideClose}
+                    >
+                      <X size="0.9375rem" />
+                    </button>
+                  </div>
+                ) : null}
+                {side}
+              </aside>
+            ) : null}
+          </div>
+        )}
+        {phone && bottomTabs ? (
+          <div className="sp-bottom" data-testid="sp-bottom">
+            {bottomTabs}
+          </div>
+        ) : null}
+      </div>
+    </SpacePhoneContext.Provider>
   );
 };
