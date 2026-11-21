@@ -48,7 +48,7 @@
     "diagnostics": "Self-diagnostics",
     "mcp": "MCP server",
     "packStudio": "Template Studio",
-    "packCatalog": "Pack catalogs"
+    "packCatalog": "Template sources"
   },
   "overview": {
     "title": "Installation overview",

@@ -87,10 +87,12 @@ describe("админка: каталоги паков", () => {
     expect(within(git).getByTestId("pc-source-location")).toHaveTextContent(
       "https://git.example.org/acme/packs.git @ v2026.1.1",
     );
-    expect(within(git).getByText("Включён")).toBeInTheDocument();
-    expect(within(git).getByText("Отслеживается")).toBeInTheDocument();
+    expect(within(git).getByTestId("pc-source-status")).toHaveTextContent(
+      "Всё подключено",
+    );
+    expect(within(git).getByText("Обновляется сам")).toBeInTheDocument();
     expect(within(git).getByTestId("pc-source-applied")).toHaveTextContent(
-      "Применена ревизия 4b825dc6",
+      "Сейчас подключено: 4b825dc6",
     );
     expect(within(git).getByText("thesis 2026.1.0")).toBeInTheDocument();
 
@@ -104,12 +106,19 @@ describe("админка: каталоги паков", () => {
         "В архиве есть ссылки, абсолютные пути или выход за его папку. Такой архив не принимается.",
       ),
     ).toBeInTheDocument();
-    expect(within(archive).getByText("Ещё не применялся")).toBeInTheDocument();
+    expect(
+      within(archive).getByText("Ещё не подключён: проверьте и примените"),
+    ).toBeInTheDocument();
+    expect(within(archive).getByTestId("pc-source-status")).toHaveTextContent(
+      "Не удалось проверить",
+    );
     expect(within(archive).getByText("Подробнее")).toBeInTheDocument();
 
     const others = screen.getByTestId("pc-others");
     expect(within(others).getByText("Встроенный")).toBeInTheDocument();
-    expect(within(others).getByText("Удалённый источник")).toBeInTheDocument();
+    expect(
+      within(others).getByText("Из удалённого источника"),
+    ).toBeInTheDocument();
     expect(within(others).getByText("Скрыт из мастера")).toBeInTheDocument();
   });
 

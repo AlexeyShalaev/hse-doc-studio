@@ -6949,6 +6949,8 @@ a.adm-kpi:focus-visible {
 }
 .adm-state[data-compact="true"] {
   flex-direction: row;
+  /* На узком экране действие уходит под текст, а не сжимает его в столбик. */
+  flex-wrap: wrap;
   text-align: left;
   align-items: center;
   gap: 0.625rem;
@@ -6961,7 +6963,7 @@ a.adm-kpi:focus-visible {
   flex-shrink: 0;
 }
 .adm-state[data-compact="true"] .adm-state-text {
-  flex: 1;
+  flex: 1 1 12rem;
   min-width: 0;
 }
 .adm-state[data-compact="true"] .adm-state-action {

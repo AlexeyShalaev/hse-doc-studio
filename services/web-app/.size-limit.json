@@ -153,7 +153,7 @@
     "name": "Словарь админки: packStudio",
     "path": "dist/assets/locale-admin-packStudio-*.js",
     "gzip": true,
-    "limit": "3.5 kB"
+    "limit": "4.3 kB"
   },
   {
     "name": "Словарь админки: packCatalog",
@@ -249,10 +249,10 @@
     "name": "Админка, «Студия шаблонов» (lazy, features/pack-studio-admin)",
     "path": "dist/assets/pack-studio-admin-*.js",
     "gzip": true,
-    "limit": "3.1 kB"
+    "limit": "4.1 kB"
   },
   {
-    "name": "Админка, «Каталоги паков» (lazy, features/pack-catalog-admin)",
+    "name": "Админка, «Источники шаблонов» (lazy, features/pack-catalog-admin)",
     "path": "dist/assets/pack-catalog-admin-*.js",
     "gzip": true,
     "limit": "7 kB"

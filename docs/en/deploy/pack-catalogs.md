@@ -8,7 +8,7 @@ tags:
 
 # Pack catalogs
 
-<p class="hds-lede">The project wizard shows the packs built into the Studio image. Your own packs (another programme, department or university) can live in your own git repository and be edited in the Pack Studio. The Pack catalogs section of the admin panel connects such packs to this instance: they appear in the project wizard without rebuilding the image and without a restart.</p>
+<p class="hds-lede">The project wizard shows the packs built into the Studio image. Your own packs (another programme, department or university) can live in your own git repository and be edited in the Pack Studio. The Template sources section of the admin panel connects such packs to this instance: they appear in the project wizard without rebuilding the image and without a restart.</p>
 
 ## Sources
 
