@@ -1,1 +1,428 @@
-{}
+{
+  "dict": {
+    "orgOf": "{{subject}} (organisation)",
+    "subject": {
+      "kind": "Kind of work",
+      "staffing": "Team size",
+      "lang": "Language",
+      "supervisor": "Supervisor",
+      "co_supervisor": "Second supervisor",
+      "academic_supervisor": "Academic supervisor"
+    },
+    "value": {
+      "project": "Project",
+      "research": "Research",
+      "solo": "One author",
+      "team2": "Team of two",
+      "team3": "Team of three",
+      "ru": "Russian",
+      "en": "English",
+      "yes": "Yes",
+      "no": "No",
+      "university": "HSE",
+      "company": "Company",
+      "none": "None",
+      "team": "Team of two or three"
+    }
+  },
+  "verb": {
+    "document": {
+      "in": "included in the set",
+      "out": "not included in the set"
+    },
+    "field": {
+      "in": "shown",
+      "out": "not shown"
+    },
+    "participant": {
+      "in": "takes part",
+      "out": "does not take part"
+    },
+    "item": {
+      "in": "handed in",
+      "out": "not handed in"
+    },
+    "route": {
+      "in": "signature needed",
+      "out": "signature not needed"
+    },
+    "step": {
+      "in": "step needed",
+      "out": "step not needed"
+    },
+    "check": {
+      "in": "check applies",
+      "out": "check does not apply"
+    }
+  },
+  "why": {
+    "quote": "“{{text}}”",
+    "or": "or",
+    "all": " and ",
+    "any": " or ",
+    "unset": "not set",
+    "need": {
+      "in": "{{subject}}: {{values}}",
+      "contains": "the field “{{subject}}” has {{values}}",
+      "present": "there is {{subject}}",
+      "truthy": "turned on: {{subject}}"
+    },
+    "skipped": "Not checked: the result is already decided by other conditions.",
+    "verdict": {
+      "gate": {
+        "held": "{{in}} when {{need}}.",
+        "not_held": "{{out}}. It fits only when {{need}}."
+      },
+      "add": {
+        "held": "{{in}} when {{need}}.",
+        "not_held": "{{out}}. It is added only when {{need}}."
+      },
+      "display": {
+        "held": "{{in}} when {{need}}.",
+        "not_held": "{{out}}. It appears only when {{need}}."
+      },
+      "exclude": {
+        "held": "{{out}} when {{need}}.",
+        "not_held": "{{in}}. It is removed only when {{need}}, which is not the case now."
+      },
+      "require": {
+        "held": "Required when {{need}}.",
+        "not_held": "Not required. Required only when {{need}}."
+      },
+      "order": {
+        "held": "The order depends on a condition: {{need}}.",
+        "not_held": "The order depends on a condition: {{need}}."
+      }
+    },
+    "langs": {
+      "supported_langs": {
+        "held": "Editions exist in: {{values}}.",
+        "not_held": "There is no edition in this language. There are: {{values}}."
+      },
+      "variant_langs": {
+        "held": "The variant is available in: {{values}}.",
+        "not_held": "The variant is not available in this language. Available in: {{values}}."
+      }
+    },
+    "static": {
+      "route_order": {
+        "held": "The order of signatures is set by the version rules.",
+        "not_held": "The order of signatures is set by the version rules."
+      },
+      "slot_optional": {
+        "held": "The signature is optional: it can be skipped.",
+        "not_held": "The signature is required."
+      },
+      "skip_if_nda": {
+        "held": "This item is skipped when the work is under an NDA.",
+        "not_held": "This item is not skipped under an NDA."
+      },
+      "item_document": {
+        "held": "The document of this item is in the set, so the item stays.",
+        "not_held": "The document of this item is not in the set, so there is no item either."
+      },
+      "check_disabled": {
+        "held": "The check is turned off in the version description.",
+        "not_held": "The check is not turned off."
+      },
+      "other": {
+        "held": "A version rule is met.",
+        "not_held": "A version rule is not met."
+      }
+    },
+    "builtin": {
+      "nda_gate": "This rule is built into the Studio: under an NDA the document is turned off.",
+      "manuals_gate": "This rule is built into the Studio: it reads the “Manuals” field.",
+      "presentation_variant": "This rule is built into the Studio: it picks the presentation variant.",
+      "builtin_route": "This order is built into the Studio: the version did not set its own.",
+      "other": "This rule is built into the Studio and cannot be changed here."
+    },
+    "title": "Why it is so",
+    "busy": "The server is busy, retrying in {{count}} s.",
+    "failed": "Could not find out why.",
+    "emptyDepends": "It has no conditions of its own, but the student's conditions change it: see below.",
+    "emptyStatic": "It does not depend on the student's conditions: it is set in the template."
+  },
+  "whatIf": {
+    "result": {
+      "document": {
+        "active": "the document will be in the set",
+        "present": "the document will be in the set",
+        "inactive": "the document will be turned off",
+        "absent": "there will be no document"
+      },
+      "field": {
+        "active": "the field will appear",
+        "present": "the field will appear",
+        "inactive": "there will be no field",
+        "absent": "there will be no field"
+      },
+      "participant": {
+        "active": "the participant will appear",
+        "present": "the participant will appear",
+        "inactive": "there will be no participant",
+        "absent": "there will be no participant"
+      },
+      "item": {
+        "active": "it will be handed in",
+        "present": "it will be handed in",
+        "inactive": "it will not be handed in",
+        "absent": "it will not be handed in"
+      },
+      "route": {
+        "active": "the signature will appear",
+        "present": "the signature will appear",
+        "inactive": "there will be no signature",
+        "absent": "there will be no signature"
+      },
+      "step": {
+        "active": "the step will appear",
+        "present": "the step will appear",
+        "inactive": "there will be no step",
+        "absent": "there will be no step"
+      },
+      "check": {
+        "active": "the check will apply",
+        "present": "the check will apply",
+        "inactive": "the check will not apply",
+        "absent": "the check will not apply"
+      }
+    },
+    "title": "What changes if…",
+    "if": "If {{condition}} is “{{value}}”:",
+    "applied": "Set: {{condition}} “{{value}}”.",
+    "restore": "Undo",
+    "none": "No condition of the student changes this element.",
+    "more": "Show more ({{count}})",
+    "less": "Show less"
+  },
+  "kind": {
+    "document": "Document",
+    "meta": "Project data field",
+    "form": "Questionnaire",
+    "form_field": "Questionnaire field",
+    "participant": "Participant",
+    "point": "Hand-in point",
+    "point_item": "Document in a hand-in point",
+    "point_extra": "File in a hand-in point",
+    "route": "Signatures of a hand-in point",
+    "route_step": "Signing step",
+    "route_pair": "Signature",
+    "route_skipped": "Skipped signature",
+    "check": "Check",
+    "unknown": "Element"
+  },
+  "inPoint": "point “{{point}}”",
+  "stepTitle": "Step {{n}}, {{point}}",
+  "state": {
+    "document": {
+      "active": "included in the set",
+      "present": "included in the set",
+      "inactive": "turned off under these conditions",
+      "absent": "not included in the set"
+    },
+    "field": {
+      "active": "shown",
+      "present": "shown",
+      "inactive": "not shown",
+      "absent": "not shown"
+    },
+    "participant": {
+      "active": "takes part",
+      "present": "takes part",
+      "inactive": "does not take part",
+      "absent": "does not take part"
+    },
+    "item": {
+      "active": "handed in",
+      "present": "handed in",
+      "inactive": "not handed in",
+      "absent": "not handed in"
+    },
+    "route": {
+      "active": "signature needed",
+      "present": "signature needed",
+      "inactive": "signature not needed",
+      "absent": "signature not needed"
+    },
+    "step": {
+      "active": "step needed",
+      "present": "step needed",
+      "inactive": "no such step",
+      "absent": "no such step"
+    },
+    "check": {
+      "active": "check applies",
+      "present": "check applies",
+      "inactive": "check is off",
+      "absent": "check is off"
+    }
+  },
+  "scope": {
+    "personal": "personal",
+    "shared": "shared by the team"
+  },
+  "optional": "optional",
+  "tone": {
+    "ok": "Condition met:",
+    "no": "Condition not met:",
+    "skip": "Not checked:",
+    "info": "For information:"
+  },
+  "retry": "Try again",
+  "recalculating": "Recalculating…",
+  "released": "This version is released and does not change. “Edit a copy”: the Studio picks the number itself.",
+  "makeCopy": "Edit a copy",
+  "registry": "Releases from the registry are read-only.",
+  "open": {
+    "document": "Document text",
+    "fields": "Field in the form",
+    "forms": "Questionnaire in the form",
+    "deadlines": "Deadlines and hand-in",
+    "signatures": "Signatures"
+  },
+  "empty": {
+    "kicker": "Details",
+    "title": "What you can do here",
+    "lead": "Click a document, a field or a participant: we will show why it is in the set and how to change that.",
+    "cardTitle": "Change the conditions at the top",
+    "cardLead": "The result is recalculated at once, and what changed is highlighted."
+  },
+  "more": {
+    "label": "More",
+    "undo": "Undo the edit",
+    "redo": "Redo the edit",
+    "history": "Edit history",
+    "link": "Copy link to this element",
+    "linkCopied": "Link copied.",
+    "linkFailed": "Could not copy the link."
+  },
+  "tech": {
+    "title": "Technical details",
+    "element": "Element",
+    "builtin": "built into the Studio: {{name}}",
+    "openFile": "Open the rule file",
+    "source": "File text",
+    "kinds": {
+      "supported_kinds": "Kinds of work of a document",
+      "supported_staffing": "Team size of a document",
+      "supported_langs": "Languages of a document",
+      "document_scope": "Scope of a document",
+      "variant_langs": "Languages of a variant",
+      "builtin_gate": "Studio rule",
+      "field_kinds": "Kinds of work of a field",
+      "visible_if": "When the field is shown",
+      "required_at": "When the field is required",
+      "form_kinds": "Kinds of work of a questionnaire",
+      "form_per_author": "A questionnaire per author",
+      "item_kinds": "Kinds of work of an item",
+      "extra_kinds": "Kinds of work of an extra file",
+      "skip_if_nda": "Skip under an NDA",
+      "item_document": "Document of an item",
+      "slot_when": "When the signature is needed",
+      "slot_optional": "Signature is optional",
+      "route_order": "Order of signing",
+      "check_applies": "The check applies",
+      "check_disabled": "The check is turned off"
+    }
+  },
+  "edit": {
+    "open": "Change conditions",
+    "title": "Editing a condition",
+    "none": "The conditions of this element are set so that they cannot be changed here. Open it in “Content”.",
+    "loading": "Loading the version description…",
+    "loadFailed": "Could not read the version description.",
+    "missing": "This entry is gone from the version description. Choose the element again.",
+    "remove": "Remove the condition",
+    "other": "Conditions that cannot be changed here: {{count}}. Change them in “Content”.",
+    "saveNote": "Saved to the draft at once. The result is recalculated, and the difference is shown in this panel.",
+    "done": "Done",
+    "cancel": "Cancel",
+    "phrase": {
+      "supported_kinds": "The document is needed when the kind of work is:",
+      "supported_staffing": "The document is needed when the team is:",
+      "supported_langs": "The document exists in:",
+      "visible_if": "The field is shown:",
+      "slot_when": "The signature is needed:",
+      "checks_disabled": "Do not check the rules:",
+      "checks_categories": "Do not check these groups of rules:",
+      "other": "Needed when:"
+    },
+    "hintList": "Everything or nothing ticked: no restriction.",
+    "hintChecks": "Ticked items are not checked for this version.",
+    "flag": {
+      "skip_if_nda": "Do not hand this item in when the work is under an NDA",
+      "optional": "The signature is optional: it can be skipped"
+    },
+    "always": "Always",
+    "whenField": "When the value of the field “{{field}}” is:",
+    "equals": "Show when the value equals:",
+    "when": {
+      "any": "When there is a {{person}}",
+      "university": "When the {{person}} is from HSE",
+      "company": "When the {{person}} is from a company"
+    },
+    "live": {
+      "saved": "Saved, the result is being recalculated.",
+      "undone": "Undone.",
+      "redone": "Redone.",
+      "same": "The result did not change.",
+      "delta": "The result changed, rows: {{count}}."
+    },
+    "removed": "Condition removed.",
+    "undo": "Undo",
+    "redo": "Redo",
+    "undoHint": "Undo the last edit (Ctrl+Z)",
+    "redoHint": "Redo the undone edit (Ctrl+Shift+Z)",
+    "dismiss": "Got it",
+    "notice": {
+      "staleTitle": "The file changed while you were editing",
+      "staleLead": "The value was reread from disk. Check it and edit again.",
+      "missingTitle": "The entry is gone",
+      "missingLead": "The version description was changed outside this screen. Choose the element again.",
+      "errorTitle": "The edit was not saved",
+      "errorLead": "",
+      "driftTitle": "The entry changed after this edit",
+      "driftLead": "It was changed outside this screen or by another edit. Undoing or redoing will overwrite those changes.",
+      "forceUndo": "Undo anyway",
+      "forceRedo": "Redo anyway"
+    },
+    "delta": {
+      "label": "What changed in the result",
+      "same": "The result did not change",
+      "apply": "The result changed",
+      "undo": "After the undo the result changed",
+      "redo": "After the redo the result changed",
+      "dismiss": "Hide",
+      "tally": "Appeared: {{added}}, changed: {{changed}}, gone: {{removed}}.",
+      "symbol": {
+        "+": "Appeared",
+        "~": "Changed",
+        "-": "Gone"
+      },
+      "more": "and more: {{count}}"
+    },
+    "history": {
+      "title": "Edit history ({{count}})",
+      "empty": "No edits yet.",
+      "applied": "in effect",
+      "undone": "undone"
+    },
+    "entry": {
+      "set": "{{what}}: changed",
+      "remove": "{{what}}: removed",
+      "delete": "Deleted: {{what}}"
+    },
+    "what": {
+      "supported_kinds": "Kinds of work",
+      "supported_staffing": "Team size",
+      "supported_langs": "Languages",
+      "visible_if": "Field display",
+      "skip_if_nda": "Skip under an NDA",
+      "slot_optional": "Signature is optional",
+      "slot_when": "When the signature is needed",
+      "check_disabled": "Turned-off checks",
+      "other": "Condition"
+    }
+  }
+}
