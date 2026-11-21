@@ -226,7 +226,7 @@ describe("deriveChangesStatus: изменения", () => {
     expect(
       deriveChangesStatus(rawOf({ git: gitOf({ changed }) })).changedFiles,
     ).toBe(2);
-    expect(lintTargets([changed[0]!], GALLERY_REF)).toEqual([]);
+    expect(lintTargets(changed.slice(0, 1), GALLERY_REF)).toEqual([]);
   });
 
   it("отставание от основной ветки", () => {

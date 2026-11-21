@@ -23,6 +23,8 @@ import type { ChangesStatus } from "./types";
 export type ChangesData = {
   status: ChangesStatus;
   raw: ChangesRaw;
+  /** Почему git не прочитался (при `status.load === "failed"`). */
+  error: unknown;
   /** Перечитать git (повтор после сбоя). */
   retry: () => void;
 };
@@ -46,6 +48,7 @@ export const useChangesData = (): ChangesData => {
 
   const git = usePackGit(id, live);
   const refetchGit = git.refetch;
+  const gitError: unknown = git.error;
   const data = git.data ?? null;
   const ws = data?.workspace ?? workspace;
   const hasRequest = live && ws.pr_number !== null;
@@ -133,11 +136,12 @@ export const useChangesData = (): ChangesData => {
     () => ({
       status,
       raw,
+      error: gitError,
       retry: () => {
         void refetchGit();
       },
     }),
-    [status, raw, refetchGit],
+    [status, raw, gitError, refetchGit],
   );
 };
 

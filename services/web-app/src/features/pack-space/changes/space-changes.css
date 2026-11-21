@@ -1,0 +1,304 @@
+/* Область «Изменения» (pack-studio-ux.md, 4.4 и 5.6): кнопка в полосе пространства и панель.
+   Префикс sp-ch-, только токены темы. Панель живёт в правой колонке каркаса (на телефоне это
+   страница), поэтому её ширину задаёт каркас, а не она. */
+
+.sp-ch-btn {
+  position: relative;
+}
+.sp-ch-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.125rem;
+  height: 1.125rem;
+  padding: 0 0.3125rem;
+  border-radius: 0.5625rem;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.sp-ch-btn[aria-expanded="true"] {
+  border-color: var(--accent);
+}
+.sp-root[data-phone] .sp-ch-btn-label {
+  display: none;
+}
+
+.sp-ch {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  min-height: 100%;
+  font-size: 0.8125rem;
+  color: var(--fg-0);
+}
+.sp-ch-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.sp-ch-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+.sp-ch-title:focus {
+  outline: none;
+}
+.sp-ch-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  flex: 1;
+}
+.sp-ch-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding-top: 0.875rem;
+  border-top: 1px solid var(--border);
+}
+.sp-ch-body > .sp-ch-section:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+.sp-ch-h {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.sp-ch-muted {
+  margin: 0;
+  color: var(--fg-2);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+.sp-ch-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+.sp-ch-group + .sp-ch-group {
+  margin-top: 0.375rem;
+}
+.sp-ch-group-head {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  color: var(--fg-2);
+}
+.sp-ch-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sp-ch-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 1.75rem;
+  padding: 0.125rem 0.375rem;
+  margin-inline: -0.375rem;
+  border: 0;
+  border-radius: var(--r-2);
+  background: transparent;
+  color: var(--fg-0);
+  font: inherit;
+  text-align: left;
+}
+button.sp-ch-item {
+  cursor: pointer;
+}
+button.sp-ch-item:hover {
+  background: var(--bg-hover);
+}
+.sp-ch-item svg {
+  flex-shrink: 0;
+  color: var(--fg-2);
+}
+.sp-ch-item-text {
+  flex: 1;
+  min-width: 0;
+}
+.sp-ch-tag {
+  flex-shrink: 0;
+  padding: 0 0.4375rem;
+  border-radius: var(--r-pill);
+  background: var(--bg-3);
+  color: var(--fg-1);
+  font-size: 0.6875rem;
+}
+.sp-ch-tag[data-status="added"] {
+  background: var(--c-ok-soft);
+  color: var(--c-ok);
+}
+.sp-ch-tag[data-status="deleted"] {
+  background: var(--c-err-soft);
+  color: var(--c-err);
+}
+.sp-ch-link {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  cursor: pointer;
+}
+.sp-ch-link:hover {
+  text-decoration: underline;
+}
+
+/* Строка проверки: значок, текст, действие. */
+.sp-ch-row {
+  display: grid;
+  grid-template-columns: 1.375rem minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: start;
+}
+.sp-ch-row-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
+}
+.sp-ch-mark {
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: var(--bg-3);
+  color: var(--fg-2);
+}
+.sp-ch-mark[data-tone="ok"] {
+  background: var(--c-ok-soft);
+  color: var(--c-ok);
+}
+.sp-ch-mark[data-tone="warn"] {
+  background: var(--c-warn-soft);
+  color: var(--c-warn);
+}
+.sp-ch-mark[data-tone="err"] {
+  background: var(--c-err-soft);
+  color: var(--c-err);
+}
+.sp-ch-mark[data-tone="wait"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+/* Плашки: итог запроса, «в основной ветке есть новое», папка. */
+.sp-ch-banner {
+  display: flex;
+  gap: 0.625rem;
+  align-items: flex-start;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--r-3);
+  background: var(--c-info-soft);
+  border: 1px solid color-mix(in oklab, var(--c-info) 28%, transparent);
+  line-height: 1.45;
+}
+.sp-ch-banner[data-tone="ok"] {
+  background: var(--c-ok-soft);
+  border-color: color-mix(in oklab, var(--c-ok) 30%, transparent);
+}
+.sp-ch-banner[data-tone="warn"] {
+  background: var(--c-warn-soft);
+  border-color: color-mix(in oklab, var(--c-warn) 35%, transparent);
+}
+.sp-ch-banner[data-tone="err"] {
+  background: var(--c-err-soft);
+  border-color: color-mix(in oklab, var(--c-err) 30%, transparent);
+}
+.sp-ch-banner > svg {
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+.sp-ch-banner-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  align-items: flex-start;
+}
+.sp-ch-banner-text > span {
+  color: var(--fg-1);
+}
+.sp-ch-path {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+.sp-ch-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.5rem 0.5rem;
+  text-align: center;
+}
+.sp-ch-empty h3 {
+  margin: 0;
+  font-size: 0.9375rem;
+}
+.sp-ch-empty p {
+  max-width: 26rem;
+  margin: 0;
+  color: var(--fg-2);
+  line-height: 1.5;
+}
+.sp-ch-empty-ico {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.75rem;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.sp-ch-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2rem 0;
+  color: var(--fg-2);
+}
+
+/* Подвал: действие и «Ещё». На узкой колонке остаётся внизу, пока прокручивается середина. */
+.sp-ch-foot {
+  position: sticky;
+  bottom: -1rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 0 -1rem -1rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-2);
+  border-top: 1px solid var(--border);
+}
+.sp-ch-foot-grow {
+  flex: 1;
+}
+.sp-ch-foot .btn {
+  text-decoration: none;
+}
+.sp-page .sp-ch-foot {
+  bottom: 0;
+  margin: 0 calc(var(--page-gutter) * -1) 0;
+  padding-bottom: calc(0.75rem + var(--safe-bottom, 0px));
+}
+.sp-page .sp-ch {
+  max-width: 40rem;
+  margin: 0 auto;
+}
