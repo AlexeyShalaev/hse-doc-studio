@@ -1,8 +1,8 @@
 import { useId, useState, type ReactNode } from "react";
-import { FileX2, Maximize2, Play, RotateCw, ScrollText } from "lucide-react";
+import { FileX2, Play, RotateCw, ScrollText } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { packErrorText } from "@entities/pack-studio";
-import { BuildView, LogModal, PdfFullModal } from "@features/pack-preview";
+import { LogModal } from "@features/pack-preview";
 import { ApiError } from "@shared/api";
 import { pickLocalized } from "@shared/lib";
 import { Button, EmptyState, ErrorState, Select, Spinner } from "@shared/ui";
@@ -10,6 +10,7 @@ import { Notice } from "@shared/ui/ConflictKit";
 import { useSpace } from "../context/SpaceContext";
 import { Conditions } from "./Conditions";
 import { Findings } from "./Findings";
+import { PdfPage } from "./PdfPage";
 import { usePreviewBuild, type PreviewBuild } from "./usePreviewBuild";
 import "./space-preview.css";
 
@@ -43,14 +44,12 @@ const Wait = ({ text, children }: { text: string; children?: ReactNode }) => (
 type StateProps = {
   pv: PreviewBuild;
   onLog: () => void;
-  onFull: () => void;
 };
 
 /** Одно состояние предпросмотра: страница, ожидание или понятное объяснение. */
-const PreviewState = ({ pv, onLog, onFull }: StateProps) => {
+const PreviewState = ({ pv, onLog }: StateProps) => {
   const { t } = useTranslation("packSpace");
   const reason = useReason();
-  const { workspace } = useSpace();
   const { view } = pv;
   switch (view.kind) {
     case "loading":
@@ -142,16 +141,7 @@ const PreviewState = ({ pv, onLog, onFull }: StateProps) => {
               }
             />
           ) : null}
-          <BuildView
-            workspaceId={workspace.id}
-            build={view.build}
-            stale={false}
-            onLog={onLog}
-            onFull={onFull}
-            places={null}
-            mode="pdf"
-            onMode={() => undefined}
-          />
+          <PdfPage build={view.build} url={view.pdfUrl} onLog={onLog} />
         </div>
       );
     case "failed": {
@@ -249,7 +239,6 @@ export const PreviewPanel = ({ docId, docName, file, onLine }: PanelProps) => {
   const pv = usePreviewBuild(docId);
   const ids = useId();
   const [log, setLog] = useState<string | null>(null);
-  const [full, setFull] = useState(false);
   const lang = i18n.language;
   const { view } = pv;
   const hasBuild = view.kind === "ready" || view.kind === "failed";
@@ -265,20 +254,6 @@ export const PreviewPanel = ({ docId, docName, file, onLine }: PanelProps) => {
           <span className="sp-pv-kicker">{t("preview.title")}</span>
           <h3 className="sp-pv-title">{docName}</h3>
         </div>
-        {view.kind === "ready" ? (
-          <button
-            type="button"
-            className="icon-btn sm"
-            aria-label={t("preview.full")}
-            title={t("preview.full")}
-            data-testid="sp-pv-full"
-            onClick={() => {
-              setFull(true);
-            }}
-          >
-            <Maximize2 size="0.875rem" aria-hidden="true" />
-          </button>
-        ) : null}
       </div>
 
       <Conditions pv={pv} />
@@ -358,9 +333,6 @@ export const PreviewPanel = ({ docId, docName, file, onLine }: PanelProps) => {
         onLog={() => {
           setLog(buildId);
         }}
-        onFull={() => {
-          setFull(true);
-        }}
       />
 
       {file != null && onLine ? (
@@ -372,14 +344,6 @@ export const PreviewPanel = ({ docId, docName, file, onLine }: PanelProps) => {
         buildId={log}
         onClose={() => {
           setLog(null);
-        }}
-      />
-      <PdfFullModal
-        workspaceId={workspace.id}
-        build={view.kind === "ready" ? view.build : undefined}
-        isOpen={full}
-        onClose={() => {
-          setFull(false);
         }}
       />
     </div>

@@ -24,3 +24,9 @@ export const notifyPackFilesSaved = (workspaceId: string): void => {
 /** Сколько записей файлов пространства видела вкладка. */
 export const usePackFilesRevision = (workspaceId: string): number =>
   useSyncExternalStore(subscribe, () => counts.get(workspaceId) ?? 0);
+
+/** Только для тестов: счётчики записей обнуляются, чтобы ключи проверок не зависели от прежних тестов. */
+export const resetPackFilesRevision = (): void => {
+  counts.clear();
+  for (const listener of listeners) listener();
+};

@@ -183,6 +183,7 @@ export type {
 export { packErrorText, workspaceErrorText } from "./lib/errorText";
 export {
   notifyPackFilesSaved,
+  resetPackFilesRevision,
   usePackFilesRevision,
 } from "./lib/filesRevision";
 export { PackErrorText } from "./ui/PackErrorText";

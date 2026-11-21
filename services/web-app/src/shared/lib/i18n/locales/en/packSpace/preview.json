@@ -62,5 +62,9 @@
     "lead": "The preview shows the document open on the left. Form sections and plain files have no page."
   },
   "show": "PDF preview",
-  "hide": "Hide preview"
+  "hide": "Hide preview",
+  "pages_one": "{{count}} page",
+  "pages_few": "{{count}} pages",
+  "pages_many": "{{count}} pages",
+  "pages_other": "{{count}} pages"
 }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  packPreviewPdfUrl,
   usePackFilesRevision,
   usePackOutcome,
   usePackOutcomeInputs,
@@ -26,6 +27,7 @@ import { useSituation } from "../context/useSituation";
 import { useSpaceNav } from "../context/useSpaceNav";
 import { makeReasoner, type Reason } from "../result/reasons";
 import { EXAMPLE_PARAM } from "../situation/useSituationDelta";
+import { readPreviewBuildSeed } from "./buildSeed";
 
 // Предпросмотр PDF документа по условиям студента (pack-studio-ux.md, 5.4 и 5.5, срез S9). Условия
 // берутся из адреса (`i.*`), пример данных из `example`; документ, вариант и имя файла считает
@@ -48,6 +50,7 @@ export type PreviewView =
   | {
       kind: "ready";
       build: PackPreviewBuild;
+      pdfUrl: string;
       stale: "conditions" | "files" | null;
     }
   | { kind: "failed"; build: PackPreviewBuild | null; error: unknown }
@@ -122,7 +125,8 @@ export const usePreviewBuild = (docId: string): PreviewBuild => {
   );
   const options = usePackPreviewOptions(workspace.id, versionRef);
   const filesRevision = usePackFilesRevision(workspace.id);
-  const runner = usePreviewRunner(workspace.id, versionRef);
+  const seed = readPreviewBuildSeed(workspace.id, versionRef, docId);
+  const runner = usePreviewRunner(workspace.id, versionRef, seed);
 
   const shown: PackOutcome | undefined = outcome.data;
   // После смены условий пока лежит прежний результат: по нему собирать нельзя.
@@ -199,7 +203,7 @@ export const usePreviewBuild = (docId: string): PreviewBuild => {
         },
       };
     }
-    if (target?.doc == null) return { kind: "noPdf" };
+    // Сначала «нет в комплекте»: документ, которого студент не получит, объяснять через PDF незачем.
     if (!inKit) {
       const reasoner = makeReasoner(t, i18n.language, shown, inputList);
       return {
@@ -207,6 +211,7 @@ export const usePreviewBuild = (docId: string): PreviewBuild => {
         reason: outcomeDoc ? reasoner.why(outcomeDoc.why) : null,
       };
     }
+    if (target?.doc == null) return { kind: "noPdf" };
     const { build, builtKey, startError, buildError } = runner;
     // Новая сборка идёт: прежняя страница не показывается, чтобы не выдать старое за новое.
     if (runner.starting) return { kind: "building" };
@@ -226,7 +231,12 @@ export const usePreviewBuild = (docId: string): PreviewBuild => {
             ? "files"
             : "conditions"
           : null;
-      return { kind: "ready", build, stale };
+      return {
+        kind: "ready",
+        build,
+        pdfUrl: seed?.pdfUrl ?? packPreviewPdfUrl(workspace.id, build.id),
+        stale,
+      };
     }
     if (build?.status === "failed") {
       return { kind: "failed", build, error: null };
