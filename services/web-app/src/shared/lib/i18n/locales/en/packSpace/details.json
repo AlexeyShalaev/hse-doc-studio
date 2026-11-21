@@ -270,8 +270,7 @@
     "info": "For information:"
   },
   "retry": "Try again",
-  "recalculating": "Recalculating…",
-  "released": "This version is released and does not change. “Edit a copy”: the Studio picks the number itself.",
+  "recalculating": "Calculating…",
   "makeCopy": "Edit a copy",
   "registry": "Releases from the registry are read-only.",
   "open": {

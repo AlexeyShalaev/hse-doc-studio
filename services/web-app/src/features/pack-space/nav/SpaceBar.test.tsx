@@ -104,4 +104,27 @@ describe("SpaceBar: назад, название, «Ещё»", () => {
       expect(screen.getByTestId("location").textContent).toBe("/pack-studio");
     });
   });
+
+  it("удаление предупреждает о неотправленных правках: они пропадут", async () => {
+    const user = userEvent.setup();
+    renderNav(<SpaceBar />, {
+      changed: [
+        "hse-cs-sse/templates/coursework/versions/2026.1.3/version.yaml",
+      ],
+    });
+    await user.click(screen.getByTestId("sp-ws-menu"));
+    await user.click(await screen.findByTestId("sp-ws-delete"));
+    expect(await screen.findByTestId("sp-ws-delete-unsent")).toHaveTextContent(
+      "неотправленные правки: они пропадут вместе с пространством",
+    );
+  });
+
+  it("правок нет: предупреждения нет", async () => {
+    const user = userEvent.setup();
+    renderNav(<SpaceBar />, { changed: [] });
+    await user.click(screen.getByTestId("sp-ws-menu"));
+    await user.click(await screen.findByTestId("sp-ws-delete"));
+    await screen.findByRole("dialog");
+    expect(screen.queryByTestId("sp-ws-delete-unsent")).toBeNull();
+  });
 });

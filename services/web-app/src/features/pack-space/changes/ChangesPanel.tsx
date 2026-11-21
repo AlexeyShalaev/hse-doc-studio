@@ -699,16 +699,18 @@ export const ChangesPanel = ({
         )}
         {showVerdict && status.errors > 0 && impact}
         {showVerdict && submit}
-        {git && (request.kind === "none" || request.kind === "open") && (
-          <p className="sp-ch-muted" data-testid="sp-ch-where">
-            {git.branch
-              ? t("changes.where.branch", { branch: git.branch })
-              : t("changes.where.noBranch")}
-            {git.branch && git.ahead > 0
-              ? ` ${t("changes.where.ahead", { count: git.ahead })}`
-              : ""}
-          </p>
-        )}
+        {git &&
+          status.changedFiles > 0 &&
+          (request.kind === "none" || request.kind === "open") && (
+            <p className="sp-ch-muted" data-testid="sp-ch-where">
+              {git.branch
+                ? t("changes.where.branch", { branch: git.branch })
+                : t("changes.where.noBranch")}
+              {git.branch && git.ahead > 0
+                ? ` ${t("changes.where.ahead", { count: git.ahead })}`
+                : ""}
+            </p>
+          )}
       </>
     );
     if (request.kind === "open" && request.url) {

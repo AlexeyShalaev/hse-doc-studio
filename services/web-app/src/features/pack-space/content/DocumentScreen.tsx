@@ -61,9 +61,15 @@ export const DocumentScreen = ({
           <h1 className="sp-ct-h1">
             {doc.name}
             {data.readOnly && (
-              <span className="sp-ct-badge" data-testid="ct-readonly">
+              // Слов «только чтение» тут нет: версия выпущена, и это уже сказано в плашке и у
+              // названия версии. Остаётся замок с подсказкой.
+              <span
+                className="sp-ct-badge"
+                title={t("content.released.readOnly")}
+                aria-label={t("content.released.readOnly")}
+                data-testid="ct-readonly"
+              >
                 <Lock size="0.6875rem" aria-hidden="true" />
-                {t("content.released.readOnly")}
               </span>
             )}
           </h1>

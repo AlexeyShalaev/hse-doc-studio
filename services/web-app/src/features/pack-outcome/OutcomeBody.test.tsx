@@ -428,7 +428,7 @@ describe("экран «Результат»: каркас на эталонах"
       mount();
       const status = screen.getByTestId("outcome-status");
       expect(status).toHaveAttribute("role", "status");
-      expect(status).toHaveTextContent("Пересчитываю");
+      expect(status).toHaveTextContent("Считаю");
       await waitFor(() => {
         expect(status).toHaveTextContent("Сохранено");
       });

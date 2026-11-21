@@ -11,6 +11,12 @@ import { Notice } from "@shared/ui/ConflictKit";
 
 export type StartOverDialogProps = {
   git: PackGit;
+  /**
+   * Слова окна. `classic` прежнее «Начать заново» (старый вид); `reset` «Сбросить все мои
+   * изменения» (меню «Ещё» панели «Изменения»); `next` «Начать новую правку» после принятого
+   * запроса. Новый вид без git-слов вне панели «Изменения».
+   */
+  variant?: "classic" | "reset" | "next";
   isOpen: boolean;
   onClose: () => void;
   onDone: () => void;
@@ -23,6 +29,7 @@ export type StartOverDialogProps = {
  */
 export const StartOverDialog = ({
   git,
+  variant = "classic",
   isOpen,
   onClose,
   onDone,
@@ -31,6 +38,24 @@ export const StartOverDialog = ({
   const startOver = useStartPackOver(git.workspace.id);
   const [discard, setDiscard] = useState(false);
   const uid = useId();
+  const base = git.base_branch ?? "";
+  // Слова: у `classic` прежние ключи, у новых видов отдельные (без «свежей main без ветки»).
+  const words =
+    variant === "classic"
+      ? {
+          title: t("git.startOver.title"),
+          lead: t("git.startOver.lead", { base }),
+          remote: t("git.startOver.remote"),
+          submit: t("git.startOver.submit"),
+          done: t("git.startOver.done", { base }),
+        }
+      : {
+          title: t(`git.startOver.${variant}.title`),
+          lead: t(`git.startOver.${variant}.lead`),
+          remote: t("git.startOver.remoteSpace"),
+          submit: t(`git.startOver.${variant}.submit`),
+          done: t(`git.startOver.${variant}.done`),
+        };
 
   const close = () => {
     if (startOver.isPending) return;
@@ -42,7 +67,7 @@ export const StartOverDialog = ({
   const submit = () => {
     startOver.mutate(git.dirty && discard, {
       onSuccess: () => {
-        toast.success(t("git.startOver.done", { base: git.base_branch ?? "" }));
+        toast.success(words.done);
         onDone();
         startOver.reset();
         setDiscard(false);
@@ -55,8 +80,8 @@ export const StartOverDialog = ({
     <Modal
       isOpen={isOpen}
       onClose={close}
-      title={t("git.startOver.title")}
-      description={t("git.startOver.lead", { base: git.base_branch ?? "" })}
+      title={words.title}
+      description={words.lead}
       width={520}
       footer={
         <>
@@ -69,13 +94,13 @@ export const StartOverDialog = ({
             onClick={submit}
             data-testid="git-start-over-submit"
           >
-            {t("git.startOver.submit")}
+            {words.submit}
           </Button>
         </>
       }
     >
       <div className="flex flex-col" style={{ gap: "0.75rem" }}>
-        <p className="ps-dialog-text">{t("git.startOver.remote")}</p>
+        <p className="ps-dialog-text">{words.remote}</p>
         {git.dirty && (
           <>
             <Notice

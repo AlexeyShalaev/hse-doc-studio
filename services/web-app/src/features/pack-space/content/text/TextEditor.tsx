@@ -188,9 +188,13 @@ const Loaded = ({
             </span>
           )}
           {locked && (
-            <span className="sp-ct-text-state" data-testid="ct-text-lock">
+            <span
+              className="sp-ct-text-state"
+              title={t("content.released.readOnly")}
+              aria-label={t("content.released.readOnly")}
+              data-testid="ct-text-lock"
+            >
               <Lock size="0.6875rem" aria-hidden="true" />
-              {t("content.released.readOnly")}
             </span>
           )}
           {!locked && autosave.text !== original && (
