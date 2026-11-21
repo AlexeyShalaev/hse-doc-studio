@@ -1,11 +1,9 @@
 import { useId, useMemo, useState } from "react";
-import { BadgeCheck, ExternalLink } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useCredentials } from "@entities/git-remote";
 import {
   packErrorText,
   useOpenPackOfficial,
-  usePackOfficial,
   type PackOfficial,
   type PackWorkspace,
 } from "@entities/pack-studio";
@@ -25,7 +23,7 @@ export type OfficialPacksDialogProps = {
 };
 
 /**
- * Доступ к официальным пакам (template-studio.md, 4.7): только свой токен
+ * Подключение официальных шаблонов (template-studio.md, 4.7): только свой токен
  * GitHub (PR создают люди своим аккаунтом). Без токена окно объясняет, какой
  * выпустить (классический с public_repo: вклад идёт через форк), и принимает
  * его прямо здесь: проверка, сохранение в «Доступы git» и выбор.
@@ -180,66 +178,5 @@ export const OfficialPacksDialog = ({
         )}
       </div>
     </Modal>
-  );
-};
-
-export type OfficialPacksCardProps = {
-  onOpen: (id: string) => void;
-};
-
-/**
- * Карточка «Официальные паки» на главной Студии шаблонов: паки репозитория
- * Студии и вклад в них через PR. Пустой адрес в настройках установки прячет её.
- */
-export const OfficialPacksCard = ({ onOpen }: OfficialPacksCardProps) => {
-  const { t } = useTranslation("packStudio");
-  const official = usePackOfficial();
-  const [choosing, setChoosing] = useState(false);
-  const data = official.data;
-  if (!data?.repo) return null;
-  const existing = data.workspace_id;
-
-  return (
-    <section className="ps-ws-card" data-testid="official-card">
-      <span className="ps-ws-icon" aria-hidden="true">
-        <BadgeCheck size="1.125rem" />
-      </span>
-      <div className="ps-ws-body">
-        <div className="ps-ws-title">
-          <strong>{t("official.title")}</strong>
-        </div>
-        <div className="ps-ws-meta">{t("official.lead")}</div>
-        <div className="ps-ws-meta mono truncate" title={data.repo.web_url}>
-          <a href={data.repo.web_url} target="_blank" rel="noopener noreferrer">
-            <ExternalLink size="0.6875rem" aria-hidden="true" />{" "}
-            {data.repo.web_url.replace(/^https:\/\//, "")}
-          </a>
-          {` · ${data.repo.packs_path} · ${data.repo.base_branch}`}
-        </div>
-      </div>
-      <div className="ps-ws-actions">
-        <Button
-          size="sm"
-          onClick={() => {
-            if (existing) onOpen(existing);
-            else setChoosing(true);
-          }}
-          data-testid="official-open"
-        >
-          {existing ? t("workspaces.open") : t("official.start")}
-        </Button>
-      </div>
-      <OfficialPacksDialog
-        official={data}
-        isOpen={choosing}
-        onClose={() => {
-          setChoosing(false);
-        }}
-        onOpened={(workspace) => {
-          setChoosing(false);
-          onOpen(workspace.id);
-        }}
-      />
-    </section>
   );
 };

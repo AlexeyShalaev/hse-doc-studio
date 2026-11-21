@@ -116,3 +116,25 @@ describe("ActionMenu as a desktop dropdown", () => {
     expect(onIssue).toHaveBeenCalledOnce();
   });
 });
+
+describe("ActionMenu with its own trigger", () => {
+  it("opens from the given button and runs the chosen item", async () => {
+    const user = userEvent.setup();
+    const onGit = vi.fn();
+    render(
+      <ActionMenu
+        label="Подключить пространство"
+        trigger={<button type="button">Подключить пространство</button>}
+        items={[{ id: "git", label: "Свой репозиторий", onSelect: onGit }]}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Действия" })).toBeNull();
+    await user.click(
+      screen.getByRole("button", { name: "Подключить пространство" }),
+    );
+    await user.click(
+      await screen.findByRole("menuitem", { name: "Свой репозиторий" }),
+    );
+    expect(onGit).toHaveBeenCalledOnce();
+  });
+});
