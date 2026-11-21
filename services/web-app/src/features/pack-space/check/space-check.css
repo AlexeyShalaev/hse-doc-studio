@@ -1,0 +1,630 @@
+/* Вкладка «Проверка» (pack-studio-ux.md, 5.7). Область: check. Префикс sp-ck-, только токены темы:
+   светлую, тёмную и чертёж держат они. Горизонтального скролла страницы нет: широкая таблица
+   прокручивается внутри своей рамки. Левой колонки на телефоне нет, там части переключает полоса
+   sp-ck-switch (на @container, ширина экрана пространства, а не окна). */
+
+.sp-ck {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+  max-width: 64rem;
+}
+.sp-ck-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.sp-ck-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+.sp-ck-lead {
+  margin: 0;
+  max-width: 44rem;
+  font-size: 0.875rem;
+  color: var(--fg-1);
+}
+.sp-ck-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  min-width: 0;
+}
+.sp-ck-h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+.sp-ck-h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0.375rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--fg-1);
+}
+.sp-ck-count {
+  padding: 0 0.4375rem;
+  border-radius: var(--r-pill);
+  background: var(--bg-2);
+  color: var(--fg-1);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.sp-ck-note {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--fg-2);
+}
+.sp-ck-message {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.sp-ck-hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--fg-1);
+}
+.sp-ck-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.sp-ck-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--fg-2);
+}
+.sp-ck-spin {
+  animation: sp-ck-spin 1s linear infinite;
+}
+@keyframes sp-ck-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sp-ck-spin {
+    animation: none;
+  }
+}
+
+/* Карточка и плашка */
+.sp-ck-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  min-width: 0;
+  padding: 0.875rem 1rem;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-3);
+}
+.sp-ck-summary {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.625rem 1rem;
+}
+.sp-ck-summary[data-clean] .sp-ck-h3 svg {
+  color: var(--c-ok);
+}
+.sp-ck-summary:not([data-clean]) .sp-ck-h3 svg {
+  color: var(--c-warn);
+}
+.sp-ck-summary-line {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+}
+.sp-ck-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: var(--r-2);
+  background: var(--c-info-soft);
+  border-left-color: var(--c-info);
+  font-size: 0.8125rem;
+}
+.sp-ck-notice[data-tone="error"] {
+  background: var(--c-err-soft);
+  border-left-color: var(--c-err);
+}
+.sp-ck-notice p {
+  margin: 0;
+}
+.sp-ck-notice-title {
+  font-weight: 600;
+}
+
+/* Находки */
+.sp-ck-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.sp-ck-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sp-ck-plain {
+  margin: 0.375rem 0 0;
+  padding-left: 1.125rem;
+  font-size: 0.8125rem;
+}
+.sp-ck-finding,
+.sp-ck-rule {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+  padding: 0.75rem 0.875rem;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-left-width: 3px;
+  border-radius: var(--r-2);
+}
+.sp-ck-finding[data-severity="error"] {
+  border-left-color: var(--c-err);
+}
+.sp-ck-finding[data-severity="warning"],
+.sp-ck-rule[data-state="half"] {
+  border-left-color: var(--c-warn);
+}
+.sp-ck-finding[data-severity="info"],
+.sp-ck-rule[data-state="none"] {
+  border-left-color: var(--c-info);
+}
+.sp-ck-finding-head {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  margin: 0;
+}
+.sp-ck-sev {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--fg-1);
+}
+.sp-ck-sev[data-severity="error"] {
+  color: var(--c-err);
+}
+.sp-ck-sev[data-severity="warning"],
+.sp-ck-sev[data-coverage="half"] {
+  color: var(--c-warn);
+}
+.sp-ck-sev[data-severity="info"],
+.sp-ck-sev[data-coverage="none"] {
+  color: var(--c-info);
+}
+.sp-ck-chips,
+.sp-ck-witnesses {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+}
+.sp-ck-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  min-height: 1.625rem;
+  padding: 0.125rem 0.5rem;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  color: var(--fg-0);
+  font: inherit;
+  font-size: 0.75rem;
+}
+button.sp-ck-chip {
+  cursor: pointer;
+}
+button.sp-ck-chip:hover {
+  background: var(--bg-hover);
+}
+.sp-ck-chip-id {
+  color: var(--fg-2);
+}
+.sp-ck-witness {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem 0.75rem;
+  flex: 1 1 100%;
+}
+.sp-ck-witness-text {
+  flex: 1;
+  min-width: 12rem;
+  font-size: 0.8125rem;
+}
+.sp-ck-tech summary {
+  cursor: pointer;
+  font-size: 0.75rem;
+  color: var(--fg-2);
+}
+.sp-ck-tech dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.125rem 0.75rem;
+  margin: 0.375rem 0 0;
+  font-size: 0.75rem;
+}
+.sp-ck-tech dt {
+  color: var(--fg-2);
+}
+.sp-ck-tech dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+/* Фильтры */
+.sp-ck-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin: 0.5rem 0;
+}
+.sp-ck-search {
+  flex: 1;
+  min-width: 12rem;
+}
+.sp-ck-search .input {
+  width: 100%;
+}
+.sp-ck-seg {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  overflow: hidden;
+}
+.sp-ck-seg button {
+  min-height: var(--touch-min);
+  padding: 0 0.75rem;
+  background: var(--bg-1);
+  color: var(--fg-1);
+  border: 0;
+  border-right: 1px solid var(--border);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+.sp-ck-seg button:last-child {
+  border-right: 0;
+}
+.sp-ck-seg button[aria-pressed="true"] {
+  background: var(--accent-soft);
+  color: var(--fg-0);
+  font-weight: 600;
+}
+.sp-ck-seg button:disabled {
+  color: var(--fg-3);
+  cursor: not-allowed;
+}
+.sp-ck-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+}
+
+/* Какие правила проверены */
+.sp-ck-percent {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.sp-ck-percent-num {
+  font-size: 1.5rem;
+  font-weight: 600;
+  min-width: 5rem;
+}
+.sp-ck-progress {
+  flex: 1;
+  height: 0.5rem;
+  accent-color: var(--accent);
+}
+.sp-ck-tally {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8125rem;
+}
+.sp-ck-tally li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.sp-ck-tally [data-state="full"] svg {
+  color: var(--c-ok);
+}
+.sp-ck-tally [data-state="half"] svg {
+  color: var(--c-warn);
+}
+.sp-ck-tally [data-state="none"] svg {
+  color: var(--c-info);
+}
+.sp-ck-suggest {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.sp-ck-suggest .sp-ck-list {
+  align-self: stretch;
+}
+
+/* Типовые случаи */
+.sp-ck-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-3);
+  background: var(--bg-1);
+}
+.sp-ck-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+.sp-ck-table th,
+.sp-ck-table td {
+  padding: 0.375rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: middle;
+}
+.sp-ck-table thead th {
+  background: var(--bg-2);
+  font-weight: 600;
+  color: var(--fg-1);
+  white-space: nowrap;
+}
+.sp-ck-table tbody tr:last-child th,
+.sp-ck-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+.sp-ck-table tbody th {
+  min-width: 10rem;
+  font-weight: 500;
+}
+.sp-ck-case-name {
+  display: block;
+}
+.sp-ck-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.0625rem;
+  min-height: var(--touch-min);
+  width: 100%;
+  padding: 0.25rem 0.5rem;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-2);
+  color: var(--fg-0);
+  font: inherit;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.sp-ck-cell:hover {
+  background: var(--bg-hover);
+}
+.sp-ck-cell[aria-pressed="true"] {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+.sp-ck-cell[data-status="matched"] svg {
+  color: var(--c-ok);
+}
+.sp-ck-cell[data-status="changed"] svg {
+  color: var(--c-warn);
+}
+.sp-ck-cell[data-status="error"] svg {
+  color: var(--c-err);
+}
+.sp-ck-cell[data-status="unchecked"] svg {
+  color: var(--fg-3);
+}
+.sp-ck-cell-word {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3125rem;
+}
+.sp-ck-cell-count {
+  padding-left: 1.1875rem;
+  color: var(--fg-2);
+  font-size: 0.75rem;
+}
+
+/* Что на что влияет */
+.sp-ck-dims {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: 0.625rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sp-ck-dim {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+  padding: 0.75rem 0.875rem;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-3);
+}
+.sp-ck-dim[data-fixed] {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+.sp-ck-dim-name {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.sp-ck-affects {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0;
+}
+.sp-ck-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.sp-ck-field .input {
+  width: 100%;
+}
+.sp-ck-fixed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0;
+  font-size: 0.8125rem;
+}
+.sp-ck-variants {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sp-ck-variant {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+}
+.sp-ck-variant[data-current] {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+.sp-ck-variant .sp-ck-chips {
+  flex: 1 1 18rem;
+}
+.sp-ck-chip[data-default] {
+  color: var(--fg-2);
+}
+.sp-ck-current {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* Левая колонка и переключатель на телефоне */
+.sp-ck-nav ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sp-ck-nav hr {
+  margin: 0.5rem 0.25rem;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+.sp-ck-nav a {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: var(--touch-min);
+  padding: 0 0.625rem;
+  border-radius: var(--r-2);
+  color: var(--fg-1);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+.sp-ck-nav a:hover {
+  background: var(--bg-hover);
+  color: var(--fg-0);
+}
+.sp-ck-nav a[aria-current="page"] {
+  background: var(--accent-soft);
+  color: var(--fg-0);
+}
+.sp-ck-nav a span:first-of-type {
+  flex: 1;
+  min-width: 0;
+}
+.sp-ck-badge {
+  min-width: 1.25rem;
+  padding: 0 0.375rem;
+  border-radius: var(--r-pill);
+  background: var(--c-warn-soft);
+  color: var(--fg-0);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-align: center;
+}
+.sp-ck-badge[data-tone="error"] {
+  background: var(--c-err-soft);
+}
+.sp-ck-switch {
+  display: none;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+.sp-ck-switch a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-min);
+  padding: 0 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  color: var(--fg-1);
+  font-size: 0.8125rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.sp-ck-switch a[aria-current="page"] {
+  background: var(--accent-soft);
+  border-color: var(--accent-line);
+  color: var(--fg-0);
+  font-weight: 600;
+}
+@container sp (max-width: 47.9375rem) {
+  .sp-ck-switch {
+    display: flex;
+  }
+}
