@@ -3,6 +3,8 @@ export type { MainView, PackFileEditorProps } from "./ui/PackFileEditor";
 export { parsePointer, pointerLine } from "./lib/yamlPointer";
 export { ProblemsPanel } from "./ui/ProblemsPanel";
 export { GateFindings } from "./ui/GateFindings";
+export { StaleFileBanner } from "./ui/StaleFileBanner";
+export type { StaleFileBannerProps } from "./ui/StaleFileBanner";
 export type { GateFindingsProps } from "./ui/GateFindings";
 export type { ProblemsPanelProps } from "./ui/ProblemsPanel";
 export {
