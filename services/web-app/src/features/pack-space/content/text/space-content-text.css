@@ -1,0 +1,91 @@
+/* Сегмент «Текст» документа (S8b). Префикс sp-ct-text-, токены темы; рамка редактора sp-ct-editor у S8a. */
+.sp-ct-text-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+/* Под редактором остаётся место для плашек (конфликт, замечание): они не уезжают за край экрана. */
+.sp-ct-text-box .sp-ct-editor {
+  height: max(20rem, calc(100dvh - 19rem));
+}
+.sp-ct-text-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-height: 2.25rem;
+  padding: 0.25rem 0.625rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-1);
+  font-size: 0.8125rem;
+}
+.sp-ct-text-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--font-mono, monospace);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sp-ct-text-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.0625rem 0.5rem;
+  border-radius: var(--r-pill);
+  background: var(--bg-3);
+  color: var(--fg-1);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+.sp-ct-text-state.ok {
+  background: var(--c-ok-soft);
+  color: var(--c-ok);
+}
+.sp-ct-text-code {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.sp-ct-text-code > * {
+  flex: 1;
+  min-height: 0;
+}
+.sp-ct-text-warning {
+  border-color: var(--c-warn);
+  background: var(--c-warn-soft);
+}
+.sp-ct-text-warning > svg {
+  color: var(--c-warn);
+}
+.sp-ct-text-error,
+.sp-ct-text-err {
+  border-color: var(--c-err);
+  background: var(--c-err-soft);
+}
+.sp-ct-text-error > svg,
+.sp-ct-text-err > svg {
+  color: var(--c-err);
+}
+.sp-ct-text-msg {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.sp-ct-text-line {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline dotted;
+  cursor: pointer;
+}
+.sp-ct-text-more {
+  color: var(--fg-2);
+}

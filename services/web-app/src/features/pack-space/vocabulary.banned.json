@@ -172,6 +172,11 @@
       "use": "Подпись"
     },
     {
+      "id": "anchor",
+      "pattern": "якор",
+      "use": "Следует за текстом (подпись по строке документа)"
+    },
+    {
       "id": "meta",
       "pattern": "метаданные",
       "use": "Данные проекта"
@@ -307,6 +312,11 @@
       "id": "slot",
       "pattern": "slot",
       "use": "Signature"
+    },
+    {
+      "id": "anchor",
+      "pattern": "anchor",
+      "use": "Follows the text (signature on a document line)"
     },
     {
       "id": "jinja",

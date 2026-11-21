@@ -134,10 +134,15 @@ describe("маршруты Студии шаблонов: флаг ?ux=2", () =>
     it("переключение вкладок меняет адрес", async () => {
       open(`${DRAFT}/result?ux=2&i.kind=research`);
       await shell();
+      // Вкладка «Содержимое» грузится лениво: переход завершается после загрузки её чанка.
       fireEvent.click(screen.getByTestId("sp-tab-content"));
-      expect(where()).toBe(`${DRAFT}/content?i.kind=research`);
+      await vi.waitFor(() => {
+        expect(where()).toBe(`${DRAFT}/content?i.kind=research`);
+      });
       fireEvent.click(screen.getByTestId("sp-tab-check"));
-      expect(where()).toBe(`${DRAFT}/check?i.kind=research`);
+      await vi.waitFor(() => {
+        expect(where()).toBe(`${DRAFT}/check?i.kind=research`);
+      });
     });
 
     it("флаг запоминается: следующий заход без query остаётся в новом виде", async () => {

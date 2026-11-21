@@ -1,0 +1,215 @@
+/* «Подписи» документа и раздел «Подписи и места» (S8c). Префикс sp-ct-sg-, токены темы. Раскладка по
+   ширине экрана пространства (@container sp), а не окна. */
+.sp-ct-sgs,
+.sp-ct-sgo,
+.sp-ct-sg {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  min-width: 0;
+}
+.sp-ct-sg-lead {
+  margin: 0;
+  color: var(--fg-1);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+.sp-ct-sg-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.sp-ct-sg-lock {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  background: var(--bg-1);
+  color: var(--fg-1);
+  font-size: 0.8125rem;
+}
+.sp-ct-sg-wait {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 2rem 0;
+  color: var(--fg-2);
+  font-size: 0.8125rem;
+}
+.sp-ct-sg-reason {
+  display: block;
+  margin-top: 0.125rem;
+  font-size: 0.6875rem;
+  color: var(--fg-2);
+}
+
+/* страница и карточки: узкий экран друг под другом, широкий рядом */
+.sp-ct-sg-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.sp-ct-sg-pdf {
+  display: flex;
+  flex-direction: column;
+  height: max(24rem, calc(100dvh - 17rem));
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  overflow: hidden;
+}
+.sp-ct-sg-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+@container sp (min-width: 1000px) {
+  .sp-ct-sg-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(16rem, 21rem);
+    align-items: start;
+  }
+  .sp-ct-sg-panel {
+    max-height: max(24rem, calc(100dvh - 17rem));
+    overflow-y: auto;
+    padding-right: 0.25rem;
+  }
+}
+.sp-ct-sg-h2 {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.sp-ct-sg-list,
+.sp-ct-sg-plain,
+.sp-ct-sgo-docs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.sp-ct-sg-plain {
+  gap: 0.125rem;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--fg-1);
+}
+
+/* карточка подписи */
+.sp-ct-sg-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  background: var(--bg-0);
+}
+.sp-ct-sg-card.is-missing {
+  border-color: color-mix(in oklch, var(--c-warn) 45%, transparent);
+}
+.sp-ct-sg-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  min-width: 0;
+}
+.sp-ct-sg-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.sp-ct-sg-chip {
+  padding: 0 0.375rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  color: var(--fg-2);
+  font-size: 0.6875rem;
+  line-height: 1.125rem;
+}
+.sp-ct-sg-status {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  color: var(--fg-0);
+}
+.sp-ct-sg-status.warn,
+.sp-ct-sg-note.warn,
+.sp-ct-sg-row.warn {
+  color: var(--c-warn);
+}
+.sp-ct-sg-note {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--fg-2);
+}
+.sp-ct-sg-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.375rem;
+  font-size: 0.75rem;
+}
+.sp-ct-sg-more {
+  font-size: 0.75rem;
+  color: var(--fg-2);
+}
+.sp-ct-sg-more > summary {
+  cursor: pointer;
+}
+.sp-ct-sg-more dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.125rem 0.625rem;
+  margin: 0.375rem 0 0;
+}
+.sp-ct-sg-more dt {
+  color: var(--fg-2);
+}
+.sp-ct-sg-more dd {
+  margin: 0;
+  color: var(--fg-1);
+  overflow-wrap: anywhere;
+}
+
+/* раздел «Подписи и места» */
+.sp-ct-sgo-docs {
+  gap: 0.125rem;
+}
+.sp-ct-sgo-docs > li {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.125rem 0.625rem;
+  padding: 0.25rem 0;
+  border-top: 1px solid var(--border-soft);
+  font-size: 0.8125rem;
+}
+.sp-ct-sgo-doc {
+  min-width: 0;
+  flex: 1 1 12rem;
+}
+.sp-ct-sgo-go {
+  margin-left: auto;
+  color: var(--accent);
+  font-size: 0.75rem;
+  text-decoration: none;
+}
+.sp-ct-sgo-link {
+  color: var(--accent);
+  text-decoration: none;
+}
+.sp-ct-sgo-link:hover,
+.sp-ct-sgo-go:hover {
+  text-decoration: underline;
+}
