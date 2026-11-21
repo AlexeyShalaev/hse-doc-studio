@@ -15,6 +15,7 @@ import {
   INPUTS_SOURCE,
   previewTarget,
 } from "@features/pack-outcome/lib/previewRequest";
+import { readDocumentBuildSeed } from "./buildSeed";
 
 // PDF документа для расстановки подписей (pack-studio-ux.md, 5.5, срез S8c): человек ничего не
 // собирает сам. Документ собирается при открытии «Подписей» на условиях студента с экрана
@@ -51,7 +52,8 @@ export const useDocumentPdf = (
   inputs: Readonly<Record<string, string>>,
 ): DocumentPdf => {
   const options = usePackPreviewOptions(workspaceId, versionRef);
-  const runner = usePreviewRunner(workspaceId, versionRef);
+  const seed = readDocumentBuildSeed(workspaceId, versionRef, docId);
+  const runner = usePreviewRunner(workspaceId, versionRef, seed);
   const data = options.data;
 
   const target = useMemo(
@@ -120,7 +122,7 @@ export const useDocumentPdf = (
     return {
       state: "ready",
       build,
-      pdfUrl: packPreviewPdfUrl(workspaceId, build.id),
+      pdfUrl: seed?.pdfUrl ?? packPreviewPdfUrl(workspaceId, build.id),
       lang: build.combination.lang ?? inputs.lang ?? "ru",
       rebuild: retry,
     };

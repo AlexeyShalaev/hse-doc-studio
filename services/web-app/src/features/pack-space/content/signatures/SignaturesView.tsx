@@ -38,22 +38,25 @@ const SignaturesView = ({
   const nav = useContentNav();
   const situation = useSituation();
   const slots = usePackSignatures(workspaceId, versionRef, null);
+  // Решает наличие данных, а не статус запроса: после каждой правки список перечитывается, и
+  // неудавшееся перечитывание не должно убирать редактор из-под рук.
+  const loaded = slots.data;
   const mine = useMemo(
-    () => (slots.data ? slotsForDocument(slots.data.slots, doc.id) : []),
-    [slots.data, doc.id],
+    () => (loaded ? slotsForDocument(loaded.slots, doc.id) : []),
+    [loaded, doc.id],
   );
-  const wanted = slots.isSuccess && mine.length > 0;
+  const wanted = mine.length > 0;
   return (
     <div className="sp-ct-sgs" data-testid="ct-signatures" data-doc={doc.id}>
-      {slots.isPending && <Wait />}
-      {slots.isError && (
+      {!loaded && slots.isPending && <Wait />}
+      {!loaded && slots.isError && (
         <ErrorState
           compact
           description={packErrorText(slots.error)}
           onRetry={() => void slots.refetch()}
         />
       )}
-      {slots.isSuccess && mine.length === 0 && (
+      {loaded && mine.length === 0 && (
         <EmptyState
           framed
           icon={<PenLine size="1.5rem" />}

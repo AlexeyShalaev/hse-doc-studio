@@ -84,14 +84,14 @@ export const PlacesEditor = ({
     [data, sharedSuffix],
   );
 
-  if (query.isPending) {
+  if (!data && query.isPending) {
     return (
       <div className="flex justify-center" style={{ padding: "1.5rem" }}>
         <Spinner size="md" />
       </div>
     );
   }
-  if (query.isError) {
+  if (!data) {
     return (
       <ErrorState
         compact
@@ -103,7 +103,7 @@ export const PlacesEditor = ({
   }
   if (!stamper) return null;
 
-  const loaded = query.data;
+  const loaded = data;
   const readOnly = readOnlyProp || loaded.read_only !== null;
   const slotOf = (id: string): PackSignatureSlot | undefined =>
     loaded.slots.find((slot) => slot.id === id);

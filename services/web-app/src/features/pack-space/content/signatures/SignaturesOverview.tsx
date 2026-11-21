@@ -22,14 +22,14 @@ const SignaturesOverview = ({ workspaceId }: ContentPartProps) => {
   const { docs } = useContentData();
   const query = usePackSignatures(workspaceId, versionRef, null);
 
-  if (query.isPending) {
+  if (!query.data && query.isPending) {
     return (
       <div className="flex justify-center" style={{ padding: "2rem" }}>
         <Spinner size="md" />
       </div>
     );
   }
-  if (query.isError) {
+  if (!query.data) {
     return (
       <ErrorState
         compact
