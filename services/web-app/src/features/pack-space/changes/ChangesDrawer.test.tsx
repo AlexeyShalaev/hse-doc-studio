@@ -41,6 +41,9 @@ import { ChangesPanel } from "./ChangesPanel";
 import { deriveChangesStatus } from "./deriveChangesStatus";
 import { slots } from "./slots";
 
+// Первая панель грузит отдельный чанк и модули диалогов: на нагруженной машине это секунды.
+vi.setConfig({ testTimeout: 30_000 });
+
 const V = "hse-cs-sse/templates/coursework/versions/2026.1.3";
 const BRANCH = "pack-studio/anna/hse-cs-sse-coursework-2026.1.3";
 const FILES: PackFileChange[] = [
