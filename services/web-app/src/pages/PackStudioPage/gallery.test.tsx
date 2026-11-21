@@ -19,7 +19,7 @@ describe("галерея Студии шаблонов", () => {
   beforeAll(async () => {
     await Promise.all([
       loadPackStudioNamespace(),
-      loadAdminNamespaces(["packStudio"]),
+      loadAdminNamespaces(["packStudio", "packCatalog"]),
     ]);
   });
   afterEach(cleanup);

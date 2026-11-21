@@ -1,18 +1,11 @@
+import type { UseQueryResult } from "@tanstack/react-query";
 import { useState } from "react";
-import {
-  KeyRound,
-  Plus,
-  ShieldCheck,
-  Stethoscope,
-  Trash2,
-  TriangleAlert,
-} from "lucide-react";
+import { KeyRound, Plus, ShieldCheck, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import {
   packErrorText,
   useAddPackServiceAccess,
   useCheckPackServiceAccess,
-  usePackServiceAccess,
   useRemovePackServiceAccess,
   type PackServiceAccess,
   type PackServiceAccessCheck,
@@ -20,6 +13,7 @@ import {
 import { ApiError } from "@shared/api";
 import { formatPastTime } from "@shared/lib";
 import {
+  Badge,
   Button,
   EmptyState,
   ErrorState,
@@ -32,8 +26,8 @@ import {
 } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 
-/** Окно «Добавить служебный доступ»: адрес репозитория паков, метка и токен. */
-const AddDialog = ({
+/** Окно «Подключить репозиторий»: адрес, название и токен доступа. */
+export const AddRepoDialog = ({
   isOpen,
   onClose,
 }: {
@@ -182,17 +176,25 @@ const CheckResult = ({ check }: { check: PackServiceAccessCheck }) => {
 };
 
 /**
- * «Служебные доступы» (template-studio.md, 4.2): токен репозитория паков уровня
- * установки, один на репозиторий. Им ходят пространства людей с правом «Автор
- * шаблонов»; коммит подписан человеком, секрет сервер не показывает.
+ * «Подключённые репозитории» (template-studio.md, 4.2): токен репозитория шаблонов
+ * уровня установки, один на репозиторий. Им ходят пространства людей с доступом
+ * к Студии; коммит подписан человеком, секрет сервер не показывает. Окно
+ * подключения открывает страница: тот же шаг лежит и в чек-листе наверху.
  */
-export const ServiceAccessSection = () => {
+export const ServiceAccessSection = ({
+  list,
+  onAdd,
+}: {
+  /** Запрос списка держит страница: чек-лист наверху читает те же данные. */
+  list: UseQueryResult<PackServiceAccess[]>;
+  onAdd: () => void;
+}) => {
   const { t } = useTranslation("adminPackStudio");
-  const list = usePackServiceAccess();
   const remove = useRemovePackServiceAccess();
   const check = useCheckPackServiceAccess();
   const [checked, setChecked] = useState<PackServiceAccessCheck | null>(null);
-  const [adding, setAdding] = useState(false);
+  // Итог последней проверки по каждому репозиторию: строка сама говорит, работает ли доступ.
+  const [results, setResults] = useState<Record<string, boolean>>({});
   const [removing, setRemoving] = useState<PackServiceAccess | null>(null);
 
   // Без хранилища служебных доступов (локальная Студия) раздела нет.
@@ -227,62 +229,86 @@ export const ServiceAccessSection = () => {
   } else {
     body = (
       <SectionList>
-        {list.data.map((item) => (
-          <ListRow
-            key={item.id}
-            testId={`ps-service-${item.id}`}
-            icon={<KeyRound size="0.875rem" />}
-            title={item.label}
-            description={[
-              item.url,
-              item.token_family ? `${item.token_family}…` : null,
-              t("service.since", {
-                when: formatPastTime(item.created_at),
-                who: item.created_by_name ?? item.created_by ?? "",
-              }),
-            ]
-              .filter(Boolean)
-              .join(" · ")}
-            meta={
-              <>
-                <Button
-                  size="xs"
-                  variant="ghost"
-                  aria-label={t("service.check.button", { name: item.label })}
-                  title={t("service.check.button", { name: item.label })}
-                  disabled={check.isPending}
-                  onClick={() => {
-                    setChecked(null);
-                    check.mutate(item.id, {
-                      onSuccess: (result) => {
-                        setChecked(result);
-                      },
-                    });
-                  }}
-                  data-testid="ps-service-check"
-                >
-                  {check.isPending && check.variables === item.id ? (
-                    <Spinner size="sm" />
-                  ) : (
-                    <Stethoscope size="0.75rem" />
+        {list.data.map((item) => {
+          const result = results[item.id];
+          const who = item.created_by_name ?? item.created_by;
+          const when = formatPastTime(item.created_at);
+          return (
+            <ListRow
+              key={item.id}
+              testId={`ps-service-${item.id}`}
+              icon={<KeyRound size="0.875rem" />}
+              title={
+                <>
+                  {item.label}
+                  {result !== undefined && (
+                    <>
+                      {" "}
+                      <Badge
+                        variant={result ? "success" : "warning"}
+                        data-testid="ps-service-status"
+                      >
+                        {result
+                          ? t("service.checkedOk")
+                          : t("service.checkedFailed")}
+                      </Badge>
+                    </>
                   )}
-                </Button>
-                <Button
-                  size="xs"
-                  variant="ghost"
-                  aria-label={t("service.remove", { name: item.label })}
-                  title={t("service.remove", { name: item.label })}
-                  onClick={() => {
-                    setRemoving(item);
-                  }}
-                  data-testid="ps-service-remove"
-                >
-                  <Trash2 size="0.75rem" />
-                </Button>
-              </>
-            }
-          />
-        ))}
+                </>
+              }
+              description={[
+                item.url,
+                item.token_family
+                  ? t("service.tokenFamily", { family: item.token_family })
+                  : null,
+                who
+                  ? t("service.sinceBy", { when, who })
+                  : t("service.since", { when }),
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+              meta={
+                <>
+                  <Button
+                    size="xs"
+                    variant="secondary"
+                    aria-label={t("service.check.button", { name: item.label })}
+                    disabled={check.isPending}
+                    onClick={() => {
+                      setChecked(null);
+                      check.mutate(item.id, {
+                        onSuccess: (result) => {
+                          setChecked(result);
+                          setResults((prev) => ({
+                            ...prev,
+                            [item.id]: result.ok,
+                          }));
+                        },
+                      });
+                    }}
+                    data-testid="ps-service-check"
+                  >
+                    {check.isPending && check.variables === item.id && (
+                      <Spinner size="sm" />
+                    )}
+                    {t("service.check.label")}
+                  </Button>
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    aria-label={t("service.remove", { name: item.label })}
+                    onClick={() => {
+                      setRemoving(item);
+                    }}
+                    data-testid="ps-service-remove"
+                  >
+                    {t("service.removeLabel")}
+                  </Button>
+                </>
+              }
+            />
+          );
+        })}
       </SectionList>
     );
   }
@@ -291,12 +317,12 @@ export const ServiceAccessSection = () => {
     <Section
       title={t("service.title")}
       description={t("service.lead")}
+      testId="ps-service"
       actions={
         <Button
           size="sm"
-          onClick={() => {
-            setAdding(true);
-          }}
+          variant="secondary"
+          onClick={onAdd}
           data-testid="ps-service-open"
         >
           <Plus size="0.875rem" />
@@ -327,12 +353,6 @@ export const ServiceAccessSection = () => {
       >
         {checked && <CheckResult check={checked} />}
       </Modal>
-      <AddDialog
-        isOpen={adding}
-        onClose={() => {
-          setAdding(false);
-        }}
-      />
       <Modal
         isOpen={removing !== null}
         onClose={() => {

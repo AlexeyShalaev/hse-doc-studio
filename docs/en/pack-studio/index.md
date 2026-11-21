@@ -17,7 +17,7 @@ How a pack, its versions and the patch, minor and major classes work: [Packs and
 | Where | How to turn it on |
 |---|---|
 | Local Studio | **Settings**, the "Template Studio" section, the "Template author tools" switch. A header button appears. |
-| Server | An administrator turns the section on in `/admin`, "Template Studio", and grants the "Template author" right to a person or a group. Installation administrators always have it. |
+| Server | An administrator turns the section on in `/admin`, "Template Studio", and grants access to a person or a group ("Who can edit templates"). Installation administrators always have access. |
 | Template Studio only, on your computer | A launch profile with one command, without sign-in or projects: [Template Studio on your computer](../deploy/pack-studio-local.md). |
 
 The section lives at `/pack-studio`. Turning it on does not change projects.
@@ -33,7 +33,7 @@ A workspace is the pack source you work with: where the Studio takes the files f
 
 The repository access is a token from **Settings**, the "Repository access" section (**Add token** button). If there is no suitable token, paste one right in the creation dialog, **New token…** item: the Studio checks it and selects it right away. The token never lands in the clone. For branches and merge requests it needs write access, merge requests and reading the check status; the link "Which token branches and pull requests need" in the creation dialog lists the rights, and the "Repository access" dialog of the git panel checks the token and helps issue a new one. A public repository can be read without a token, but then a branch cannot be pushed.
 
-On a server an administrator can set a service access for a repository ("Service access" in `/admin`). Then a new workspace can use **Service access**: branches are pushed with the installation token, commits are signed by you, forks are not available.
+On a server an administrator can set a service access for a repository ("Connected repositories" in the "Template Studio" section of `/admin`). Then a new workspace can use **Service access**: branches are pushed with the installation token, commits are signed by you, forks are not available.
 
 The workspace menu:
 

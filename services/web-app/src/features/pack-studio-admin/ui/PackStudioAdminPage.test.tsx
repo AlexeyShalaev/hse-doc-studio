@@ -105,16 +105,77 @@ describe("админка: Студия шаблонов", () => {
     const toggle = await screen.findByTestId("ps-admin-enabled");
     expect(toggle).toHaveAttribute("aria-checked", "true");
     expect(screen.getByText("Анна Петрова")).toBeInTheDocument();
-    expect(screen.getByText(/группа · ФКН/)).toBeInTheDocument();
+    expect(screen.getByText(/группа ФКН/)).toBeInTheDocument();
 
     await userEvent.click(toggle);
     await waitFor(() => {
       expect(setAdmin).toHaveBeenCalledWith(false);
     });
     await userEvent.click(
-      screen.getByRole("button", { name: "Снять право у «Анна Петрова»" }),
+      screen.getByRole("button", { name: "Снять доступ у «Анна Петрова»" }),
     );
     expect(remove).toHaveBeenCalledWith(data.grants[0]?.id);
+  });
+
+  it("чек-лист: раздел выключен, доступ не выдан, репозитория нет", async () => {
+    vi.spyOn(packStudioApi, "admin").mockResolvedValue({
+      ...admin("enabled"),
+      enabled: false,
+      grants: [],
+    });
+    noService();
+    mount();
+    const setup = await screen.findByTestId("ps-setup");
+    expect(setup).toHaveTextContent("Настройка: 0 шагов из 3");
+    expect(screen.getByTestId("ps-setup-status")).toHaveTextContent(
+      "раздел выключен",
+    );
+    expect(setup).toHaveTextContent("людям недоступна кнопка в шапке");
+    expect(screen.getByTestId("ps-step-repo")).toHaveTextContent(
+      "необязательно",
+    );
+    // Из чек-листа выдаётся доступ и подключается репозиторий, как из разделов ниже.
+    await userEvent.click(
+      within(screen.getByTestId("ps-step-access")).getByRole("button", {
+        name: "Выдать доступ",
+      }),
+    );
+    expect(
+      await screen.findByRole("heading", {
+        name: "Выдать доступ к Студии шаблонов",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("чек-лист: раздел включён, доступ у людей, репозиторий подключён", async () => {
+    vi.spyOn(packStudioApi, "admin").mockResolvedValue(admin("enabled"));
+    vi.spyOn(packStudioApi, "serviceAccess").mockResolvedValue(SERVICE);
+    mount();
+    const setup = await screen.findByTestId("ps-setup");
+    await waitFor(() => {
+      expect(setup).toHaveTextContent("Настройка закончена");
+    });
+    expect(screen.getByTestId("ps-setup-status")).toHaveTextContent(
+      "раздел работает",
+    );
+    expect(setup).toHaveTextContent(
+      "Анна Петрова и группа «Методисты». Администраторы имеют доступ всегда.",
+    );
+    expect(setup).toHaveTextContent("Подключено: fcs/packs.");
+  });
+
+  it("чек-лист: без хранилища репозиториев шага нет", async () => {
+    vi.spyOn(packStudioApi, "admin").mockResolvedValue(admin("enabled"));
+    vi.spyOn(packStudioApi, "serviceAccess").mockRejectedValue(
+      new ApiError("x", "service_access_not_found", 404),
+    );
+    mount();
+    const setup = await screen.findByTestId("ps-setup");
+    await waitFor(() => {
+      expect(screen.queryByTestId("ps-step-repo")).not.toBeInTheDocument();
+    });
+    expect(setup).toHaveTextContent("Настройка закончена");
+    expect(screen.queryByTestId("ps-service")).not.toBeInTheDocument();
   });
 
   it("включение из окружения: переключатель закрыт, прав нет", async () => {
@@ -122,7 +183,7 @@ describe("админка: Студия шаблонов", () => {
     noService();
     mount();
     expect(await screen.findByTestId("ps-admin-enabled")).toBeDisabled();
-    expect(screen.getByText("Право пока никому не выдано")).toBeInTheDocument();
+    expect(screen.getByText("Пока никому не выдано")).toBeInTheDocument();
   });
 
   it("служебные доступы: список без секрета, добавление с токеном, удаление с подтверждением", async () => {
@@ -187,9 +248,7 @@ describe("админка: Студия шаблонов", () => {
     );
     await userEvent.type(screen.getByTestId("ps-service-token"), "glpat-1");
     await userEvent.click(screen.getByTestId("ps-service-submit"));
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "служебный доступ уже задан",
-    );
+    expect(await screen.findByRole("alert")).toHaveTextContent("уже подключён");
     // Токен не остаётся в окне после запроса.
     expect(screen.getByTestId("ps-service-token")).toHaveValue("");
   });

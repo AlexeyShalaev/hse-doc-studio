@@ -86,8 +86,8 @@ const otherOrigin = (pack: CatalogPack, t: TFunction): string =>
   pack.origin === "builtin" ? t("pack.builtin") : t("pack.orphan");
 
 /**
- * Админка, «Каталоги паков» (template-studio.md, 10.3 и 10.4, срез T17): подключённые
- * источники паков git и архивы, их проверка и применение, остальные паки каталога.
+ * Админка, «Источники шаблонов» (template-studio.md, 10.3 и 10.4, срез T17; слова по
+ * pack-studio-ux.md, срез S12): подключённые источники паков, git и архивы, их проверка и применение, остальные паки каталога.
  */
 export const PackCatalogAdminPage = () => {
   const { t } = useTranslation("adminPackCatalog");
@@ -101,7 +101,7 @@ export const PackCatalogAdminPage = () => {
       title={t("title")}
       description={t("lead")}
       actions={
-        overview.data ? (
+        overview.data && overview.data.sources.length > 0 ? (
           <Button
             onClick={() => {
               setAdding(true);
@@ -183,6 +183,7 @@ export const PackCatalogAdminPage = () => {
                 onClick={() => {
                   setAdding(true);
                 }}
+                data-testid="pc-add-open"
               >
                 <Plus size="0.875rem" />
                 {t("sources.add")}

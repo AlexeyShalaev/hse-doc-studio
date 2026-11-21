@@ -87,7 +87,7 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
             loadPackStudioNamespace(),
             loadPackOutcomeNamespace(),
             loadPackSpaceNamespace(),
-            loadAdminNamespaces(["packStudio"]),
+            loadAdminNamespaces(["packStudio", "packCatalog"]),
           ]);
           const extraSections = [
             {

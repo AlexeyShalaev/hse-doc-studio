@@ -619,6 +619,7 @@ export const SETTINGS_SEARCH_INDEX: readonly SettingSearchEntry[] = [
     keywords: [
       "студия шаблонов",
       "автор шаблонов",
+      "кто может править шаблоны",
       "пак",
       "шаблон",
       "template studio",

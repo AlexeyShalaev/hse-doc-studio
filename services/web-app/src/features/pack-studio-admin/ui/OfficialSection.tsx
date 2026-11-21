@@ -1,10 +1,11 @@
 import { useTranslation } from "react-i18next";
 import { packErrorText, usePackOfficialAdmin } from "@entities/pack-studio";
-import { ErrorState, Section, Spinner } from "@shared/ui";
+import { Badge, ErrorState, Section, Spinner } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
+import "./packStudioAdmin.css";
 
 /**
- * «Официальные паки» (template-studio.md, 4.7): репозиторий паков установки
+ * «Официальные шаблоны» (template-studio.md, 4.7): репозиторий паков установки
  * из окружения, только для чтения. Вклад в него идёт PR от людей своим
  * аккаунтом GitHub, настроек у вклада нет.
  */
@@ -36,13 +37,20 @@ export const OfficialSection = () => {
     <Section title={t("official.title")} description={t("official.lead")}>
       <div data-testid="ps-official">
         {repo ? (
-          <p className="mono" style={{ margin: 0, fontSize: "0.75rem" }}>
-            {t("official.repo", {
-              url: repo.web_url,
-              path: repo.packs_path,
-              branch: repo.base_branch,
-            })}
-          </p>
+          <div className="sp-repo-meta">
+            <span className="mono">{repo.web_url}</span>
+            <Badge variant="subtle">
+              {t("official.path", { path: repo.packs_path })}
+            </Badge>
+            <Badge variant="subtle">
+              {t("official.branch", { branch: repo.base_branch })}
+            </Badge>
+            {repo.license && (
+              <Badge variant="subtle">
+                {t("official.license", { license: repo.license })}
+              </Badge>
+            )}
+          </div>
         ) : (
           <Notice tone="info" role="status" text={t("official.hidden")} />
         )}
