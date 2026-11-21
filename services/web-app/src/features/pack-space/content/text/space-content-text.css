@@ -5,6 +5,10 @@
   gap: 0.5rem;
   min-width: 0;
 }
+/* Под редактором остаётся место для плашек (конфликт, замечание): они не уезжают за край экрана. */
+.sp-ct-text-box .sp-ct-editor {
+  height: max(20rem, calc(100dvh - 19rem));
+}
 .sp-ct-text-head {
   display: flex;
   align-items: center;

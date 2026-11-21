@@ -45,18 +45,16 @@ const seedTypo = (client: QueryClient) => {
     target: CONTENT_VERSION_DIR,
     released: false,
     errors: 0,
-    warnings: 1,
-    findings: [
-      {
-        severity: "warning",
-        check: "outcome",
-        message:
-          "Шаблон files/technical_specification/technical_specification.tex читает project.meta.name_shrt, а такого поля нет в meta_fields версии: значение всегда пустое.",
-        path: CONTENT_TEXT_PATH,
-        line: 6,
-        pointer: null,
-      },
-    ],
+    warnings: 2,
+    findings: ["ru", "en"].map((lang) => ({
+      severity: "warning",
+      check: "outcome",
+      message:
+        "Шаблон files/technical_specification/technical_specification.tex читает project.meta.name_shrt, а такого поля нет в meta_fields версии: значение всегда пустое.",
+      path: CONTENT_TEXT_PATH.replace(".ru.", `.${lang}.`),
+      line: 6,
+      pointer: null,
+    })),
   });
   client.setQueryData(packStudioKeys.hints(WS, CONTENT_VERSION_DIR), {
     version: CONTENT_VERSION_DIR,
@@ -115,7 +113,7 @@ export const galleryEntries: GalleryEntry[] = [
     frame: "screen",
     width: 1280,
     seed: seedTypo,
-    render: () => frameFor({ height: "36rem" }),
+    render: () => frameFor({ height: "46rem" }),
   },
   {
     id: "sp_content_text_released",
@@ -124,7 +122,7 @@ export const galleryEntries: GalleryEntry[] = [
     frame: "screen",
     width: 1280,
     seed: seedReleased,
-    render: () => frameFor({ version: "2026.1.2", height: "36rem" }),
+    render: () => frameFor({ version: "2026.1.2", height: "46rem" }),
   },
   {
     id: "sp_content_text_phone",
