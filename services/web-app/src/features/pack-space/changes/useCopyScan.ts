@@ -51,16 +51,20 @@ export const useCopyScan = (
     () => (enabled ? freshCopyDir(changed, open) : null),
     [enabled, changed, open],
   );
+  // Основа версии (с чем сверять) от правок не зависит: отчёт читаем один раз, а не после каждой.
   const stateQuery = usePackVersionState(
     workspaceId,
     dir ? open : null,
-    String(revision),
+    "copy-base",
   );
   const loaded = stateQuery.data;
   const base =
     loaded && loaded.version.version === open.version ? loaded.base : null;
+  // Отчёт не пришёл совсем (сервер не ответил): считаем по git, а не прячем изменения навсегда.
   const stateReady =
-    dir === null || (loaded?.version.version === open.version && !loaded.error);
+    dir === null ||
+    stateQuery.isError ||
+    (loaded?.version.version === open.version && !loaded.error);
   const candidates = useMemo(
     () => (dir ? scanCandidates(changed, dir) : []),
     [changed, dir],

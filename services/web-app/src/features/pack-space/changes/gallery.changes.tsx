@@ -268,6 +268,10 @@ const seedOf =
     );
     if (spec.copy) {
       client.setQueryData(
+        packStudioKeys.versionState(WS, GALLERY_REF, "copy-base"),
+        versionStateOf({ changes: spec.notes ?? { ru: [], en: [] } }),
+      );
+      client.setQueryData(
         [...packStudioKeys.workspace(WS), "copy-same", DRAFT, "2026.1.2", "0"],
         new Set(
           COPY_FILES.map((c) => c.path).filter((path) => !COPY_MINE.has(path)),
