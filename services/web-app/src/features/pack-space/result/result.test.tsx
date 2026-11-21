@@ -16,6 +16,7 @@ import {
   vi,
 } from "vitest";
 import { i18n } from "@shared/lib";
+import { packOutcomeKeys, type PackOutcome } from "@entities/pack-studio";
 import { loadPackSpaceNamespace } from "@shared/lib/i18n/packSpaceNamespace";
 import banned from "../vocabulary.banned.json";
 import { SpaceScreen } from "../shell/SpaceScreen";
@@ -34,12 +35,17 @@ const location = () => screen.getByTestId("location").textContent;
 const mount = async (
   seed: ResultSeed = {},
   query = "",
-  options: { phone?: boolean } = {},
+  options: {
+    phone?: boolean;
+    /** Правка кэша до первого кадра (например, документ, который не вошёл в комплект). */
+    prepare?: (client: QueryClient) => void;
+  } = {},
 ) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   });
   seedResult(client, { ...seed, search: seed.search ?? query });
+  options.prepare?.(client);
   const url = `${SPACE_BASE}/2026.1.3/result${query ? `?${query}` : ""}`;
   const view = renderSpace(
     <QueryClientProvider client={client}>
@@ -49,6 +55,25 @@ const mount = async (
   );
   await screen.findByTestId("sp-result", undefined, { timeout: 5000 });
   return { ...view, client };
+};
+
+/** Лишний документ, который при этих условиях не входит: его строка живёт в «Не вошло». */
+const withMissingDoc = (client: QueryClient): void => {
+  for (const query of client
+    .getQueryCache()
+    .findAll({ queryKey: packOutcomeKeys.all("gallery-ws") })) {
+    const data = query.state.data as PackOutcome | undefined;
+    if (!data || !Array.isArray(data.documents)) continue;
+    const doc = data.documents[0];
+    if (!doc) continue;
+    client.setQueryData(query.queryKey, {
+      ...data,
+      documents: [
+        ...data.documents,
+        { ...doc, id: "extra_doc", state: "inactive" },
+      ],
+    });
+  }
 };
 
 const CONTROLS =
@@ -446,6 +471,29 @@ describe("центр «Результата»", () => {
       await mount({}, "", { phone: true });
       expect(screen.queryByTestId("sp-toc")).toBeNull();
       expect(controls().length).toBeLessThanOrEqual(16);
+    });
+
+    it("390 на 844: не больше 16 и при раскрытом «Не вошло»", async () => {
+      await mount({ missing: true }, "", {
+        phone: true,
+        prepare: withMissingDoc,
+      });
+      expect(screen.getByTestId("sp-docs-missing-toggle")).toHaveAttribute(
+        "aria-expanded",
+        "true",
+      );
+      expect(controls().length).toBeLessThanOrEqual(16);
+    });
+
+    it("на телефоне у строки «Не вошло» одна кнопка: «Показать при» живёт в подробностях", async () => {
+      await mount({ work: "vkr", missing: true }, "", { phone: true });
+      const list = screen.getByTestId("sp-docs-missing");
+      const rows = [...list.querySelectorAll("li.sp-row")];
+      expect(rows.length).toBe(6);
+      for (const row of rows) expect(controls(row)).toHaveLength(1);
+      expect(
+        within(list).queryByRole("button", { name: /Показать при/ }),
+      ).toBeNull();
     });
 
     it("на телефоне в строке документа одна кнопка, PDF живёт в подробностях", async () => {

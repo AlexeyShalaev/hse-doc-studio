@@ -3,6 +3,7 @@ import { useIsPhoneWidth } from "@shared/lib";
 import { SPACE_QUERY } from "@entities/pack-studio";
 import { useSpace } from "../context/SpaceContext";
 import { useRememberPlace } from "../context/memory";
+import { isPreviewOpen, previewPatch } from "../preview/link";
 import { useSpaceNav } from "../context/useSpaceNav";
 import {
   ComingSoon,
@@ -41,6 +42,9 @@ export const SpaceScreen = ({
   };
   const changesOpen =
     new URLSearchParams(location.search).get(SPACE_QUERY.changes) === "1";
+  // «Содержимое»: предпросмотр PDF справа. На широком экране колонка на месте всегда, на узком она
+  // выезжает по кнопке «Предпросмотр PDF» в шапке документа (`preview=1`); у вкладки нет `sel`.
+  const contentPreview = tab === "content" && isPreviewOpen(location.search);
   const orDefault = (
     component: ComponentType | undefined,
     name: string,
@@ -66,11 +70,17 @@ export const SpaceScreen = ({
       mainTop={perTab("mainTop", slots.mainTop)}
       main={perTab("main", slots.main) ?? <ComingSoon />}
       details={perTab("details", slots.details)}
-      detailsOpen={selection !== null}
+      detailsOpen={selection !== null || contentPreview}
       changes={slots.changes ? view("changes", slots.changes) : undefined}
       changesOpen={changesOpen}
       onSideClose={() => {
-        nav.go(changesOpen ? { changes: false } : { sel: null });
+        nav.go(
+          changesOpen
+            ? { changes: false }
+            : contentPreview
+              ? previewPatch(false)
+              : { sel: null },
+        );
       }}
       bottomTabs={orDefault(
         slots.bottomTabs,

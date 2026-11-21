@@ -1,19 +1,27 @@
-import { Lock } from "lucide-react";
+import { ChevronLeft, Lock } from "lucide-react";
+import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
 import { EmptyState, ErrorState, Spinner } from "@shared/ui";
 import { packErrorText } from "@entities/pack-studio";
 import { useSpace } from "../context/SpaceContext";
+import { useSpaceNav } from "../context/useSpaceNav";
+import { useSpacePhone } from "../shell/phoneContext";
 import { ContentNavView } from "./ContentNav";
 import { DocumentScreen } from "./DocumentScreen";
 import { PartScreen } from "./PartScreen";
+import { contentListPatch, contentPartPatch } from "./link";
 import { useContentData } from "./useContentData";
+import { useContentNav } from "./useContentNav";
 import { useContentRoute } from "./useContentRoute";
 import "./space-content.css";
 
 /** Слот `main.content`: плашка выпущенной версии и экран документа или раздела. */
 const ContentMain = () => {
   const { t } = useTranslation("packSpace");
-  const { versionRef, location } = useSpace();
+  const { versionRef } = useSpace();
+  const phone = useSpacePhone();
+  const nav = useSpaceNav();
+  const contentNav = useContentNav();
   const data = useContentData();
   const route = useContentRoute(data);
 
@@ -33,19 +41,28 @@ const ContentMain = () => {
       />
     );
   }
-  const currentName =
-    route.kind === "document"
-      ? (data.docs.find((doc) => doc.id === route.docId)?.name ?? route.docId)
-      : route.kind === "part"
-        ? t(`content.part.${route.part}`)
-        : t("content.nav.documents");
   return (
     <div className="sp-ct" data-testid="ct-main">
-      {/* Телефон: слева ничего, «что редактируем» сворачивается полосой в центре (4.5, до S11). */}
-      <details className="sp-ct-phone-nav" key={location.search}>
-        <summary>{t("content.nav.current", { name: currentName })}</summary>
-        <ContentNavView data={data} route={route} testId="ct-phone" />
-      </details>
+      {/* Телефон (5.8): слева ничего. Список «Что редактируем» страница первого уровня, правка
+          следующая страница с кнопкой «назад» к списку. */}
+      {phone && route.kind !== "none" && (
+        <Link
+          to={nav.href(
+            // Файл «Всех файлов» открыт: «назад» ведёт к дереву, а не в начало.
+            route.kind === "part" && route.part === "files" && route.file
+              ? contentPartPatch("files")
+              : contentListPatch(),
+          )}
+          className="sp-ct-back"
+          data-testid="ct-back"
+          onClick={contentNav.guardClick}
+        >
+          <ChevronLeft size="1.125rem" aria-hidden="true" />
+          {route.kind === "part" && route.part === "files" && route.file
+            ? t("content.nav.files")
+            : t("content.nav.label")}
+        </Link>
+      )}
       {data.readOnly && (
         <div className="sp-ct-banner" role="status" data-testid="ct-released">
           <Lock size="0.9375rem" aria-hidden="true" />
@@ -57,7 +74,12 @@ const ContentMain = () => {
           </div>
         </div>
       )}
-      {route.kind === "document" ? (
+      {phone && route.kind === "none" ? (
+        <div className="sp-ct-list" data-testid="ct-list">
+          <h1 className="sp-ct-h1">{t("content.nav.label")}</h1>
+          <ContentNavView data={data} route={route} testId="ct-list" />
+        </div>
+      ) : route.kind === "document" ? (
         <DocumentScreen
           data={data}
           docId={route.docId}
