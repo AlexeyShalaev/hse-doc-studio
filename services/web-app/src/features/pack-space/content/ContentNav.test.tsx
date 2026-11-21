@@ -102,6 +102,19 @@ describe("навигация «Что редактируем»", () => {
     ).toHaveLength(1);
   });
 
+  it("заголовок «Документы» ведёт в состав документов версии", () => {
+    renderContent(<ContentNav />, "doc=nda");
+    fireEvent.click(screen.getByTestId("ct-part-documents"));
+    expect(location()).toBe(`${CONTENT_BASE}?part=documents`);
+    expect(screen.getByTestId("ct-part-documents")).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(
+      document.querySelectorAll('[data-testid="ct-nav"] [aria-current="page"]'),
+    ).toHaveLength(1);
+  });
+
   it("поиск есть, только когда документов больше десяти", () => {
     const { unmount } = renderContent(<ContentNav />);
     expect(screen.queryByTestId("ct-search")).toBeNull();

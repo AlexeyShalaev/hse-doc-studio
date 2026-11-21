@@ -1,0 +1,94 @@
+/* Разделы версии и «Все файлы» «Содержимого» (S8d). Префикс sp-ct-part-, sp-ct-fileview-; токены темы. */
+.sp-ct-part {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.sp-ct-part-lead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+.sp-ct-part-lead p {
+  margin: 0;
+  max-width: 46rem;
+  color: var(--fg-2);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+.sp-ct-part-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: var(--fg-1);
+  font-size: 0.75rem;
+}
+.sp-ct-part-h2 {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--fg-0);
+}
+.sp-ct-part-note {
+  margin: 0.125rem 0 0.5rem;
+  color: var(--fg-2);
+  font-size: 0.8125rem;
+}
+.sp-ct-part-rules {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-soft);
+}
+.sp-ct-part-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.sp-ct-part-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 2rem;
+  padding: 0.25rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  background: var(--bg-1);
+  color: var(--fg-1);
+  font-size: 0.8125rem;
+  text-decoration: none;
+}
+.sp-ct-part-link:hover {
+  background: var(--bg-hover);
+}
+.sp-ct-part-open {
+  color: var(--accent);
+  font-size: 0.75rem;
+}
+.sp-ct-fileview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.sp-ct-fileview-seg {
+  align-self: flex-start;
+}
+.sp-ct-fileview-seg .sp-ct-seg-btn {
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+}
+.sp-ct-fileview-seg .sp-ct-seg-btn + .sp-ct-seg-btn {
+  border-left: 1px solid var(--border);
+}
+.sp-ct-fileview-seg .sp-ct-seg-btn.on {
+  background: var(--accent-soft);
+}

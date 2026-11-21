@@ -59,7 +59,7 @@ export const ContentNavView = ({
     : data.docs;
   const activeDoc = route.kind === "document" ? route.docId : null;
   const activePart = route.kind === "part" ? route.part : null;
-  const count = (key: ContentPart | "documents") => {
+  const count = (key: ContentPart) => {
     const value = data.counts[key];
     return value === undefined ? null : (
       <span className="sp-ct-count">{value}</span>
@@ -73,11 +73,23 @@ export const ContentNavView = ({
       data-testid={`${testId}-nav`}
     >
       <div className="sp-ct-kicker">{t("content.nav.label")}</div>
-      <div className={clsx("sp-ct-item", activeDoc && "on")}>
+      {/* Заголовок списка ведёт в «Состав документов»: добавить, убрать, переставить документы. */}
+      <Link
+        replace
+        to={nav.partHref("documents")}
+        className={clsx(
+          "sp-ct-item",
+          (activeDoc !== null || activePart === "documents") && "on",
+        )}
+        aria-current={activePart === "documents" ? "page" : undefined}
+        title={t("content.nav.documentsHint")}
+        data-testid={`${testId}-part-documents`}
+        onClick={nav.guardClick}
+      >
         <FileText size="0.9375rem" aria-hidden="true" />
         <span className="sp-ct-label">{t("content.nav.documents")}</span>
         {count("documents")}
-      </div>
+      </Link>
       {data.docs.length === 0 ? (
         <p className="sp-ct-empty">{t("content.nav.noDocuments")}</p>
       ) : (

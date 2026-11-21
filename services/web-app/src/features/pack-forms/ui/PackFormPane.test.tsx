@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import type { ComponentProps } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
@@ -36,7 +37,10 @@ const WS = "ws1";
 const REF = { pack: "hse-cs-sse", template: "coursework", version: "2026.1.7" };
 const PATH = "hse-cs-sse/templates/coursework/versions/2026.1.7/version.yaml";
 
-const renderPane = (data: PackVersionModel) => {
+const renderPane = (
+  data: PackVersionModel,
+  extra: Partial<ComponentProps<typeof PackFormPane>> = {},
+) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   });
@@ -45,7 +49,7 @@ const renderPane = (data: PackVersionModel) => {
   const onSaved = vi.fn();
   render(
     <QueryClientProvider client={client}>
-      <PackFormPane workspaceId={WS} path={PATH} onSaved={onSaved} />
+      <PackFormPane workspaceId={WS} path={PATH} onSaved={onSaved} {...extra} />
     </QueryClientProvider>,
   );
   return { client, onSaved };
@@ -245,5 +249,24 @@ describe("формы версии: поля и анкеты", () => {
     expect(screen.queryByTestId("pf-field-add")).toBeNull();
     fireEvent.click(screen.getByTestId("pf-field-year"));
     expect(screen.getByTestId("pf-field-label-ru")).toBeDisabled();
+  });
+
+  it("раздел задан снаружи: одна форма без полосы вкладок и без плашки о выпущенной версии", () => {
+    renderPane(
+      { ...fixture("editable.json"), read_only: "version_released" },
+      { section: "forms" },
+    );
+
+    expect(screen.queryByRole("tablist")).toBeNull();
+    expect(screen.queryByTestId("pf-field-year")).toBeNull();
+    expect(screen.queryByText(/Версия выпущена/)).toBeNull();
+    expect(screen.queryByTestId("pf-field-add")).toBeNull();
+  });
+
+  it("раздел «Поля» без вкладок показывает поля", () => {
+    renderPane(fixture("editable.json"), { section: "fields" });
+
+    expect(screen.queryByRole("tablist")).toBeNull();
+    expect(screen.getByTestId("pf-field-year")).toBeInTheDocument();
   });
 });

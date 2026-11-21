@@ -13,7 +13,8 @@
     "search": "Find a document",
     "searchEmpty": "No such document",
     "noDocuments": "This version has no documents yet.",
-    "current": "What we edit: {{name}}"
+    "current": "What we edit: {{name}}",
+    "documentsHint": "Document list: add, remove, reorder"
   },
   "doc": {
     "kicker": "Document",
@@ -47,7 +48,8 @@
     "signatures": "Signatures and places",
     "languages": "Languages",
     "rules": "Check rules",
-    "files": "All files"
+    "files": "All files",
+    "documents": "Document list"
   },
   "released": {
     "title": "Version {{version}} is released and does not change.",
@@ -128,12 +130,39 @@
   "leave": "There are unsaved changes. Leave without saving them?",
   "noDocumentsTitle": "This version has no documents",
   "noDocumentsLead": "Project data, questionnaires and deadlines are on the left.",
-  "parts": {},
-  "legacy": {
-    "file": "File",
-    "noText": "The document has no text files that can be edited here.",
-    "treeTitle": "Template files",
-    "pickTitle": "Pick a file",
-    "pickLead": "Open a file in the tree on the left."
+  "parts": {
+    "readOnly": "This version is released: you can only look here.",
+    "copy": "Edit a copy",
+    "documents": {
+      "lead": "Which documents belong to the version and in what order. Open a document in the list on the left to change its content."
+    },
+    "fields": {
+      "lead": "The data a student fills in when creating a project: fields, their groups and hints."
+    },
+    "forms": {
+      "lead": "Questionnaires: which questions the student sees and in what order. The answers go to the project data."
+    },
+    "deadlines": {
+      "lead": "What a student hands in and when, who signs and in what order. Signatures at handover points are set up here too; where a signature sits on the page is in \"Signatures and places\"."
+    },
+    "languages": {
+      "lead": "Which languages the version's documents come in and which files each document has."
+    },
+    "rules": {
+      "lead": "Which formatting and content checks are on in this version and how strict they are.",
+      "files": "Rule files",
+      "filesLead": "The rules themselves live in separate files. Open a file to edit a rule with a form.",
+      "open": "Open"
+    },
+    "files": {
+      "lead": "All template files as they are, for experienced users. Ordinary edits are easier in the sections on the left.",
+      "treeTitle": "Template files",
+      "pickTitle": "Pick a file",
+      "pickLead": "Open a file in the list on the left.",
+      "view": "How to show the file",
+      "form": "Form",
+      "text": "Text",
+      "formMissing": "This file has no form: edit it as text."
+    }
   }
 }

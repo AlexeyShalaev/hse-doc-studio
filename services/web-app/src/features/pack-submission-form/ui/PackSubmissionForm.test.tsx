@@ -136,7 +136,7 @@ describe("форма точек сдачи", () => {
       "если научный руководитель указан и из компании",
     );
     expect(screen.getAllByTestId("route-preview-skipped")[0]).toHaveTextContent(
-      "Не в этой комбинации",
+      "Не при этих условиях",
     );
   });
 

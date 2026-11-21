@@ -1,7 +1,11 @@
 import { useRef, useState, type ComponentType } from "react";
 import { clsx } from "clsx";
 import { useTranslation } from "react-i18next";
-import { sectionOfPointer, useRecordFocus } from "../lib/focus";
+import {
+  sectionOfPointer,
+  useRecordFocus,
+  type VersionSection,
+} from "../lib/focus";
 import { DocumentsSection } from "./documents/DocumentsSection";
 import { LanguagesSection } from "./documents/LanguagesSection";
 import { FieldsSection } from "./fields/FieldsSection";
@@ -36,34 +40,45 @@ export const VERSION_SECTIONS: {
   { id: "checks", Component: ChecksSection },
 ];
 
-export const VersionForm = (props: VersionSectionProps) => {
+export type VersionFormProps = VersionSectionProps & {
+  /**
+   * Показать один раздел без полосы вкладок: навигация «Содержимого» (pack-space) сама выбирает
+   * раздел, а полоса вкладок осталась бы вторым способом сделать то же.
+   */
+  section?: VersionSection | undefined;
+};
+
+export const VersionForm = ({ section: only, ...props }: VersionFormProps) => {
   const { t } = useTranslation("packForms");
   const [active, setActive] = useState(
-    sectionOfPointer(props.at) ?? VERSION_SECTIONS[0]?.id ?? "",
+    only ?? sectionOfPointer(props.at) ?? VERSION_SECTIONS[0]?.id ?? "",
   );
   const section =
-    VERSION_SECTIONS.find((s) => s.id === active) ?? VERSION_SECTIONS[0];
+    VERSION_SECTIONS.find((s) => s.id === (only ?? active)) ??
+    VERSION_SECTIONS[0];
   const root = useRef<HTMLDivElement>(null);
   useRecordFocus(root, props.at, section?.id ?? "");
   return (
     <div className="pf-version" ref={root}>
-      <nav className="pf-tabs" role="tablist" aria-label={t("sections")}>
-        {VERSION_SECTIONS.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            role="tab"
-            aria-selected={s.id === section?.id}
-            className={clsx("pf-tab", s.id === section?.id && "active")}
-            data-testid={`pf-tab-${s.id}`}
-            onClick={() => {
-              setActive(s.id);
-            }}
-          >
-            {t(`tabs.${s.id}`)}
-          </button>
-        ))}
-      </nav>
+      {!only && (
+        <nav className="pf-tabs" role="tablist" aria-label={t("sections")}>
+          {VERSION_SECTIONS.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              role="tab"
+              aria-selected={s.id === section?.id}
+              className={clsx("pf-tab", s.id === section?.id && "active")}
+              data-testid={`pf-tab-${s.id}`}
+              onClick={() => {
+                setActive(s.id);
+              }}
+            >
+              {t(`tabs.${s.id}`)}
+            </button>
+          ))}
+        </nav>
+      )}
       {section && <section.Component {...props} />}
     </div>
   );
