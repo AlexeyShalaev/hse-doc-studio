@@ -40,3 +40,6 @@ export { SpaceScreen } from "./shell/SpaceScreen";
 export { SpaceTabs } from "./shell/DefaultParts";
 export { defineSpaceSlots, mergeSpaceSlots } from "./shell/spaceSlots";
 export type { SpaceSlots, SpaceTabSlot } from "./shell/spaceSlots";
+export { useSituationDelta } from "./situation/useSituationDelta";
+export type { SituationDelta } from "./situation/useSituationDelta";
+export type { ChangeSymbol } from "./situation/deltaSummary";
