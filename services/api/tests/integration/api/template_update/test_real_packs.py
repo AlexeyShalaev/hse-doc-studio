@@ -247,8 +247,11 @@ async def test__real_coursework__2026_1_4_project_gets_anchors_and_presets_in_pa
     ("pack_id", "template_id", "current", "patched", "lang"),
     [
         ("hse-cs-sse", "coursework", "2026.1.5", "2026.1.6", "ru"),
-        ("hse-cs-se", "coursework", "2026.1.1", "2026.1.2", "ru"),
-        ("hse-cs-se", "vkr", "2026.1.1", "2026.1.2", "ru"),
+        # 2026.1.3: английские подсказки полей (линтер результата), файлы шаблона те же.
+        ("hse-cs-se", "coursework", "2026.1.1", "2026.1.3", "ru"),
+        ("hse-cs-se", "coursework", "2026.1.2", "2026.1.3", "ru"),
+        ("hse-cs-se", "vkr", "2026.1.1", "2026.1.3", "ru"),
+        ("hse-cs-se", "vkr", "2026.1.2", "2026.1.3", "ru"),
         ("hse-cs-se", "pp", "2026.1", "2026.1.1", "en"),
     ],
 )

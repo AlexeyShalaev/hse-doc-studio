@@ -1,0 +1,90 @@
+% !TeX program = xelatex
+% ============================================================
+% Общая аннотация — документ КТ1 КОМАНДНОЙ исследовательской ВКР
+% ОП «Программная инженерия» ФКН НИУ ВШЭ.
+%
+% Тот же жанр, что и личная аннотация (свободный ~2-стр. документ из
+% полужирных лейблов, НЕ ЕСПД: без штампа/кода/ЛУ/содержания), но
+% описывает исследование КОМАНДЫ В ЦЕЛОМ: общая постановка, общая цель
+% и задачи, и распределение областей ответственности между соавторами.
+% Частные задачи каждого участника — в его личной аннотации.
+% ============================================================
+\documentclass[12pt,a4paper]{extarticle}
+\input{../common/annotation_preamble}
+\begin{document}
+\sloppy
+\input{../common/annotation_title}
+
+
+\begin{center}
+  \textbf{\large Shared Annotation}
+\end{center}
+
+\vspace{0.4em}
+
+\noindent\textbf{Keywords:} \hseFill{5–15 WORDS IN UPPERCASE, IN THE NOMINATIVE CASE, SEPARATED BY COMMAS, WITH NO FULL STOP AT THE END}
+
+\medskip
+\noindent\textbf{Assessment of the current state of the problem being solved.} The problem addressed by the team is~\hseFill{briefly state the shared scientific problem}. Today it is tackled with \hseFill{list the existing approaches} \cite{example-en}. Their main limitations are: \hseFill{limitation 1}; \hseFill{limitation 2}~--- which is precisely what defines the direction of the research.
+
+\medskip
+\noindent\textbf{Relevance and novelty of the research topic.} The relevance stems from \hseFill{the practical and scientific significance of the task}. The scientific novelty of the work lies in~\hseFill{what is proposed for the first time}.
+
+\medskip
+\noindent\textbf{Object of research:} \hseFill{the team's overall object of research}.
+
+\smallskip
+\noindent\textbf{Subject of research:} \hseFill{the team's overall subject of research}.
+
+\smallskip
+\noindent\textbf{Overall research objective:} \hseFill{state the overall objective of the team's work}.
+
+\medskip
+\noindent\textbf{Research tasks:}
+\begin{enumerate}[label=\arabic*), leftmargin=1.3cm, topsep=2pt, itemsep=2pt]
+  \item \hseFill{shared task 1};
+  \item \hseFill{shared task 2};
+  \item \hseFill{shared task 3};
+  \item \hseFill{extend the list of tasks}.
+\end{enumerate}
+
+\medskip
+\noindent\textbf{Research methods:} \hseFill{list the methods: analytical review, formal modelling, computational experiment, statistical analysis, etc.}
+
+\medskip
+\noindent\textbf{Distribution of areas of responsibility.} For~each research direction a responsible co-author is indicated; that co-author prepares and~defends the corresponding part of the work (details~--- in~their personal annotation and~thesis chapters).
+
+\vspace{-0.2em}
+\begin{table}[H]
+\centering
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{4.5cm}|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{Co-author} & \textbf{Research direction / task} \\
+\hline
+\hseFill{full name of co-author 1} & \hseFill{area of responsibility: direction, tasks, experiments} \\
+\hline
+\hseFill{full name of co-author 2} & \hseFill{area of responsibility: direction, tasks, experiments} \\
+\hline
+\end{tabularx}
+\end{table}
+
+\noindent
+The co-authors of the work are~\hseAuthorsList.
+
+\bigskip
+% ── References in IEEE citation style (English track): author initials
+%    first, article titles in quotes, "in Proc. …", vol./no./pp., and an
+%    accessed date for online resources. ──
+\noindent\textbf{References}
+\vspace{-0.3em}
+\renewcommand{\refname}{}
+\begin{thebibliography}{99}
+  \bibitem{example-en}
+  A.~B. Author and C.~D. Coauthor, ``Title of the paper,'' in \emph{Proc. of the Conference}, New York, NY, USA: ACM, 2024, pp.~10--20.
+
+  \bibitem{example-web}
+  ``Resource title.'' \url{https://example.org} (accessed Jan.~1, 2026).
+\end{thebibliography}
+
+
+\end{document}

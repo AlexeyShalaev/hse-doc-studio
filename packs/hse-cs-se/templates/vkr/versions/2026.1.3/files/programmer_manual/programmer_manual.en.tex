@@ -1,0 +1,528 @@
+% !TeX program = xelatex
+% ============================================================
+% rp/rp.tex — Руководство программиста
+% ГОСТ 19.504-79 «Руководство программиста. Требования к
+% содержанию и оформлению»
+% ============================================================
+\documentclass[12pt,a4paper]{extarticle}
+
+% 1. Подключение общей преамбулы (пакеты)
+\input{../common/preamble}
+
+% 2. Определение переменных для конкретного документа
+\newcommand{\docname}{Programmer's Manual}
+\newcommand{\doccode}{\hseDocCodeBase\ 33 01-1}
+\newcommand{\doccodelu}{\hseDocCodeBase\ 33 01-1-ЛУ}
+
+% 3. Подключение общих команд (проект, студент, руководитель)
+\input{../common/commands}
+
+% 4. Подключение стилей (колонтитулы, заголовки)
+\input{../common/styles}
+
+\begin{document}
+\sloppy
+
+% 5. Генерация титульных листов по шаблону
+\input{../common/title_template}
+
+% ============================================================
+% ANNOTATION
+% ============================================================
+\section*{ANNOTATION}
+\addcontentsline{toc}{section}{ANNOTATION}
+
+This document, \enquote{\hseProjectName. Programmer's Manual}, contains the information required for the development, configuration, deployment, verification and maintenance of the software system. It describes the purpose and conditions of use of the program, the characteristics of its architecture, the procedure for invoking the program, the organisation of input and output data, and the diagnostic messages produced by the system.
+
+% Hint: specify the intended audience of the manual (which services, libraries
+% and configurations its readers develop).
+The manual is intended for programmers and engineers who develop the services, shared libraries, software contracts and infrastructure configurations of the project.
+
+This document has been prepared in accordance with the requirements of GOST 19.504-79\cite{gost19504}.
+
+\clearpage
+
+% ============================================================
+% LIST OF STANDARDS USED
+% ============================================================
+\noindent
+This document has been prepared in accordance with the requirements of:
+
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+  \item GOST 19.101-77 Types of Programs and Program Documents\cite{gost19101}.
+  \item GOST 19.103-77 Designation of Programs and Program Documents\cite{gost19103}.
+  \item GOST 19.104-78 Basic Inscriptions\cite{gost19104}.
+  \item GOST 19.105-78 General Requirements for Program Documents\cite{gost19105}.
+  \item GOST 19.106-78 Requirements for Program Documents Prepared in Printed
+        Form\cite{gost19106}.
+  \item GOST 19.504-79 Programmer's Manual. Requirements for Content and
+        Presentation\cite{gost19504}.
+\end{enumerate}
+
+Changes to this document are made in accordance with GOST\,19.604-78\cite{gost19604}.
+
+\clearpage
+
+% ============================================================
+% CONTENTS
+% ============================================================
+\hypersetup{linkcolor=black}
+\tableofcontents
+\hypersetup{linkcolor=blue}
+\thispagestyle{fancy}
+\clearpage
+
+% ============================================================
+% 1. PURPOSE AND CONDITIONS OF USE OF THE PROGRAM
+% ============================================================
+\section{PURPOSE AND CONDITIONS OF USE OF THE PROGRAM}
+
+\subsection{Purpose of the program}
+
+% Hint: describe the purpose of the program and the range of tasks it solves.
+\begin{hseExample}
+The program \enquote{\projectname} is intended for \hseFill{state the purpose of the program}. The system provides \hseFill{categories of users} with software interfaces for \hseFill{list of tasks solved}.
+
+The program is used as \hseFill{the role of the program within the overall system} and as a basis for the further development of \hseFill{directions of functional development}.
+\end{hseExample}
+
+\subsection{Functions performed by the program}
+
+% Hint: list the main functions of the program (itemised list).
+\begin{hseExample}
+The software system performs the following main functions:
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item \hseFill{the first main function of the program};
+    \item \hseFill{the second main function of the program};
+    \item \hseFill{the third main function of the program};
+    \item collection of metrics, traces and structured logs.
+\end{itemize}
+\end{hseExample}
+
+\subsection{Conditions required to run the program}
+
+% Hint: specify the environment in which the program runs (containers, OS,
+% development environment, etc.).
+\begin{hseExample}
+The program is designed to run in \hseFill{execution environment of the program}. Local development uses \hseFill{local development tools}.
+\end{hseExample}
+
+\subsubsection{Hardware requirements}
+
+% Hint: minimum/recommended requirements for the processor, RAM, disk space
+% and network.
+\begin{hseExample}
+For running the program locally, a workstation with the following characteristics is recommended:
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item processor: at least \hseFill{number of cores and architecture};
+    \item RAM: at least \hseFill{amount of RAM};
+    \item disk space: at least \hseFill{disk space} of free space for the source code, dependencies and data;
+    \item network access to \hseFill{repository and external resources}.
+\end{itemize}
+
+For production deployment, the components must be hosted in \hseFill{target deployment environment} with dedicated resources for \hseFill{DBMS and infrastructure services}.
+\end{hseExample}
+
+\subsubsection{Software requirements}
+
+% Hint: list the OS, runtimes, DBMS, build tools and other software.
+\begin{hseExample}
+The following software is required to develop and run the program:
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item operating system \hseFill{supported operating systems};
+    \item Git for obtaining the source code;
+    \item \hseFill{containerisation or virtualisation tools};
+    \item \hseFill{programming language and its version};
+    \item \hseFill{DBMS and infrastructure dependencies};
+    \item \hseFill{additional development tools}.
+\end{itemize}
+\end{hseExample}
+
+\subsubsection{Personnel requirements}
+
+% Hint: specify the qualifications of the programmer (languages, technologies,
+% skills).
+\begin{hseExample}
+A programmer developing and maintaining the program must have practical experience with \hseFill{languages, frameworks and tools} and with the Git version control system. Modifying \hseFill{adjacent layer of the system} additionally requires experience with \hseFill{additional technologies and tools}.
+\end{hseExample}
+
+\clearpage
+
+% ============================================================
+% 2. CHARACTERISTICS OF THE PROGRAM
+% ============================================================
+\section{CHARACTERISTICS OF THE PROGRAM}
+
+\subsection{Description of the main characteristics of the program}
+
+% Hint: describe the architecture, approaches and technologies used.
+\begin{hseExample}
+The program \enquote{\projectname} is implemented as \hseFill{type of software system}. The server side is built with \hseFill{languages and frameworks} and uses \hseFill{architectural style}. Interaction between components is performed via \hseFill{interaction protocols}.
+
+The system uses the following architectural approaches:
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item separation of components by areas of responsibility;
+    \item \hseFill{the second architectural approach};
+    \item \hseFill{the third architectural approach};
+    \item data schema migrations via \hseFill{migration tool}.
+\end{itemize}
+\end{hseExample}
+
+\subsection{Operating mode of the program}
+
+% Hint: specify the operating mode (continuous/batch/interactive) and the
+% permitted launch scenarios.
+\begin{hseExample}
+In normal operation the program runs continuously. \hseFill{describe how the components operate in normal mode}.
+
+The following launch modes are available for development:
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item launching only the infrastructure dependencies;
+    \item launching a selected component of the program;
+    \item launching all components simultaneously;
+    \item launching a test environment for integration checks.
+\end{itemize}
+\end{hseExample}
+
+\subsection{Composition and purpose of the components}
+
+% Hint: list the main components of the program and their purpose.
+\begin{hseExample}
+The composition and purpose of the main components of the program are given in Table~\ref{tab:rp_components}.
+
+% The table is typeset with \captionof (not \begin{table}[H]): floating
+% environments are not allowed inside the yellow sample block.
+\begin{center}
+\small
+\captionof{table}{Main components of the program}
+\label{tab:rp_components}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{0.34\textwidth}|X|}
+\hline
+\textbf{Component} & \textbf{Purpose} \\
+\hline
+\hseFill{component name} & \hseFill{purpose of the component}. \\
+\hline
+\hseFill{component name} & \hseFill{purpose of the component}. \\
+\hline
+\end{tabularx}
+\end{center}
+\end{hseExample}
+
+\subsection{Means of verifying correct execution}
+
+% Hint: describe the means of verifying correct operation (tests, linters,
+% health checks, logs, metrics, traces).
+\begin{hseExample}
+The correctness of the program is verified by the following means:
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item automated unit and integration tests via \hseFill{testing framework};
+    \item formatting, static analysis and type checks via \hseFill{linters and analysers};
+    \item health checks of the program components;
+    \item metrics, traces and structured logs;
+    \item \hseFill{additional means of verification}.
+\end{itemize}
+\end{hseExample}
+
+\clearpage
+
+% ============================================================
+% 3. INVOKING THE PROGRAM
+% ============================================================
+\section{INVOKING THE PROGRAM}
+
+\subsection{Obtaining the source code}
+
+% Hint: specify the repository location and the cloning commands.
+\begin{hseExample}
+The source code of the program is located in a remote Git repository \hseFill{state the Git hosting and repository name}.
+
+To obtain the source code, run:
+
+\begin{verbatim}
+git clone <repository URL>
+cd <project folder>
+\end{verbatim}
+\end{hseExample}
+
+\subsection{Preparing the development environment}
+
+% Hint: describe the preparation of configurations and the installation of
+% dependencies.
+\begin{hseExample}
+Before running the program, install the system dependencies listed in subsection 1.3.2 and prepare the environment variable files. The example configurations \texttt{.env.example} are located in \hseFill{directories with example configurations}.
+
+The minimum preparation procedure is as follows:
+
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+    \item copy the example configurations into working \texttt{.env} files;
+    \item install the dependencies with \hseFill{dependency installation command};
+    \item \hseFill{additional environment preparation steps};
+    \item apply the database migrations.
+\end{enumerate}
+\end{hseExample}
+
+\subsection{Launching the program}
+
+% Hint: provide the commands to launch the program and its components
+% (infrastructure dependencies, a single component, the whole environment).
+\begin{hseExample}
+To launch the infrastructure dependencies, use the command:
+
+\begin{verbatim}
+<command to launch the infrastructure>
+\end{verbatim}
+
+To launch the program and all its components:
+
+\begin{verbatim}
+<command to launch the program>
+\end{verbatim}
+
+The local environment is stopped with the command:
+
+\begin{verbatim}
+<command to stop the environment>
+\end{verbatim}
+\end{hseExample}
+
+\subsection{Configuration}
+
+% Hint: describe the configuration parameters (environment variables,
+% configuration files) and their default values.
+\begin{hseExample}
+The program parameters are set through environment variables and configuration files. The main parameters include connection strings to \hseFill{infrastructure dependencies}, observability parameters, service keys and component launch flags.
+\end{hseExample}
+
+\subsection{Running the checks}
+
+% Hint: provide the commands to run the tests and other checks.
+\begin{hseExample}
+To run the tests, static checks and formatting, use the commands:
+
+\begin{verbatim}
+<command to run the tests>
+<command for static checks>
+<command for formatting>
+\end{verbatim}
+
+For a smoke check of the locally running environment:
+
+\begin{verbatim}
+<command for the smoke check>
+\end{verbatim}
+\end{hseExample}
+
+\clearpage
+
+% ============================================================
+% 4. INPUT AND OUTPUT DATA
+% ============================================================
+\section{INPUT AND OUTPUT DATA}
+
+\subsection{Organisation of input data}
+
+% Hint: describe the sources, formats and composition of the input data.
+\begin{hseExample}
+The input data of the program arrive through \hseFill{interfaces and channels of input data}, environment variables, configuration files and migration data. The main formats of the input data are given in Table~\ref{tab:rp_input_data}.
+
+% The table is typeset with \captionof (not \begin{table}[H]): floating
+% environments are not allowed inside the yellow sample block.
+\begin{center}
+\small
+\captionof{table}{Input data of the program}
+\label{tab:rp_input_data}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{0.28\textwidth}|X|}
+\hline
+\textbf{Source} & \textbf{Data composition} \\
+\hline
+\hseFill{API interface} & \hseFill{composition of the request data}. \\
+\hline
+Environment variables & Connection strings to \hseFill{infrastructure dependencies}, observability parameters, keys and component launch flags. \\
+\hline
+Database migrations & \hseFill{migration tool} scripts for changing the database structure. \\
+\hline
+\end{tabularx}
+\end{center}
+\end{hseExample}
+
+\subsection{Organisation of output data}
+
+% Hint: describe the channels, formats and composition of the output data.
+\begin{hseExample}
+The output data are produced in the form of \hseFill{channels of output data}, database records, metrics, traces and logs. The main kinds of output information are given in Table~\ref{tab:rp_output_data}.
+
+% The table is typeset with \captionof (not \begin{table}[H]): floating
+% environments are not allowed inside the yellow sample block.
+\begin{center}
+\small
+\captionof{table}{Output data of the program}
+\label{tab:rp_output_data}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{0.28\textwidth}|X|}
+\hline
+\textbf{Channel} & \textbf{Data composition} \\
+\hline
+\hseFill{API channel} & \hseFill{composition of the responses and errors}. \\
+\hline
+Database & Business data of the program, migration history and service structures. \\
+\hline
+Observability & Metrics, traces, error events and structured logs. \\
+\hline
+\end{tabularx}
+\end{center}
+\end{hseExample}
+
+\subsection{Data constraints and validation}
+
+% Hint: describe the levels of validation and the constraints on the data.
+\begin{hseExample}
+Validation of the input data is performed at several levels:
+
+\begin{itemize}[leftmargin=1.25cm]
+    \item \hseFill{validation schemas} check the types, required presence and format of the fields;
+    \item the domain layer checks business invariants: \hseFill{examples of business rules};
+    \item database constraints and indexes protect against violations of data integrity;
+    \item \hseFill{additional data protection mechanisms}.
+\end{itemize}
+\end{hseExample}
+
+\clearpage
+
+% ============================================================
+% 5. MESSAGES
+% ============================================================
+\section{MESSAGES}
+
+% Hint: describe the types of messages produced and fill in the table of
+% diagnostic messages (code/text, cause, programmer's actions).
+\begin{hseExample}
+The program produces messages of several types: \hseFill{types of responses and error codes}, log records, health check messages and monitoring events. The messages are intended for the programmer, the system operator and the calling software clients. The main diagnostic messages are given in Table~\ref{tab:rp_messages}.
+\end{hseExample}
+
+% The longtable stays outside the yellow sample block: breakable tables are
+% not allowed inside hseExample.
+\begin{small}
+\begin{longtable}{|>{\raggedright\arraybackslash}p{0.19\textwidth}|>{\raggedright\arraybackslash}p{0.21\textwidth}|>{\raggedright\arraybackslash}p{0.48\textwidth}|}
+\caption{Main diagnostic messages and programmer's actions}
+\label{tab:rp_messages}\\
+\hline
+\textbf{Message/code} & \textbf{Cause} & \textbf{Programmer's actions} \\
+\hline
+\endfirsthead
+\hline
+\textbf{Message/code} & \textbf{Cause} & \textbf{Programmer's actions} \\
+\hline
+\endhead
+\hline
+\endfoot
+\texttt{400 Bad Request} & Incorrect format of the input data or request parameters. & Check the request schema, the client-side validation and the boundary-value tests. \\
+\hline
+\texttt{404 Not Found} & The requested entity was not found. & Check the identifier, the data and the correctness of the route. \\
+\hline
+\texttt{503 Service Unavailable} & A dependent service, database or external component is unavailable. & Check the health checks, environment variables, network settings and logs of the corresponding service. \\
+\hline
+\texttt{Health check not ready} & The component has started but is not ready to accept traffic. & Check the readiness endpoint, the migrations and the connections to dependencies. \\
+\hline
+\hseFill{message or code} & \hseFill{cause} & \hseFill{programmer's actions} \\
+\hline
+\end{longtable}
+\end{small}
+
+\clearpage
+% The pages with terms, references and appendices are printed without the
+% bottom stamp (as in real document sets) — only the sheet number and the
+% document code at the top.
+\pagestyle{appendix}
+
+% ============================================================
+% LIST OF TERMS AND DEFINITIONS
+% ============================================================
+\section*{LIST OF TERMS AND DEFINITIONS}
+\addcontentsline{toc}{section}{LIST OF TERMS AND DEFINITIONS}
+
+% Hint: list the terms and abbreviations used in the document (in
+% alphabetical order).
+\begin{enumerate}[label=\arabic*., leftmargin=1.25cm]
+  \item \textbf{\hseFill{term}} --- \hseFill{definition of the term}.
+\end{enumerate}
+
+\clearpage
+
+% ============================================================
+% LIST OF REFERENCES (IEEE style)
+% ============================================================
+\section*{REFERENCES}
+\addcontentsline{toc}{section}{REFERENCES}
+
+% Hint: add BEFORE the standards the sources on the technologies of your
+% project, in IEEE style, following the example:
+% \bibitem{fastapi}
+% \emph{FastAPI}. Accessed: Mar.~14, 2026. [Online]. Available: \url{https://fastapi.tiangolo.com}
+\renewcommand{\refname}{}
+\begin{thebibliography}{99}
+\vspace{-1cm}
+
+\bibitem{gost19101}
+\emph{GOST 19.101-77. Unified System for Program Documentation. Types of Programs and Program Documents}. Moscow, Russia: Standartinform, 2001.
+
+\bibitem{gost19103}
+\emph{GOST 19.103-77. Unified System for Program Documentation. Designation of Programs and Program Documents}. Moscow, Russia: Standartinform, 2001.
+
+\bibitem{gost19104}
+\emph{GOST 19.104-78. Unified System for Program Documentation. Basic Inscriptions}. Moscow, Russia: Standartinform, 2001.
+
+\bibitem{gost19105}
+\emph{GOST 19.105-78. Unified System for Program Documentation. General Requirements for Program Documents}. Moscow, Russia: Standartinform, 2001.
+
+\bibitem{gost19106}
+\emph{GOST 19.106-78. Unified System for Program Documentation. Requirements for Program Documents Prepared in Printed Form}. Moscow, Russia: Standartinform, 2001.
+
+\bibitem{gost19504}
+\emph{GOST 19.504-79. Unified System for Program Documentation. Programmer's Manual. Requirements for Content and Presentation}. Moscow, Russia: Standartinform, 2001.
+
+\bibitem{gost19604}
+\emph{GOST 19.604-78. Unified System for Program Documentation. Rules for Making Changes to Program Documents Prepared in Printed Form}. Moscow, Russia: Standartinform, 2001.
+
+\end{thebibliography}
+
+\clearpage
+
+% ============================================================
+% APPENDIX 1 — EXAMPLE OF PROGRAMMER'S COMMANDS
+% ============================================================
+\section*{APPENDIX 1}
+\addcontentsline{toc}{section}{APPENDIX 1}
+
+\begin{center}
+\textbf{EXAMPLE OF PROGRAMMER'S COMMANDS}
+\end{center}
+
+% Hint: provide the typical programmer's commands (launching the
+% infrastructure, launching the services, checks, stopping the environment).
+\begin{verbatim}
+# Launch the development infrastructure
+<command to launch the infrastructure>
+
+# Launch all services
+<command to launch the services>
+
+# Run the checks
+<command for the checks>
+
+# Stop the services
+<command to stop the services>
+\end{verbatim}
+
+\clearpage
+
+% ============================================================
+% ЛИСТ РЕГИСТРАЦИИ ИЗМЕНЕНИЙ
+% ============================================================
+\input{../common/change_log}
+
+\end{document}
