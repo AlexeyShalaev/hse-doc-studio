@@ -110,7 +110,7 @@ describe("вкладка «Проверка»", { timeout: 30_000 }, () => {
       const [button] = await screen.findAllByRole("button", {
         name: "Показать в результате",
       });
-      fireEvent.click(button as HTMLElement);
+      fireEvent.click(button!);
       expect(location()).toMatch(/\/result\?.*sel=/);
     });
 
@@ -120,7 +120,7 @@ describe("вкладка «Проверка»", { timeout: 30_000 }, () => {
       const [button] = screen.getAllByRole("button", {
         name: "Показать такую ситуацию",
       });
-      fireEvent.click(button as HTMLElement);
+      fireEvent.click(button!);
       expect(location()).toMatch(/\/result\?.*i\./);
     });
 
@@ -129,7 +129,7 @@ describe("вкладка «Проверка»", { timeout: 30_000 }, () => {
       const [button] = await screen.findAllByRole("button", {
         name: "Открыть место в файле",
       });
-      fireEvent.click(button as HTMLElement);
+      fireEvent.click(button!);
       expect(location()).toContain("/content?");
       expect(decodeURIComponent(location())).toContain(
         "file=hse-cs-sse/templates/coursework/versions/2026.1.3/",
@@ -203,7 +203,7 @@ describe("вкладка «Проверка»", { timeout: 30_000 }, () => {
       openCases();
       const table = await screen.findByRole("table");
       const cells = within(table).getAllByRole("button");
-      fireEvent.click(cells[0] as HTMLElement);
+      fireEvent.click(cells[0]!);
       expect(
         screen.getByRole("region", {
           name: "Что изменилось в выбранной части",
@@ -218,7 +218,7 @@ describe("вкладка «Проверка»", { timeout: 30_000 }, () => {
     it("«Сравнить с другим» открывает сравнение с этим случаем слева", async () => {
       openCases();
       const table = await screen.findByRole("table");
-      fireEvent.click(within(table).getAllByRole("button")[0] as HTMLElement);
+      fireEvent.click(within(table).getAllByRole("button")[0]!);
       fireEvent.click(
         screen.getByRole("button", { name: "Сравнить с другим" }),
       );
@@ -272,9 +272,9 @@ describe("вкладка «Проверка»", { timeout: 30_000 }, () => {
       const [select] = screen.getAllByRole("combobox", {
         name: /Зафиксировать/,
       });
-      const option = within(select as HTMLElement).getAllByRole("option")[1];
-      fireEvent.change(select as HTMLElement, {
-        target: { value: (option as HTMLOptionElement).value },
+      const option = within(select!).getAllByRole("option")[1];
+      fireEvent.change(select!, {
+        target: { value: option!.value },
       });
       expect(decodeURIComponent(location())).toMatch(/[?&]p\.[a-z_]+=/);
     });
@@ -289,7 +289,7 @@ describe("вкладка «Проверка»", { timeout: 30_000 }, () => {
       fireEvent.click(
         screen.getAllByRole("button", {
           name: "Показать результат",
-        })[0] as HTMLElement,
+        })[0]!,
       );
       expect(location()).toContain("/result");
     });
