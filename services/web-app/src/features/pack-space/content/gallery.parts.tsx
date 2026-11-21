@@ -15,6 +15,7 @@ import {
 } from "../galleryKit";
 import { SpaceScreen } from "../shell/SpaceScreen";
 import {
+  CONTENT_MODEL,
   CONTENT_TEXT_PATH,
   CONTENT_VERSION_DIR,
   RELEASED_MODEL,
@@ -56,7 +57,11 @@ const seedDeadlines = (client: QueryClient) => {
   seedContentModel(client);
   client.setQueryData(
     packSubmissionKeys.of(WS, GALLERY_REF),
-    PackSubmissionSchema.parse(only(submissionFiles)),
+    // Манифест версии в модели и в точках сдачи один: иначе форма решит, что отстала, и перечитает.
+    {
+      ...PackSubmissionSchema.parse(only(submissionFiles)),
+      etag: CONTENT_MODEL.manifest.etag,
+    },
   );
 };
 

@@ -11,8 +11,8 @@
   "stale": "The file changed outside the form. The form reread it: repeat the edit.",
   "dismiss": "Dismiss",
   "unreadable": "The form did not open",
-  "problemsNote_one": "The version manifests have {{count}} loader or schema finding. The form will not add new ones; existing ones are in Problems.",
-  "problemsNote_other": "The version manifests have {{count}} loader or schema findings. The form will not add new ones; existing ones are in Problems.",
+  "problemsNote_one": "The version description has {{count}} issue. The form will not add new ones; existing ones are in the checks findings.",
+  "problemsNote_other": "The version description has {{count}} issues. The form will not add new ones; existing ones are in the checks findings.",
   "kinds": {
     "research": "Research",
     "project": "Project"
@@ -50,7 +50,7 @@
     "section": "Settings page",
     "sectionHint": "Where the group shows in the project settings.",
     "sections": {
-      "meta": "Metadata",
+      "meta": "Project data",
       "documents": "Documents"
     }
   },
@@ -108,17 +108,17 @@
     "usageTitle": "Where it prints",
     "unused": "The field is not printed anywhere. Check that it is needed.",
     "unusedRequired": "The field is required on creation but is not printed anywhere.",
-    "usageDirect": "right in the source",
+    "usageDirect": "right in the template text",
     "usageWhole": "for the whole document",
     "printedIn_one": "in {{count}} document",
     "printedIn_other": "in {{count}} documents",
     "notPrinted": "not printed",
     "renameTitle": "New key for the field {{key}}",
-    "renameLead": "The key changes in the manifest and in every template of the version (project.meta.<key>). For projects on older versions this removes one field and adds another: the new version is at least minor.",
+    "renameLead": "The key changes in the version description and in every template (project.meta.<key>). For projects on older versions this removes one field and adds another: the new version needs at least new features.",
     "renameTo": "New key",
     "renameSubmit": "Rename",
     "deleteTitle": "Delete the field {{key}}?",
-    "deleteLead": "The field leaves the version manifest. Templates that print it stay as they are.",
+    "deleteLead": "The field leaves the version description. Templates that print it stay as they are.",
     "deletePrinted": "The field prints in: {{docs}}. After deletion it will be empty there."
   },
   "forms": {
@@ -190,7 +190,7 @@
   "cancel": "Cancel",
   "documents": {
     "title": "Version documents",
-    "lead": "The roster order is the order in a project. A navigation group draws a subheading in the document list.",
+    "lead": "The order of documents here is the order in a project. A group draws a subheading in the document list.",
     "add": "Document",
     "addTitle": "New document",
     "id": "Document id",
@@ -207,13 +207,13 @@
     "open": "Open the document form",
     "remove": "Delete document",
     "removeTitle": "Delete the document {{id}}?",
-    "removeLead": "The roster entry goes away and the document folder with all its files is deleted. For projects this removes a document: the new version is at least minor.",
-    "referenced": "The version manifest mentions the document. After deletion fix these places, Problems will show them:"
+    "removeLead": "The document goes away and its folder with all files is deleted. For projects this removes a document: the new version needs at least new features.",
+    "referenced": "The version description mentions the document. After deletion fix these places, the check findings will show them:"
   },
   "languages": {
     "title": "Version languages",
-    "lead": "File suffix codes: report.ru.tex, report.en.tex. The first language is the default: its edition is the source of translations and is used when a translation is missing.",
-    "undeclared": "The manifest has no langs key: the version is in Russian. Adding a language writes langs explicitly.",
+    "lead": "Languages set file suffixes: report.ru.tex, report.en.tex. The first language is the main one: translations start from it and it is used when a translation is missing.",
+    "undeclared": "The version description sets no languages: the version is in Russian. An added language is written explicitly.",
     "default": "default",
     "add": "Language",
     "newCode": "Language code, for example en",
@@ -226,18 +226,18 @@
     "present": "present",
     "missing": "missing",
     "shared": "one file for all languages",
-    "mixed": "The file exists both without and with codes: the linter treats this as an error",
+    "mixed": "The file exists both without and with codes: the check treats this as an error",
     "split": "Split by language",
     "splitHint": "The file becomes the “{{lang}}” edition and gets a copy to translate",
     "translate": "Create translation: {{lang}}",
     "translateHint": "A copy of the “{{from}}” edition for every file without a “{{lang}}” translation",
     "translateNone": "Every file with editions already has a “{{lang}}” translation",
-    "noSources": "The document folder has no sources."
+    "noSources": "The document folder has no text files."
   },
   "doc": {
     "title": "Document {{id}}",
-    "lead": "The doc.yaml manifest of the document folder.",
-    "notInRoster": "The document {{id}} is not in the version roster: no form, edit the Source.",
+    "lead": "The document description (doc.yaml).",
+    "notInRoster": "The document {{id}} is not in the version's document list: no form, edit the file text.",
     "name": "Name",
     "code": "Code",
     "outputName": "File name on export",
