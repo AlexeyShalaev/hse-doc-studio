@@ -6,7 +6,7 @@ import {
   screen,
   within,
 } from "@testing-library/react";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { i18n } from "@shared/lib";
 import { loadPackSpaceNamespace } from "@shared/lib/i18n/packSpaceNamespace";
 import { SpaceScreen } from "../shell/SpaceScreen";
@@ -274,7 +274,7 @@ describe("вкладка «Проверка»", { timeout: 30_000 }, () => {
       });
       const option = within(select!).getAllByRole("option")[1];
       fireEvent.change(select!, {
-        target: { value: option!.value },
+        target: { value: option?.getAttribute("value") ?? "" },
       });
       expect(decodeURIComponent(location())).toMatch(/[?&]p\.[a-z_]+=/);
     });
