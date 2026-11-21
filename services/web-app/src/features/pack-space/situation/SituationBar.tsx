@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useScrollHint } from "@shared/lib/scrollHint";
 import { ActionMenu } from "@shared/ui";
 import { useSpaceNav } from "../context/useSpaceNav";
 import { CasesMenu } from "./CasesMenu";
@@ -19,10 +20,13 @@ export const SituationBar = () => {
   const model = useSituationModel();
   const nav = useSpaceNav();
   const [dialog, setDialog] = useState<"more" | "save" | null>(null);
+  // Телефон: ряд прокручивается, край с продолжением затухает (mobile-layout.md, раздел 9).
+  const hintRef = useScrollHint(null, "[data-none]");
   const rest = model.groups.more.length + model.groups.inert.length;
   return (
     <div
-      className="sp-sit"
+      ref={hintRef}
+      className="sp-sit scroll-hint"
       role="group"
       aria-label={t("situation.title")}
       data-testid="sp-situation"

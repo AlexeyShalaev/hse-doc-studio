@@ -42,3 +42,17 @@ export const contentPartPatch = (
     [CONTENT_QUERY.at]: options.at ?? null,
   },
 });
+
+/**
+ * Список «Что редактируем» (телефон): адрес без документа, раздела и файла. На широком экране
+ * такой адрес открывает последний документ, на телефоне он и есть страница первого уровня.
+ */
+export const contentListPatch = (): SpaceNavPatch => ({
+  doc: null,
+  part: null,
+  file: null,
+  extra: {
+    [CONTENT_QUERY.segment]: null,
+    [CONTENT_QUERY.at]: null,
+  },
+});
