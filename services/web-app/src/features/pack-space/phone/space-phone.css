@@ -45,30 +45,50 @@
 }
 
 /* ── зоны касания: 44 px (--touch-lg) у всего, на что нажимают пальцем ──
-   Общие правила телефона из index.css дают 40 px; экран пространства строже. Редактор текста и
-   страница PDF со своими жестами сюда не входят. */
-.sp-root[data-phone]
+   Общие правила телефона из index.css дают 40 px; экран пространства строже. Размер лежит в
+   `--sp-touch`: на телефоне и там, где основной указатель палец (планшет), он 44 px, у мыши 0 (то
+   есть правило ничего не меняет). Редактор текста со своими жестами сюда не входит. */
+.sp-root {
+  --sp-touch: 0px;
+}
+.sp-root[data-phone] {
+  --sp-touch: var(--touch-lg);
+}
+@media (pointer: coarse) {
+  .sp-root {
+    --sp-touch: var(--touch-lg);
+  }
+}
+.sp-root
   :is(button, a[href], summary, select, [role="tab"]):not(
     .cm-editor *,
     .sp-keep-size
   ) {
-  min-height: var(--touch-lg);
+  min-height: var(--sp-touch);
 }
-.sp-root[data-phone] :is(.icon-btn, .btn.icon) {
-  min-width: var(--touch-lg);
+.sp-root button:not(.cm-editor *, .sp-keep-size) {
+  min-width: var(--sp-touch);
 }
-.sp-root[data-phone]
+.sp-root
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(
     [type="file"]
   ):not([type="hidden"]) {
-  min-height: var(--touch-lg);
+  min-height: var(--sp-touch);
+  min-width: var(--sp-touch);
 }
-.sp-root[data-phone]
-  label:has(> input[type="checkbox"], > input[type="radio"]) {
+.sp-root[data-phone] label:has(> input[type="checkbox"], > input[type="radio"]) {
   min-height: var(--touch-lg);
   display: flex;
   align-items: center;
   gap: 0.625rem;
+}
+@media (pointer: coarse) {
+  .sp-root label:has(> input[type="checkbox"], > input[type="radio"]) {
+    min-height: var(--touch-lg);
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+  }
 }
 /* Ссылки-кнопки в тексте: строка не ниже пальца. */
 .sp-root[data-phone] :is(.sp-link, .sp-ch-link) {
@@ -208,4 +228,58 @@
 }
 .sp-root[data-phone] .sp-sit > .sp-chip {
   scroll-snap-align: start;
+}
+
+/* ── предпросмотр PDF шторкой (5.5, 5.8) ──
+   Шторка с предпросмотром выше обычной, страница PDF сразу под названием, а условия, пример
+   данных и «Собрать заново» под ней: на телефоне смотрят на страницу, а не на настройки. */
+.sp-root[data-phone] .sp-side:has(.sp-pv) {
+  height: 92%;
+  max-height: 92%;
+}
+.sp-root[data-phone] .sp-pv > * {
+  order: 1;
+}
+.sp-root[data-phone] .sp-pv > .sp-pv-top {
+  order: 0;
+}
+.sp-root[data-phone]
+  .sp-pv
+  > :is(.sp-pv-block, .sp-pv-fields, .sp-pv-run) {
+  order: 2;
+}
+.sp-root[data-phone] .sp-pv > .sp-pv-findings {
+  order: 3;
+}
+.sp-root[data-phone] .sp-pv-viewer {
+  height: min(60vh, 32rem);
+}
+
+/* ── формы версии (прежние `pack-forms`) на узкой ширине ──
+   Формы рассчитаны на колонку шире телефона: ряды переносятся, а не растягивают страницу. */
+.sp-root[data-phone] .sp-ct-legacy :is(.psf-chip, .psf-actions, .psf-inline-field, .psf-step-head, .psf-step-new) {
+  flex-wrap: wrap;
+  max-width: 100%;
+  min-width: 0;
+}
+.sp-root[data-phone] .sp-ct-legacy .psf-chip > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.sp-root[data-phone] .sp-ct-title > .sp-ct-kicker {
+  display: none;
+}
+/* Файлы документа по языкам: одна строка, которая прокручивается, а не две по 44 px. */
+.sp-root[data-phone] .sp-ct-files {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  margin-inline: calc(var(--page-gutter) * -1);
+  padding-inline: var(--page-gutter);
+  scrollbar-width: none;
+}
+.sp-root[data-phone] .sp-ct-files::-webkit-scrollbar {
+  display: none;
+}
+.sp-root[data-phone] .sp-ct-files > * {
+  flex-shrink: 0;
 }

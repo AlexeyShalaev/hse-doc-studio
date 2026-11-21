@@ -4,7 +4,14 @@ import { packStudioKeys } from "@entities/pack-studio";
 import { referenceModel } from "@entities/pack-studio/reference";
 import { galleryEntries as changesEntries } from "../changes/gallery.changes";
 import { galleryEntries as detailsEntries } from "../details/gallery.details";
-import { seedContentModel, seedContentText } from "../content/fixtures";
+import { galleryEntries as partEntries } from "../content/gallery.parts";
+import { galleryEntries as signatureEntries } from "../content/gallery.signatures";
+import {
+  CONTENT_TEXT_PATH,
+  seedContentModel,
+  seedContentText,
+} from "../content/fixtures";
+import { SIGNATURES_DOC } from "../content/signatures/fixtures";
 import {
   GALLERY_REF,
   GALLERY_WORKSPACE,
@@ -40,6 +47,13 @@ const seedBase = (client: QueryClient): void => {
   seedLint(client, "normal");
 };
 
+/** Данные записи другой области по её id: разделы версии и «Подписи» кладут своё в кэш сами. */
+const seedOf =
+  (entries: GalleryEntry[], id: string) =>
+  (client: QueryClient): void => {
+    entries.find((entry) => entry.id === id)?.seed?.(client);
+  };
+
 const seedContent = (client: QueryClient): void => {
   seedContentText(client);
   seedContentModel(client);
@@ -66,14 +80,16 @@ type Spec = {
   search?: string;
   height?: string;
   seed?: (client: QueryClient) => void;
+  /** Планшет: ширина 820 px, раскладка десктопа с выезжающей правой колонкой. */
+  tablet?: boolean;
 };
 
 const phone = (spec: Spec): GalleryEntry => ({
   id: spec.id,
   title: spec.title,
   note: spec.note,
-  frame: "plain",
-  width: 390,
+  frame: spec.tablet ? "screen" : "plain",
+  width: spec.tablet ? 820 : 390,
   seed: (client) => {
     seedBase(client);
     spec.seed?.(client);
@@ -84,12 +100,30 @@ const phone = (spec: Spec): GalleryEntry => ({
       search={spec.search ?? ""}
       height={spec.height ?? "52rem"}
     >
-      <SpaceScreen phone />
+      <SpaceScreen phone={!spec.tablet} />
     </SpaceGalleryFrame>
   ),
 });
 
 export const galleryEntries: GalleryEntry[] = [
+  phone({
+    id: "sp_phone_tablet_details",
+    title: "Планшет: «Подробности» выезжают справа",
+    note: "820 px: левая колонка 200 px, подробности поверх, закрываются крестиком.",
+    search: "sel=documents%3Atechnical_specification",
+    tablet: true,
+    height: "46rem",
+  }),
+  phone({
+    id: "sp_phone_tablet_preview",
+    title: "Планшет: предпросмотр PDF из «Содержимого»",
+    note: "Кнопка «Предпросмотр PDF» в шапке документа выдвигает правую колонку.",
+    tab: "content",
+    search: "doc=technical_specification&seg=text&preview=1",
+    seed: seedContent,
+    tablet: true,
+    height: "46rem",
+  }),
   phone({
     id: "sp_phone_result",
     title: "Телефон: «Результат»",
@@ -121,6 +155,57 @@ export const galleryEntries: GalleryEntry[] = [
     tab: "content",
     search: "doc=technical_specification&seg=text",
     seed: seedContent,
+  }),
+  phone({
+    id: "sp_phone_terms",
+    title: "Телефон: «Условия» документа",
+    note: "Форма документа во всю ширину, поля 16 px.",
+    tab: "content",
+    search: "doc=technical_specification&seg=terms",
+    seed: seedContent,
+  }),
+  phone({
+    id: "sp_phone_signatures",
+    title: "Телефон: «Подписи» документа",
+    note: "Страница PDF с местами подписей и карточки под ней.",
+    tab: "content",
+    search: `doc=${SIGNATURES_DOC}&seg=signatures`,
+    seed: seedOf(signatureEntries, "sp_content_signatures"),
+    height: "56rem",
+  }),
+  phone({
+    id: "sp_phone_forms",
+    title: "Телефон: раздел «Анкеты»",
+    note: "Форма версии без вкладок, на всю ширину.",
+    tab: "content",
+    search: "part=forms",
+    seed: seedOf(partEntries, "sp_content_part_forms"),
+  }),
+  phone({
+    id: "sp_phone_deadlines",
+    title: "Телефон: раздел «Сроки и сдача»",
+    note: "Профили сдачи и порядок подписания.",
+    tab: "content",
+    search: "part=deadlines",
+    seed: seedOf(partEntries, "sp_content_part_deadlines"),
+  }),
+  phone({
+    id: "sp_phone_files",
+    title: "Телефон: «Все файлы»",
+    note: "Дерево компактно сверху, файл под ним.",
+    tab: "content",
+    search: `part=files&file=${encodeURIComponent(CONTENT_TEXT_PATH)}`,
+    seed: seedOf(partEntries, "sp_content_files"),
+    height: "56rem",
+  }),
+  phone({
+    id: "sp_phone_preview",
+    title: "Телефон: предпросмотр PDF из «Содержимого»",
+    note: "Кнопка «Предпросмотр PDF» в шапке документа открывает ту же панель шторкой.",
+    tab: "content",
+    search: "doc=technical_specification&seg=text&preview=1",
+    seed: seedContent,
+    height: "56rem",
   }),
   phone({
     id: "sp_phone_check",

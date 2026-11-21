@@ -373,6 +373,10 @@ a.sp-ct-item:hover,
 .sp-root[data-phone] .sp-ct-files-part {
   grid-template-columns: minmax(0, 1fr);
 }
+.sp-root[data-phone] .sp-ct-tree {
+  max-height: none;
+  overflow: visible;
+}
 .sp-root[data-phone] .sp-ct-seg {
   flex: 1 0 100%;
 }

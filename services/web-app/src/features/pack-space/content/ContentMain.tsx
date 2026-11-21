@@ -9,7 +9,7 @@ import { useSpacePhone } from "../shell/phoneContext";
 import { ContentNavView } from "./ContentNav";
 import { DocumentScreen } from "./DocumentScreen";
 import { PartScreen } from "./PartScreen";
-import { contentListPatch } from "./link";
+import { contentListPatch, contentPartPatch } from "./link";
 import { useContentData } from "./useContentData";
 import { useContentNav } from "./useContentNav";
 import { useContentRoute } from "./useContentRoute";
@@ -47,13 +47,20 @@ const ContentMain = () => {
           следующая страница с кнопкой «назад» к списку. */}
       {phone && route.kind !== "none" && (
         <Link
-          to={nav.href(contentListPatch())}
+          to={nav.href(
+            // Файл «Всех файлов» открыт: «назад» ведёт к дереву, а не в начало.
+            route.kind === "part" && route.part === "files" && route.file
+              ? contentPartPatch("files")
+              : contentListPatch(),
+          )}
           className="sp-ct-back"
           data-testid="ct-back"
           onClick={contentNav.guardClick}
         >
           <ChevronLeft size="1.125rem" aria-hidden="true" />
-          {t("content.nav.label")}
+          {route.kind === "part" && route.part === "files" && route.file
+            ? t("content.nav.files")
+            : t("content.nav.label")}
         </Link>
       )}
       {data.readOnly && (

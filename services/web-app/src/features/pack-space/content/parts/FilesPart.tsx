@@ -5,6 +5,7 @@ import { PackTreePanel } from "@features/pack-tree";
 import type { NewPackTarget } from "@features/pack-scaffold";
 import { CreateDialog } from "../../nav/CreateDialog";
 import { useSpaceNav } from "../../context/useSpaceNav";
+import { useSpacePhone } from "../../shell/phoneContext";
 import type { ContentPartProps } from "../contract";
 import { useContentNav } from "../useContentNav";
 import { FileView } from "./FileView";
@@ -24,6 +25,11 @@ const FilesPart = ({
   const nav = useContentNav();
   const space = useSpaceNav();
   const [create, setCreate] = useState<NewPackTarget | null>(null);
+  // Телефон: дерево и файл две страницы, а не две колонки. Без файла дерево, с файлом файл
+  // и «назад» к дереву (его рисует `ContentMain`).
+  const phone = useSpacePhone();
+  const showTree = !phone || !file;
+  const showFile = !phone || Boolean(file);
   // Замок версии, которая открыта в Студии: чужую выпущенную версию закрывает сервер.
   const locked = readOnly && (file?.startsWith(`${versionDir}/`) ?? false);
   const open = (ref: PackVersionRef) => {
@@ -31,10 +37,13 @@ const FilesPart = ({
   };
   return (
     <div className="sp-ct-part" data-testid="ct-files">
-      <div className="sp-ct-part-lead">
-        <p>{t("content.parts.files.lead")}</p>
-      </div>
+      {showTree && (
+        <div className="sp-ct-part-lead">
+          <p>{t("content.parts.files.lead")}</p>
+        </div>
+      )}
       <div className="sp-ct-files-part">
+        {showTree && (
         <div
           className="sp-ct-tree"
           aria-label={t("content.parts.files.treeTitle")}
@@ -53,6 +62,8 @@ const FilesPart = ({
             }}
           />
         </div>
+        )}
+        {showFile && (
         <div className="sp-ct-tree-main">
           {file ? (
             <FileView
@@ -73,6 +84,7 @@ const FilesPart = ({
             </div>
           )}
         </div>
+        )}
       </div>
       <CreateDialog
         workspaceId={workspaceId}
