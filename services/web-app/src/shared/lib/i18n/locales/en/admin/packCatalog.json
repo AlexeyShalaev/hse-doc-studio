@@ -1,6 +1,6 @@
 {
-  "title": "Pack catalogs",
-  "lead": "Template packs beyond the ones built into the image: from a git repository or an archive. New versions appear in the project wizard without a rebuild or restart.",
+  "title": "Template sources",
+  "lead": "Where the project wizard gets templates besides the ones built into the Studio: a git repository or an archive. New versions appear without a rebuild or restart.",
   "common": {
     "cancel": "Cancel",
     "close": "Close",
@@ -8,37 +8,36 @@
     "done": "Done"
   },
   "sources": {
-    "title": "Sources",
-    "lead": "Check first: the Studio fetches the revision and shows which versions will appear. Apply puts exactly the checked revision into the catalog.",
+    "title": "Connected sources",
+    "lead": "Check first: the Studio loads the source and shows which template versions will appear. Apply connects exactly what you checked.",
     "add": "Add source",
     "emptyTitle": "No sources yet",
-    "emptyLead": "Connect a packs repository or upload an archive."
+    "emptyLead": "A source is a git repository or an archive with templates. Connect the first one and its templates appear in the project wizard."
   },
   "source": {
     "kind": {
-      "git": "git",
+      "git": "Repository",
       "archive": "Archive",
       "folder": "Folder"
     },
-    "enabled": "On",
     "disabled": "Off",
-    "disabledHint": "The source packs are hidden from the project wizard. Versions stay for existing projects.",
-    "tracking": "Tracked",
+    "disabledHint": "The source's templates are hidden from the project wizard. Versions stay for existing projects.",
+    "tracking": "Updates itself",
     "trackingHint": "Once a day the Studio checks the source and applies new released versions.",
-    "replacesBuiltin": "Replaces built-in",
-    "busy": "Checking",
-    "packsPath": "Packs folder: {{path}}",
-    "defaultBranch": "default branch",
-    "applied": "Applied revision {{revision}}, {{when}}",
-    "notApplied": "Not applied yet",
-    "checkedOk": "Checked {{when}}: ready to apply",
-    "checkedBlocked": "Checked {{when}}: has blockers",
-    "checkedFailed": "Check {{when}} failed",
+    "replacesBuiltin": "Replaces a built-in",
+    "busy": "Check in progress",
+    "packsPath": "Templates folder: {{path}}",
+    "defaultBranch": "main branch",
+    "applied": "Connected now: {{revision}}, {{when}}",
+    "notApplied": "Not connected yet: check and apply",
+    "checkedOk": "Checked {{when}}: can be applied",
+    "checkedBlocked": "Checked {{when}}: there are obstacles",
+    "checkedFailed": "The check {{when}} failed",
     "notChecked": "Not checked yet",
     "pending_one": "{{count}} new version available",
     "pending_other": "{{count}} new versions available",
-    "packs": "Source packs",
-    "noPacks": "No packs in the catalog yet: check and apply the source.",
+    "packs": "Source templates",
+    "noPacks": "No templates yet: check and apply the source.",
     "actions": "Actions for “{{name}}”",
     "check": "Check",
     "edit": "Edit",
@@ -47,48 +46,56 @@
     "disable": "Turn off",
     "history": "History",
     "remove": "Remove",
-    "errorDetail": "Details"
+    "errorDetail": "Details",
+    "status": {
+      "busy": "Check in progress",
+      "failed": "Could not check",
+      "off": "Off",
+      "new": "Needs a check",
+      "blocked": "There are obstacles",
+      "ok": "All connected"
+    }
   },
   "pack": {
     "hidden": "Hidden from the wizard",
     "versionHidden": "hidden",
     "versionHiddenHint": "The version is there for existing projects, but the wizard does not offer it.",
     "builtin": "Built-in",
-    "orphan": "Removed source",
+    "orphan": "From a removed source",
     "replacesBuiltin": "Replaces built-in"
   },
   "others": {
-    "title": "Other catalog packs",
-    "lead": "Built into the image and left from removed sources. They are read-only here.",
-    "empty": "No other packs."
+    "title": "Other templates in the Studio",
+    "lead": "Built into the Studio or left from removed sources. Here they are view-only.",
+    "empty": "No other templates."
   },
   "add": {
     "title": "Add source",
-    "lead": "After adding, check and apply the source: until then its packs do not appear in the wizard.",
+    "lead": "After adding, the source must be checked and applied: until then its templates do not appear in the wizard.",
     "tabGit": "Git",
     "tabArchive": "Archive",
     "url": "Repository address",
     "label": "Name",
     "labelHint": "How the source is named in the list. Empty: from the address or file name.",
-    "packsPath": "Packs folder",
-    "packsPathGitHint": "Path to the packs folder from the repository root.",
-    "packsPathArchiveHint": "Path to the packs folder inside the archive. Empty: the archive root.",
-    "ref": "Tag, branch or sha",
-    "refHint": "Empty: the default branch. A tag is safer: its content does not change.",
+    "packsPath": "Templates folder",
+    "packsPathGitHint": "Path to the templates folder from the repository root.",
+    "packsPathArchiveHint": "Path to the templates folder inside the archive. Empty: the archive root.",
+    "ref": "Version in the repository",
+    "refHint": "A tag, branch or commit. Empty: the main branch. A tag is safer: its content does not change.",
     "access": "Repository access",
-    "accessNone": "No access (public repository)",
+    "accessNone": "Open repository, no access needed",
     "accessPersonal": "My git access",
     "accessService": "Service access",
     "credential": "Git access",
     "credentialEmpty": "You have no git access for this address. Add one under Git access in the settings.",
     "service": "Service access",
-    "serviceEmpty": "No service access yet. Add it in the Template Studio section.",
+    "serviceEmpty": "No connected repositories. Connect one in the Template Studio section.",
     "choose": "Choose",
     "insecureHttp": "Allow an unencrypted http:// address",
     "replaceBuiltin": "Replace built-in",
-    "replaceBuiltinHint": "A pack with the same id as a built-in one replaces it in the wizard. Without the check box such a pack is not connected.",
-    "track": "Track once a day",
-    "trackHint": "The Studio checks the source by itself and applies new released versions when nothing blocks them.",
+    "replaceBuiltinHint": "A template with the same id as one built into the Studio replaces it in the wizard. Without the checkbox such a template is not connected.",
+    "track": "Update once a day",
+    "trackHint": "The Studio checks the source itself and applies new released versions if nothing prevents it.",
     "file": "Archive .zip or .tar.gz",
     "fileDrop": "Drop the archive here or",
     "fileAction": "choose a file",
@@ -102,7 +109,7 @@
   },
   "edit": {
     "title": "Edit “{{name}}”",
-    "lead": "A new ref, packs folder or built-in replacement resets the last check: check the source again.",
+    "lead": "Changing the version in the repository, the templates folder or the built-in replacement resets the last check: the source must be checked again.",
     "accessKeep": "As now"
   },
   "replace": {
@@ -127,7 +134,7 @@
       "enable": "Turned on",
       "disable": "Turned off",
       "remove": "Removed",
-      "track": "Tracking"
+      "track": "Auto-update"
     },
     "summary": {
       "added_one": "{{count}} version added: {{list}}",
@@ -140,7 +147,7 @@
   },
   "remove": {
     "title": "Remove “{{name}}”?",
-    "lead": "The source packs disappear from the project wizard. Versions stay in the store: existing projects keep working on them.",
+    "lead": "The source's templates disappear from the project wizard. Versions stay in storage: existing projects keep working on them.",
     "submit": "Remove"
   }
 }
