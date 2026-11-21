@@ -1,7 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { pickLocalized } from "@shared/lib/i18n/pickLocalized";
+import { Spinner } from "@shared/ui";
 import { useSpace } from "../context/SpaceContext";
+import { isPreviewOpen } from "../preview/link";
+import { PreviewToggle } from "../preview/PreviewToggle";
 import { DetailsActions } from "./DetailsActions";
 import { EditDelta, EditHistory } from "./EditFeedback";
 import { ElementHeader } from "./ElementHeader";
@@ -17,6 +20,9 @@ import { explainToSentences, whatIfRows } from "./explain";
 import { useDetailsData } from "./useDetailsData";
 import "./space-details.css";
 
+// Предпросмотр PDF (S9) тянет просмотрщик страниц: грузится только когда его открыли.
+const PreviewSection = lazy(() => import("../preview/PreviewSection"));
+
 /**
  * Правая панель «Результата» (pack-studio-ux.md, 5.4): всегда о выбранном. Ничего не выбрано:
  * «Что здесь можно сделать». Выбран элемент: заголовок, «Почему так», «Что изменится, если…»,
@@ -30,7 +36,7 @@ export const DetailsPanel = ({
   initialEditing?: boolean;
 }) => {
   const { t, i18n } = useTranslation("packSpace");
-  const { released } = useSpace();
+  const { released, location } = useSpace();
   const data = useDetailsData();
   const edit = useConditionEdit(data.outcome, data.checks);
   const { element, explain, info, group, words } = data;
@@ -102,6 +108,9 @@ export const DetailsPanel = ({
   if (!element || !info) return <EmptyDetails edit={edit} />;
 
   const editable = explain.data ? targets.length > 0 : null;
+  // Предпросмотр есть только у документа; его просит кнопка «PDF» в строке (`preview=1`).
+  const previewable = element.section === "documents";
+  const previewOpen = previewable && isPreviewOpen(location.search);
   return (
     <div className="sp-details" data-testid="sp-details">
       <div className="sp-details-handle" aria-hidden="true" />
@@ -122,6 +131,17 @@ export const DetailsPanel = ({
         />
       </div>
       <EditDelta edit={edit} />
+      {previewOpen && (
+        <Suspense
+          fallback={
+            <div className="flex justify-center">
+              <Spinner size="md" />
+            </div>
+          }
+        >
+          <PreviewSection docId={element.id} name={info.title} />
+        </Suspense>
+      )}
       <WhySection
         query={explain}
         sentences={sentences}
@@ -156,6 +176,11 @@ export const DetailsPanel = ({
           setEditing(true);
         }}
       />
+      {previewable && (
+        <div className="sp-details-row">
+          <PreviewToggle open={previewOpen} />
+        </div>
+      )}
       {historyOpen && <EditHistory edit={edit} />}
       {chain && <TechnicalDetails element={element} chain={chain} />}
       <div
