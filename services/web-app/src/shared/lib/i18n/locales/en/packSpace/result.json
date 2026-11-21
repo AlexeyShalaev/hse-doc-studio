@@ -1,1 +1,217 @@
-{}
+{
+  "title_one": "The student will get {{count}} document",
+  "title_few": "The student will get {{count}} documents",
+  "title_many": "The student will get {{count}} documents",
+  "title_other": "The student will get {{count}} documents",
+  "titleNone": "The student will not get any documents",
+  "signers_one": "{{count}} person signs",
+  "signers_few": "{{count}} people sign",
+  "signers_many": "{{count}} people sign",
+  "signers_other": "{{count}} people sign",
+  "signersNone": "No signatures needed",
+  "points_one": "handed in at {{count}} checkpoint",
+  "points_few": "handed in at {{count}} checkpoints",
+  "points_many": "handed in at {{count}} checkpoints",
+  "points_other": "handed in at {{count}} checkpoints",
+  "pointsNone": "nothing to hand in",
+  "leadNote": "Everything is calculated on sample data, nothing is sent anywhere.",
+  "calculating": "Calculating…",
+  "calculatingSlow": "Calculating, this takes longer than usual…",
+  "failedTitle": "Could not calculate the result",
+  "failedStale": "The previous result is shown, the new one could not be calculated.",
+  "retry": "Try again",
+  "emptyTitle": "This version has no documents",
+  "emptyLead": "When the template gets documents, you will see here what the student receives.",
+  "sections": "Parts of the result",
+  "navTitle": "What the student gets",
+  "navMore": "More",
+  "navMap": "What affects what",
+  "navCases": "Typical cases",
+  "delta": {
+    "added": "new"
+  },
+  "parts": {
+    "documents": "Documents",
+    "data": "Project data",
+    "people": "Participants",
+    "deadlines": "Deadlines and hand-in",
+    "signatures": "Signatures"
+  },
+  "expand": "Expand “{{name}}”",
+  "collapse": "Collapse “{{name}}”",
+  "summary": {
+    "documents_one": "{{count}} in the set",
+    "documents_few": "{{count}} in the set",
+    "documents_many": "{{count}} in the set",
+    "documents_other": "{{count}} in the set",
+    "fields_one": "{{count}} field",
+    "fields_few": "{{count}} fields",
+    "fields_many": "{{count}} fields",
+    "fields_other": "{{count}} fields",
+    "needAtCreate": "{{count}} needed at creation",
+    "forms_one": "{{count}} questionnaire",
+    "forms_few": "{{count}} questionnaires",
+    "forms_many": "{{count}} questionnaires",
+    "forms_other": "{{count}} questionnaires",
+    "noData": "Nothing to fill in",
+    "noPeople": "No participants",
+    "points_one": "{{count}} checkpoint: {{names}}",
+    "points_few": "{{count}} checkpoints: {{names}}",
+    "points_many": "{{count}} checkpoints: {{names}}",
+    "points_other": "{{count}} checkpoints: {{names}}",
+    "noPoints": "Nothing to hand in",
+    "signatures_one": "{{count}} signature at {{points}}",
+    "signatures_few": "{{count}} signatures at {{points}}",
+    "signatures_many": "{{count}} signatures at {{points}}",
+    "signatures_other": "{{count}} signatures at {{points}}",
+    "signaturePoints_one": "{{count}} checkpoint",
+    "signaturePoints_few": "{{count}} checkpoints",
+    "signaturePoints_many": "{{count}} checkpoints",
+    "signaturePoints_other": "{{count}} checkpoints",
+    "noSignatures": "No signatures needed"
+  },
+  "docs": {
+    "optional": "optional",
+    "pdf": "PDF",
+    "pdfFor": "View PDF: {{name}}",
+    "variantFor": "Variant of “{{name}}”",
+    "noFile": "file name is not set",
+    "moreFiles": "and {{count}} more",
+    "noFallback": "no edition in {{lang}}",
+    "search": "Find a document",
+    "searchLabel": "Search documents",
+    "scopeLabel": "Which documents to show",
+    "scope": {
+      "all": "All",
+      "personal": "Personal",
+      "shared": "Shared"
+    },
+    "noMatch": "Nothing found",
+    "reset": "Reset",
+    "groups": {
+      "none": "Other",
+      "espd": "GOST 19 (ESPD)",
+      "report": "Report",
+      "pdp": "Internship",
+      "pres": "Presentations",
+      "work": "Work",
+      "nda": "NDA",
+      "topic": "Topic"
+    },
+    "empty": "No document fits the chosen conditions."
+  },
+  "data": {
+    "atCreate": "at creation",
+    "atFinish": "at completion",
+    "perAuthor": "for each author",
+    "common": "shared",
+    "fieldsOf_one": "{{count}} field",
+    "fieldsOf_few": "{{count}} fields",
+    "fieldsOf_many": "{{count}} fields",
+    "fieldsOf_other": "{{count}} fields",
+    "forms": "Questionnaires",
+    "groups": {
+      "none": "Other",
+      "study": "Studies",
+      "docset": "Set of documents",
+      "naming": "Titles",
+      "vkr_title": "Title page",
+      "title": "Title page",
+      "proposal": "Proposal",
+      "topic": "Topic",
+      "espd": "GOST 19 (ESPD)"
+    },
+    "empty": "Nothing to fill in for these conditions."
+  },
+  "people": {
+    "authorN": "Author {{n}}",
+    "role": {
+      "author": "Author",
+      "supervisor": "Supervisor",
+      "co_supervisor": "Second supervisor",
+      "academic_supervisor": "Academic supervisor"
+    },
+    "org": {
+      "university": "HSE",
+      "company": "Company"
+    },
+    "from": {
+      "university": "from HSE",
+      "company": "from a company"
+    },
+    "noName": "name is not set",
+    "empty": "No participants for these conditions."
+  },
+  "deadlines": {
+    "docs_one": "{{count}} document",
+    "docs_few": "{{count}} documents",
+    "docs_many": "{{count}} documents",
+    "docs_other": "{{count}} documents",
+    "nothing": "nothing is handed in",
+    "empty": "This version has no hand-in checkpoints."
+  },
+  "signatures": {
+    "count_one": "{{count}} signature",
+    "count_few": "{{count}} signatures",
+    "count_many": "{{count}} signatures",
+    "count_other": "{{count}} signatures",
+    "then": "{{first}}, then {{next}}",
+    "and": "{{first}} and {{second}}",
+    "empty": "No signatures are needed for these conditions.",
+    "skipped": "The “{{name}}” signature is not needed under these conditions."
+  },
+  "missing": {
+    "title": "Not in the set",
+    "titleData": "Not in the project",
+    "titleDeadlines": "Not handed in",
+    "titleSignatures": "Signatures that are missing",
+    "titlePeople": "Absent under these conditions",
+    "show": "Show when “{{condition}}”",
+    "showFor": "Show when “{{condition}}”: {{name}}",
+    "searching": "Finding the condition…",
+    "unknownDoc": "Switched off by the chosen conditions.",
+    "unknownAbsent": "Does not fit the chosen conditions.",
+    "unknownHidden": "Hidden by the chosen conditions.",
+    "unknownForm": "The questionnaire is not needed under the chosen conditions.",
+    "unknownPoint": "Not handed in under the chosen conditions.",
+    "personAbsent": "Absent while “{{subject}}” is set to “{{value}}”.",
+    "personAbsentPlain": "Absent under the chosen conditions.",
+    "item": {
+      "nda": "Only needed for NDA work.",
+      "kind": "Does not fit this type of work.",
+      "absent": "The document is not in the set.",
+      "inactive": "The document is switched off."
+    }
+  },
+  "why": {
+    "in": "{{subject}}: needs “{{expected}}”, now “{{actual}}”.",
+    "equals": "{{subject}}: needs “{{expected}}”, now “{{actual}}”.",
+    "contains": "{{subject}}: must include “{{expected}}”, now “{{actual}}”.",
+    "present": "{{subject}}: must be filled in.",
+    "truthy": "{{subject}}: must be switched on.",
+    "unset": "not set",
+    "orgOf": "{{subject}}, organisation",
+    "subjects": {
+      "kind": "Type of work",
+      "staffing": "Team size",
+      "lang": "Language",
+      "supervisor": "Supervisor",
+      "co_supervisor": "Second supervisor",
+      "academic_supervisor": "Academic supervisor"
+    },
+    "values": {
+      "project": "project",
+      "research": "research",
+      "solo": "one author",
+      "team2": "team of two",
+      "team3": "team of three",
+      "ru": "Russian",
+      "en": "English",
+      "yes": "yes",
+      "no": "no",
+      "university": "from HSE",
+      "company": "from a company",
+      "none": "none"
+    }
+  }
+}

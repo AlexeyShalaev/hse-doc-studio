@@ -1,1 +1,217 @@
-{}
+{
+  "title_one": "Студент получит {{count}} документ",
+  "title_few": "Студент получит {{count}} документа",
+  "title_many": "Студент получит {{count}} документов",
+  "title_other": "Студент получит {{count}} документов",
+  "titleNone": "Студент не получит ни одного документа",
+  "signers_one": "Подписывает {{count}} человек",
+  "signers_few": "Подписывают {{count}} человека",
+  "signers_many": "Подписывают {{count}} человек",
+  "signers_other": "Подписывают {{count}} человек",
+  "signersNone": "Подписи не нужны",
+  "points_one": "сдача в {{count}} точке",
+  "points_few": "сдача в {{count}} точках",
+  "points_many": "сдача в {{count}} точках",
+  "points_other": "сдача в {{count}} точках",
+  "pointsNone": "сдавать ничего не нужно",
+  "leadNote": "Всё считается на примере данных, ничего не отправляется.",
+  "calculating": "Считаю…",
+  "calculatingSlow": "Считаю дольше обычного…",
+  "failedTitle": "Не удалось посчитать результат",
+  "failedStale": "Показан прежний результат, пересчитать не получилось.",
+  "retry": "Повторить",
+  "emptyTitle": "В этой версии нет документов",
+  "emptyLead": "Когда в шаблоне появятся документы, здесь будет видно, что получит студент.",
+  "sections": "Части результата",
+  "navTitle": "Что получает студент",
+  "navMore": "Ещё",
+  "navMap": "Что на что влияет",
+  "navCases": "Типовые случаи",
+  "delta": {
+    "added": "новое"
+  },
+  "parts": {
+    "documents": "Документы",
+    "data": "Данные проекта",
+    "people": "Участники",
+    "deadlines": "Сроки и сдача",
+    "signatures": "Подписи"
+  },
+  "expand": "Развернуть «{{name}}»",
+  "collapse": "Свернуть «{{name}}»",
+  "summary": {
+    "documents_one": "{{count}} в комплекте",
+    "documents_few": "{{count}} в комплекте",
+    "documents_many": "{{count}} в комплекте",
+    "documents_other": "{{count}} в комплекте",
+    "fields_one": "{{count}} поле",
+    "fields_few": "{{count}} поля",
+    "fields_many": "{{count}} полей",
+    "fields_other": "{{count}} полей",
+    "needAtCreate": "{{count}} нужно при создании",
+    "forms_one": "{{count}} анкета",
+    "forms_few": "{{count}} анкеты",
+    "forms_many": "{{count}} анкет",
+    "forms_other": "{{count}} анкет",
+    "noData": "Заполнять нечего",
+    "noPeople": "Участников нет",
+    "points_one": "{{count}} точка: {{names}}",
+    "points_few": "{{count}} точки: {{names}}",
+    "points_many": "{{count}} точек: {{names}}",
+    "points_other": "{{count}} точек: {{names}}",
+    "noPoints": "Сдавать ничего не нужно",
+    "signatures_one": "{{count}} подпись в {{points}}",
+    "signatures_few": "{{count}} подписи в {{points}}",
+    "signatures_many": "{{count}} подписей в {{points}}",
+    "signatures_other": "{{count}} подписей в {{points}}",
+    "signaturePoints_one": "{{count}} точке",
+    "signaturePoints_few": "{{count}} точках",
+    "signaturePoints_many": "{{count}} точках",
+    "signaturePoints_other": "{{count}} точках",
+    "noSignatures": "Подписи не нужны"
+  },
+  "docs": {
+    "optional": "необязательный",
+    "pdf": "PDF",
+    "pdfFor": "Посмотреть PDF: {{name}}",
+    "variantFor": "Вариант документа «{{name}}»",
+    "noFile": "имя файла не задано",
+    "moreFiles": "и ещё {{count}}",
+    "noFallback": "нет редакции на {{lang}}",
+    "search": "Найти документ",
+    "searchLabel": "Поиск по документам",
+    "scopeLabel": "Какие документы показать",
+    "scope": {
+      "all": "Все",
+      "personal": "Личные",
+      "shared": "Общие"
+    },
+    "noMatch": "Ничего не найдено",
+    "reset": "Сбросить",
+    "groups": {
+      "none": "Прочее",
+      "espd": "ЕСПД",
+      "report": "Отчёт",
+      "pdp": "Практика",
+      "pres": "Презентации",
+      "work": "Работа",
+      "nda": "NDA",
+      "topic": "Тема"
+    },
+    "empty": "Ни один документ не подходит к выбранным условиям."
+  },
+  "data": {
+    "atCreate": "при создании",
+    "atFinish": "при завершении",
+    "perAuthor": "у каждого автора",
+    "common": "общая",
+    "fieldsOf_one": "{{count}} поле",
+    "fieldsOf_few": "{{count}} поля",
+    "fieldsOf_many": "{{count}} полей",
+    "fieldsOf_other": "{{count}} полей",
+    "forms": "Анкеты",
+    "groups": {
+      "none": "Прочее",
+      "study": "Учёба",
+      "docset": "Комплект документов",
+      "naming": "Названия",
+      "vkr_title": "Титульный лист",
+      "title": "Титульный лист",
+      "proposal": "Заявка",
+      "topic": "Тема",
+      "espd": "ЕСПД"
+    },
+    "empty": "Для этих условий заполнять нечего."
+  },
+  "people": {
+    "authorN": "Автор {{n}}",
+    "role": {
+      "author": "Автор",
+      "supervisor": "Руководитель",
+      "co_supervisor": "Второй руководитель",
+      "academic_supervisor": "Академический руководитель"
+    },
+    "org": {
+      "university": "ВШЭ",
+      "company": "Компания"
+    },
+    "from": {
+      "university": "из ВШЭ",
+      "company": "из компании"
+    },
+    "noName": "имя не указано",
+    "empty": "Для этих условий участников нет."
+  },
+  "deadlines": {
+    "docs_one": "{{count}} документ",
+    "docs_few": "{{count}} документа",
+    "docs_many": "{{count}} документов",
+    "docs_other": "{{count}} документов",
+    "nothing": "ничего не сдаётся",
+    "empty": "В версии нет точек сдачи."
+  },
+  "signatures": {
+    "count_one": "{{count}} подпись",
+    "count_few": "{{count}} подписи",
+    "count_many": "{{count}} подписей",
+    "count_other": "{{count}} подписей",
+    "then": "{{first}}, затем {{next}}",
+    "and": "{{first}} и {{second}}",
+    "empty": "Подписи для этих условий не нужны.",
+    "skipped": "Подпись «{{name}}» не нужна при этих условиях."
+  },
+  "missing": {
+    "title": "Не вошло в комплект",
+    "titleData": "Не вошло в проект",
+    "titleDeadlines": "Не сдаётся",
+    "titleSignatures": "Подписи, которых нет",
+    "titlePeople": "Нет при этих условиях",
+    "show": "Показать при «{{condition}}»",
+    "showFor": "Показать при «{{condition}}»: {{name}}",
+    "searching": "Подбираем условие…",
+    "unknownDoc": "Выключен выбранными условиями.",
+    "unknownAbsent": "Не подходит к выбранным условиям.",
+    "unknownHidden": "Скрыто выбранными условиями.",
+    "unknownForm": "Анкета не нужна при выбранных условиях.",
+    "unknownPoint": "Не сдаётся при выбранных условиях.",
+    "personAbsent": "Нет, пока условие «{{subject}}» стоит «{{value}}».",
+    "personAbsentPlain": "Нет при выбранных условиях.",
+    "item": {
+      "nda": "Нужно только при работе под NDA.",
+      "kind": "Не подходит к этому виду работы.",
+      "absent": "Документа нет в комплекте.",
+      "inactive": "Документ выключен."
+    }
+  },
+  "why": {
+    "in": "{{subject}}: нужно «{{expected}}», сейчас «{{actual}}».",
+    "equals": "{{subject}}: нужно «{{expected}}», сейчас «{{actual}}».",
+    "contains": "{{subject}}: нужно, чтобы входило «{{expected}}», сейчас «{{actual}}».",
+    "present": "{{subject}}: нужно указать.",
+    "truthy": "{{subject}}: нужно включить.",
+    "unset": "не задано",
+    "orgOf": "{{subject}}, организация",
+    "subjects": {
+      "kind": "Вид работы",
+      "staffing": "Состав",
+      "lang": "Язык",
+      "supervisor": "Руководитель",
+      "co_supervisor": "Второй руководитель",
+      "academic_supervisor": "Академический руководитель"
+    },
+    "values": {
+      "project": "проектная",
+      "research": "исследовательская",
+      "solo": "один автор",
+      "team2": "команда из двух",
+      "team3": "команда из трёх",
+      "ru": "русский",
+      "en": "английский",
+      "yes": "да",
+      "no": "нет",
+      "university": "из ВШЭ",
+      "company": "из компании",
+      "none": "нет"
+    }
+  }
+}
