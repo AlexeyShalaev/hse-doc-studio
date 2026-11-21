@@ -129,5 +129,178 @@
   },
   "footer": {
     "close": "Close"
+  },
+  "next": {
+    "connecting": "Connecting…",
+    "checkAccess": "Check access",
+    "folder": "Saved to the folder",
+    "folderTitle": "Edits are written straight to the folder on disk. There is nothing to send from here: git is not set up in this folder.",
+    "makeCopy": "Edit a copy",
+    "toDraft": "Go to my draft {{version}}",
+    "fixErrors": "Fix errors · {{count}}",
+    "describe": "Describe changes",
+    "submit": "Send for review",
+    "requestOpen": "Request {{label}} is open",
+    "request": {
+      "pending": "Request {{label}} · checks running",
+      "passed": "Request {{label}} · checks passed",
+      "failed": "Request {{label}} · checks failed",
+      "awaiting_approval": "Request {{label}} · waiting for approval"
+    },
+    "updateRequest": "Update request",
+    "startNew": "Start a new edit",
+    "hint": {
+      "checkAccess": "Could not connect to the repository. We will check the address and access.",
+      "makeCopy": "This version is released and does not change. We will make a copy for your edits and pick its number ourselves.",
+      "toDraft": "Your edits are in another version. We will open it.",
+      "fixErrors": "The check found errors. You cannot send until they are fixed. We will show what to fix.",
+      "describe": "Write a couple of sentences about what changed. It is needed to release the version.",
+      "submit": "All set. We will open the Changes panel, it has a single send button.",
+      "request": "Your edits are under review. We will open the Changes panel with the details.",
+      "updateRequest": "You kept editing after sending. We will add the new edits to the same request.",
+      "startNew": "The request was accepted. We will start a new edit from the fresh main branch."
+    }
+  },
+  "submit": {
+    "loading": "Reading version details…",
+    "notes": {
+      "title": "What changed for students and supervisors",
+      "lead": "A few short phrases about what changed in this version, one item per line. They go into the version's change list. Without them the version cannot be released.",
+      "ru": "In Russian",
+      "en": "In English",
+      "breakingRu": "What will stop working as before (in Russian)",
+      "breakingEn": "What will stop working as before (in English)",
+      "classNote": "Why this number",
+      "classNoteHint": "The number is lower than the Studio suggests for your edits. Explain why that is fine.",
+      "pairs": "There must be the same number of items in Russian and in English: as many lines in one field as in the other.",
+      "suggest": "Suggest from changes",
+      "suggestHint": "We will fill in a draft from what you edited. You can rewrite it.",
+      "saving": "Saving…",
+      "saved": "Saved to the version",
+      "needed": "Fill in both fields: the version cannot be released without notes.",
+      "write": "Write"
+    },
+    "class": {
+      "small": "Small fix",
+      "features": "New features",
+      "regulation": "New edition of the regulation"
+    },
+    "classHint": {
+      "small": "Fixes: texts, files, signature places. Projects get the update as a card.",
+      "features": "New without breaking anything: fields, documents, deadlines.",
+      "regulation": "New edition of the regulation: another intake year."
+    },
+    "release": {
+      "label": "Release version {{version}}",
+      "number": "change number",
+      "lead": "A released version is closed for edits: once the request is accepted, students use it and new edits go into its copy.",
+      "numberBad": "These edits need a number of at least {{version}}. Change the number, otherwise the version cannot be released.",
+      "outdated": "The version is already released in your branch, but you edited it afterwards. We will release it again.",
+      "advanced": "More options",
+      "base": "Changes are compared with version {{version}}.",
+      "setDefault": "Make it the default version for new projects"
+    },
+    "number": {
+      "title": "Version number",
+      "lead": "The version is {{version}} now. Pick how big these changes are: the number depends on it.",
+      "class": "Size of changes",
+      "minimum": "Your edits need at least “{{minimum}}”.",
+      "blocked": "Too small for these edits.",
+      "majorNumber": "Version number",
+      "majorHint": "For a new edition of the regulation enter the intake year, for example 2027.1.0.",
+      "unrelease": "The version is already released in your branch. After the number changes it must be released again, we will do it when sending.",
+      "submit": "Change number to {{version}}",
+      "cancel": "Cancel",
+      "take": "Take the free {{version}}",
+      "done": "Number changed: {{version}}"
+    },
+    "where": {
+      "new": "We will send your edits for review: repository maintainers will check them and accept them into the main branch {{base}}. For that a merge request opens, that is, a request to accept your edits. You do not need to create a branch: it is created automatically.",
+      "update": "New edits will be added to the already open request {{label}}. Nothing needs to be created again.",
+      "service": "Sending goes on behalf of the Studio installation, your name will be on the edits.",
+      "viaFork": "Edits go through your copy of the repository (a fork): {{url}}."
+    },
+    "request": {
+      "summary": "Request title and description (optional)",
+      "title": "Request title",
+      "titleHint": "If left empty, the Studio makes up a title from the changed versions.",
+      "description": "Description",
+      "descriptionHint": "Say why these edits are needed. The Studio adds the “what changes for students” summary itself."
+    },
+    "license": {
+      "consent": "I agree that my contribution is public and distributed under the repository license ({{license}})",
+      "repoLicense": "repository license",
+      "hint": "The request goes from your hosting account and everyone can see it. Consent is asked once for this space.",
+      "license": "License",
+      "rules": "Contribution rules",
+      "afterMerge": "Official templates ship with the Studio: once the request is accepted, the new version reaches users with the next release."
+    },
+    "ack": {
+      "label": "I know the result of ready-made cases will change",
+      "hint": "This does not forbid sending, but confirmation is needed while such cases exist."
+    },
+    "impactWaiting": "Working out what changes for students: sending turns on when it finishes.",
+    "fork": {
+      "title": "You cannot write to this repository",
+      "lead": "We will send your edits to your own copy of the repository (called a fork) and open the request from there. This is what you do without rights to the repository itself.",
+      "create": "Create my copy automatically",
+      "createHint": "The Studio creates a copy on GitHub from your account and sends the edits there.",
+      "own": "Enter my own copy",
+      "ownHint": "A copy on the same server as the repository.",
+      "url": "Address of your copy",
+      "urlHint": "The Studio remembers it for this space.",
+      "reason": {
+        "fork_host_mismatch": "The copy must be on the same server as the repository: the token is tied to the server.",
+        "fork_unavailable": "Could not create or find a copy. Enter the address of your own."
+      },
+      "reasonOther": "Could not create a copy. Enter the address of your own."
+    },
+    "steps": {
+      "notes": "Saving version notes",
+      "release": "Releasing version {{version}}",
+      "send": "Sending for review",
+      "send_update": "Adding edits to the request"
+    },
+    "failure": {
+      "stopped": "Stopped at the step “{{step}}”.",
+      "resume": "Everything before it is already done. Retry starts from this step.",
+      "lint": "The check found errors, the version was not sent. Click an error to go to the place.",
+      "taken": "Number {{version}} is already released in the main branch. Your edits can be moved to the free number {{suggested}}.",
+      "moveTo": "Move to {{version}}",
+      "access": "Repository access"
+    },
+    "outcome": {
+      "title": "Edits were sent, but the request could not be opened.",
+      "lead": "The branch with your edits is already on the hosting. You can open the request there by hand.",
+      "open": "Open on the hosting"
+    },
+    "primary": {
+      "send": "Send for review",
+      "update": "Update request",
+      "fork": "Send to my copy",
+      "running": "Sending…",
+      "retry": "Retry",
+      "errors_one": "Fix {{count}} error",
+      "errors_other": "Fix {{count}} errors",
+      "notes": "Describe the changes first"
+    },
+    "blocker": {
+      "errors": "You cannot send while checks have errors. Fix them.",
+      "loading": "Reading version details…",
+      "notes": "Describe what changed in Russian and in English: you cannot send without it.",
+      "saving": "Saving notes…",
+      "consent": "Confirm that you accept the license.",
+      "impact": "Working out what changes for students. It is quick.",
+      "ack": "Confirm that you know the result of ready-made cases changes.",
+      "fork": "Enter the address of your copy of the repository.",
+      "moving": "Moving edits to the new number…"
+    },
+    "done": {
+      "opened": "Request {{label}} opened",
+      "updated": "Request {{label}} updated"
+    },
+    "move": {
+      "done": "Edits moved to version {{version}}"
+    }
   }
 }
