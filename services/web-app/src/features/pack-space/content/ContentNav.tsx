@@ -23,10 +23,15 @@ import { useSpacePhone } from "../shell/phoneContext";
 import "./space-content.css";
 
 // Левая навигация «Что редактируем» (pack-studio-ux.md, 5.5): документы списком, дальше разделы
-// версии, внизу «Все файлы». Документ находится в один клик: список всегда раскрыт, а когда
-// документов больше десяти, над ним появляется поиск.
+// версии, внизу «Все файлы». Длинный список не вытесняет разделы: девять и больше документов
+// показывают первые шесть и открытый, остальные за «Ещё N»; раскрытый список листается внутри
+// своего блока, разделы под ним всегда на виду. Когда документов больше десяти, над списком
+// появляется поиск.
 
 const SEARCH_FROM = 10;
+const COLLAPSED = 6;
+// Свёртка нужна, когда она прячет хотя бы три документа: «Ещё 1» только мешает.
+const COLLAPSE_FROM = 9;
 
 const PARTS: { part: ContentPart; icon: LucideIcon }[] = [
   { part: "fields", icon: Braces },
@@ -53,15 +58,25 @@ export const ContentNavView = ({
   // «назад» браузера возвращает к списку. На широком экране документы листают заменой записи.
   const replace = !useSpacePhone();
   const [query, setQuery] = useState("");
+  const [expanded, setExpanded] = useState(false);
   const needle = query.trim().toLowerCase();
-  const docs = needle
+  const activeDoc = route.kind === "document" ? route.docId : null;
+  const matching = needle
     ? data.docs.filter(
         (doc) =>
           doc.name.toLowerCase().includes(needle) ||
           doc.id.toLowerCase().includes(needle),
       )
     : data.docs;
-  const activeDoc = route.kind === "document" ? route.docId : null;
+  // «Ещё N» не прячет документ, который открыт: он остаётся на своём месте в порядке списка.
+  const collapsible = !needle && matching.length >= COLLAPSE_FROM;
+  const docs =
+    collapsible && !expanded
+      ? matching.filter(
+          (doc, index) => index < COLLAPSED || doc.id === activeDoc,
+        )
+      : matching;
+  const hidden = matching.length - docs.length;
   const activePart = route.kind === "part" ? route.part : null;
   const count = (key: ContentPart) => {
     const value = data.counts[key];
@@ -141,6 +156,21 @@ export const ContentNavView = ({
               <li className="sp-ct-empty">{t("content.nav.searchEmpty")}</li>
             )}
           </ul>
+          {collapsible && (
+            <button
+              type="button"
+              className="sp-ct-more"
+              aria-expanded={expanded}
+              data-testid={`${testId}-more`}
+              onClick={() => {
+                setExpanded(!expanded);
+              }}
+            >
+              {expanded
+                ? t("content.nav.less")
+                : t("content.nav.more", { count: hidden })}
+            </button>
+          )}
         </>
       )}
       {PARTS.map(({ part, icon: Icon }) => (

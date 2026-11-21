@@ -118,6 +118,9 @@ describe("вход в пространство нового вида: верси
     expect(screen.getByTestId("space-no-versions-create")).toHaveTextContent(
       "Создать пак",
     );
+    // Шапка пространства есть и здесь: выход в список и меню не зависят от иконки приложения.
+    expect(screen.getByTestId("sp-back")).toBeInTheDocument();
+    expect(screen.getByTestId("sp-ws-menu")).toBeInTheDocument();
   });
 
   it("в паке нет шаблонов: «Создать шаблон»", async () => {

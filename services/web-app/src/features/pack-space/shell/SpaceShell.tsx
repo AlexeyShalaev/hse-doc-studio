@@ -1,4 +1,9 @@
-import type { KeyboardEvent, ReactNode } from "react";
+import {
+  useRef,
+  type KeyboardEvent,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { SpacePhoneContext } from "./phoneContext";
@@ -57,6 +62,13 @@ export const SpaceShell = ({
   const onKeyDown = (event: KeyboardEvent) => {
     if (event.key === "Escape" && sideOpen) onSideClose?.();
   };
+  const main$ = useRef<HTMLDivElement>(null);
+  // «Пропустить к содержимому»: фокус сразу в центр, мимо шапки и левой навигации. Своей записи в
+  // истории переход не делает (это не адрес), поэтому ссылка без href-перехода.
+  const skip = (event: MouseEvent) => {
+    event.preventDefault();
+    main$.current?.focus();
+  };
   return (
     <SpacePhoneContext.Provider value={phone}>
       <div
@@ -64,6 +76,14 @@ export const SpaceShell = ({
         data-testid="sp-shell"
         data-phone={phone ? "" : undefined}
       >
+        <a
+          href="#sp-main"
+          className="sp-skip"
+          data-testid="sp-skip"
+          onClick={skip}
+        >
+          {t("shell.skip")}
+        </a>
         <header className="sp-bar" data-testid="sp-bar">
           <div className="sp-bar-lead">{header}</div>
           {actions ? <div className="sp-bar-actions">{actions}</div> : null}
@@ -90,7 +110,13 @@ export const SpaceShell = ({
                   {mainTop}
                 </div>
               ) : null}
-              <div className="sp-main" data-testid="sp-main">
+              <div
+                className="sp-main"
+                id="sp-main"
+                tabIndex={-1}
+                ref={main$}
+                data-testid="sp-main"
+              >
                 {main}
               </div>
             </section>

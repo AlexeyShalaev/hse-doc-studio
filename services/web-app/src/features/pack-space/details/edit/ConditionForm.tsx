@@ -158,17 +158,22 @@ export const ConditionForm = ({
     case "list": {
       const all = listOptions(shape.list, context.manifest);
       const subject = LIST_SUBJECT[shape.list];
+      const picked = selectedOf(value, all);
       return (
         <Chips
           legend={t(`details.edit.phrase.${kind}`, {
             defaultValue: t("details.edit.phrase.other"),
           })}
-          hint={t("details.edit.hintList")}
+          hint={t(
+            picked.length === all.length
+              ? "details.edit.hintListAll"
+              : "details.edit.hintListSome",
+          )}
           options={all.map((v) => ({
             value: v,
             label: words.value(subject, v),
           }))}
-          value={selectedOf(value, all)}
+          value={picked}
           disabled={disabled}
           testId="sp-cond-list"
           onChange={(next) => {

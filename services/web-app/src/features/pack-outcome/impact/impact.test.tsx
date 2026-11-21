@@ -2,7 +2,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router";
-import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import {
   packOutcomeApi,
   packStudioApi,
@@ -91,6 +99,12 @@ describe("блок «Что изменится в результате» (F10)",
   beforeAll(async () => {
     await loadPackOutcomeNamespace();
     await i18n.changeLanguage("ru");
+  });
+  beforeEach(() => {
+    // Список изменений нужен блоку, чтобы отличить новую версию: по умолчанию изменений нет.
+    vi.spyOn(packStudioApi, "git").mockResolvedValue({
+      changed: [],
+    } as unknown as Awaited<ReturnType<typeof packStudioApi.git>>);
   });
   afterEach(() => {
     cleanup();
@@ -214,6 +228,26 @@ describe("блок «Что изменится в результате» (F10)",
       });
     },
   );
+
+  it("версия новая (её version.yaml добавлен): запрос не уходит, текст «сравнивать не с чем» тот же", async () => {
+    const impact = vi.spyOn(packOutcomeApi, "impact");
+    vi.spyOn(packStudioApi, "git").mockResolvedValue({
+      changed: [
+        {
+          path: `${REF.pack}/templates/${REF.template}/versions/${REF.version}/version.yaml`,
+          status: "added",
+        },
+      ],
+    } as unknown as Awaited<ReturnType<typeof packStudioApi.git>>);
+    const { reports } = mount();
+    expect(
+      await screen.findByTestId("impact-no-base-new_version"),
+    ).toBeInTheDocument();
+    expect(impact).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(last(reports)).toMatchObject({ pending: false, needsAck: false });
+    });
+  });
 
   it("версия выпущена: расчёта нет, объяснение", async () => {
     const impact = vi.spyOn(packOutcomeApi, "impact");

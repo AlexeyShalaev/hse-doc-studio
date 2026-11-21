@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router";
+import { useLocation, useNavigate, useParams } from "react-router";
 import { useTranslation } from "react-i18next";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import {
@@ -16,7 +16,9 @@ import {
   Monitor,
   Moon,
   Plus,
+  Route,
   Search,
+  Send,
   Settings,
   TriangleAlert,
   Sun,
@@ -31,7 +33,13 @@ import {
 } from "@entities/git-sync";
 import { openHelp } from "@entities/help";
 import { useProjects } from "@entities/project";
-import { useThemeStore, useUIStore, useWorkspaceStore } from "@shared/lib";
+import { useBootstrap } from "@entities/session";
+import {
+  runPackStudioCommand,
+  useThemeStore,
+  useUIStore,
+  useWorkspaceStore,
+} from "@shared/lib";
 
 type Command = {
   id: string;
@@ -46,6 +54,13 @@ export const CommandPalette = () => {
   const { t: tHelp } = useTranslation("help");
   const navigate = useNavigate();
   const params = useParams<{ projectId?: string; docId?: string }>();
+  const { pathname } = useLocation();
+  // Студия шаблонов (раздел /pack-studio или отдельный профиль): проектов там нет, команды про
+  // проекты не предлагаются, зато есть переход по паку, шаблону и версии и отправка на рассмотрение.
+  const standalone =
+    useBootstrap().data?.capabilities.pack_studio_standalone === true;
+  const inPackStudio = standalone || pathname.startsWith("/pack-studio");
+  const inSpace = /^\/pack-studio\/w\/[^/]+\/t\//.test(pathname);
   const isOpen = useUIStore((s) => s.paletteOpen);
   const setOpen = useUIStore((s) => s.setPaletteOpen);
   const togglePalette = useUIStore((s) => s.togglePaletteOpen);
@@ -63,7 +78,11 @@ export const CommandPalette = () => {
         e.preventDefault();
         togglePalette();
       }
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "n") {
+      if (
+        (e.metaKey || e.ctrlKey) &&
+        e.key.toLowerCase() === "n" &&
+        !inPackStudio
+      ) {
         const target = e.target as HTMLElement | null;
         const isEditable =
           target &&
@@ -89,7 +108,7 @@ export const CommandPalette = () => {
     return () => {
       window.removeEventListener("keydown", onKey);
     };
-  }, [togglePalette, setOpen, navigate]);
+  }, [togglePalette, setOpen, navigate, inPackStudio]);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -118,25 +137,29 @@ export const CommandPalette = () => {
           openHelp();
         },
       },
-      {
-        id: "new",
-        label: t("commandPalette.newProject"),
-        icon: Plus,
-        shortcut: "⌘N",
-        run: () => {
-          setOpen(false);
-          void navigate("/wizard?mode=create");
-        },
-      },
-      {
-        id: "clone",
-        label: t("commandPalette.cloneProject"),
-        icon: GitBranch,
-        run: () => {
-          setOpen(false);
-          void navigate(CLONE_PATH);
-        },
-      },
+      ...(inPackStudio
+        ? []
+        : [
+            {
+              id: "new",
+              label: t("commandPalette.newProject"),
+              icon: Plus,
+              shortcut: "⌘N",
+              run: () => {
+                setOpen(false);
+                void navigate("/wizard?mode=create");
+              },
+            },
+            {
+              id: "clone",
+              label: t("commandPalette.cloneProject"),
+              icon: GitBranch,
+              run: () => {
+                setOpen(false);
+                void navigate(CLONE_PATH);
+              },
+            },
+          ]),
       {
         id: "settings",
         label: t("commandPalette.settings"),
@@ -289,7 +312,31 @@ export const CommandPalette = () => {
       }
     }
 
-    const projectCmds: Command[] = (projects ?? [])
+    // Команды экрана пространства: слушает сам экран (shared/lib/packStudioCommand).
+    const spaceCmds: Command[] = inSpace
+      ? [
+          {
+            id: "space-where",
+            label: t("commandPalette.spaceWhere"),
+            icon: Route,
+            run: () => {
+              setOpen(false);
+              runPackStudioCommand("where");
+            },
+          },
+          {
+            id: "space-submit",
+            label: t("commandPalette.spaceSubmit"),
+            icon: Send,
+            run: () => {
+              setOpen(false);
+              runPackStudioCommand("submit");
+            },
+          },
+        ]
+      : [];
+
+    const projectCmds: Command[] = (inPackStudio ? [] : (projects ?? []))
       .filter((p) => !p.archived)
       .map((p) => ({
         id: `proj-${p.id}`,
@@ -301,8 +348,10 @@ export const CommandPalette = () => {
         },
       }));
 
-    return [...base, ...syncCmds, ...docCmds, ...projectCmds];
+    return [...spaceCmds, ...base, ...syncCmds, ...docCmds, ...projectCmds];
   }, [
+    inPackStudio,
+    inSpace,
     navigate,
     params,
     projects,
@@ -352,7 +401,11 @@ export const CommandPalette = () => {
               onChange={(e) => {
                 setQuery(e.target.value);
               }}
-              placeholder={t("commandPalette.placeholder")}
+              placeholder={t(
+                inPackStudio
+                  ? "commandPalette.placeholderPackStudio"
+                  : "commandPalette.placeholder",
+              )}
             />
             <span className="kbd">ESC</span>
           </div>

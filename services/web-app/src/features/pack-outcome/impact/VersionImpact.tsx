@@ -17,6 +17,7 @@ import {
   packOutcomeKeys,
   packOutcomePath,
   packRulePath,
+  usePackGit,
   usePackOutcomeImpact,
   usePackOutcomeInputs,
   usePackTree,
@@ -251,11 +252,20 @@ export const VersionImpact = ({
       ?.templates.find((tpl) => tpl.id === version.template)
       ?.versions.find((v) => v.version === version.version)?.released ?? false;
   const [cancelled, setCancelled] = useState(false);
+  // Версия появилась в рабочем дереве целиком (её `version.yaml` добавлен): в основной ветке её нет,
+  // сравнивать не с чем. Сервер ответил бы 409, а браузер пишет такой ответ красным в консоль,
+  // поэтому запрос не уходит, а вывод «сравнивать не с чем» тот же.
+  const git = usePackGit(workspaceId);
+  const versionYaml = `${version.pack}/templates/${version.template}/versions/${version.version}/version.yaml`;
+  const isNew =
+    git.data?.changed.some(
+      (change) => change.status === "added" && change.path === versionYaml,
+    ) ?? false;
   const impact = usePackOutcomeImpact(
     workspaceId,
     version,
     { base: "base", include_atlas: true },
-    !cancelled && !released && !tree.isPending,
+    !cancelled && !released && !tree.isPending && !git.isPending && !isNew,
   );
   const inputs = usePackOutcomeInputs(
     workspaceId,
@@ -265,7 +275,7 @@ export const VersionImpact = ({
   );
   const data = impact.data;
   const loading =
-    !released && !cancelled && data === undefined && !impact.isError;
+    !released && !cancelled && !isNew && data === undefined && !impact.isError;
   const elapsed = useElapsed(loading);
 
   const key = versionKey(version);
@@ -347,6 +357,8 @@ export const VersionImpact = ({
         </div>
       </div>
     );
+  } else if (isNew) {
+    body = <NoBase reason="new_version" />;
   } else if (cancelled) {
     body = (
       <div

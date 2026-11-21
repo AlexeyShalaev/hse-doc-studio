@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { NewPackTarget } from "@features/pack-scaffold";
+import { usePackStudioCommand } from "@shared/lib";
 import { useSpace } from "../context/SpaceContext";
 import { useSpaceNav } from "../context/useSpaceNav";
 import { SpaceTabs } from "../shell/DefaultParts";
@@ -27,6 +28,13 @@ export const ContextBar = () => {
   const [sheet, setSheet] = useState(false);
   const [create, setCreate] = useState<NewPackTarget | null>(null);
   useRememberVersion();
+  // Палитра команд (Cmd+K): «Перейти к: пак, шаблон, версия» открывает то же окно «Куда перейти».
+  usePackStudioCommand(
+    "where",
+    useCallback(() => {
+      setSheet(true);
+    }, []),
+  );
 
   return (
     <>

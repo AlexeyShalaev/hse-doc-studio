@@ -21,6 +21,7 @@ import {
 import {
   deltaElement,
   diffOutcomes,
+  type DeltaItem,
 } from "@features/pack-outcome/lib/edit/delta";
 import {
   markRedone,
@@ -119,6 +120,8 @@ type Tracking = {
   direction: EditDelta["direction"];
   /** Пересчёт после записи уже шёл: его конец означает «результат готов». */
   sawFetching: boolean;
+  /** Сравнение готово: осталось записать его в ленту (делает эффект). */
+  items?: DeltaItem[] | undefined;
 };
 
 /** Поле ввода, где Ctrl+Z принадлежит самому полю: экран не отнимает его. */
@@ -459,8 +462,10 @@ export const useConditionEdit = (
   };
 
   // Результат после записи: когда пришёл новый расчёт, сравниваем его с прежним. Состояние
-  // выводится при отрисовке (как смена версии выше), чтобы не плодить лишние проходы эффектов.
-  if (tracking) {
+  // выводится при отрисовке (как смена версии выше), а запись в ленту (внешнее хранилище, на него
+  // подписаны и другие части экрана) идёт из эффекта: запись во время отрисовки заставляла соседей
+  // обновляться посреди чужой отрисовки, и React ругался.
+  if (tracking && tracking.items === undefined) {
     const data = outcome.data;
     const fresh =
       data !== undefined &&
@@ -473,16 +478,7 @@ export const useConditionEdit = (
       data !== undefined;
     if (data && (fresh || settled)) {
       const items = diffOutcomes(tracking.baseline, data, i18n.language);
-      writeEditFeed(key, {
-        delta: { items, edit: tracking.edit, direction: tracking.direction },
-        flashed: new Set(
-          items.map((item) => {
-            const el = deltaElement(item);
-            return `${el.section}:${el.id}`;
-          }),
-        ),
-      });
-      setTracking(null);
+      setTracking({ ...tracking, items });
       setLive(
         items.length === 0
           ? t("details.edit.live.same")
@@ -492,6 +488,19 @@ export const useConditionEdit = (
       setTracking({ ...tracking, sawFetching: true });
     }
   }
+  useEffect(() => {
+    if (!tracking?.items) return;
+    const { items, edit, direction } = tracking;
+    writeEditFeed(key, {
+      delta: { items, edit, direction },
+      flashed: new Set(
+        items.map((item) => {
+          const el = deltaElement(item);
+          return `${el.section}:${el.id}`;
+        }),
+      ),
+    });
+  }, [tracking, key]);
 
   const flashedSize = feed.flashed.size;
   useEffect(() => {

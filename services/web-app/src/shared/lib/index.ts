@@ -149,6 +149,11 @@ export type {
 } from "./stateGallery";
 
 export {
+  runPackStudioCommand,
+  usePackStudioCommand,
+} from "./packStudioCommand";
+export type { PackStudioCommand } from "./packStudioCommand";
+export {
   PHONE_MAX_WIDTH,
   TABLET_MAX_WIDTH,
   useIsCoarsePointer,

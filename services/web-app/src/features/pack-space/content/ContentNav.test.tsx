@@ -130,6 +130,39 @@ describe("навигация «Что редактируем»", () => {
     expect(screen.getByText("Такого документа нет")).toBeInTheDocument();
   });
 
+  it("длинный список за «Ещё N»: открытый документ остаётся виден, разделы на месте", () => {
+    renderContent(<ContentNav />, "doc=extra_document_8", {
+      model: modelWithDocuments(16),
+    });
+    const docs = () => screen.getAllByTestId(/^ct-doc-/);
+    // Шесть первых и открытый, остальные за кнопкой.
+    expect(docs()).toHaveLength(7);
+    expect(screen.getByTestId("ct-doc-extra_document_8")).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    const more = screen.getByTestId("ct-more");
+    expect(more).toHaveTextContent(/^Ещё \d+$/);
+    expect(more).toHaveAttribute("aria-expanded", "false");
+    // Разделы версии не вытеснены: все на странице при любом списке.
+    for (const part of [
+      "deadlines",
+      "signatures",
+      "languages",
+      "rules",
+      "files",
+    ]) {
+      expect(screen.getByTestId(`ct-part-${part}`)).toBeInTheDocument();
+    }
+    fireEvent.click(more);
+    expect(docs().length).toBeGreaterThan(7);
+    expect(screen.getByTestId("ct-more")).toHaveTextContent("Свернуть список");
+    expect(screen.getByTestId("ct-more")).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+  });
+
   it("несохранённая правка: уход спрашивает, отказ оставляет на месте", () => {
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     renderContent(<ContentNav />, "doc=technical_specification");

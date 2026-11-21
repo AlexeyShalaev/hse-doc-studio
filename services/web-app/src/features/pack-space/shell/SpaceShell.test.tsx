@@ -42,6 +42,15 @@ describe("SpaceShell", () => {
     expect(screen.getByTestId("sp-shell")).not.toHaveAttribute("data-phone");
   });
 
+  it("«Пропустить к содержимому» первая по Tab и переводит фокус в центр", () => {
+    render(<SpaceShell {...slots()} />);
+    const skip = screen.getByRole("link", { name: "Пропустить к содержимому" });
+    const all = [...document.querySelectorAll<HTMLElement>("a, button")];
+    expect(all[0]).toBe(skip);
+    fireEvent.click(skip);
+    expect(screen.getByTestId("sp-main")).toHaveFocus();
+  });
+
   it("подробности выезжают по выбору: data-open следует за detailsOpen", () => {
     const { rerender } = render(<SpaceShell {...slots()} />);
     expect(screen.getByTestId("sp-side")).toHaveAttribute("data-open", "false");

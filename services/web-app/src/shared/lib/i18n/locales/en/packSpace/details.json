@@ -348,7 +348,6 @@
       "checks_categories": "Do not check these groups of rules:",
       "other": "Needed when:"
     },
-    "hintList": "Everything or nothing ticked: no restriction.",
     "hintChecks": "Ticked items are not checked for this version.",
     "flag": {
       "skip_if_nda": "Do not hand this item in when the work is under an NDA",
@@ -423,6 +422,8 @@
       "slot_when": "When the signature is needed",
       "check_disabled": "Turned-off checks",
       "other": "Condition"
-    }
+    },
+    "hintListAll": "Everything is ticked: no restriction.",
+    "hintListSome": "Restriction applies: only the ticked values match."
   }
 }

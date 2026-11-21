@@ -3,7 +3,7 @@ import { SpaceProvider } from "../context/SpaceContext";
 import { GALLERY_TREE, GALLERY_WORKSPACE } from "../galleryKit";
 import { SpaceScreen } from "../shell/SpaceScreen";
 import { defineSpaceSlots } from "../shell/spaceSlots";
-import { EDITED, TREE, WS, seedNav } from "./fixtures";
+import { EDITED, TREE, seedNav } from "./fixtures";
 import { NoPlace } from "./NoPlace";
 import { WhereBody } from "./WhereSheet";
 import { slots as navSlots } from "./slots";
@@ -163,7 +163,10 @@ export const galleryEntries: GalleryEntry[] = [
     frame: "plain",
     width: 720,
     render: () => (
-      <NoPlace workspaceId={WS} tree={{ ...GALLERY_TREE, packs: [] }} />
+      <NoPlace
+        workspace={GALLERY_WORKSPACE}
+        tree={{ ...GALLERY_TREE, packs: [] }}
+      />
     ),
   },
 ];
