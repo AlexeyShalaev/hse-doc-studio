@@ -76,7 +76,8 @@
   min-height: var(--sp-touch);
   min-width: var(--sp-touch);
 }
-.sp-root[data-phone] label:has(> input[type="checkbox"], > input[type="radio"]) {
+.sp-root[data-phone]
+  label:has(> input[type="checkbox"], > input[type="radio"]) {
   min-height: var(--touch-lg);
   display: flex;
   align-items: center;
@@ -243,9 +244,7 @@
 .sp-root[data-phone] .sp-pv > .sp-pv-top {
   order: 0;
 }
-.sp-root[data-phone]
-  .sp-pv
-  > :is(.sp-pv-block, .sp-pv-fields, .sp-pv-run) {
+.sp-root[data-phone] .sp-pv > :is(.sp-pv-block, .sp-pv-fields, .sp-pv-run) {
   order: 2;
 }
 .sp-root[data-phone] .sp-pv > .sp-pv-findings {
@@ -257,7 +256,15 @@
 
 /* ── формы версии (прежние `pack-forms`) на узкой ширине ──
    Формы рассчитаны на колонку шире телефона: ряды переносятся, а не растягивают страницу. */
-.sp-root[data-phone] .sp-ct-legacy :is(.psf-chip, .psf-actions, .psf-inline-field, .psf-step-head, .psf-step-new) {
+.sp-root[data-phone]
+  .sp-ct-legacy
+  :is(
+    .psf-chip,
+    .psf-actions,
+    .psf-inline-field,
+    .psf-step-head,
+    .psf-step-new
+  ) {
   flex-wrap: wrap;
   max-width: 100%;
   min-width: 0;

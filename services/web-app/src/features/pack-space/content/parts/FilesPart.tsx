@@ -44,46 +44,46 @@ const FilesPart = ({
       )}
       <div className="sp-ct-files-part">
         {showTree && (
-        <div
-          className="sp-ct-tree"
-          aria-label={t("content.parts.files.treeTitle")}
-        >
-          <PackTreePanel
-            workspaceId={workspaceId}
-            selectedPath={file}
-            onSelect={(path) => {
-              nav.toPart("files", { file: path });
-            }}
-            onNewPack={() => {
-              setCreate({ kind: "pack" });
-            }}
-            onNewTemplate={(pack) => {
-              setCreate({ kind: "template", pack });
-            }}
-          />
-        </div>
+          <div
+            className="sp-ct-tree"
+            aria-label={t("content.parts.files.treeTitle")}
+          >
+            <PackTreePanel
+              workspaceId={workspaceId}
+              selectedPath={file}
+              onSelect={(path) => {
+                nav.toPart("files", { file: path });
+              }}
+              onNewPack={() => {
+                setCreate({ kind: "pack" });
+              }}
+              onNewTemplate={(pack) => {
+                setCreate({ kind: "template", pack });
+              }}
+            />
+          </div>
         )}
         {showFile && (
-        <div className="sp-ct-tree-main">
-          {file ? (
-            <FileView
-              key={file}
-              workspaceId={workspaceId}
-              path={file}
-              at={at}
-              readOnly={locked}
-              onCopy={() => {
-                space.go({ extra: { copy: "1" } });
-              }}
-              onOpenFile={nav.toFile}
-            />
-          ) : (
-            <div className="sp-ct-stub">
-              <h2>{t("content.parts.files.pickTitle")}</h2>
-              <p>{t("content.parts.files.pickLead")}</p>
-            </div>
-          )}
-        </div>
+          <div className="sp-ct-tree-main">
+            {file ? (
+              <FileView
+                key={file}
+                workspaceId={workspaceId}
+                path={file}
+                at={at}
+                readOnly={locked}
+                onCopy={() => {
+                  space.go({ extra: { copy: "1" } });
+                }}
+                onOpenFile={nav.toFile}
+              />
+            ) : (
+              <div className="sp-ct-stub">
+                <h2>{t("content.parts.files.pickTitle")}</h2>
+                <p>{t("content.parts.files.pickLead")}</p>
+              </div>
+            )}
+          </div>
         )}
       </div>
       <CreateDialog
