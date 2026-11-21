@@ -1,1 +1,133 @@
-{}
+{
+  "button": {
+    "label": "Changes",
+    "title": "What you changed and what is not sent yet",
+    "aria_one": "Changes: {{count}} file",
+    "aria_few": "Changes: {{count}} files",
+    "aria_many": "Changes: {{count}} files",
+    "aria_other": "Changes: {{count}} files"
+  },
+  "title": "Changes",
+  "close": "Close panel",
+  "badge": {
+    "draft": "draft {{version}}",
+    "released": "released {{version}}",
+    "open": "request {{label}}",
+    "merged": "accepted",
+    "closed": "request closed",
+    "folder": "folder on disk"
+  },
+  "state": {
+    "loading": "Reading your changes…",
+    "failedTitle": "Could not read your changes",
+    "retry": "Try again",
+    "cloningTitle": "The space is still connecting",
+    "cloningLead": "Your changes will appear when it is ready.",
+    "connectTitle": "Could not connect to the repository",
+    "connectLead": "Check the address and access in the list of spaces."
+  },
+  "intro": "Only you can see these edits for now. To reach students, they have to be sent for review.",
+  "empty": {
+    "title": "No changes yet",
+    "draft": "Open a document and press “Change conditions” or “Document text”. Everything you edit will be collected here.",
+    "released": "Version {{version}} is released and cannot change. Make a copy with “Edit a copy” and edit the copy."
+  },
+  "folder": {
+    "title": "Your edits are already written to the folder.",
+    "lead": "This space has no sending: save and send changes the way you usually work with this folder. Connect a repository to send from here.",
+    "connect": "Connect a repository"
+  },
+  "what": {
+    "title": "What changed",
+    "group": "{{template}} · version {{version}}",
+    "groupPack": "Shared files of pack {{pack}}",
+    "groupOther": "Other files",
+    "files_one": "{{count}} file",
+    "files_few": "{{count}} files",
+    "files_many": "{{count}} files",
+    "files_other": "{{count}} files",
+    "item": {
+      "version": "Version description",
+      "docConditions": "{{doc}}: conditions",
+      "docText": "{{doc}}: text",
+      "docFiles": "{{doc}}: files",
+      "common": "Parts shared by documents",
+      "assets": "Images and attachments",
+      "checks": "Check rules",
+      "packInfo": "Pack description",
+      "templateInfo": "Template description",
+      "releases": "List of releases",
+      "other": "Other files"
+    },
+    "tag": {
+      "added": "new",
+      "deleted": "removed"
+    },
+    "openItem": "Open: {{what}}",
+    "diff": "Show line by line"
+  },
+  "checks": {
+    "title": "Checks",
+    "running": "Checking…",
+    "ok": "No errors",
+    "errorsTitle": "To fix before sending",
+    "go": "Go",
+    "where": "{{where}}, line {{line}}: {{message}}",
+    "whereNoLine": "{{where}}: {{message}}",
+    "whereVersion": "Version {{version}}",
+    "warnings_one": "{{count}} formatting remark. It does not block sending.",
+    "warnings_few": "{{count}} formatting remarks. They do not block sending.",
+    "warnings_many": "{{count}} formatting remarks. They do not block sending.",
+    "warnings_other": "{{count}} formatting remarks. They do not block sending.",
+    "show": "Show",
+    "hide": "Hide",
+    "notes": "Describe what changed for students and supervisors: the version cannot be released without it. This is a normal step, not an error."
+  },
+  "request": {
+    "openTitle": "Merge request {{label}} is open.",
+    "openLead": "Now it is up to the repository maintainers: they will review the changes and accept them into the main branch.",
+    "hostChecks": "Checks on the hosting",
+    "pending": "Running: {{done}} of {{total}} finished",
+    "pendingNoCount": "Running",
+    "passed": "Checks passed",
+    "failed": "Checks failed",
+    "awaiting": "Waiting for approval: GitHub does not run checks for a new contributor until a maintainer allows it",
+    "unknown": "Check status is unknown: the hosting does not report it",
+    "details": "Details",
+    "next": "What next",
+    "nextClean": "You can keep editing: new changes will go into the same request.",
+    "nextEdits": "There are edits that are not in the request yet. When you send them, they go into the same request.",
+    "open": "Open request {{label}}",
+    "mergedTitle": "Request {{label}} is accepted.",
+    "mergedLead": "The changes are in the main branch, students get them with the next Studio release.",
+    "mergedNext": "Your branch is not needed anymore: a new edit starts from the fresh main branch.",
+    "startNew": "Start a new edit",
+    "closedTitle": "Request {{label}} was closed without merging.",
+    "closedLead": "The changes did not reach the main branch. You can reset your changes and start clean.",
+    "reset": "Reset all my changes"
+  },
+  "where": {
+    "branch": "Working branch (the line of your changes): {{branch}}.",
+    "ahead": "Saved points ahead of the main branch: {{count}}.",
+    "noBranch": "The edits are only yours for now: nothing has been sent to the repository."
+  },
+  "behind": {
+    "title": "The main branch has news.",
+    "lead": "Take them so that the request does not conflict.",
+    "take": "Take the news",
+    "done": "News from the main branch taken",
+    "upToDate": "Nothing new in the main branch"
+  },
+  "menu": {
+    "label": "More about changes",
+    "save": "Save a point",
+    "branch": "Branch…",
+    "take": "Take news from the main branch",
+    "access": "Repository access",
+    "compare": "Open comparison on the hosting",
+    "reset": "Reset all my changes"
+  },
+  "footer": {
+    "close": "Close"
+  }
+}
