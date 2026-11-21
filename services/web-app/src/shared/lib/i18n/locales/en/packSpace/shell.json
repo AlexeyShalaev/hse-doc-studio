@@ -1,0 +1,17 @@
+{
+  "back": "Back to workspaces",
+  "tabsLabel": "Template sections",
+  "tabs": {
+    "result": "Result",
+    "content": "Content",
+    "check": "Check",
+    "changes": "Changes"
+  },
+  "close": "Close",
+  "soon": "Coming soon: this part of the new Studio view is still in progress.",
+  "slotFailed": "This part of the screen failed to load. Reload the page.",
+  "entry": {
+    "noVersionsTitle": "This workspace has no template versions yet",
+    "noVersionsLead": "The first template will open here once it appears."
+  }
+}

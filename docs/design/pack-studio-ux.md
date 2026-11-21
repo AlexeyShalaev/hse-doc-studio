@@ -989,3 +989,95 @@ S1, S12: независимы
 - Стенд: `HSE_STUDIO__PACK_STUDIO__ENABLED=true HSE_STUDIO__PACK_STUDIO__STANDALONE=true HSE_STUDIO__PACK_STUDIO__STANDALONE_FOLDER=<копия папки packs> HSE_STUDIO__GIT__ALLOW_LOCAL_REMOTES=true`, запуск `uv run --extra api python -m hse_doc_studio.api.entrypoint` в `services/api`, фронтенд `vite` из `services/web-app` с `VITE_DEV_PROXY_TARGET`. Для пространства над git подключается локальный bare-репозиторий (`file://...`), в котором папка `packs/`. Папку паков лучше копировать, чтобы эксперименты не трогали рабочее дерево.
 - Подсчёт: скрипт в Playwright берёт видимые в окне `button`, `a[href]`, `[role=tab]`, `[role=switch]`, `input`, `select`, `textarea`, `[role=combobox]`, `[role=radio]`, `[role=checkbox]`, исключает шапку приложения и строку состояния, подсчитывает по видам. Числа раздела 1.2 получены именно так; при повторе после S14 используем тот же приём.
 - Макеты: `docs/design/pack-studio-ux/index.html`. Написаны вручную на токенах `services/web-app/src/index.css`; страницы не требуют сборки.
+
+## 12. Как подключаться к каркасу (после S0)
+
+Срез S0 слит: основа есть, остальные срезы только добавляют своё. Откройте любое пространство с `?ux=2` (флаг запоминается в браузере, `?ux=1` его снимает): появится оболочка с тремя вкладками и заглушкой «Скоро» в центре. Всё ниже про код в `services/web-app/src`.
+
+### 12.1. Где что лежит
+
+| Что | Где | Кто правит |
+|---|---|---|
+| Адреса, перенаправления со старых, флаг | `entities/pack-studio/lib/spaceRoutes.ts`, `usePackStudioUx.ts` | только S0 |
+| Контекст места, `useSpaceNav`, `useSituation`, память, вход | `features/pack-space/context/` | только S0 |
+| Каркас, реестр слотов, запасные части | `features/pack-space/shell/` | только S0 |
+| `ChangesStatus` и заглушка `useChangesStatus` | `features/pack-space/changes/` (`types.ts`, `useChangesStatus.ts`) | S0 создал, дальше S3; поля `types.ts` меняют вместе S3 и S4 |
+| Маршруты и загрузка данных | `pages/PackStudioPage/space/` (отдельный чанк `pack-space`) | только S0 |
+| Область среза | `features/pack-space/<область>/` | срез |
+
+Области (каталоги) и срезы: `nav` (S2), `changes` (S3, S4), `situation` (S5), `result` (S6), `details` (S7), `content` (S8), `preview` (S9), `check` (S10). Своя область это свой каталог и ничего больше: общих файлов срез не правит.
+
+### 12.2. Слот: как положить свою часть
+
+1. Создайте `features/pack-space/<область>/slots.tsx` и экспортируйте `slots`:
+
+```tsx
+import { lazy } from "react";
+import { defineSpaceSlots } from "../shell/spaceSlots";
+
+const SituationBar = lazy(() => import("./SituationBar"));
+
+export const slots = defineSpaceSlots({
+  mainTop: { result: SituationBar },
+});
+```
+
+2. Всё. Реестр (`shell/registry.ts`) находит файл сам через `import.meta.glob("../*/slots.tsx")`, `SpaceScreen` выбирает компонент по текущей вкладке, оборачивает его в `Suspense` и в границу ошибок (сбой одного слота не роняет остальные).
+
+Слоты (`shell/spaceSlots.ts`; `ComponentType` без props, место и адрес берите из хуков):
+
+| Слот | Вид | Кто занимает | Что в нём |
+|---|---|---|---|
+| `header` | одиночный | S2 | левая часть верхней полосы: назад, название, меню «Ещё» |
+| `changesButton` | одиночный | S3 | кнопка «Изменения N», правая часть верхней полосы |
+| `nextStep` | одиночный | S4 | главная кнопка, правее «Изменений» |
+| `contextBar` | одиночный | S2 | вторая полоса: крошки и вкладки (заменяет вкладки каркаса; на телефоне рисуется тоже: прячьте вкладки сами) |
+| `changes` | одиночный | S3 | панель «Изменения»: справа вместо «Подробностей», на телефоне страница |
+| `bottomTabs` | одиночный | S11 | нижние вкладки телефона (заменяют запасные из каркаса) |
+| `nav` | по вкладке | S6 (`result`), S8 (`content`) | левая колонка «что»; на телефоне не рисуется |
+| `mainTop` | по вкладке | S5 (`result`) | полоса над центром |
+| `main` | по вкладке | S6, S8, S10 | центр; пока слота нет, там заглушка «Скоро» |
+| `details` | по вкладке | S7 (`result`), S9 (`content`) | правая колонка «подробности» |
+
+Правила: слот (а для «по вкладке» пара слот и вкладка) занимает одна область; второй претендент это ошибка при сборке реестра с названием обоих файлов (проверено тестом). Колонка появляется, только если слот на этой вкладке занят. Тяжёлое грузите через `lazy()`: сам `slots.tsx` читается сразу. Ширину окна ради структуры проверяйте `useIsPhoneWidth()`, ради раскладки внутри слота используйте `@container sp` (ширина экрана пространства, а не окна).
+
+Каркас без реестра: `SpaceShell` (чистый, props-слоты, без запросов) и `SpaceScreen slots={...} phone={...}` (подмена реестра и ширины для тестов и галереи).
+
+### 12.3. Контракты хуков
+
+Все хуки работают внутри `SpaceProvider` (его ставит `SpaceRoute`). Публичное экспортирует `features/pack-space/index.ts`.
+
+| Хук или функция | Что даёт | Замечание |
+|---|---|---|
+| `useSpace()` | `{ workspace, tree, versionRef, tab, pack, template, version, released, selection, location }` | только чтение; `selection` это сырая строка `sel` (`<раздел>:<id>`, как прежний `selected`), разбор `parseSelection` |
+| `useSpaceNav()` | `{ href(patch), go(patch, { push? }) }` | единственный способ менять адрес; патч `SpaceNavPatch`: `ref`, `tab`, `doc`, `part`, `file`, `sel`, `changes`, `inputs`, `case`, `extra` |
+| `useSituation()` | `{ inputs, caseId, setInput, setInputs, setCase, reset }` | пишет в адрес через `useSpaceNav` |
+| `useChangesStatus()` | `ChangesStatus` | в S0 заглушка «ничего не изменено» с видом пространства и замком версии; S3 заменяет тело |
+| `readUi/writeUi(ws, key, value)` | память мелочей интерфейса (раскрыто «Ещё N условий», скрытые части) | только удобство, всегда с умолчанием |
+| `readPlace/writePlace`, `useRememberPlace()` | последнее место | `SpaceScreen` запоминает само |
+| `resolveEntryPlace(tree, hints)` | куда открыть вход без версии | S2 заменяет выбор на `pickDefaultVersion` |
+
+Как работает переход: смена вкладки или версии идёт в историю новой записью и сбрасывает параметры вкладки (`sel`, `doc`, `part`, `file`, `extra`); условия (`i.*`), `case` и `changes` переживают переход. Правка внутри вкладки заменяет запись. Параметры, у которых нет своего поля (`at`, `from`, `compare`, `copy`), передавайте в `extra`; `null` убирает параметр.
+
+`ChangesStatus` (`changes/types.ts`) плоский: `connection`, `workspaceKind`, `released`, `changedFiles`, `changedElsewhere`, `errors`, `warnings`, `notesNeeded`, `request` (`none`, `open` с `checks` и `newEdits`, `merged`, `closed`), `behind`. Это данные, слова подбирают потребители. `NO_CHANGES` состояние по умолчанию.
+
+### 12.4. Адреса и параметры
+
+Таблица 4.2 реализована в `spacePath(ws, ref, tab, search)`; `legacyToSpace(ws, pathname, search)` переводит старые адреса. Имена параметров собраны в `SPACE_QUERY`. Формат условий студента в адресе такой же, как у прежнего экрана: `i.<условие>=<значение>` (не один параметр `in`), поэтому ссылка со старого экрана открывается в новом с теми же условиями (пределы те же: до 64 условий, значение до 128 знаков, невалидное отбрасывается).
+
+### 12.5. Строки, стили, галерея, тесты
+
+- **Строки.** `shared/lib/i18n/locales/{ru,en}/packSpace/<область>.json`: файл области содержит только её ключи, наружу они видны под именем области: `shell.json` с `{"back": "..."}` даёт `t("shell.back")` в пространстве `packSpace` (`useTranslation("packSpace")`). Файлы всех областей уже созданы (пустые `{}`), добавлять новые файлы и правки в `index.ts` не нужно. `pnpm lint:i18n` понимает эту раскладку. Словарь грузит `SpaceApp` до первого кадра.
+- **Словарь запретных слов.** `features/pack-space/vocabulary.banned.json` (слова «жаргон» раздела 6, `pattern` это регулярное выражение, `use` подсказывает замену) и тест `vocabulary.test.ts`: в `packSpace` их быть не должно. Новое слово добавляйте в список. Git-слова (`commit`, `base`, `branch`, `pr`, `fork`) разрешены только в области `changes` (`allowedIn`). Тест же проверяет, что ru и en совпадают по ключам.
+- **Стили.** `features/pack-space/<область>/space-<область>.css`, префикс `sp-`, только токены `index.css`; файл импортирует компонент области.
+- **Галерея.** `features/pack-space/<область>/gallery.<область>.tsx` с `export const galleryEntries: GalleryEntry[]` (id начинаются с `sp_`); собираются `gallery.ts` глобом в группу «Студия шаблонов: новый интерфейс». Рамка `SpaceGalleryFrame` (`galleryKit.tsx`) ставит `SpaceProvider` на фикстурах и статичный адрес (`search="sel=documents%3Ats"`, `tab`, `version`); свои данные кладите в кэш запросов через `seed`. Рамка `frame: "plain"` с `width: 390` и `phone` у `SpaceScreen` даёт телефон без iframe.
+- **Тесты.** `spaceTestKit.tsx`: `renderSpace(ui, url)` ставит настоящий роутер в памяти, `SpaceProvider` на фикстурах галереи и вывод адреса (`data-testid="location"`). Фикстуры дерева и пространства: `GALLERY_TREE`, `GALLERY_WORKSPACE`. Словарь в тестах: `await loadPackSpaceNamespace()`.
+
+### 12.6. Чего S0 сознательно не делает и отклонения от документа
+
+- Параметр `in` не один: условия лежат как `i.<условие>` (12.4). Старые `selected` и `scenario` в новом адресе называются `sel` и `case`; `state`, `mode`, `tab` старого адреса отбрасываются, режимы `view` переходят во вкладку «Проверка» (`matrix` -> `part=cases`, `atlas` -> `part=map`, `compare` -> `compare=1`, `lint` -> `part=issues`). Остальные параметры (`left`, `right`, `against`, `p.*`, `example`, `at`, `from`, `pane`) и `ux` едут как есть.
+- `?newVersion=пак/шаблон` открывает «Результат» версии шаблона по умолчанию с `copy=1`: панели «Править копию» в дизайне нет (это кнопка без окна), параметр зарезервирован за S4.
+- Флаг и адреса лежат в `entities/pack-studio` (небольшие, без тяжёлых зависимостей), а всё остальное в отдельном чанке `pack-space`, который старый вид не загружает.
+- Новый адрес без флага (`/t/...`) ведёт в список пространств: реверс-перенаправления в старый вид нет. Ссылку на новый вид отправляйте с `?ux=2`.
+- Слоты каркаса шире списка 8.6: добавлены `changesButton`, `nextStep`, `changes` и полоса `mainTop`, потому что S3, S4 и S5 кладут в экран разные части, и никому нельзя править файлы другого.
+- Планшет: подробности выезжают поверх справа (как в тексте 4.5), а не уходят вниз, как на макете `02-result.html`.

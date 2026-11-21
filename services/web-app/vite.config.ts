@@ -158,6 +158,18 @@ export default defineConfig(({ mode }) => {
             if (id.endsWith("/src/pages/PackStudioPage/index.ts")) {
               return "assets/pack-studio-app-[hash].js";
             }
+            // Новый интерфейс Студии шаблонов (флаг `?ux=2`, срез S0): свой чанк, старый вид его не грузит.
+            if (id.endsWith("/src/pages/PackStudioPage/space/index.ts")) {
+              return "assets/pack-space-[hash].js";
+            }
+            // Ленивые части областей нового интерфейса (slots.tsx кладёт их через lazy()): чанк
+            // называется по области, чтобы бюджет `pack-space-*` видел их все.
+            const spaceArea = /\/src\/features\/pack-space\/([a-z]+)\//.exec(
+              id,
+            );
+            if (spaceArea) {
+              return `assets/pack-space-${spaceArea[1] ?? ""}-[name]-[hash].js`;
+            }
             // Экран «Результат» Студии шаблонов (срез F1): грузится с первым входом в пространство.
             if (id.endsWith("/src/features/pack-outcome/index.ts")) {
               return "assets/pack-outcome-[hash].js";
@@ -211,6 +223,12 @@ export default defineConfig(({ mode }) => {
               /\/locales\/([a-z]{2})\/packStudio\/packStudio\.json$/.exec(id);
             if (packStudio) {
               return `assets/locale-packStudio-${packStudio[1] ?? ""}-[hash].js`;
+            }
+            // Словарь нового интерфейса: все JSON областей языка одним чанком, грузится с его чанком.
+            const packSpace =
+              /\/locales\/([a-z]{2})\/packSpace\/index\.ts$/.exec(id);
+            if (packSpace) {
+              return `assets/locale-packSpace-${packSpace[1] ?? ""}-[hash].js`;
             }
             // Словарь экрана «Результат»: грузится вместе с его чанком.
             const packOutcome =

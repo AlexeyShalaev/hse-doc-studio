@@ -1,0 +1,231 @@
+/* Каркас экрана пространства (pack-studio-ux.md, 4.5). Область: shell. Префикс sp-, токены темы.
+   Колонки на @container: ширина самого экрана, а не окна, поэтому галерея с узкой рамкой
+   показывает ту же раскладку, что и настоящий планшет. Телефон включает атрибут data-phone. */
+
+.sp-root {
+  container: sp / inline-size;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  background: var(--bg-0);
+  color: var(--fg-0);
+}
+.sp-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-height: 3rem;
+  padding: 0.375rem var(--page-gutter);
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--border);
+}
+.sp-bar-lead {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+.sp-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+.sp-ws-name {
+  margin: 0;
+  min-width: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+.sp-context {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  padding: 0 var(--page-gutter);
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--border);
+}
+.sp-tabs {
+  display: flex;
+  gap: 0.125rem;
+  margin-left: auto;
+}
+.sp-tab {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 0.875rem;
+  min-height: var(--touch-min);
+  border-bottom: 2px solid transparent;
+  color: var(--fg-2);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+.sp-tab:hover {
+  color: var(--fg-0);
+}
+.sp-tab[aria-current="page"] {
+  color: var(--fg-0);
+  border-bottom-color: var(--accent);
+}
+
+/* Тело: слева «что» (если есть), центр, справа «подробности». */
+.sp-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  position: relative;
+}
+.sp-grid[data-nav] {
+  grid-template-columns: 12.5rem minmax(0, 1fr);
+}
+.sp-nav {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.75rem 0.5rem;
+  background: var(--bg-1);
+  border-right: 1px solid var(--border);
+}
+.sp-center {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+.sp-main-top {
+  flex-shrink: 0;
+  padding: 0.75rem var(--page-gutter);
+  border-bottom: 1px solid var(--border);
+}
+.sp-main {
+  flex: 1;
+  min-height: 0;
+  padding: 1rem var(--page-gutter);
+}
+.sp-side {
+  display: none;
+  position: absolute;
+  inset-block: 0;
+  inset-inline-end: 0;
+  z-index: 3;
+  width: min(22.5rem, 100%);
+  overflow-y: auto;
+  padding: 1rem;
+  background: var(--bg-1);
+  border-left: 1px solid var(--border);
+  box-shadow: var(--shadow-pop);
+}
+.sp-side[data-open="true"] {
+  display: block;
+}
+.sp-side-close {
+  float: right;
+}
+.sp-page {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1rem var(--page-gutter);
+}
+.sp-soon {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 2rem 0;
+  color: var(--fg-2);
+}
+.sp-soon h2 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--fg-0);
+}
+.sp-soon p {
+  margin: 0;
+  font-size: 0.8125rem;
+}
+.sp-slot-failed {
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--r-2);
+  background: var(--c-err-soft);
+  color: var(--c-err);
+  font-size: 0.8125rem;
+}
+
+/* От 1100 px: три колонки фиксированной ширины, подробности всегда на месте. */
+@container sp (min-width: 1100px) {
+  .sp-grid[data-nav] {
+    grid-template-columns: 14.5rem minmax(0, 1fr);
+  }
+  .sp-grid:has(> .sp-side) {
+    grid-template-columns: minmax(0, 1fr) 22.5rem;
+  }
+  .sp-grid[data-nav]:has(> .sp-side) {
+    grid-template-columns: 14.5rem minmax(0, 1fr) 22.5rem;
+  }
+  .sp-side {
+    position: static;
+    display: block;
+    width: auto;
+    box-shadow: none;
+  }
+  .sp-side-close {
+    display: none;
+  }
+}
+
+/* Телефон: одна колонка, подробности шторкой над нижними вкладками. */
+.sp-root[data-phone] .sp-bar {
+  flex-wrap: wrap;
+  padding: 0.375rem 0.75rem;
+}
+.sp-root[data-phone] .sp-bar-actions {
+  flex: 1 0 100%;
+}
+.sp-root[data-phone] .sp-bar-actions > .btn.primary {
+  flex: 1;
+}
+.sp-root[data-phone] .sp-side {
+  position: absolute;
+  inset-inline: 0;
+  inset-block: auto 0;
+  width: auto;
+  max-height: 60%;
+  border-left: 0;
+  border-top: 1px solid var(--border-strong);
+  border-radius: 1rem 1rem 0 0;
+}
+.sp-bottom {
+  flex-shrink: 0;
+  background: var(--bg-1);
+  border-top: 1px solid var(--border);
+  padding-bottom: var(--safe-bottom);
+}
+.sp-bottom-tabs {
+  display: flex;
+  min-height: 3.5rem;
+}
+.sp-bottom-tabs a {
+  flex: 1;
+  min-height: var(--touch-min);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.125rem;
+  color: var(--fg-2);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+.sp-bottom-tabs a[aria-current="page"] {
+  color: var(--accent);
+}

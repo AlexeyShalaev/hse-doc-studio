@@ -300,6 +300,18 @@
     "limit": "28.6 kB"
   },
   {
+    "name": "Студия шаблонов, новый интерфейс (lazy, ?ux=2: pages/PackStudioPage/space и все области features/pack-space, вместе)",
+    "path": "dist/assets/pack-space-*.js",
+    "gzip": true,
+    "limit": "100 kB"
+  },
+  {
+    "name": "Словарь нового интерфейса Студии (ru и en, features/pack-space)",
+    "path": "dist/assets/locale-packSpace-*.js",
+    "gzip": true,
+    "limit": "40 kB"
+  },
+  {
     "name": "Студия шаблонов, экран «Результат» (lazy, features/pack-outcome)",
     "path": [
       "dist/assets/pack-outcome-*.js",
