@@ -77,7 +77,7 @@ const seedDetails = (
   if (options.model) {
     client.setQueryData(
       packStudioKeys.model(WS, ref),
-      referenceModel(WS, { ...ref, template: "vkr" }),
+      referenceModel(WS, "hse-cs-se", "vkr", ref.version),
     );
   }
 };
