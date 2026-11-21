@@ -363,7 +363,14 @@ export const useSubmit = ({
     focusElement(NOTES_FIELD_ID);
   };
   const wanted = new URLSearchParams(location.search).get(FOCUS_PARAM);
-  const ready = available && (!wantState || state !== null);
+  // Фокус на кнопку отправки ставим, когда она перестала ждать расчёты: у выключенной кнопки
+  // фокуса не бывает.
+  const ready =
+    available &&
+    (!wantState || state !== null) &&
+    blocker !== "loading" &&
+    blocker !== "saving" &&
+    blocker !== "impact";
   const applyFocus = useEffectEvent(() => {
     // Заметок уже нет (написаны): внимание к кнопке отправки.
     if (!(wanted === "notes" && focusElement(NOTES_FIELD_ID))) {

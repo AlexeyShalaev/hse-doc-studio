@@ -44,9 +44,9 @@ const ready = async (): Promise<HTMLElement> => {
 
 const sentGit = () => gitOf(SENT);
 
-/** Что вызвано и в каком порядке: заметки, выпуск, отправка. */
-const order = (...spies: { mock: { invocationCallOrder: number[] } }[]) =>
-  spies.map((spy) => spy.mock.invocationCallOrder[0] ?? Infinity);
+/** Номер первого вызова: по нему видно, что выпуск шёл раньше отправки. */
+const firstCall = (spy: { mock: { invocationCallOrder: number[] } }): number =>
+  spy.mock.invocationCallOrder[0] ?? Infinity;
 
 const stubWrite = () => {
   const notes = vi
@@ -115,8 +115,7 @@ describe("отправка в панели «Изменения»", () => {
       "gallery-ws",
       expect.objectContaining({ title: null, description: null }),
     );
-    const [releaseAt, proposeAt] = order(release, propose);
-    expect(releaseAt).toBeLessThan(proposeAt);
+    expect(firstCall(release)).toBeLessThan(firstCall(propose));
     // Панель показывает открытый запрос.
     expect(await within(root).findByTestId("sp-ch-open")).toHaveTextContent(
       "#412",
