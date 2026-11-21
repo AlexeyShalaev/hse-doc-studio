@@ -609,7 +609,7 @@ for (const lang of LANGS) {
       await expect(page).toHaveURL(/\/pack-studio$/);
       await expect(page.getByTestId("ws-empty")).toBeVisible();
 
-      await page.getByTestId("ws-create-empty").click();
+      await page.getByTestId("ws-connect-git").click();
       await page.getByTestId("ws-create-url").fill("https://github.com/e2e/packs");
       await page.getByTestId("ws-create-submit").click();
       await expect(page.getByTestId("ws-cloning")).toBeVisible();
@@ -689,7 +689,7 @@ for (const lang of LANGS) {
       await login(page);
       await setSection(page, true);
       await page.goto("/pack-studio");
-      await page.getByTestId("ws-create-empty").click();
+      await page.getByTestId("ws-connect-git").click();
       await page.getByTestId("ws-create-url").fill("https://github.com/e2e/packs");
       await page.getByTestId("ws-create-submit").click();
       await openFilesMode(page);
@@ -737,7 +737,7 @@ for (const lang of LANGS) {
       await login(page);
       await setSection(page, true);
       await page.goto("/pack-studio");
-      await page.getByTestId("ws-create-empty").click();
+      await page.getByTestId("ws-connect-git").click();
       await page.getByTestId("ws-create-url").fill("https://github.com/e2e/packs");
       await page.getByTestId("ws-create-submit").click();
       await openFilesMode(page);
@@ -779,7 +779,7 @@ for (const lang of LANGS) {
       await login(page);
       await setSection(page, true);
       await page.goto("/pack-studio");
-      await page.getByTestId("ws-create-empty").click();
+      await page.getByTestId("ws-connect-git").click();
       await page.getByTestId("ws-create-url").fill("https://github.com/e2e/packs");
       await page.getByTestId("ws-create-submit").click();
 
@@ -917,7 +917,7 @@ for (const lang of LANGS) {
         await setSection(page, true);
         // Пространство уже есть: первый опрос «клонируется», дальше готово.
         await page.goto("/pack-studio");
-        await page.getByTestId("ws-create-empty").click();
+        await page.getByTestId("ws-connect-git").click();
         await page.getByTestId("ws-create-url").fill("https://github.com/e2e/packs");
         await page.getByTestId("ws-create-submit").click();
         await openFilesMode(page);
@@ -938,7 +938,7 @@ for (const lang of LANGS) {
         await login(page);
         await setSection(page, true);
         await page.goto("/pack-studio");
-        await page.getByTestId("ws-create-empty").click();
+        await page.getByTestId("ws-connect-git").click();
         await page.getByTestId("ws-create-url").fill("https://github.com/e2e/packs");
         await page.getByTestId("ws-create-submit").click();
         await expect(page.getByTestId("outcome-summary")).toContainText(text("4 документа", "4 documents"), {
@@ -967,7 +967,7 @@ for (const lang of LANGS) {
         await login(page);
         await setSection(page, true);
         await page.goto("/pack-studio");
-        await page.getByTestId("ws-create-empty").click();
+        await page.getByTestId("ws-connect-git").click();
         await page.getByTestId("ws-create-url").fill("https://github.com/e2e/packs");
         await page.getByTestId("ws-create-submit").click();
         await expect(page.getByTestId("outcome-summary")).toContainText(text("4 документа", "4 documents"), {

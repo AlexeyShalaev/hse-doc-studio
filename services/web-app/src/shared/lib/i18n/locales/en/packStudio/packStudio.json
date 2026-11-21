@@ -1,6 +1,6 @@
 {
   "title": "Template Studio",
-  "lead": "Template packs in workspaces: edit files with linter and schema checks. Released versions are read-only.",
+  "lead": "Edit document templates here and propose changes. Pick a space or connect a new one.",
   "common": {
     "cancel": "Cancel"
   },
@@ -11,8 +11,6 @@
       "fetching": "Updating",
       "ready": "Ready"
     },
-    "fetched": "base updated {{when}}",
-    "packsPath": "packs folder: {{path}}",
     "open": "Open",
     "retry": "Retry",
     "actions": "Actions for “{{name}}”",
@@ -22,43 +20,66 @@
     "deleteTitle": "Delete “{{name}}”?",
     "deleteGitHint": "The clone in the Studio is deleted. The repository on the host does not change.",
     "deleteFolderHint": "Only the Studio record is deleted; the folder on disk stays.",
-    "emptyTitle": "No workspaces yet",
-    "emptyLead": "Open a packs git repository or a folder with packs to edit templates.",
-    "create": "New workspace"
+    "status": {
+      "cloning": "Connecting…",
+      "failed": "Could not connect",
+      "fetching": "Updating…",
+      "clean": "no changes",
+      "folder": "edits go to the folder",
+      "request": "merge request #{{number}} is open",
+      "unsent_one": "{{count}} change not sent",
+      "unsent_other": "{{count}} changes not sent",
+      "newUnsent_one": "{{count}} new change not sent",
+      "newUnsent_other": "{{count}} new changes not sent"
+    },
+    "cloningHint": "usually up to a couple of minutes",
+    "failedHint": "Check the address and access.",
+    "sourceOfficial": "Official HSE templates",
+    "baseBranch": "main branch {{branch}}",
+    "continue": "Continue",
+    "checkAccess": "Check access",
+    "retryConnect": "Retry connecting",
+    "menuRefresh": "Update",
+    "connect": "Connect a space",
+    "loading": "Loading spaces"
   },
   "create": {
-    "title": "New workspace",
-    "lead": "Where the packs come from. The repository is cloned partially: only the packs folder.",
-    "kind": {
-      "folder": "Folder on disk",
-      "git": "Git repository"
-    },
+    "title": "Connect a repository",
     "url": "Repository address",
     "credential": "Access",
-    "noCredential": "No access (public repository)",
-    "credentialHint": "The token never goes into the clone. You can add a new token right here, “New token” item.",
+    "noCredential": "No token (public repository)",
     "insecureHttp": "Allow plain http (no encryption)",
-    "branch": "Base branch",
-    "branchHint": "Empty: the server's default branch.",
+    "branch": "Main branch",
+    "branchHint": "Empty: the default branch.",
     "folder": "Folder",
-    "folderHint": "The repository root or the packs folder itself.",
-    "pickFolder": "Choose folder",
-    "packsPath": "Packs folder",
-    "packsPathGitHint": "The folder with packs inside the repository; “.” means the root.",
-    "packsPathFolderHint": "Leave “packs”: the Studio finds the packs folder itself.",
+    "folderHint": "The repository root or the templates folder itself.",
+    "pickFolder": "Choose folder…",
+    "packsPath": "Templates folder",
+    "packsPathGitHint": "The folder with templates inside the repository; “.” means the root.",
+    "packsPathFolderHint": "Leave “packs”: the Studio finds the templates folder itself.",
     "label": "Name",
     "labelHint": "Empty: from the address or the folder name.",
-    "submitGit": "Clone",
-    "submitFolder": "Open folder",
     "access": {
       "personal": "My git access",
       "service": "Service access",
-      "serviceHint": "The branch is pushed with the instance token the administrator set up for this repository. Commits are signed by you. Forks are not available with service access."
+      "serviceHint": "Changes are sent with the instance token the administrator set up for this repository. Commits are signed by you. Your own copy of the repository (a fork) is not available with service access."
     },
-    "tokenHelp": "Which token branches and pull requests need",
+    "tokenHelp": "Which token is needed to send changes",
     "newToken": "New token…",
-    "newTokenHint": "Without a token a public repository is read-only. To push branches and open pull requests, paste a token below: Studio checks it and selects it right away.",
-    "pasteHint": "Choose “New token” in the list above and paste it into the field."
+    "newTokenHint": "A token is needed for a private repository and to send changes. Paste it below: Studio checks it and selects it right away.",
+    "pasteHint": "Press “Add a token” and paste it into the field.",
+    "titleFolder": "Connect a folder",
+    "openHint": "A public repository connects without a token. A private one needs a token.",
+    "withToken": "We will connect with your access “{{name}}”.",
+    "addToken": "Add a token",
+    "noToken": "No token",
+    "advanced": "More",
+    "advancedFolder": "More",
+    "submit": "Connect",
+    "footGit": "We download only the templates folder, usually up to a couple of minutes.",
+    "footFolder": "Edits will be written straight into this folder.",
+    "advancedList": "main branch, templates folder, name, access",
+    "advancedFolderList": "templates folder, name"
   },
   "workspace": {
     "back": "Back to workspaces",
@@ -431,14 +452,12 @@
     }
   },
   "official": {
-    "title": "Official packs",
-    "lead": "Packs from the Studio's own repository. Edit them here and propose changes through a PR: no repository of your own is needed.",
-    "start": "Start",
-    "dialogLead": "The Studio downloads only the packs folder and opens a workspace. Changes are sent only with your own GitHub account.",
-    "submit": "Open official packs",
+    "title": "Official HSE templates",
+    "dialogLead": "The Studio downloads only the templates folder and opens a space. Changes are sent only with your own GitHub account.",
+    "submit": "Connect official templates",
     "token": {
-      "hint": "The branch goes to your fork on GitHub, the PR is opened from your account.",
-      "added": "The token is checked and selected: you can open the official packs now.",
+      "hint": "Changes go to your own copy of the repository (a fork) on GitHub, the merge request is opened from your account.",
+      "added": "The token is checked and selected: you can connect the official templates now.",
       "another": "Add another GitHub token"
     },
     "none": {
@@ -917,5 +936,24 @@
     "submitTemplate": "Create template",
     "donePack": "Pack {{pack}} created",
     "doneTemplate": "Template {{template}} created"
+  },
+  "connect": {
+    "lead": "Start with where the templates come from. A pack is a set of templates for one program.",
+    "best": "Easiest",
+    "official": {
+      "title": "Official HSE templates",
+      "text": "Fix or improve the ready templates and propose the changes. You need a GitHub account, no repository of your own.",
+      "action": "Start"
+    },
+    "git": {
+      "title": "Your own repository",
+      "text": "Your faculty's or program's templates in git on GitHub or GitLab.",
+      "action": "Connect a repository"
+    },
+    "folder": {
+      "title": "Folder on your computer",
+      "text": "Local Studio only. Edits go straight into the folder, you send them yourself.",
+      "action": "Choose a folder"
+    }
   }
 }
