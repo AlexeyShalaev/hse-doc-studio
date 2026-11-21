@@ -1,7 +1,9 @@
 import { useState } from "react";
 import {
+  Check,
   Folder,
   FolderGit2,
+  GitPullRequestArrow,
   RefreshCw,
   Trash2,
   type LucideIcon,
@@ -14,12 +16,17 @@ import {
   workspaceErrorText,
   type PackWorkspace,
 } from "@entities/pack-studio";
-import { formatRelativeTime } from "@shared/lib";
-import { workspaceSource } from "../lib/workspaceSource";
+import { RepoAccessDialog } from "@features/pack-git";
 import { ActionMenu, Badge, Button, Modal, Spinner } from "@shared/ui";
+import { shortUrl } from "../lib/workspaceSource";
+import type { WorkspaceStatus } from "../lib/workspaceStatus";
+import "./space-list.css";
 
 export type WorkspaceCardProps = {
   workspace: PackWorkspace;
+  status: WorkspaceStatus;
+  /** Сюда человек возвращается: у этой карточки главная кнопка «Продолжить». */
+  isContinue: boolean;
   onOpen: (id: string) => void;
 };
 
@@ -28,72 +35,130 @@ const KIND_ICON: Record<PackWorkspace["kind"], LucideIcon> = {
   folder: Folder,
 };
 
-/** Состояние пространства одной меткой: клон идёт, не удался, выборка, готово. */
-export const WorkspaceStateBadge = ({
-  workspace,
+/** Состояние пространства словами (5.10): что с подключением, запросом и правками. */
+export const WorkspaceStatusBadges = ({
+  status,
 }: {
-  workspace: PackWorkspace;
+  status: WorkspaceStatus;
 }) => {
   const { t } = useTranslation("packStudio");
-  if (workspace.state === "cloning") {
-    return (
-      <Badge variant="info" data-testid="ws-state-cloning">
-        <Spinner size="sm" />
-        {t("workspaces.state.cloning")}
-      </Badge>
-    );
+  switch (status.kind) {
+    case "cloning":
+      return (
+        <Badge variant="info" data-testid="ws-status-cloning">
+          <Spinner size="sm" />
+          {t("workspaces.status.cloning")}
+        </Badge>
+      );
+    case "fetching":
+      return (
+        <Badge variant="info" data-testid="ws-status-fetching">
+          <Spinner size="sm" />
+          {t("workspaces.status.fetching")}
+        </Badge>
+      );
+    case "failed":
+      return (
+        <Badge variant="error" data-testid="ws-status-failed">
+          {t("workspaces.status.failed")}
+        </Badge>
+      );
+    case "folder":
+      return (
+        <Badge variant="subtle" data-testid="ws-status-folder">
+          {t("workspaces.status.folder")}
+        </Badge>
+      );
+    case "request":
+      return (
+        <span className="sp-ws-badges">
+          <Badge variant="accent" data-testid="ws-status-request">
+            <GitPullRequestArrow size="0.6875rem" aria-hidden="true" />
+            {t("workspaces.status.request", { number: status.number })}
+          </Badge>
+          {status.unsent > 0 && (
+            <Badge variant="warning" data-testid="ws-status-unsent">
+              {t("workspaces.status.newUnsent", { count: status.unsent })}
+            </Badge>
+          )}
+        </span>
+      );
+    case "unsent":
+      return (
+        <Badge variant="warning" data-testid="ws-status-unsent">
+          {t("workspaces.status.unsent", { count: status.unsent })}
+        </Badge>
+      );
+    case "clean":
+      return (
+        <Badge variant="success" data-testid="ws-status-clean">
+          <Check size="0.6875rem" aria-hidden="true" />
+          {t("workspaces.status.clean")}
+        </Badge>
+      );
+    case "unknown":
+      return null;
   }
-  if (workspace.state === "failed") {
-    return (
-      <Badge variant="error" data-testid="ws-state-failed">
-        {t("workspaces.state.failed")}
-      </Badge>
-    );
-  }
-  if (workspace.busy) {
-    return (
-      <Badge variant="info" data-testid="ws-state-fetching">
-        <Spinner size="sm" />
-        {t("workspaces.state.fetching")}
-      </Badge>
-    );
-  }
-  return (
-    <Badge variant="success" data-testid="ws-state-ready">
-      {t("workspaces.state.ready")}
-    </Badge>
-  );
 };
 
-/** Карточка рабочего пространства в списке: источник, состояние, действия. */
-export const WorkspaceCard = ({ workspace, onOpen }: WorkspaceCardProps) => {
+/** Вторая строка карточки: откуда пространство (5.1). */
+const SourceLine = ({ workspace }: { workspace: PackWorkspace }) => {
+  const { t } = useTranslation("packStudio");
+  if (workspace.kind === "folder") {
+    return <>{workspace.folder ?? ""}</>;
+  }
+  const parts = [
+    workspace.official ? t("workspaces.sourceOfficial") : null,
+    shortUrl(workspace.url ?? ""),
+    // Основная ветка нужна, когда пространство уже работает: у неудачного её нет смысла показывать.
+    workspace.state === "ready" && workspace.base_branch
+      ? t("workspaces.baseBranch", { branch: workspace.base_branch })
+      : null,
+  ];
+  return <>{parts.filter(Boolean).join(" · ")}</>;
+};
+
+/**
+ * Карточка пространства в списке: название, состояние словами, откуда оно и одно
+ * действие, зависящее от состояния («Продолжить», «Открыть», «Проверить доступ»).
+ */
+export const WorkspaceCard = ({
+  workspace,
+  status,
+  isContinue,
+  onOpen,
+}: WorkspaceCardProps) => {
   const { t } = useTranslation("packStudio");
   const refresh = useRefreshPackWorkspace();
   const remove = useDeletePackWorkspace();
   const [confirming, setConfirming] = useState(false);
+  const [checking, setChecking] = useState(false);
   const Icon = KIND_ICON[workspace.kind];
   const ready = workspace.state === "ready";
+  const failed = workspace.state === "failed";
   const git = workspace.kind === "git";
-  const fetched = workspace.fetched_at
-    ? t("workspaces.fetched", {
-        when: formatRelativeTime(workspace.fetched_at),
-      })
-    : null;
+  const source = workspace.kind === "git" ? (workspace.url ?? "") : "";
+
+  const closeAccess = () => {
+    setChecking(false);
+    // Токен могли поменять: подключение пробуется заново.
+    if (failed && git) refresh.mutate(workspace.id);
+  };
 
   return (
     <li
-      className="ps-ws-card"
+      className="sp-ws"
       data-testid={`ws-card-${workspace.id}`}
       data-state={workspace.state}
     >
-      <span className="ps-ws-icon" aria-hidden="true">
-        <Icon size="1.125rem" />
+      <span className="sp-ws-ico" aria-hidden="true">
+        <Icon size="1.25rem" />
       </span>
-      <div className="ps-ws-body">
-        <div className="ps-ws-title">
+      <div className="sp-ws-body">
+        <div className="sp-ws-title">
           <button
             type="button"
-            className="ps-link truncate"
+            className="sp-ws-name"
             disabled={!ready}
             onClick={() => {
               onOpen(workspace.id);
@@ -102,51 +167,54 @@ export const WorkspaceCard = ({ workspace, onOpen }: WorkspaceCardProps) => {
           >
             {workspace.label}
           </button>
-          <WorkspaceStateBadge workspace={workspace} />
+          <WorkspaceStatusBadges status={status} />
         </div>
-        <div
-          className="ps-ws-meta mono truncate"
-          title={workspaceSource(workspace)}
-        >
-          {workspaceSource(workspace)}
-        </div>
-        <div className="ps-ws-meta">
-          {t("workspaces.packsPath", { path: workspace.packs_path })}
-          {fetched ? ` · ${fetched}` : ""}
+        <div className="sp-ws-meta" title={source || undefined}>
+          <SourceLine workspace={workspace} />
         </div>
         {workspace.error && (
-          <div
-            className="ps-ws-error"
-            role={workspace.state === "failed" ? "alert" : "status"}
+          <p
+            className="sp-ws-err"
+            role={failed ? "alert" : "status"}
             data-testid="ws-error"
           >
             {workspaceErrorText(workspace.error)}
-          </div>
+          </p>
+        )}
+        {failed && (
+          <p className="sp-ws-meta" data-testid="ws-failed-hint">
+            {t("workspaces.failedHint")}
+          </p>
         )}
       </div>
-      <div className="ps-ws-actions">
+      <div className="sp-ws-acts">
+        {workspace.state === "cloning" && (
+          <span className="sp-ws-wait" data-testid="ws-wait">
+            {t("workspaces.cloningHint")}
+          </span>
+        )}
         {ready && (
           <Button
             size="sm"
+            variant={isContinue ? "primary" : "secondary"}
             onClick={() => {
               onOpen(workspace.id);
             }}
+            data-testid={isContinue ? "ws-continue" : "ws-open-button"}
           >
-            {t("workspaces.open")}
+            {isContinue ? t("workspaces.continue") : t("workspaces.open")}
           </Button>
         )}
-        {git && workspace.state === "failed" && (
+        {failed && git && (
           <Button
             size="sm"
             variant="secondary"
-            disabled={refresh.isPending}
             onClick={() => {
-              refresh.mutate(workspace.id);
+              setChecking(true);
             }}
-            data-testid="ws-retry"
+            data-testid="ws-check-access"
           >
-            <RefreshCw size="0.75rem" />
-            {t("workspaces.retry")}
+            {t("workspaces.checkAccess")}
           </Button>
         )}
         <ActionMenu
@@ -157,9 +225,23 @@ export const WorkspaceCard = ({ workspace, onOpen }: WorkspaceCardProps) => {
               ? [
                   {
                     id: "refresh",
-                    label: t("workspaces.refresh"),
+                    label: t("workspaces.menuRefresh"),
                     icon: <RefreshCw size="0.875rem" />,
                     disabled: workspace.busy,
+                    onSelect: () => {
+                      refresh.mutate(workspace.id);
+                    },
+                  },
+                ]
+              : []),
+            ...(git && failed
+              ? [
+                  {
+                    id: "retry",
+                    label: t("workspaces.retryConnect"),
+                    icon: <RefreshCw size="0.875rem" />,
+                    disabled: refresh.isPending,
+                    testId: "ws-retry",
                     onSelect: () => {
                       refresh.mutate(workspace.id);
                     },
@@ -179,6 +261,13 @@ export const WorkspaceCard = ({ workspace, onOpen }: WorkspaceCardProps) => {
           ]}
         />
       </div>
+      {git && failed && (
+        <RepoAccessDialog
+          workspace={workspace}
+          isOpen={checking}
+          onClose={closeAccess}
+        />
+      )}
       <Modal
         isOpen={confirming}
         onClose={() => {
@@ -216,7 +305,7 @@ export const WorkspaceCard = ({ workspace, onOpen }: WorkspaceCardProps) => {
         }
       >
         {remove.isError && (
-          <p className="ps-ws-error" role="alert">
+          <p className="sp-ws-err" role="alert">
             {packErrorText(remove.error)}
           </p>
         )}

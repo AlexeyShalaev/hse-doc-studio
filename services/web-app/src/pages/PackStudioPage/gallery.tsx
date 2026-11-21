@@ -7,6 +7,7 @@ import {
   type PackPreviewOptions,
   type PackFile,
   type PackLint,
+  type PackOfficial,
   type PackTree,
   type PackWorkspace,
 } from "@entities/pack-studio";
@@ -14,8 +15,12 @@ import { PackFileEditor } from "@features/pack-file-editor";
 import { PackGitBar } from "@features/pack-git";
 import { PackPreviewPane } from "@features/pack-preview";
 import { PackTreePanel } from "@features/pack-tree";
-import { WorkspaceList } from "@features/pack-workspaces";
+import {
+  CreateWorkspaceDialog,
+  WorkspacesView,
+} from "@features/pack-workspaces";
 import type { GalleryGroup } from "@shared/lib/stateGallery";
+import { DialogLauncher } from "@shared/ui/StateGallery";
 import { getPackStudioAdminGallery } from "./gallery.admin";
 import "./packStudio.css";
 
@@ -56,15 +61,32 @@ const workspace = (patch: Partial<PackWorkspace>): PackWorkspace => ({
   ...patch,
 });
 
+const WS_OFFICIAL = workspace({
+  id: "ws-official",
+  label: "hse-doc-studio",
+  official: true,
+  work_branch: "pack-studio/anna/hse-cs-sse-coursework-2026.1.6",
+});
+const WS_REQUEST = workspace({
+  id: "ws-request",
+  label: "fcs/packs",
+  url: "https://gitlab.com/fcs/packs.git",
+  work_branch: "pack-studio/anna/fcs-coursework-2026.1.2",
+  pr_number: 412,
+  pr_url: "https://gitlab.com/fcs/packs/-/merge_requests/412",
+});
 const WORKSPACES: PackWorkspace[] = [
-  workspace({}),
+  WS_OFFICIAL,
+  WS_REQUEST,
   workspace({
-    id: "ws-cloning",
-    label: "fcs/packs",
-    url: "https://gitlab.com/fcs/packs.git",
-    state: "cloning",
-    busy: true,
+    id: "ws-folder",
+    kind: "folder",
+    label: "packs на диске",
+    url: null,
+    base_branch: null,
+    base_sha: null,
     fetched_at: null,
+    folder: "/Users/anna/hse-doc-studio",
   }),
   workspace({
     id: "ws-failed",
@@ -75,16 +97,26 @@ const WORKSPACES: PackWorkspace[] = [
     error: { code: "auth_failed", detail: "Сервер не принял доступ." },
   }),
   workspace({
-    id: "ws-folder",
-    kind: "folder",
-    label: "packs",
-    url: null,
-    base_branch: null,
-    base_sha: null,
+    id: "ws-cloning",
+    label: "team/packs",
+    url: "https://gitlab.com/team/packs.git",
+    state: "cloning",
+    busy: true,
     fetched_at: null,
-    folder: "/Users/anna/hse-doc-studio",
   }),
 ];
+
+const OFFICIAL_REPO: NonNullable<PackOfficial["repo"]> = {
+  url: "https://github.com/AlexeyShalaev/hse-doc-studio",
+  web_url: "https://github.com/AlexeyShalaev/hse-doc-studio",
+  packs_path: "packs",
+  base_branch: "master",
+  license: "Apache-2.0",
+  license_url:
+    "https://github.com/AlexeyShalaev/hse-doc-studio/blob/master/LICENSE",
+  contributing_url:
+    "https://github.com/AlexeyShalaev/hse-doc-studio/blob/master/CONTRIBUTING.md#contributing-to-the-official-packs",
+};
 
 const file = (
   path: string,
@@ -393,31 +425,103 @@ export const getPackStudioGallery = (): GalleryGroup[] => [
     entries: [
       {
         id: "ps_workspaces",
-        title: "Список: готово, клонируется, не удалось, папка",
-        note: "Отказ доступа назван словами словаря ошибок, у неудачного клона «Повторить».",
+        title:
+          "Список: правки не отправлены, запрос открыт, папка, не удалось, подключаем",
+        note: "Одна залитая кнопка «Продолжить» там, где есть неотправленные изменения; состояние словами, причина отказа по словарю ошибок.",
         frame: "page",
-        width: 860,
+        width: 920,
         seed: (client) => {
           client.setQueryData(packStudioKeys.workspaces(), WORKSPACES);
+          client.setQueryData(packStudioKeys.official(), {
+            repo: OFFICIAL_REPO,
+            workspace_id: "ws-official",
+          });
+          client.setQueryData(packStudioKeys.git("ws-official"), {
+            ...GIT_DIRTY,
+            workspace: WS_OFFICIAL,
+            uncommitted: [
+              ...GIT_DIRTY.uncommitted,
+              { path: `${DRAFT}/files/report/main.tex`, status: "modified" },
+            ],
+            changed: [
+              ...GIT_DIRTY.changed,
+              { path: `${DRAFT}/files/report/main.tex`, status: "modified" },
+            ],
+          } satisfies PackGit);
+          client.setQueryData(packStudioKeys.git("ws-request"), {
+            ...GIT_PROPOSED,
+            workspace: WS_REQUEST,
+            uncommitted: [],
+            dirty: false,
+          } satisfies PackGit);
         },
-        render: () => (
-          <div className="ps-page">
-            <WorkspaceList onOpen={noop} onCreate={noop} />
-          </div>
-        ),
+        render: () => <WorkspacesView onOpen={noop} allowFolder />,
       },
       {
         id: "ps_workspaces_empty",
-        title: "Пусто",
+        title: "Пусто: три пути подключения",
+        note: "Самый простой путь выделен и единственный залит; папка только в локальной Студии.",
         frame: "page",
-        width: 640,
+        width: 920,
         seed: (client) => {
           client.setQueryData(packStudioKeys.workspaces(), []);
+          client.setQueryData(packStudioKeys.official(), {
+            repo: OFFICIAL_REPO,
+            workspace_id: null,
+          });
         },
+        render: () => <WorkspacesView onOpen={noop} allowFolder />,
+      },
+      {
+        id: "ps_workspaces_empty_server",
+        title: "Пусто на сервере: без папки",
+        frame: "page",
+        width: 920,
+        seed: (client) => {
+          client.setQueryData(packStudioKeys.workspaces(), []);
+          client.setQueryData(packStudioKeys.official(), {
+            repo: OFFICIAL_REPO,
+            workspace_id: null,
+          });
+        },
+        render: () => <WorkspacesView onOpen={noop} allowFolder={false} />,
+      },
+      {
+        id: "ps_workspaces_connect",
+        title: "Подключение репозитория: одно поле",
+        note: "Адрес и строка про токен; остальное под «Дополнительно».",
+        frame: "page",
+        width: 920,
         render: () => (
-          <div className="ps-page">
-            <WorkspaceList onOpen={noop} onCreate={noop} />
-          </div>
+          <DialogLauncher label="Открыть окно подключения">
+            {({ isOpen, close }) => (
+              <CreateWorkspaceDialog
+                isOpen={isOpen}
+                kind="git"
+                allowServiceAccess={false}
+                onClose={close}
+                onCreated={close}
+              />
+            )}
+          </DialogLauncher>
+        ),
+      },
+      {
+        id: "ps_workspaces_connect_folder",
+        title: "Подключение папки",
+        frame: "page",
+        width: 920,
+        render: () => (
+          <DialogLauncher label="Открыть окно подключения папки">
+            {({ isOpen, close }) => (
+              <CreateWorkspaceDialog
+                isOpen={isOpen}
+                kind="folder"
+                onClose={close}
+                onCreated={close}
+              />
+            )}
+          </DialogLauncher>
         ),
       },
     ],
