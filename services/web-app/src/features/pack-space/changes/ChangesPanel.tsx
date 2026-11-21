@@ -25,7 +25,6 @@ import {
   describeChanges,
   describePath,
   type ChangeItem,
-  type ChangeKind,
 } from "./describeChanges";
 import { itemLabel } from "./itemLabel";
 import type { ChangesData } from "./useChangesStatus";
