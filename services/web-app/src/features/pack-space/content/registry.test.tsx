@@ -2,7 +2,7 @@ import { cleanup, screen } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { loadPackSpaceNamespace } from "@shared/lib/i18n/packSpaceNamespace";
 import { CONTENT_PARTS, DOC_SEGMENTS } from "./contract";
-import { renderContent } from "./contentTestKit";
+import { renderSignatures } from "./signatures/signaturesTestKit";
 import ContentMain from "./ContentMain";
 import { PART_COMPONENTS, SEGMENT_COMPONENTS } from "./registry";
 
@@ -22,11 +22,16 @@ describe("файлы-расширения области", () => {
     expect(PART_COMPONENTS[part]).not.toBeNull();
   });
 
-  it("настоящий сегмент «Подписи» (заглушка до S8c) рисуется в рамке документа", async () => {
-    renderContent(<ContentMain />, "doc=nda&seg=signatures");
-    expect(await screen.findByTestId("ct-stub-signatures")).toHaveAttribute(
+  it("сегмент «Подписи» (S8c) рисуется в рамке документа", async () => {
+    renderSignatures(<ContentMain />, "doc=source_listing&seg=signatures");
+    expect(await screen.findByTestId("ct-signatures")).toHaveAttribute(
       "data-doc",
-      "nda",
+      "source_listing",
     );
+  });
+
+  it("раздел «Подписи и места» (S8c) рисуется сводкой", async () => {
+    renderSignatures(<ContentMain />, "part=signatures");
+    expect(await screen.findByTestId("ct-sg-overview")).toBeInTheDocument();
   });
 });

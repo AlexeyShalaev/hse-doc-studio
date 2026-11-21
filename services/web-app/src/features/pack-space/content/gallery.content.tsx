@@ -75,17 +75,6 @@ export const galleryEntries: GalleryEntry[] = [
       frameFor("doc=technical_specification&seg=terms", { height: "40rem" }),
   },
   {
-    id: "sp_content_signatures",
-    title: "Содержимое: сегмент «Подписи» (до S8c заглушка)",
-    frame: "screen",
-    width: 1280,
-    seed: seedContentModel,
-    render: () =>
-      frameFor("doc=technical_specification&seg=signatures", {
-        height: "30rem",
-      }),
-  },
-  {
     id: "sp_content_part",
     title: "Содержимое: раздел «Данные проекта»",
     note: "Раздел версии на прежней форме (до S8d).",
