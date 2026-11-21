@@ -889,14 +889,14 @@
       "typography": "Typography (typography)"
     },
     "config": {
-      "lead": "Which version rules are on and with what severity. Written to checks_version in version.yaml.",
+      "lead": "Which version rules are on and with what severity.",
       "categories": "Categories",
       "categoriesHint": "A ticked category is off entirely.",
       "noCategories": "The version rules have no categories.",
       "off": "Off",
       "severity": "Severity in this version",
       "asRule": "As in the rule: {{severity}}",
-      "orphans": "checks_version names rules that are not in the rules files: {{ids}}."
+      "orphans": "The version check settings name rules that are not in the rules files: {{ids}}."
     }
   },
   "scaffold": {
