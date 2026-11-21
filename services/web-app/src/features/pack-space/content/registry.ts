@@ -30,6 +30,7 @@ export const PART_COMPONENTS: Record<
   ContentPart,
   ComponentType<ContentPartProps> | null
 > = {
+  documents: extension("part-documents"),
   fields: extension("part-fields"),
   forms: extension("part-forms"),
   deadlines: extension("part-deadlines"),

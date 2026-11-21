@@ -100,7 +100,9 @@ describe("partOfPointer", () => {
     ["/pack_submission/profiles/0", "deadlines"],
     ["/signatures/slots/2", "signatures"],
     ["/checks_version", "rules"],
-    ["/documents/3", null],
+    ["/documents/3", "documents"],
+    ["/dynamic_includes/0", "documents"],
+    ["/unknown/0", null],
     ["", null],
     [null, null],
   ])("%s -> %s", (pointer, part) => {

@@ -1,5 +1,13 @@
-import { LegacyVersionPart } from "../legacy/LegacyVersionPart";
+import type { ContentPartProps } from "../contract";
+import { RuleFiles } from "../parts/RuleFiles";
+import { VersionPart } from "../parts/VersionPart";
 
-// S8d: ЗАМЕНИТЬ ЭТОТ ФАЙЛ. Раздел «rules» пока показывает прежнюю форму версии на своём разделе
-// (docs/design/pack-studio-ux.md, 12.7). Props: `ContentPartProps`.
-export default LegacyVersionPart;
+// S8d: раздел «Правила проверки»: что включено в версии и файлы с правилами, у которых своя форма
+// (docs/design/pack-studio-ux.md, 12.10).
+const RulesPart = (props: ContentPartProps) => (
+  <VersionPart {...props}>
+    <RuleFiles versionDir={props.versionDir} workspaceId={props.workspaceId} />
+  </VersionPart>
+);
+
+export default RulesPart;
