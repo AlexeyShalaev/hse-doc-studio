@@ -45,36 +45,27 @@
 }
 
 /* ── зоны касания: 44 px (--touch-lg) у всего, на что нажимают пальцем ──
-   Общие правила телефона из index.css дают 40 px; экран пространства строже. Размер лежит в
-   `--sp-touch`: на телефоне и там, где основной указатель палец (планшет), он 44 px, у мыши 0 (то
-   есть правило ничего не меняет). Редактор текста со своими жестами сюда не входит. */
-.sp-root {
-  --sp-touch: 0px;
-}
-.sp-root[data-phone] {
-  --sp-touch: var(--touch-lg);
-}
-@media (pointer: coarse) {
-  .sp-root {
-    --sp-touch: var(--touch-lg);
-  }
-}
-.sp-root
+   Общие правила телефона из index.css дают 40 px; экран пространства строже. Правила действуют на
+   телефоне (`data-phone`, он же рамка галереи) и там, где основной указатель палец (`pointer:
+   coarse`, планшет); у мыши ничего не меняется. Редактор текста со своими жестами сюда не входит,
+   остальным, кому нужен свой размер, класс `sp-keep-size`. Два блока ниже одинаковы: селектор
+   телефона и медиазапрос нельзя объединить в один. */
+.sp-root[data-phone]
   :is(button, a[href], summary, select, [role="tab"]):not(
     .cm-editor *,
     .sp-keep-size
   ) {
-  min-height: var(--sp-touch);
+  min-height: var(--touch-lg);
 }
-.sp-root button:not(.cm-editor *, .sp-keep-size) {
-  min-width: var(--sp-touch);
+.sp-root[data-phone] button:not(.cm-editor *, .sp-keep-size) {
+  min-width: var(--touch-lg);
 }
-.sp-root
+.sp-root[data-phone]
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(
     [type="file"]
   ):not([type="hidden"]) {
-  min-height: var(--sp-touch);
-  min-width: var(--sp-touch);
+  min-height: var(--touch-lg);
+  min-width: var(--touch-lg);
 }
 .sp-root[data-phone]
   label:has(> input[type="checkbox"], > input[type="radio"]) {
@@ -84,6 +75,23 @@
   gap: 0.625rem;
 }
 @media (pointer: coarse) {
+  .sp-root
+    :is(button, a[href], summary, select, [role="tab"]):not(
+      .cm-editor *,
+      .sp-keep-size
+    ) {
+    min-height: var(--touch-lg);
+  }
+  .sp-root button:not(.cm-editor *, .sp-keep-size) {
+    min-width: var(--touch-lg);
+  }
+  .sp-root
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(
+      [type="file"]
+    ):not([type="hidden"]) {
+    min-height: var(--touch-lg);
+    min-width: var(--touch-lg);
+  }
   .sp-root label:has(> input[type="checkbox"], > input[type="radio"]) {
     min-height: var(--touch-lg);
     display: flex;
