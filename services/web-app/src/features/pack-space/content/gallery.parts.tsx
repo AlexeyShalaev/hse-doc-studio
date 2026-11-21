@@ -114,7 +114,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     id: "sp_content_part_forms",
     title: "Содержимое: раздел «Анкеты»",
-    note: "Какие вопросы видит студент.",
+    note: "Какие вопросы видит студент. В списке названия анкет и секций, а не идентификаторы; идентификатор виден только в подсказке.",
     frame: "screen",
     width: 1280,
     seed: seedContentModel,
@@ -123,7 +123,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     id: "sp_content_part_deadlines",
     title: "Содержимое: раздел «Сроки и сдача»",
-    note: "Точки сдачи, порядок подписания и подписи в точках: заменяет прежнюю форму «Сдача и подписи».",
+    note: "Точки сдачи, порядок подписания и подписи в точках: заменяет прежнюю форму «Сдача и подписи». Короткое имя точки под «Технические подробности».",
     frame: "screen",
     width: 1280,
     seed: seedDeadlines,
@@ -132,7 +132,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     id: "sp_content_part_languages",
     title: "Содержимое: раздел «Языки»",
-    note: "Языки версии и файлы документов по языкам.",
+    note: "Русский и английский вместо кодов; файлы по языкам без разговора о суффиксах.",
     frame: "screen",
     width: 1280,
     seed: seedContentModel,
@@ -141,7 +141,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     id: "sp_content_part_rules",
     title: "Содержимое: раздел «Правила проверки»",
-    note: "Что включено в версии и файлы с правилами, у которых своя форма.",
+    note: "Что включено в версии (категории по-русски, правила названиями, идентификаторы под «Технические подробности») и файлы с правилами.",
     frame: "screen",
     width: 1280,
     seed: seedRules,

@@ -23,6 +23,7 @@ import { Notice } from "@shared/ui/ConflictKit";
 import { categoriesOf, findingsByRule } from "../lib/params";
 import { CheckOnPreview } from "./CheckOnPreview";
 import { RuleCard, type RuleCtx } from "./RuleCard";
+import "@features/pack-submission-form/ui/submissionForm.css";
 import "./checksForm.css";
 
 export type PackChecksFileFormProps = {

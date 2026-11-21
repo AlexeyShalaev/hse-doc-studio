@@ -299,7 +299,14 @@ export const ConditionForm = ({
         <Chips
           legend={t(`details.edit.phrase.checks_${shape.list}`)}
           hint={t("details.edit.hintChecks")}
-          options={options.map((v) => ({ value: v, label: names.get(v) ?? v }))}
+          options={options.map((v) => ({
+            value: v,
+            label:
+              names.get(v) ??
+              (shape.list === "categories"
+                ? t(`details.edit.category.${v}`, { defaultValue: v })
+                : v),
+          }))}
           value={chosen}
           disabled={disabled}
           testId="sp-cond-checks"

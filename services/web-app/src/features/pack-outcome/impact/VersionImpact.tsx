@@ -255,7 +255,9 @@ export const VersionImpact = ({
   // Версия появилась в рабочем дереве целиком (её `version.yaml` добавлен): в основной ветке её нет,
   // сравнивать не с чем. Сервер ответил бы 409, а браузер пишет такой ответ красным в консоль,
   // поэтому запрос не уходит, а вывод «сравнивать не с чем» тот же.
-  const git = usePackGit(workspaceId);
+  // Список изменений только читается из кэша (его уже держит панель «Изменения» или диалог
+  // отправки): своего запроса блок не делает, но ждёт, пока чужой запрос идёт.
+  const git = usePackGit(workspaceId, false);
   const versionYaml = `${version.pack}/templates/${version.template}/versions/${version.version}/version.yaml`;
   const isNew =
     git.data?.changed.some(
@@ -265,7 +267,7 @@ export const VersionImpact = ({
     workspaceId,
     version,
     { base: "base", include_atlas: true },
-    !cancelled && !released && !tree.isPending && !git.isPending && !isNew,
+    !cancelled && !released && !tree.isPending && !git.isFetching && !isNew,
   );
   const inputs = usePackOutcomeInputs(
     workspaceId,

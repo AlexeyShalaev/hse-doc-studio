@@ -424,6 +424,16 @@
       "other": "Condition"
     },
     "hintListAll": "Everything is ticked: no restriction.",
-    "hintListSome": "Restriction applies: only the ticked values match."
+    "hintListSome": "Restriction applies: only the ticked values match.",
+    "category": {
+      "structure": "Document structure",
+      "formatting": "Formatting",
+      "bibliography": "Bibliography",
+      "metadata": "Project data",
+      "references": "References and captions",
+      "content": "Content",
+      "custom": "Custom rules",
+      "language": "Language and spelling"
+    }
   }
 }

@@ -9,8 +9,9 @@ import {
   type PackTree,
   type PackWorkspace,
 } from "@entities/pack-studio";
+import { SpaceNotFound } from "@features/pack-space";
 import { ApiError } from "@shared/api";
-import { EmptyState, ErrorState, Spinner } from "@shared/ui";
+import { ErrorState, Spinner } from "@shared/ui";
 import { NotReady } from "../NotReady";
 
 /** Сервер не знает такого пространства (нет записи или адрес не похож на идентификатор). */
@@ -27,7 +28,6 @@ export const WithSpaceData = ({
   children: (data: { workspace: PackWorkspace; tree: PackTree }) => ReactNode;
 }) => {
   const { t } = useTranslation("packStudio");
-  const { t: tSpace } = useTranslation("packSpace");
   const { workspaceId = "" } = useParams<{ workspaceId: string }>();
   const workspace = usePackWorkspace(workspaceId);
   const ready = workspace.data?.state === "ready";
@@ -43,17 +43,7 @@ export const WithSpaceData = ({
   if (workspace.isError && isMissing(workspace.error)) {
     return (
       <div className="ps-page">
-        <EmptyState
-          framed
-          title={tSpace("shell.notFound.title")}
-          description={tSpace("shell.notFound.lead")}
-          action={
-            <Link className="btn primary" to={PACK_STUDIO_PATH}>
-              {tSpace("shell.notFound.action")}
-            </Link>
-          }
-          testId="space-not-found"
-        />
+        <SpaceNotFound />
       </div>
     );
   }

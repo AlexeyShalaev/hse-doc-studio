@@ -114,3 +114,97 @@ describe("словарь packSpace", () => {
     }
   });
 });
+
+// Формы «Содержимого» (pack-studio-ux.md, 5.5 и раздел 6): строки форм живут в общих словарях
+// packForms и packStudio (ими пользуется и прежний интерфейс), поэтому проверяются только их ключи,
+// перечисленные в `forms.scopes`. Ключи под `tech` (технические подробности) не проверяются:
+// идентификаторы и имена файлов допустимы там и только там.
+
+type FormScope = { file: string; prefixes: string[] };
+const formsVocabulary = banned.forms as {
+  ru: Rule[];
+  en: Rule[];
+  scopes: FormScope[];
+};
+const IS_TECH = /(^|\.)tech(\.|$)/;
+const readLocale = (lng: string, file: string): unknown =>
+  JSON.parse(readFileSync(join(LOCALES, lng, file), "utf8"));
+/** Без подстановок `{{id}}`: имя переменной не видно человеку. */
+const visible = (text: string): string => text.replace(/\{\{[^}]*\}\}/g, "");
+
+describe("словарь форм «Содержимого»", () => {
+  it("ru и en: те же ключи в проверяемых областях", () => {
+    for (const scope of formsVocabulary.scopes) {
+      // Формы числа (`_one`, `_few`...) у языков разные: сравниваем ключи без них.
+      const keys = (lng: string) => [
+        ...new Set(
+          leaves(readLocale(lng, scope.file)).map(([key]) =>
+            key.replace(/_(zero|one|two|few|many|other)$/, ""),
+          ),
+        ),
+      ];
+      expect(keys("en"), scope.file).toEqual(keys("ru"));
+    }
+  });
+
+  it.each(LANGS)(
+    "(%s) нет идентификаторов, имён файлов и внутренних слов",
+    (lng) => {
+      const rules = formsVocabulary[lng];
+      const hits: string[] = [];
+      for (const scope of formsVocabulary.scopes) {
+        for (const [key, text] of leaves(readLocale(lng, scope.file))) {
+          if (IS_TECH.test(key)) continue;
+          if (
+            !scope.prefixes.some((p) => p === "" || key.startsWith(`${p}.`))
+          ) {
+            continue;
+          }
+          for (const rule of rules) {
+            if (new RegExp(rule.pattern, "iu").test(visible(text))) {
+              hits.push(
+                `${scope.file}: ${key}: «${text}» (${rule.id}; вместо этого: ${rule.use})`,
+              );
+            }
+          }
+        }
+      }
+      expect(hits).toEqual([]);
+    },
+  );
+
+  it("правила рабочие: ловят слова из жалоб проверяющего", () => {
+    const hit = (text: string): string[] =>
+      formsVocabulary.ru
+        .filter((rule) => new RegExp(rule.pattern, "iu").test(visible(text)))
+        .map((rule) => rule.id);
+    expect(hit("Документ technical_specification")).toContain("snake-case");
+    expect(hit("Описание документа (doc.yaml)")).toContain("yaml");
+    expect(hit("Группа навигации ЕСПД")).toContain("navigation-group");
+    expect(hit("Незнакомая Студии группа показывается как «Прочее»")).toContain(
+      "unknown-to-studio",
+    );
+    expect(hit("Идентификатор checkpoint-1")).toEqual(
+      expect.arrayContaining(["identifier", "checkpoint"]),
+    );
+    expect(hit("Id пака")).toContain("id-word");
+    expect(hit("Идентификатор SPDX")).toEqual(
+      expect.arrayContaining(["identifier", "spdx"]),
+    );
+    expect(hit("версия beta, реестр выпусков, манифест")).toEqual(
+      expect.arrayContaining(["beta", "release-registry", "manifest"]),
+    );
+    expect(hit("Языки задают суффиксы файлов")).toContain("suffix");
+    expect(hit("Название {{id}} по-русски")).toEqual([]);
+    expect(hit("Короткое имя документа")).toEqual([]);
+  });
+
+  it("технические подробности вынесены под tech: сам блок существует", () => {
+    const ru = readLocale("ru", "packForms/packForms.json") as {
+      doc: { tech: Record<string, string> };
+    };
+    expect(Object.keys(ru.doc.tech)).toEqual(
+      expect.arrayContaining(["sourceFile", "outputFile"]),
+    );
+  });
+});

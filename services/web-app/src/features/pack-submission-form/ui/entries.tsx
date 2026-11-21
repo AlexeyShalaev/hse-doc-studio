@@ -476,7 +476,7 @@ const ExtraRow = ({
       </div>
       {form && !form.required_for_pack && (
         <p className="hint psf-warn" data-testid="extra-not-required">
-          {t("submission.extras.notRequired", { form: form.id })}
+          {t("submission.extras.notRequired", { form: title })}
         </p>
       )}
     </li>

@@ -30,6 +30,7 @@ export type { SpacePlace } from "./context/memory";
 export { hasVersion, resolveEntryPlace } from "./context/entry";
 export { pickDefaultVersion } from "./nav/pickDefaultVersion";
 export { NoPlace } from "./nav/NoPlace";
+export { SpaceNotFound } from "./nav/SpaceNotFound";
 export type { EntryHints, EntryPlace } from "./context/entry";
 export { NO_CHANGES } from "./changes/types";
 export type { ChangesRequest, ChangesStatus } from "./changes/types";
