@@ -1,0 +1,70 @@
+{
+  "title": "PDF preview",
+  "forStudent": "For which student",
+  "changeConditions": "Change conditions",
+  "moreChanged": "and {{count}} more",
+  "noConditions": "This template has no conditions: the result is always the same.",
+  "conditionsLoading": "Reading conditions...",
+  "example": "Sample data",
+  "exampleBroken": "This sample data cannot be read: {{reason}}. Pick another one.",
+  "variant": "Document variant",
+  "variantNoPdf": "This variant does not produce a PDF.",
+  "build": "Build PDF",
+  "rebuild": "Build again",
+  "building": "Building the PDF...",
+  "cancel": "Cancel",
+  "cancelled": "The build was cancelled.",
+  "full": "Full screen",
+  "log": "Build log",
+  "loading": "Preparing the preview...",
+  "retry": "Retry",
+  "stale": {
+    "conditions": "The conditions changed after the build. Build again so the page matches them.",
+    "files": "Files changed after the build. Build again to see your edits."
+  },
+  "failedPrepare": "Could not prepare the preview.",
+  "noPdf": {
+    "title": "This document is not built as a PDF",
+    "lead": "The preview shows only documents that become a PDF. Presentations and similar files are not included."
+  },
+  "notInKit": {
+    "title": "This document is not in the set under these conditions",
+    "lead": "The student will not get it, so there is no page.",
+    "reset": "Reset conditions",
+    "show": "Show when: {{condition}}"
+  },
+  "failed": {
+    "title": "The PDF was not built",
+    "again": "Build again",
+    "log": "Open the log"
+  },
+  "quota": "The maximum number of builds is running ({{limit}}). Wait for one to finish and build again.",
+  "error": {
+    "render_failed": "The template could not be filled with data: the text has an error or the build took too long.",
+    "interrupted": "The build was interrupted by a Studio restart. Build again.",
+    "pdf_missing": "The build finished but no PDF appeared.",
+    "build_failed": "The document did not build: the text has an error.",
+    "font_missing": "The build server does not have a font the document needs.",
+    "generic": "The build failed (code {{code}})."
+  },
+  "errorHint": "The place of the error is shown in the build log.",
+  "findings": {
+    "title": "Notes on this file",
+    "none": "No notes on this file.",
+    "line": "Line {{line}}",
+    "whole": "Whole file",
+    "error": "Error",
+    "warning": "Warning",
+    "failed": "Could not check the file."
+  },
+  "noDocument": {
+    "title": "Pick a document",
+    "lead": "The preview shows the document open on the left. Form sections and plain files have no page."
+  },
+  "show": "PDF preview",
+  "hide": "Hide preview",
+  "pages_one": "{{count}} page",
+  "pages_few": "{{count}} pages",
+  "pages_many": "{{count}} pages",
+  "pages_other": "{{count}} pages"
+}

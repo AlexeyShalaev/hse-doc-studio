@@ -20,6 +20,7 @@ import {
   PackStaleFileError,
   packStudioApi,
   packStudioKeys,
+  resetPackFilesRevision,
   type PackLint,
 } from "@entities/pack-studio";
 import { loadPackSpaceNamespace } from "@shared/lib/i18n/packSpaceNamespace";
@@ -99,6 +100,8 @@ describe("сегмент «Текст»", () => {
   });
   beforeEach(() => {
     window.localStorage.clear();
+    // Проверки версии лежат под ключом «сколько записей было»: каждый тест начинает с нуля.
+    resetPackFilesRevision();
     vi.useFakeTimers({ shouldAdvanceTime: true });
     write = vi
       .spyOn(packStudioApi, "writeFile")

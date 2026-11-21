@@ -1,0 +1,241 @@
+/* Предпросмотр PDF (pack-studio-ux.md, 5.4 и 5.5). Область: preview. Префикс sp-pv-, токены темы. */
+
+.sp-pv {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  min-width: 0;
+  color: var(--fg-0);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+.sp-pv p {
+  margin: 0;
+}
+.sp-pv-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.sp-pv-head {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.sp-pv-kicker {
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+  font-weight: 600;
+}
+.sp-pv-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.sp-pv-sub {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.sp-pv-muted {
+  color: var(--fg-2);
+}
+.sp-pv-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.sp-pv-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.sp-pv-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sp-pv-chip {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem;
+  padding: 0.125rem 0.625rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-pill);
+  background: var(--bg-1);
+  font-size: 0.8125rem;
+}
+.sp-pv-chip span {
+  color: var(--fg-2);
+}
+.sp-pv-chip span::after {
+  content: ":";
+}
+.sp-pv-chip[data-more="true"] {
+  border-style: dashed;
+  color: var(--fg-1);
+}
+.sp-pv-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+}
+.sp-pv-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.sp-pv-field label {
+  font-weight: 600;
+}
+.sp-pv-hint {
+  color: var(--fg-2);
+  font-size: 0.75rem;
+}
+.sp-pv-field [role="alert"].sp-pv-hint {
+  color: var(--c-err);
+}
+.sp-pv-run {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.sp-pv-wait {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-height: 3rem;
+  color: var(--fg-1);
+}
+.sp-pv-ready {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+/* Замечания к файлу: свёрнутый список под страницей. */
+.sp-pv-findings {
+  border-top: 1px solid var(--border);
+  padding-top: 0.625rem;
+}
+.sp-pv-findings > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+.sp-pv-count {
+  min-width: 1.25rem;
+  padding: 0 0.375rem;
+  border-radius: var(--r-pill);
+  background: var(--bg-2);
+  color: var(--fg-1);
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-align: center;
+}
+.sp-pv-finds {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.sp-pv-find {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  background: var(--bg-1);
+}
+.sp-pv-find > svg {
+  margin-top: 0.125rem;
+  flex-shrink: 0;
+}
+.sp-pv-find[data-severity="error"] {
+  border-color: var(--c-err);
+  background: var(--c-err-soft);
+}
+.sp-pv-find[data-severity="error"] > svg {
+  color: var(--c-err);
+}
+.sp-pv-find[data-severity="warning"] > svg {
+  color: var(--c-warn);
+}
+.sp-pv-find-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.sp-pv-line {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.sp-pv-line-none {
+  color: var(--fg-2);
+  font-weight: 600;
+}
+
+/* Страница PDF: число страниц, журнал, во весь экран. */
+.sp-pv-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+}
+.sp-pv-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--fg-2);
+}
+.sp-pv-viewer {
+  height: 30rem;
+  min-height: 16rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  overflow: hidden;
+}
+.sp-pv-viewer-full {
+  height: 75vh;
+  min-height: 20rem;
+}
+.sp-root[data-phone] .sp-pv-viewer {
+  height: 60vh;
+}
+.sp-pv-fail {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.375rem;
+}
+.sp-pv-fail > * {
+  align-self: stretch;
+}
+.sp-pv-fail > button {
+  align-self: flex-start;
+}

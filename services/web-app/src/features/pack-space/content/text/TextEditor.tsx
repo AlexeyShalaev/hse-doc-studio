@@ -9,6 +9,7 @@ import {
   packErrorText,
   packStudioKeys,
   usePackFile,
+  usePackFilesRevision,
   usePackHints,
   usePackLint,
   versionDirOf,
@@ -28,6 +29,7 @@ import {
   type RevealRequest,
 } from "@shared/ui";
 import { setContentDirty } from "../contentGuard";
+import { onRevealLine, takePendingReveal } from "./revealLine";
 import { pickFinding, suggestFix } from "./finding";
 import { useAutosaveFile } from "./useAutosaveFile";
 import "./space-content-text.css";
@@ -70,17 +72,24 @@ const Loaded = ({
   const { t } = useTranslation("packSpace");
   const client = useQueryClient();
   const path = file.path;
-  const [epoch, setEpoch] = useState(0);
-  const autosave = useAutosaveFile(workspaceId, file, {
-    onWritten: () => {
-      setEpoch((n) => n + 1);
-    },
-  });
+  // Записи файлов пространства: проверки читаются заново после каждой (тот же ключ у списка
+  // «Замечания к файлу» справа, поэтому запрос один).
+  const revision = usePackFilesRevision(workspaceId);
+  const autosave = useAutosaveFile(workspaceId, file);
   const versionDir = versionDirOf(path);
   const hints = usePackHints(workspaceId, versionDir);
-  const lint = usePackLint(workspaceId, lintTargetOf(path), String(epoch));
+  const lint = usePackLint(workspaceId, lintTargetOf(path), String(revision));
   const [caret, setCaret] = useState(1);
   const [reveal, setReveal] = useState<RevealRequest | undefined>(undefined);
+  // «Строка N» из списка замечаний справа: прокрутить редактор к строке.
+  useEffect(() => {
+    const show = (request: { line: number; token: number }) => {
+      setReveal({ line: request.line, token: request.token });
+    };
+    const waiting = takePendingReveal(path);
+    if (waiting) show(waiting);
+    return onRevealLine(path, show);
+  }, [path]);
   const locked = readOnly || file.readOnly !== null;
   const language = languageForPackPath(path);
   const inVersionFiles = path.includes("/files/") && versionDir !== null;
