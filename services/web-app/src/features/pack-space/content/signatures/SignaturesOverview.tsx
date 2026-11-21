@@ -120,6 +120,7 @@ const SignaturesOverview = ({ workspaceId }: ContentPartProps) => {
       <p className="sp-ct-sg-note">
         {t("content.signatures.overview.order")}{" "}
         <Link
+          className="sp-ct-sgo-link"
           to={nav.partHref("deadlines")}
           onClick={nav.guardClick}
           data-testid="ct-sgo-order"

@@ -195,7 +195,7 @@ describe("«Подписи» документа", () => {
     });
 
     const lock = await screen.findByTestId("ct-sg-readonly");
-    expect(lock).toHaveTextContent("Версия выпущена");
+    expect(lock).toHaveTextContent("только смотреть");
     expect(screen.getByTestId("stamp-editor")).toHaveAttribute(
       "data-readonly",
       "true",

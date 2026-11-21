@@ -205,6 +205,11 @@
   font-size: 0.75rem;
   text-decoration: none;
 }
+.sp-ct-sgo-link {
+  color: var(--accent);
+  text-decoration: none;
+}
+.sp-ct-sgo-link:hover,
 .sp-ct-sgo-go:hover {
   text-decoration: underline;
 }

@@ -58,7 +58,7 @@
     "lead": "Drag a signature frame to where it belongs on the page. Everything is saved automatically.",
     "hintFollow": "Signatures that follow the text move together with it.",
     "hintNoFollow": "This PDF has no signature lines, so the signatures sit at their fallback places: move them.",
-    "leadReadOnly": "This version is released: signature places are view-only. Press \"Edit a copy\" to make changes in it.",
+    "leadReadOnly": "Signature places are view-only.",
     "copy": "Edit a copy",
     "building": "Building the document PDF…",
     "cancel": "Stop",
@@ -111,7 +111,7 @@
     "commonLoader": "The version does not set it, the standard one is used.",
     "code": "Signature code",
     "overview": {
-      "lead": "Which signatures the version's documents can have and where they stand. To change a place, open the document and go to \"Signatures\".",
+      "lead": "Which signatures the version's documents can have and where they stand. The \"shared place\" is one per signature: it applies in every document that has no place of its own. To change a place, open the document and go to \"Signatures\".",
       "emptyTitle": "The version has no signatures yet",
       "emptyLead": "Signatures are described in the version description. Once they appear, you will see here which documents they stand in.",
       "commonPage": "Shared place: page {{page}}.",
@@ -119,7 +119,7 @@
       "noDocs": "This signature does not belong to any document yet.",
       "own": "own place",
       "shared": "shared place",
-      "place": "Place it",
+      "place": "Set places",
       "order": "Who signs and in what order is set in the section",
       "orderLink": "Deadlines and submission"
     }

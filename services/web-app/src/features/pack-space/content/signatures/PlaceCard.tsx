@@ -58,6 +58,11 @@ export const PlaceCard = ({
   const op = (fields: Omit<PackPlaceOp, "slot" | "doc">) => {
     onOp({ slot: slot.id, doc: document, ...fields });
   };
+  // Строка даты называется по виду даты («day», «month_word»): слова те же, что у формата метки.
+  const dateLine = (name: string): string =>
+    i18n.exists(`signatureStamper:dates.formats.${name}`)
+      ? t(`signatureStamper:dates.formats.${name}`)
+      : name;
   const missingDates = frame.dates.filter((date) => date.box === null);
   const lines = freeDateAnchors(slot, data.build?.date_anchors ?? []);
   const canFollow =
@@ -264,7 +269,7 @@ export const PlaceCard = ({
                 op({ op: "add_date", anchor });
               }}
             >
-              {anchor.slice(slot.id.length + 1)}
+              {dateLine(anchor.slice(slot.id.length + 1))}
             </Button>
           ))}
         </div>
