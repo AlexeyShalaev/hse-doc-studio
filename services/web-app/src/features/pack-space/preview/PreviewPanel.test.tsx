@@ -222,7 +222,7 @@ describe("предпросмотр PDF по условиям студента", 
     expect(screen.getByTestId("sp-pv-open-log")).toBeInTheDocument();
 
     start.mockResolvedValue([previewBuild("succeeded")]);
-    fireEvent.click(screen.getByTestId("sp-pv-again"));
+    fireEvent.click(screen.getByTestId("sp-pv-build"));
     expect(await screen.findByTestId("sp-pv-page")).toBeInTheDocument();
     expect(start).toHaveBeenCalledTimes(2);
   });
@@ -236,7 +236,7 @@ describe("предпросмотр PDF по условиям студента", 
     expect(await screen.findByTestId("sp-pv-failed")).toHaveTextContent(
       "Сервер сборки недоступен.",
     );
-    fireEvent.click(screen.getByTestId("sp-pv-again"));
+    fireEvent.click(screen.getByTestId("sp-pv-build"));
     expect(await screen.findByTestId("sp-pv-page")).toBeInTheDocument();
   });
 

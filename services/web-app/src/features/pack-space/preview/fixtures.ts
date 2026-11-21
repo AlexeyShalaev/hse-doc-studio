@@ -120,7 +120,7 @@ export const previewOptions = (
     {
       id: "auto:normal",
       source: "auto",
-      label: null,
+      label: { ru: "Обычный", en: "Typical" },
       error: null,
       defaults: {},
     },

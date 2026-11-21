@@ -5,7 +5,7 @@ import PreviewPanel from "./PreviewPanel";
  * документ, без списка замечаний (тексты правят в «Содержимом»). Открывается параметром `preview=1`.
  */
 const PreviewSection = ({ docId, name }: { docId: string; name: string }) => (
-  <PreviewPanel key={docId} docId={docId} docName={name} />
+  <PreviewPanel key={docId} docId={docId} docName={name} hideName />
 );
 
 export default PreviewSection;

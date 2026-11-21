@@ -153,45 +153,36 @@ const PreviewState = ({ pv, onLog }: StateProps) => {
               .join(" ")
           : reason(code ?? "unknown");
       return (
-        <Notice
-          tone="err"
-          role="alert"
-          text={
-            <span data-testid="sp-pv-failed">
-              <b>{t("preview.failed.title")}.</b> {detail}
-              {view.build ? (
-                <>
-                  {" "}
-                  <span className="sp-pv-muted">{t("preview.errorHint")}</span>
-                </>
-              ) : null}
-            </span>
-          }
-          action={
-            <span className="sp-pv-row">
-              <Button
-                size="xs"
-                variant="secondary"
-                disabled={!pv.canBuild}
-                onClick={pv.rebuild}
-                data-testid="sp-pv-again"
-              >
-                {t("preview.failed.again")}
-              </Button>
-              {view.build ? (
-                <Button
-                  size="xs"
-                  variant="ghost"
-                  onClick={onLog}
-                  data-testid="sp-pv-open-log"
-                >
-                  <ScrollText size="0.6875rem" aria-hidden="true" />
-                  {t("preview.failed.log")}
-                </Button>
-              ) : null}
-            </span>
-          }
-        />
+        <div className="sp-pv-fail">
+          <Notice
+            tone="err"
+            role="alert"
+            text={
+              <span data-testid="sp-pv-failed">
+                <b>{t("preview.failed.title")}.</b> {detail}
+                {view.build ? (
+                  <>
+                    {" "}
+                    <span className="sp-pv-muted">
+                      {t("preview.errorHint")}
+                    </span>
+                  </>
+                ) : null}
+              </span>
+            }
+          />
+          {view.build ? (
+            <Button
+              size="xs"
+              variant="ghost"
+              onClick={onLog}
+              data-testid="sp-pv-open-log"
+            >
+              <ScrollText size="0.6875rem" aria-hidden="true" />
+              {t("preview.failed.log")}
+            </Button>
+          ) : null}
+        </div>
       );
     }
     case "cancelled":
@@ -221,6 +212,8 @@ type PanelProps = {
   docId: string;
   /** Название документа для заголовка. */
   docName: string;
+  /** Название выше уже есть (панель «Подробностей» начинается с него): заголовок без повтора. */
+  hideName?: boolean;
   /** Открытый файл документа: под страницей список замечаний к нему. `null`: список не нужен. */
   file?: string | null;
   /** Показать строку файла в редакторе (список замечаний). */
@@ -233,7 +226,13 @@ type PanelProps = {
  * выбираются тут же; под страницей замечания к файлу. Один и тот же в «Содержимом» и в
  * «Подробностях» «Результата». Пересоздавайте его на каждый документ (`key`).
  */
-export const PreviewPanel = ({ docId, docName, file, onLine }: PanelProps) => {
+export const PreviewPanel = ({
+  docId,
+  docName,
+  hideName = false,
+  file,
+  onLine,
+}: PanelProps) => {
   const { t, i18n } = useTranslation("packSpace");
   const { workspace } = useSpace();
   const pv = usePreviewBuild(docId);
@@ -252,7 +251,7 @@ export const PreviewPanel = ({ docId, docName, file, onLine }: PanelProps) => {
       <div className="sp-pv-top">
         <div className="sp-pv-head">
           <span className="sp-pv-kicker">{t("preview.title")}</span>
-          <h3 className="sp-pv-title">{docName}</h3>
+          {hideName ? null : <h3 className="sp-pv-title">{docName}</h3>}
         </div>
       </div>
 
@@ -323,7 +322,11 @@ export const PreviewPanel = ({ docId, docName, file, onLine }: PanelProps) => {
             ) : (
               <Play size="0.75rem" aria-hidden="true" />
             )}
-            {hasBuild ? t("preview.rebuild") : t("preview.build")}
+            {view.kind === "failed"
+              ? t("preview.failed.again")
+              : hasBuild
+                ? t("preview.rebuild")
+                : t("preview.build")}
           </Button>
         </div>
       ) : null}

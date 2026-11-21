@@ -8,6 +8,10 @@ import { Button, Modal, PdfViewer } from "@shared/ui";
  * Готовая страница: PDF, число страниц, «Журнал сборки» и «Во весь экран». Смотрит тот самый PDF,
  * который собрал сервер; адрес берётся из `useDocumentPreview` (в галерее подменяется).
  */
+// data: и blob: адрес не принимает запрос (?v=), а его содержимое и так не меняется.
+const keyFor = (url: string, build: PackPreviewBuild): string | undefined =>
+  /^(data|blob):/.test(url) ? undefined : build.id;
+
 export const PdfPage = ({
   build,
   url,
@@ -19,6 +23,8 @@ export const PdfPage = ({
 }) => {
   const { t } = useTranslation("packSpace");
   const [full, setFull] = useState(false);
+  const key = keyFor(url, build);
+  const refresh = key === undefined ? {} : { refreshKey: key };
   return (
     <div className="sp-pv-page" data-testid="sp-pv-page">
       <div className="sp-pv-meta">
@@ -55,7 +61,7 @@ export const PdfPage = ({
       <div className="sp-pv-viewer">
         <PdfViewer
           url={url}
-          refreshKey={build.id}
+          {...refresh}
           ariaLabel={build.document}
           initialFit
         />
@@ -69,11 +75,7 @@ export const PdfPage = ({
         width={980}
       >
         <div className="sp-pv-viewer-full" data-testid="sp-pv-full-view">
-          <PdfViewer
-            url={url}
-            refreshKey={build.id}
-            ariaLabel={build.document}
-          />
+          <PdfViewer url={url} {...refresh} ariaLabel={build.document} />
         </div>
       </Modal>
     </div>
