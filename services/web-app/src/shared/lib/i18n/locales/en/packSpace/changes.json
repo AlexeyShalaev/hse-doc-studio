@@ -179,7 +179,8 @@
       "saving": "Saving…",
       "saved": "Saved to the version",
       "needed": "Fill in both fields: the version cannot be released without notes.",
-      "write": "Write"
+      "write": "Write",
+      "auto": "You can skip the notes: when you send, we fill them in from your edits, and you can fix them afterwards."
     },
     "class": {
       "small": "Small fix",
@@ -213,7 +214,19 @@
       "submit": "Change number to {{version}}",
       "cancel": "Cancel",
       "take": "Take the free {{version}}",
-      "done": "Number changed: {{version}}"
+      "auto": {
+        "documents": "These edits change which documents are included, the number will be {{version}}.",
+        "newDocuments": "These edits add documents, the number will be {{version}}.",
+        "scope": "These edits change languages, work kinds or authors, the number will be {{version}}.",
+        "fields": "These edits change form fields, the number will be {{version}}.",
+        "forms": "These edits add forms, the number will be {{version}}.",
+        "checkpoints": "These edits change deadlines and submission, the number will be {{version}}.",
+        "signatures": "These edits change signatures, the number will be {{version}}.",
+        "variants": "These edits add document variants, the number will be {{version}}.",
+        "checks": "These edits change the checks, the number will be {{version}}.",
+        "regulation": "These edits need a new edition of the rules, the number will be {{version}}.",
+        "other": "These edits are bigger than a small fix, the number will be {{version}}."
+      }
     },
     "where": {
       "new": "We will send your edits for review: repository maintainers will check them and accept them into the main branch {{base}}. For that a merge request opens, that is, a request to accept your edits. You do not need to create a branch: it is created automatically.",
@@ -258,6 +271,7 @@
     },
     "steps": {
       "notes": "Saving version notes",
+      "number": "Changing the number to {{version}}",
       "release": "Releasing version {{version}}",
       "send": "Sending for review",
       "send_update": "Adding edits to the request"
@@ -268,7 +282,9 @@
       "lint": "The check found errors, the version was not sent. Click an error to go to the place.",
       "taken": "Number {{version}} is already released in the main branch. Your edits can be moved to the free number {{suggested}}.",
       "moveTo": "Move to {{version}}",
-      "access": "Repository access"
+      "access": "Repository access",
+      "number": "The version number does not fit these edits. Pick another number.",
+      "details": "Details"
     },
     "outcome": {
       "title": "Edits were sent, but the request could not be opened.",
@@ -285,7 +301,8 @@
       "errors_few": "Fix {{count}} errors",
       "errors_many": "Fix {{count}} errors",
       "errors_other": "Fix {{count}} errors",
-      "notes": "Describe the changes first"
+      "notes": "Describe the changes first",
+      "suggestSend": "Suggest notes and send"
     },
     "blocker": {
       "errors": "You cannot send while checks have errors. Fix them.",

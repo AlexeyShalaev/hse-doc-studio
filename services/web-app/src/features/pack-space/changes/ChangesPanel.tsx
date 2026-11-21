@@ -168,13 +168,13 @@ const WhatChanged = ({
                     version: group.version.version,
                   })
                 : group.version
-                ? t("changes.what.group", {
-                    template: templateName(group.version),
-                    version: group.version.version,
-                  })
-                : group.pack
-                  ? t("changes.what.groupPack", { pack: group.pack })
-                  : t("changes.what.groupOther")}
+                  ? t("changes.what.group", {
+                      template: templateName(group.version),
+                      version: group.version.version,
+                    })
+                  : group.pack
+                    ? t("changes.what.groupPack", { pack: group.pack })
+                    : t("changes.what.groupOther")}
             </span>
             <span>{t("changes.what.files", { count: group.files })}</span>
           </div>

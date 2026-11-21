@@ -585,7 +585,8 @@ describe("deriveChangesStatus: копия версии", () => {
     expect(
       isNumberFinding(
         diagnostic({
-          message: "release: `release.kind: patch` мягче класса версии 2026.2.0 (minor)",
+          message:
+            "release: `release.kind: patch` мягче класса версии 2026.2.0 (minor)",
         }),
       ),
     ).toBe(false);

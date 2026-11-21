@@ -9,7 +9,6 @@ import {
   type UpdateClass,
 } from "@entities/pack-studio";
 import { UPDATE_CLASSES, currentClass, isSofter } from "@features/pack-version";
-import { toast } from "@shared/lib";
 import { Button, Input, Modal } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import { useSpaceNav } from "../context/useSpaceNav";
@@ -72,11 +71,8 @@ export const NumberDialog = ({
           { ref: state.version, version },
           {
             onSuccess: (moved) => {
-              toast.success(
-                t("changes.submit.number.done", {
-                  version: moved.version.version,
-                }),
-              );
+              // Тост здесь не нужен: он закрывал кнопку отправки. Новый номер виден в галочке
+              // «Выпустить версию X» и в строке версии.
               onClose();
               void client
                 .refetchQueries({ queryKey: packStudioKeys.tree(workspaceId) })

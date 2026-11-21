@@ -7,6 +7,8 @@ import {
   lintFailure,
 } from "@entities/pack-studio";
 import { Button } from "@shared/ui";
+import { isNumberMessage } from "../changes/deriveChangesStatus";
+import { isNumberError } from "./numberFix";
 import { isPushDenied, takenSuggestion } from "./submitErrors";
 import type { SubmitStep } from "./submitSteps";
 import type { SubmitController } from "./useSubmit";
@@ -18,7 +20,10 @@ const stepText = (
 ): string =>
   step === "send" && c.update
     ? t("changes.submit.steps.send_update")
-    : t(`changes.submit.steps.${step}`, { version: c.version.version });
+    : t(`changes.submit.steps.${step}`, {
+        version:
+          step === "number" ? (c.numberFix?.to ?? "") : c.version.version,
+      });
 
 /**
  * Ход отправки (pack-studio-ux.md, 5.6): шаги по порядку, что уже сделано, на каком месте
@@ -28,10 +33,13 @@ export const Progress = ({
   c,
   onAccess,
   onOpenFile,
+  onNumber,
 }: {
   c: SubmitController;
   onAccess: () => void;
   onOpenFile: (path: string) => void;
+  /** Открыть окно «Номер версии». */
+  onNumber: () => void;
 }) => {
   const { t } = useTranslation("packSpace");
   const { plan, done, failure, running, current } = c;
@@ -41,6 +49,14 @@ export const Progress = ({
   const taken = error ? takenSuggestion(error) : null;
   // Форк разобран отдельным блоком: его текст не повторяем.
   const needFork = error ? forkRequired(error) !== null : false;
+  // Отказ про номер (по коду или по находке): говорим человеческими словами и открываем окно
+  // номера; текст сервера остаётся только в «Подробностях».
+  const numberFindings =
+    lint?.findings.filter((finding) => isNumberMessage(finding.message)) ?? [];
+  const badNumber =
+    (error ? isNumberError(error) : false) || numberFindings.length > 0;
+  const otherFindings =
+    lint?.findings.filter((finding) => !isNumberMessage(finding.message)) ?? [];
   return (
     <div className="sp-sb-block" data-testid="sp-sb-progress">
       <ol className="sp-sb-steps">
@@ -79,16 +95,43 @@ export const Progress = ({
               step: stepText(t, failure.step, c),
             })}
           </strong>
-          {!needFork && !lint && !taken && (
+          {badNumber && (
+            <>
+              <span data-testid="sp-sb-number-failure">
+                {t("changes.submit.failure.number")}
+              </span>
+              <Button
+                size="xs"
+                variant="secondary"
+                onClick={onNumber}
+                data-testid="sp-sb-fix-number"
+              >
+                {t("changes.submit.release.number")}
+              </Button>
+              <details className="sp-sb-tech">
+                <summary>{t("changes.submit.failure.details")}</summary>
+                <span className="mono">
+                  {numberFindings.length > 0
+                    ? numberFindings
+                        .map((finding) => finding.message)
+                        .join("\n")
+                    : failure.error instanceof Error
+                      ? failure.error.message
+                      : ""}
+                </span>
+              </details>
+            </>
+          )}
+          {!needFork && !lint && !taken && !badNumber && (
             <span>
               <PackErrorText error={failure.error} />
             </span>
           )}
-          {lint && (
+          {lint && otherFindings.length > 0 && (
             <>
               <span>{t("changes.submit.failure.lint")}</span>
               <ul className="sp-sb-findings" data-testid="sp-sb-findings">
-                {lint.findings.map((finding, index) => (
+                {otherFindings.map((finding, index) => (
                   <li key={`${finding.path}:${String(index)}`}>
                     <button
                       type="button"

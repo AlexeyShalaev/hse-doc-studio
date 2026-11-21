@@ -140,7 +140,14 @@ export const SubmitSection = ({
         c={c}
         serviceAccess={git?.workspace.service_access ?? false}
       />
-      <Progress c={c} onAccess={onAccess} onOpenFile={onOpenFile} />
+      <Progress
+        c={c}
+        onAccess={onAccess}
+        onOpenFile={onOpenFile}
+        onNumber={() => {
+          setNumberOpen(true);
+        }}
+      />
       <Outcome c={c} onAccess={onAccess} />
       <BlockerText c={c} />
       {state && (

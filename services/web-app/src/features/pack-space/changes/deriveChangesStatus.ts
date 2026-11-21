@@ -138,10 +138,15 @@ export const isNotesFinding = (finding: PackDiagnostic): boolean =>
  * поэтому в ошибки она не идёт. Находка про `release.kind` мягче класса сюда не относится: номером
  * её не исправить.
  */
-const NUMBER_FINDING = /^release: номер \S+ после \S+ это (patch|minor|major), а изменения/u;
+const NUMBER_FINDING =
+  /^release: номер \S+ после \S+ это (patch|minor|major), а изменения/u;
+
+/** Текст находки про номер версии (из линтера и из отказа отправки). */
+export const isNumberMessage = (message: string): boolean =>
+  NUMBER_FINDING.test(message);
 
 export const isNumberFinding = (finding: PackDiagnostic): boolean =>
-  finding.severity === "error" && NUMBER_FINDING.test(finding.message);
+  finding.severity === "error" && isNumberMessage(finding.message);
 
 /** Заметки версии из данных манифеста (`changes: {ru: [...], en: [...]}`); нет блока: пусто. */
 export const readNotes = (manifest: unknown): PackLocalizedList => {
