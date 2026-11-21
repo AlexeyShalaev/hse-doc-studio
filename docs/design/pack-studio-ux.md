@@ -1052,14 +1052,14 @@ export const slots = defineSpaceSlots({
 | `useSpace()` | `{ workspace, tree, versionRef, tab, pack, template, version, released, selection, location }` | только чтение; `selection` это сырая строка `sel` (`<раздел>:<id>`, как прежний `selected`), разбор `parseSelection` |
 | `useSpaceNav()` | `{ href(patch), go(patch, { push? }) }` | единственный способ менять адрес; патч `SpaceNavPatch`: `ref`, `tab`, `doc`, `part`, `file`, `sel`, `changes`, `inputs`, `case`, `extra` |
 | `useSituation()` | `{ inputs, caseId, setInput, setInputs, setCase, reset }` | пишет в адрес через `useSpaceNav` |
-| `useChangesStatus()` | `ChangesStatus` | в S0 заглушка «ничего не изменено» с видом пространства и замком версии; S3 заменяет тело |
+| `useChangesStatus()` | `ChangesStatus` | настоящий (S3): git, проверки хостинга, линтер изменённых мест, заметки версии; запросы идут через общий кэш, несколько копий хука их не умножают |
 | `readUi/writeUi(ws, key, value)` | память мелочей интерфейса (раскрыто «Ещё N условий», скрытые части) | только удобство, всегда с умолчанием |
 | `readPlace/writePlace`, `useRememberPlace()` | последнее место | `SpaceScreen` запоминает само |
 | `resolveEntryPlace(tree, hints)` | куда открыть вход без версии | S2 заменяет выбор на `pickDefaultVersion` |
 
 Как работает переход: смена вкладки или версии идёт в историю новой записью и сбрасывает параметры вкладки (`sel`, `doc`, `part`, `file`, `extra`); условия (`i.*`), `case` и `changes` переживают переход. Правка внутри вкладки заменяет запись. Параметры, у которых нет своего поля (`at`, `from`, `compare`, `copy`), передавайте в `extra`; `null` убирает параметр.
 
-`ChangesStatus` (`changes/types.ts`) плоский: `connection`, `workspaceKind`, `released`, `changedFiles`, `changedElsewhere`, `errors`, `warnings`, `notesNeeded`, `request` (`none`, `open` с `checks` и `newEdits`, `merged`, `closed`), `behind`. Это данные, слова подбирают потребители. `NO_CHANGES` состояние по умолчанию.
+`ChangesStatus` (`changes/types.ts`, S3) плоский и состоит из данных, слова подбирают потребители. Поля: `load` (`loading`, `ready`, `failed`: пока не `ready`, остальное «ничего не изменено», главную кнопку не показывать), `connection`, `workspaceKind`, `released`, `changedFiles` (во всём пространстве, число на кнопке «Изменения»), `changedInVersion` (из них в открытой версии), `changedElsewhere` (другая версия с правками, черновик важнее выпущенной), `errors`, `warnings`, `notesNeeded`, `request` (`none`; `open` с `number`, `label` вида `#412` или `!412`, `url`, `checks` (`pending`, `passed`, `failed`, `awaiting_approval`, `unknown`), `progress` и `newEdits`; `merged` и `closed` с `number` и `label`), `behind`. `NO_CHANGES` состояние по умолчанию. Собирает его чистая `deriveChangesStatus(raw)` (`changes/deriveChangesStatus.ts`, правила сверху файла, таблица тестов рядом), данные берёт `useChangesData()`; `useChangesStatus()` отдаёт только статус. Что в него не входит: у папки на диске git нет, поэтому `changedFiles` равно 0, `request` `none`; нехватка заметок это `notesNeeded`, а не `errors`; ошибки считаются по изменённым местам, не больше трёх.
 
 ### 12.4. Адреса и параметры
 
