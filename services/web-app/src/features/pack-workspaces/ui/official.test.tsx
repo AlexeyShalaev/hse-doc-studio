@@ -11,11 +11,12 @@ import {
   PackWorkspaceSchema,
   packStudioApi,
   type PackOfficial,
+  type PackWorkspace,
 } from "@entities/pack-studio";
 import { ApiError } from "@shared/api";
 import { i18n } from "@shared/lib";
 import { loadPackStudioNamespace } from "@shared/lib/i18n/packStudioNamespace";
-import { OfficialPacksCard } from "./OfficialPacks";
+import { WorkspacesView } from "./WorkspacesView";
 
 const FIXTURES = join(
   import.meta.dirname,
@@ -73,21 +74,23 @@ const tokenField = (): HTMLInputElement => {
   return field;
 };
 
-const mount = (onOpen = vi.fn()) => {
+// Пустой список: три пути подключения, официальный среди них (если установка его знает).
+const mount = (onOpen = vi.fn(), existing: PackWorkspace[] = []) => {
+  vi.spyOn(packStudioApi, "workspaces").mockResolvedValue(existing);
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <OfficialPacksCard onOpen={onOpen} />
+        <WorkspacesView onOpen={onOpen} allowFolder={false} />
       </MemoryRouter>
     </QueryClientProvider>,
   );
   return onOpen;
 };
 
-describe("официальные паки", () => {
+describe("официальные шаблоны: подключение", () => {
   beforeAll(async () => {
     await loadPackStudioNamespace();
     await i18n.changeLanguage("ru");
@@ -96,7 +99,7 @@ describe("официальные паки", () => {
     vi.restoreAllMocks();
   });
 
-  it("установка без официального репозитория: карточки нет", async () => {
+  it("установка без официального репозитория: этого пути нет, остаётся свой репозиторий", async () => {
     const info = vi
       .spyOn(packStudioApi, "official")
       .mockResolvedValue(official("hidden"));
@@ -104,15 +107,16 @@ describe("официальные паки", () => {
     await waitFor(() => {
       expect(info).toHaveBeenCalled();
     });
-    expect(screen.queryByTestId("official-card")).not.toBeInTheDocument();
+    expect(await screen.findByTestId("ws-path-git")).toBeInTheDocument();
+    expect(screen.queryByTestId("ws-path-official")).not.toBeInTheDocument();
   });
 
-  it("пространство уже есть: «Открыть» ведёт в него без окна", async () => {
+  it("официальное пространство уже подключено: оно в списке, пути подключения нет", async () => {
     const data = official("existing");
     vi.spyOn(packStudioApi, "official").mockResolvedValue(data);
-    const onOpen = mount();
-    await userEvent.click(await screen.findByTestId("official-open"));
-    expect(onOpen).toHaveBeenCalledWith(data.workspace_id);
+    mount(vi.fn(), [WORKSPACE]);
+    expect(await screen.findByTestId("ws-list")).toBeInTheDocument();
+    expect(screen.queryByTestId("ws-path-official")).not.toBeInTheDocument();
     expect(screen.queryByTestId("official-dialog")).not.toBeInTheDocument();
   });
 
@@ -128,10 +132,10 @@ describe("официальные паки", () => {
       .spyOn(packStudioApi, "openOfficial")
       .mockResolvedValue(WORKSPACE);
     const onOpen = mount();
-    await userEvent.click(await screen.findByTestId("official-open"));
+    await userEvent.click(await screen.findByTestId("ws-connect-official"));
     expect(
       await screen.findByTestId("official-access-token"),
-    ).toHaveTextContent("ваш форк");
+    ).toHaveTextContent("форк");
     expect(screen.queryByTestId("official-access-bot")).not.toBeInTheDocument();
     expect(screen.getByTestId("official-dialog")).not.toHaveTextContent(
       "служебный аккаунт",
@@ -146,7 +150,7 @@ describe("официальные паки", () => {
   it("нет токена GitHub: поле токена в окне, подсказка про классический public_repo", async () => {
     noGithubToken().mockResolvedValue([GITLAB]);
     mount();
-    await userEvent.click(await screen.findByTestId("official-open"));
+    await userEvent.click(await screen.findByTestId("ws-connect-official"));
     expect(await screen.findByTestId("official-nothing")).toHaveTextContent(
       "нужен ваш токен GitHub",
     );
@@ -190,7 +194,7 @@ describe("официальные паки", () => {
       .spyOn(packStudioApi, "openOfficial")
       .mockResolvedValue(WORKSPACE);
     const onOpen = mount();
-    await userEvent.click(await screen.findByTestId("official-open"));
+    await userEvent.click(await screen.findByTestId("ws-connect-official"));
     await screen.findByTestId("official-nothing");
     await userEvent.type(tokenField(), "ghp_secret");
     await userEvent.click(screen.getByTestId("add-token-submit"));
@@ -226,7 +230,7 @@ describe("официальные паки", () => {
       .spyOn(gitRemoteApi, "deleteCredential")
       .mockResolvedValue(undefined);
     mount();
-    await userEvent.click(await screen.findByTestId("official-open"));
+    await userEvent.click(await screen.findByTestId("ws-connect-official"));
     await screen.findByTestId("official-nothing");
     await userEvent.type(tokenField(), "ghp_wrong");
     await userEvent.click(screen.getByTestId("add-token-submit"));
@@ -253,7 +257,7 @@ describe("официальные паки", () => {
       .spyOn(gitRemoteApi, "deleteCredential")
       .mockResolvedValue(undefined);
     mount();
-    await userEvent.click(await screen.findByTestId("official-open"));
+    await userEvent.click(await screen.findByTestId("ws-connect-official"));
     await screen.findByTestId("official-nothing");
     await userEvent.type(tokenField(), "ghp_narrow");
     await userEvent.click(screen.getByTestId("add-token-submit"));
