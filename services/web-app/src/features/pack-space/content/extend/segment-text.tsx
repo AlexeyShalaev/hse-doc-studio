@@ -21,12 +21,12 @@ const TextSegment = ({
   const files = textFilesOf(doc);
   const current = resolveDocumentFile(doc, file, i18n.language, versionDir);
   if (!current) {
-    return <p className="sp-ct-empty">{t("text.empty")}</p>;
+    return <p className="sp-ct-empty">{t("content.text.empty")}</p>;
   }
   return (
     <div className="sp-ct-text">
       {files.length > 1 && (
-        <nav className="sp-ct-files" aria-label={t("text.files")}>
+        <nav className="sp-ct-files" aria-label={t("content.text.files")}>
           {files.map((item) => (
             <Link
               key={item.path}

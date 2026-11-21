@@ -148,7 +148,7 @@ const Loaded = ({
   }, [pending]);
 
   const revert = () => {
-    if (!window.confirm(t("text.revertAsk"))) return;
+    if (!window.confirm(t("content.text.revertAsk"))) return;
     autosave.edit(original);
     autosave.flush();
   };
@@ -165,7 +165,7 @@ const Loaded = ({
             (autosave.status === "waiting" || autosave.status === "saving") && (
               <span className="sp-ct-text-state" data-testid="ct-text-state">
                 <Spinner size="sm" />
-                {t("text.saving")}
+                {t("content.text.saving")}
               </span>
             )}
           {!locked && autosave.status === "saved" && (
@@ -175,7 +175,7 @@ const Loaded = ({
               role="status"
             >
               <Check size="0.6875rem" aria-hidden="true" />
-              {t("text.saved")}
+              {t("content.text.saved")}
             </span>
           )}
           {locked && (
@@ -192,7 +192,7 @@ const Loaded = ({
               data-testid="ct-text-revert"
             >
               <RotateCcw size="0.6875rem" aria-hidden="true" />
-              {t("text.revert")}
+              {t("content.text.revert")}
             </Button>
           )}
           {readOnly && (
@@ -202,7 +202,7 @@ const Loaded = ({
               onClick={onCopy}
               data-testid="ct-text-copy"
             >
-              {t("text.copy")}
+              {t("content.text.copy")}
             </Button>
           )}
         </div>
@@ -219,7 +219,7 @@ const Loaded = ({
             diagnostics={diagnostics}
             {...(reveal ? { reveal } : {})}
             extraExtensions={extensions}
-            ariaLabel={t("text.label")}
+            ariaLabel={t("content.text.label")}
           />
         </div>
       </div>
@@ -240,11 +240,11 @@ const Loaded = ({
         >
           <CircleAlert size="0.875rem" aria-hidden="true" />
           <div className="sp-ct-text-msg">
-            <b>{t("text.failed")}</b>{" "}
+            <b>{t("content.text.failed")}</b>{" "}
             <span>{packErrorText(autosave.error)}</span>
           </div>
           <Button size="xs" variant="secondary" onClick={autosave.flush}>
-            {t("text.retry")}
+            {t("content.text.retry")}
           </Button>
         </div>
       )}
@@ -267,18 +267,18 @@ const Loaded = ({
                   }));
                 }}
               >
-                {t("text.line", { line })}:
+                {t("content.text.line", { line })}:
               </button>
             ) : null}{" "}
             <span>
               {fix
-                ? t("text.typo", { wrong: fix.wrong, right: fix.right })
+                ? t("content.text.typo", { wrong: fix.wrong, right: fix.right })
                 : finding.message}
             </span>
             {others > 0 && (
               <span className="sp-ct-text-more">
                 {" "}
-                {t("text.others", { count: others })}
+                {t("content.text.others", { count: others })}
               </span>
             )}
           </div>
@@ -291,7 +291,7 @@ const Loaded = ({
               }}
               data-testid="ct-text-fix"
             >
-              {t("text.fix")}
+              {t("content.text.fix")}
             </Button>
           )}
         </div>

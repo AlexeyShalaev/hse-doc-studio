@@ -27,15 +27,14 @@ describe("pickFinding", () => {
   });
 
   it("при равном расстоянии ошибка раньше предупреждения, без строки в конце", () => {
+    const noLine = item({ line: null, message: "no-line" });
     const list = [
-      item({ line: null, message: "no-line" }),
+      noLine,
       item({ line: 5, severity: "warning", message: "w" }),
       item({ line: 7, severity: "error", message: "e" }),
     ];
     expect(pickFinding(list, PATH, 6)?.message).toBe("e");
-    expect(pickFinding([list[0] as PackDiagnostic], PATH, 6)?.message).toBe(
-      "no-line",
-    );
+    expect(pickFinding([noLine], PATH, 6)?.message).toBe("no-line");
   });
 });
 
