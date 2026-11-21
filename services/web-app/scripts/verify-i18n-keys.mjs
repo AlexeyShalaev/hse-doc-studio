@@ -16,6 +16,20 @@ const LAZY_PAGE_NAMESPACES = [
 ];
 const load = (ns) => {
   if (ns in cache) return cache[ns];
+  // Новый интерфейс Студии: по одному JSON на область, ключи лежат под именем области
+  // (packSpace/shell.json -> shell.*), как их собирает locales/<язык>/packSpace/index.ts.
+  if (ns === "packSpace") {
+    const dir = path.join(LOC, "packSpace");
+    return (cache[ns] = Object.fromEntries(
+      fs
+        .readdirSync(dir)
+        .filter((f) => f.endsWith(".json"))
+        .map((f) => [
+          f.slice(0, -5),
+          JSON.parse(fs.readFileSync(path.join(dir, f), "utf8")),
+        ]),
+    ));
+  }
   // Словари админки: admin<Name> живёт в locales/ru/admin/<name>.json.
   const admin = /^admin([A-Z][A-Za-z]*)$/.exec(ns);
   // Ленивые словари страниц: locales/ru/<ns>/<ns>.json (лендинг, страница подписанта).

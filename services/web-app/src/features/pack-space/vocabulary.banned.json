@@ -1,0 +1,325 @@
+{
+  "comment": "Слова из раздела 6 документа pack-studio-ux.md (тип «жаргон»): в строках packSpace их быть не должно. Поле pattern это регулярное выражение без учёта регистра; use подсказывает замену. allowedIn перечисляет области, где правило не действует: git-слова допустимы только в «Изменениях» (панель и меню «Ещё»). Список растёт вместе со словарём: новое слово добавляйте сюда же.",
+  "ru": [
+    {
+      "id": "workspace-clone",
+      "pattern": "клонируется|клонируем",
+      "use": "Подключаем"
+    },
+    {
+      "id": "inputs",
+      "pattern": "вводн",
+      "use": "Для какого студента (условия)"
+    },
+    {
+      "id": "highlight-n",
+      "pattern": "подсветить",
+      "use": "подсветка срабатывает сама"
+    },
+    {
+      "id": "influence",
+      "pattern": "влияние",
+      "use": "Что это меняет"
+    },
+    {
+      "id": "rules-read",
+      "pattern": "читают правил",
+      "use": "Влияет на N мест"
+    },
+    {
+      "id": "dataset",
+      "pattern": "набор данных|тестовые данные|автонабор",
+      "use": "Пример данных"
+    },
+    {
+      "id": "scenario",
+      "pattern": "сценари",
+      "use": "Готовый случай"
+    },
+    {
+      "id": "work-tree",
+      "pattern": "рабочее дерево",
+      "use": "Мои текущие правки"
+    },
+    {
+      "id": "commit",
+      "pattern": "коммит",
+      "use": "Моя последняя сохранённая точка"
+    },
+    {
+      "id": "base",
+      "pattern": "(?<![а-яё])база(?![а-яё])|(?<![а-яё])базы(?![а-яё])|(?<![а-яё])базой(?![а-яё])",
+      "use": "Основная ветка"
+    },
+    {
+      "id": "matrix",
+      "pattern": "матриц",
+      "use": "Типовые случаи"
+    },
+    {
+      "id": "atlas",
+      "pattern": "атлас",
+      "use": "Что на что влияет"
+    },
+    {
+      "id": "outcomes",
+      "pattern": "исход",
+      "use": "Варианты результата"
+    },
+    {
+      "id": "pin",
+      "pattern": "закрепить|закрепление",
+      "use": "Зафиксировать"
+    },
+    {
+      "id": "rerun",
+      "pattern": "прогнать|прогон",
+      "use": "Проверить заново"
+    },
+    {
+      "id": "coverage",
+      "pattern": "покрытие",
+      "use": "Какие правила проверены готовыми случаями"
+    },
+    {
+      "id": "rule-chain",
+      "pattern": "цепочк",
+      "use": "Почему так"
+    },
+    {
+      "id": "edit-rule",
+      "pattern": "править правило|открыть правило",
+      "use": "Изменить условия"
+    },
+    {
+      "id": "source",
+      "pattern": "исходник",
+      "use": "Исходный текст, в «Содержимом» просто «Текст»"
+    },
+    {
+      "id": "propose",
+      "pattern": "предложить|предложение изменений",
+      "use": "Отправить на рассмотрение"
+    },
+    {
+      "id": "save-version",
+      "pattern": "сохранить версию",
+      "use": "Сохранить точку"
+    },
+    {
+      "id": "patch-minor-major",
+      "pattern": "(?<![a-z])(patch|minor|major)(?![a-z])",
+      "use": "Небольшая правка, Новые возможности, Новая редакция регламента"
+    },
+    {
+      "id": "beta-stable",
+      "pattern": "(?<![a-z])(beta|stable)(?![a-z])",
+      "use": "Черновик, Выпущена"
+    },
+    {
+      "id": "new-version-from",
+      "pattern": "новая версия от этой",
+      "use": "Править копию"
+    },
+    {
+      "id": "pull-base",
+      "pattern": "подтянуть",
+      "use": "Забрать новое из основной ветки"
+    },
+    {
+      "id": "start-over",
+      "pattern": "начать заново",
+      "use": "Сбросить все мои изменения"
+    },
+    {
+      "id": "branch",
+      "pattern": "ветк",
+      "use": "Основная ветка (в «Изменениях» с пояснением)"
+    },
+    {
+      "id": "pr",
+      "pattern": "(?<![a-z])(pr|mr|push)(?![a-z])",
+      "use": "запрос на слияние, дальше «запрос #N»"
+    },
+    {
+      "id": "fork",
+      "pattern": "форк",
+      "use": "Своя копия репозитория (форк)"
+    },
+    {
+      "id": "linter",
+      "pattern": "линтер",
+      "use": "строка 371 (без подписи источника)"
+    },
+    {
+      "id": "combination",
+      "pattern": "комбинаци",
+      "use": "Для какого студента (условия с экрана)"
+    },
+    {
+      "id": "runner",
+      "pattern": "раннер",
+      "use": "Собираем PDF"
+    },
+    {
+      "id": "manifest",
+      "pattern": "манифест",
+      "use": "Описание версии"
+    },
+    {
+      "id": "slot",
+      "pattern": "слот",
+      "use": "Подпись"
+    },
+    {
+      "id": "meta",
+      "pattern": "метаданные",
+      "use": "Данные проекта"
+    },
+    {
+      "id": "route",
+      "pattern": "маршрут подписания",
+      "use": "Подписи (кто и в каком порядке подписывает)"
+    },
+    {
+      "id": "assertions",
+      "pattern": "утверждени|запомнить снимок",
+      "use": "Проверки случая"
+    },
+    {
+      "id": "tech-skip",
+      "pattern": "jinja|python",
+      "use": "Проверить тексты шаблонов"
+    },
+    {
+      "id": "service-access",
+      "pattern": "служебные доступы",
+      "use": "Подключённые репозитории"
+    },
+    {
+      "id": "author-right",
+      "pattern": "право «автор шаблонов»",
+      "use": "Кто может править шаблоны"
+    }
+  ],
+  "en": [
+    {
+      "id": "clone",
+      "pattern": "cloning",
+      "use": "Connecting"
+    },
+    {
+      "id": "inputs",
+      "pattern": "(?<![a-z])inputs?(?![a-z])",
+      "use": "For which student (conditions)"
+    },
+    {
+      "id": "scenario",
+      "pattern": "scenario",
+      "use": "Ready case"
+    },
+    {
+      "id": "work-tree",
+      "pattern": "work(ing)? tree",
+      "use": "My current edits"
+    },
+    {
+      "id": "commit",
+      "pattern": "commit",
+      "use": "My last saved point"
+    },
+    {
+      "id": "matrix",
+      "pattern": "matrix",
+      "use": "Typical cases"
+    },
+    {
+      "id": "atlas",
+      "pattern": "atlas",
+      "use": "What affects what"
+    },
+    {
+      "id": "outcomes",
+      "pattern": "outcomes?(?![a-z])",
+      "use": "Result variants"
+    },
+    {
+      "id": "pin",
+      "pattern": "(?<![a-z])pin(ned)?(?![a-z])",
+      "use": "Fix"
+    },
+    {
+      "id": "rule-chain",
+      "pattern": "rule chain",
+      "use": "Why it is so"
+    },
+    {
+      "id": "propose",
+      "pattern": "propose",
+      "use": "Send for review"
+    },
+    {
+      "id": "patch-minor-major",
+      "pattern": "(?<![a-z])(patch|minor|major)(?![a-z])",
+      "use": "Small fix, New features, New edition of the rules"
+    },
+    {
+      "id": "beta-stable",
+      "pattern": "(?<![a-z])(beta|stable)(?![a-z])",
+      "use": "Draft, Released"
+    },
+    {
+      "id": "pull-base",
+      "pattern": "pull main",
+      "use": "Take the latest from the main branch"
+    },
+    {
+      "id": "branch",
+      "pattern": "branch",
+      "use": "Main branch (explained inside Changes)"
+    },
+    {
+      "id": "pr",
+      "pattern": "(?<![a-z])(pr|mr|push)(?![a-z])",
+      "use": "merge request, then request #N"
+    },
+    {
+      "id": "fork",
+      "pattern": "fork",
+      "use": "Own copy of the repository (fork)"
+    },
+    {
+      "id": "linter",
+      "pattern": "linter",
+      "use": "line 371"
+    },
+    {
+      "id": "runner",
+      "pattern": "runner",
+      "use": "Building PDF"
+    },
+    {
+      "id": "manifest",
+      "pattern": "manifest",
+      "use": "Version description"
+    },
+    {
+      "id": "slot",
+      "pattern": "slot",
+      "use": "Signature"
+    },
+    {
+      "id": "jinja",
+      "pattern": "jinja|python",
+      "use": "Check template texts"
+    },
+    {
+      "id": "service-access",
+      "pattern": "service access",
+      "use": "Connected repositories"
+    }
+  ],
+  "allowedIn": {
+    "changes": ["commit", "base", "branch", "pr", "fork"]
+  }
+}
