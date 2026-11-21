@@ -2,29 +2,31 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import type { DocumentSegmentProps } from "../contract";
 import { fileLabel, resolveDocumentFile, textFilesOf } from "../documents";
-import { LegacyFileEditor } from "../legacy/LegacyFileEditor";
+import { TextEditor } from "../text/TextEditor";
 import { useContentNav } from "../useContentNav";
+import { useSpaceNav } from "../../context/useSpaceNav";
 
-// S8b: ЗАМЕНИТЬ ЭТОТ ФАЙЛ. Здесь временно прежний редактор файла с кнопкой «Сохранить»;
-// «Текст» с автосохранением (`useAutosaveFile`), «Вернуть как было» и плашкой ближайшего
-// замечания пишет S8b, его файл целиком заменяет этот (docs/design/pack-studio-ux.md, 12.7).
+// S8b: сегмент «Текст» экрана документа (docs/design/pack-studio-ux.md, 5.5 и 12.7). Текст
+// сохраняется сам (`text/useAutosaveFile`), кнопок «Сохранить» и «Отменить правки» нет.
 const TextSegment = ({
   workspaceId,
   versionDir,
   doc,
   file,
+  readOnly,
 }: DocumentSegmentProps) => {
   const { t, i18n } = useTranslation("packSpace");
   const nav = useContentNav();
+  const space = useSpaceNav();
   const files = textFilesOf(doc);
   const current = resolveDocumentFile(doc, file, i18n.language, versionDir);
   if (!current) {
-    return <p className="sp-ct-empty">{t("content.legacy.noText")}</p>;
+    return <p className="sp-ct-empty">{t("text.empty")}</p>;
   }
   return (
     <div className="sp-ct-text">
       {files.length > 1 && (
-        <nav className="sp-ct-files" aria-label={t("content.legacy.file")}>
+        <nav className="sp-ct-files" aria-label={t("text.files")}>
           {files.map((item) => (
             <Link
               key={item.path}
@@ -42,11 +44,14 @@ const TextSegment = ({
           ))}
         </nav>
       )}
-      <LegacyFileEditor
+      <TextEditor
         workspaceId={workspaceId}
         path={current.path}
-        owner="segment-text"
-        onOpenFile={nav.toFile}
+        readOnly={readOnly}
+        onCopy={() => {
+          // Кнопку «Править копию» делает S4; параметр `copy` зарезервирован за ним (12.6).
+          space.go({ extra: { copy: "1" } });
+        }}
       />
     </div>
   );

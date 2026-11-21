@@ -24,7 +24,22 @@
     "notFoundTitle": "There is no document \"{{id}}\" in this version",
     "notFoundLead": "The link may be left over from another version. Pick a document on the left."
   },
-  "text": {},
+  "text": {
+    "label": "File text",
+    "files": "Document file",
+    "empty": "This document has no text files that can be edited here.",
+    "saving": "Saving…",
+    "saved": "saved",
+    "revert": "Restore as it was",
+    "revertAsk": "Restore the file to how it was when you opened it? Your edits will be lost.",
+    "copy": "Edit a copy",
+    "failed": "Could not save the file.",
+    "retry": "Retry",
+    "line": "Line {{line}}",
+    "typo": "There is no field \"{{wrong}}\". Did you mean \"{{right}}\"?",
+    "fix": "Fix",
+    "others": "More notes in this file: {{count}}."
+  },
   "part": {
     "fields": "Project data",
     "forms": "Questionnaires",
