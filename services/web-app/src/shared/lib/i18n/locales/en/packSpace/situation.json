@@ -1,1 +1,120 @@
-{}
+{
+  "title": "For which student",
+  "loading": "Loading conditions",
+  "loadFailed": "Could not load the conditions.",
+  "retry": "Retry",
+  "none": "This template has no conditions: the student always gets the same result.",
+  "more_one": "{{count}} more condition",
+  "more_few": "{{count}} more conditions",
+  "more_many": "{{count}} more conditions",
+  "more_other": "{{count}} more conditions",
+  "moreTitle": "All conditions",
+  "moreLead": "Change any of them: the result recalculates right away.",
+  "done": "Done",
+  "inertTitle": "Do not affect this template",
+  "inertLead": "These conditions exist in the version, but the result does not depend on them.",
+  "yes": "Yes",
+  "no": "No",
+  "affects": "What it changes: {{sections}}",
+  "affectsNone": "Changes nothing in this template",
+  "readers_one": "Affects {{count}} place",
+  "readers_few": "Affects {{count}} places",
+  "readers_many": "Affects {{count}} places",
+  "readers_other": "Affects {{count}} places",
+  "restore": "Restore: {{value}}",
+  "released": "Version {{version}} is released and does not change.",
+  "releasedHint": "Press “Edit a copy”: Studio picks the number itself.",
+  "std": {
+    "lang": "Work language",
+    "kind": "Kind of work",
+    "staffing": "Number of authors",
+    "supervisor": "Academic supervisor",
+    "co_supervisor": "Co-supervisor",
+    "academic_supervisor": "Programme supervisor"
+  },
+  "values": {
+    "lang": {
+      "ru": "Russian",
+      "en": "English"
+    },
+    "kind": {
+      "project": "Project",
+      "research": "Research"
+    },
+    "staffing": {
+      "solo": "One author",
+      "team2": "Two authors",
+      "team3": "Three authors"
+    },
+    "supervisor": {
+      "university": "From HSE",
+      "company": "From a company",
+      "none": "None"
+    }
+  },
+  "sections": {
+    "documents": "Documents",
+    "meta": "Project data",
+    "forms": "Forms",
+    "participants": "Participants",
+    "points": "Deadlines and hand-in",
+    "route": "Signatures",
+    "checks": "Checks"
+  },
+  "cases": {
+    "title": "Ready cases",
+    "empty": "No ready cases yet. Set the conditions above and choose “Remember this case” in the “More” menu.",
+    "none": "No ready case",
+    "badge": {
+      "passed": "The result matches the expected one",
+      "failed": "The result has changed",
+      "error": "The case conditions do not fit this version",
+      "unchecked": "The result is not checked",
+      "broken": "The case file could not be read",
+      "pending": "Checking",
+      "unknown": "Not checked yet"
+    }
+  },
+  "menu": {
+    "label": "More about conditions",
+    "reset": "Reset conditions",
+    "save": "Remember this case",
+    "compare": "Compare with another situation"
+  },
+  "save": {
+    "title": "Remember this case",
+    "lead": "The conditions on screen are saved under a name, and you can pick them later in “Ready cases”.",
+    "cancel": "Cancel",
+    "submit": "Remember",
+    "saving": "Saving",
+    "name": "Name",
+    "namePlaceholder": "For example, NDA work, two authors",
+    "nameRequired": "Enter a name",
+    "count_one": "The case will include {{count}} condition, the rest stay at their defaults.",
+    "count_few": "The case will include {{count}} conditions, the rest stay at their defaults.",
+    "count_many": "The case will include {{count}} conditions, the rest stay at their defaults.",
+    "count_other": "The case will include {{count}} conditions, the rest stay at their defaults.",
+    "advanced": "Advanced",
+    "remember": "Remember today's result",
+    "rememberHint": "Studio will warn you when the result of this case changes.",
+    "saved": "Case “{{name}}” remembered",
+    "taken": "A case with this name already exists. Change the name.",
+    "invalid": "The server did not accept the case: {{reason}}",
+    "failed": "Could not remember the case. Try again."
+  },
+  "delta": {
+    "loading": "Working out what changed…",
+    "failed": "Could not work out what changed.",
+    "same": "After “{{label}}” the result did not change.",
+    "changed": "After “{{label}}” the result changed:",
+    "added": "+{{count}}",
+    "edited": "{{count}} changed",
+    "removed": "{{count}} removed",
+    "showOnly": "Show only what changed",
+    "showAll": "Show everything",
+    "hide": "Hide",
+    "caseLabel": "Ready case “{{name}}”",
+    "noCaseLabel": "Own conditions",
+    "resetLabel": "Conditions reset"
+  }
+}
