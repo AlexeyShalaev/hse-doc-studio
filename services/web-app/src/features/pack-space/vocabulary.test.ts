@@ -42,19 +42,21 @@ describe("словарь packSpace", () => {
     }
   });
 
-  it("у каждой области есть файл (shell, list, situation, result, details, content, changes, check, admin)", () => {
+  it("у каждой области есть файл (shell, nav, list, situation, result, details, content, changes, check, admin)", () => {
+    // Области добавляют срезы (nav, preview, ...), поэтому проверяем наличие, а не точный список.
     expect(areasOf("ru")).toEqual(
-      [
+      expect.arrayContaining([
         "admin",
         "changes",
         "check",
         "content",
         "details",
         "list",
+        "nav",
         "result",
         "shell",
         "situation",
-      ].sort(),
+      ]),
     );
   });
 

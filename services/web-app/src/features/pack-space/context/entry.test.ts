@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { PackTree } from "@entities/pack-studio";
 import { GALLERY_TREE } from "../galleryKit";
+import { BASE, TREE } from "../nav/fixtures";
 import { hasVersion, resolveEntryPlace } from "./entry";
 
 const REF = (version: string) => ({
@@ -96,5 +97,59 @@ describe("выбор места на входе", () => {
 
   it("пустое дерево: места нет", () => {
     expect(resolveEntryPlace(EMPTY)).toBeNull();
+  });
+
+  describe("версия с моими изменениями (S2)", () => {
+    const DRAFT_FILE = [`${BASE}/2026.1.3/version.yaml`];
+    const MSC_DRAFT = ["hse-cs-msc/templates/thesis/versions/2026.1.2/a.tex"];
+
+    it("первый вход без памяти: открывается черновик с изменениями, а не версия по умолчанию", () => {
+      expect(
+        resolveEntryPlace(GALLERY_TREE, { changed: DRAFT_FILE })?.ref,
+      ).toEqual(REF("2026.1.3"));
+    });
+
+    it("последнее место важнее: выпущенная версия остаётся, к черновику ведёт главная кнопка", () => {
+      const last = {
+        ref: REF("2026.1.2"),
+        tab: "result" as const,
+        inputs: {},
+      };
+      expect(
+        resolveEntryPlace(GALLERY_TREE, { last, changed: DRAFT_FILE })?.ref,
+      ).toEqual(REF("2026.1.2"));
+    });
+
+    it("шаблон из адреса: его версия с изменениями", () => {
+      expect(
+        resolveEntryPlace(GALLERY_TREE, {
+          template: { pack: "hse-cs-sse", template: "coursework" },
+          changed: DRAFT_FILE,
+        })?.ref,
+      ).toEqual(REF("2026.1.3"));
+    });
+
+    it("шаблон из адреса: версия, где были, если изменений нет", () => {
+      const last = {
+        ref: REF("2026.1.3"),
+        tab: "content" as const,
+        inputs: {},
+      };
+      expect(
+        resolveEntryPlace(GALLERY_TREE, {
+          template: { pack: "hse-cs-sse", template: "coursework" },
+          last,
+        })?.ref,
+      ).toEqual(REF("2026.1.3"));
+    });
+
+    it("несколько шаблонов: первым идёт тот, где есть изменения", () => {
+      expect(resolveEntryPlace(TREE)?.ref).toEqual(REF("2026.1.2"));
+      expect(resolveEntryPlace(TREE, { changed: MSC_DRAFT })?.ref).toEqual({
+        pack: "hse-cs-msc",
+        template: "thesis",
+        version: "2026.1.2",
+      });
+    });
   });
 });
