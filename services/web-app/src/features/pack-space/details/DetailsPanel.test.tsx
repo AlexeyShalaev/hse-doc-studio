@@ -232,7 +232,7 @@ describe("«Подробности»", () => {
       const rows = await screen.findAllByTestId("sp-whatif-row");
       expect(rows[0]).toHaveTextContent("Если вид работы");
       expect(rows[0]).toHaveTextContent("документа не будет");
-      await userEvent.click(rows[0] as HTMLElement);
+      await userEvent.click(rows[0]!);
       expect(location()).toContain("i.kind=research");
       expect(
         await screen.findByTestId("sp-whatif-applied"),

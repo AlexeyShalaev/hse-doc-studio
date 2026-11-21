@@ -82,11 +82,13 @@ export const DetailsPanel = ({
   useEffect(() => {
     undoRef.current = edit.undo;
   });
+  // Откат дошёл до места открытия формы (или упёрся в отказ): форма закрывается.
+  if (revertTo !== null && !busy && (notice !== null || cursor <= revertTo)) {
+    setRevertTo(null);
+    if (notice === null) setEditing(false);
+  }
   useEffect(() => {
-    if (revertTo === null || busy) return;
-    if (notice !== null || cursor <= revertTo) {
-      setRevertTo(null);
-      if (notice === null) setEditing(false);
+    if (revertTo === null || busy || notice !== null || cursor <= revertTo) {
       return;
     }
     undoRef.current();
