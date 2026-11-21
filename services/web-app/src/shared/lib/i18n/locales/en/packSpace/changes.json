@@ -40,6 +40,7 @@
   "what": {
     "title": "What changed",
     "group": "{{template}} · version {{version}}",
+    "groupCopy": "New version {{version}} and my edits",
     "groupPack": "Shared files of pack {{pack}}",
     "groupOther": "Other files",
     "files_one": "{{count}} file",

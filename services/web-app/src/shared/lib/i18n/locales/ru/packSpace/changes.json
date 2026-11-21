@@ -40,6 +40,7 @@
   "what": {
     "title": "Что изменено",
     "group": "{{template}} · версия {{version}}",
+    "groupCopy": "Новая версия {{version}} и мои правки",
     "groupPack": "Общие файлы пака {{pack}}",
     "groupOther": "Другие файлы",
     "files_one": "{{count}} файл",

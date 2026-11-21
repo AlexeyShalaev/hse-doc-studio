@@ -12,6 +12,7 @@ import {
   MAX_LINT_TARGETS,
   deriveChangesStatus,
   isNotesFinding,
+  isNumberFinding,
   lintTargets,
   readNotes,
   type ChangesRaw,
@@ -494,5 +495,99 @@ describe("readNotes", () => {
     expect(readNotes(undefined)).toEqual({ ru: [], en: [] });
     expect(readNotes({ changes: "text" })).toEqual({ ru: [], en: [] });
     expect(readNotes({ changes: { ru: "x" } })).toEqual({ ru: [], en: [] });
+  });
+});
+
+describe("deriveChangesStatus: копия версии", () => {
+  const NEW_FILES = [
+    ...Array.from({ length: 13 }, (_, i) =>
+      file(`${DRAFT}/files/d${String(i)}/doc.yaml`, "added"),
+    ),
+    ...Array.from({ length: 13 }, (_, i) =>
+      file(`${DRAFT}/files/d${String(i)}/d${String(i)}.ru.tex`, "added"),
+    ),
+    file(`${DRAFT}/version.yaml`, "added"),
+  ];
+  const same = new Set(
+    NEW_FILES.map((c) => c.path).filter(
+      (path) => !path.includes("d0/") && !path.endsWith("d5.ru.tex"),
+    ),
+  );
+  const copy = { dir: DRAFT, base: "2026.1.2", same, pending: false };
+
+  it("без сверки считаем по git: вся копия это изменение", () => {
+    const status = deriveChangesStatus(
+      rawOf({ git: gitOf({ changed: NEW_FILES }) }),
+    );
+    expect(status.changedFiles).toBe(27);
+  });
+
+  it("со сверкой считаем только отличия от версии-основы", () => {
+    const status = deriveChangesStatus(
+      rawOf({ git: gitOf({ changed: NEW_FILES }), copy }),
+    );
+    expect(status.changedFiles).toBe(3);
+    expect(status.changedInVersion).toBe(3);
+  });
+
+  it("копия без правок: изменений нет, кнопки нет", () => {
+    const status = deriveChangesStatus(
+      rawOf({
+        git: gitOf({ changed: NEW_FILES }),
+        copy: {
+          ...copy,
+          same: new Set(NEW_FILES.map((c) => c.path)),
+        },
+      }),
+    );
+    expect(status.changedFiles).toBe(0);
+    expect(status.notesNeeded).toBe(false);
+  });
+
+  it("находка про номер версии не ошибка и не заметки", () => {
+    const status = deriveChangesStatus(
+      rawOf({
+        git: gitOf({ changed: NEW_FILES }),
+        copy,
+        lint: [
+          lintOf([
+            diagnostic({
+              message:
+                "release: номер 2026.1.3 после 2026.1.2 это patch, а изменения требуют не меньше minor: Состав или языки документа: documents[ts].supported_kinds",
+              path: null,
+              line: null,
+            }),
+          ]),
+        ],
+      }),
+    );
+    expect(status.errors).toBe(0);
+    expect(status.notesNeeded).toBe(false);
+  });
+
+  it("в выпущенной версии номер уже не поменять: это обычная ошибка", () => {
+    const finding = diagnostic({
+      message:
+        "release: номер 2026.1.3 после 2026.1.2 это patch, а изменения требуют не меньше minor: x",
+    });
+    expect(isNumberFinding(finding)).toBe(true);
+    expect(
+      deriveChangesStatus(
+        rawOf({
+          git: gitOf({ changed: [file(`${DRAFT}/version.yaml`)] }),
+          lint: [lintOf([finding], { released: true })],
+        }),
+      ).errors,
+    ).toBe(1);
+  });
+
+  it("мягче класса в манифесте: номером не исправить, остаётся ошибкой", () => {
+    expect(
+      isNumberFinding(
+        diagnostic({
+          message: "release: `release.kind: patch` мягче класса версии 2026.2.0 (minor)",
+        }),
+      ),
+    ).toBe(false);
   });
 });
