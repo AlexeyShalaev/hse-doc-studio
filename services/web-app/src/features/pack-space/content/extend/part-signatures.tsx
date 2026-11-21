@@ -1,5 +1,6 @@
-import { LegacyVersionPart } from "../legacy/LegacyVersionPart";
+import SignaturesOverview from "../signatures/SignaturesOverview";
 
-// S8d: ЗАМЕНИТЬ ЭТОТ ФАЙЛ. Раздел «signatures» пока показывает прежнюю форму версии на своём разделе
-// (docs/design/pack-studio-ux.md, 12.7). Props: `ContentPartProps`.
-export default LegacyVersionPart;
+// S8c: раздел «Подписи и места»: какие подписи есть в версии и где они стоят, переход в документ
+// на «Подписи». Порядок подписания и подписи сроков остаются в «Сроках и сдаче» (S8d). Props:
+// `ContentPartProps` (docs/design/pack-studio-ux.md, 12.7).
+export default SignaturesOverview;
