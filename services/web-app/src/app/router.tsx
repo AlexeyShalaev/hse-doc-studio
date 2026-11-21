@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate, type RouteObject } from "react-router";
 import { i18n, loadAdminNamespaces } from "@shared/lib";
 import { loadPackOutcomeNamespace } from "@shared/lib/i18n/packOutcomeNamespace";
+import { loadPackSpaceNamespace } from "@shared/lib/i18n/packSpaceNamespace";
 import { loadPackStudioNamespace } from "@shared/lib/i18n/packStudioNamespace";
 import { loadSigningNamespace } from "@shared/lib/i18n/signingNamespace";
 import { AuthErrorPage } from "@pages/AuthErrorPage";
@@ -66,6 +67,7 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
             { getCheckpointDeadlineGallery },
             { getPackStudioGallery },
             { getPackOutcomeGallery },
+            { getPackSpaceGallery },
             demo,
           ] = await Promise.all([
             import("@pages/DevServerScreens"),
@@ -79,10 +81,12 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
             import("@features/checkpoint-deadline/gallery"),
             import("@pages/PackStudioPage/gallery"),
             import("@features/pack-outcome/gallery"),
+            import("@features/pack-space/gallery"),
             import("./demo"),
             loadSigningNamespace(),
             loadPackStudioNamespace(),
             loadPackOutcomeNamespace(),
+            loadPackSpaceNamespace(),
             loadAdminNamespaces(["packStudio"]),
           ]);
           const extraSections = [
@@ -124,7 +128,11 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
             {
               id: "pack-studio",
               title: "Студия шаблонов",
-              groups: [...getPackStudioGallery(), ...getPackOutcomeGallery()],
+              groups: [
+                ...getPackStudioGallery(),
+                ...getPackOutcomeGallery(),
+                ...getPackSpaceGallery(),
+              ],
             },
           ];
           // Серверные записи ходят в демо-мир, даже если приложение запущено без него.
