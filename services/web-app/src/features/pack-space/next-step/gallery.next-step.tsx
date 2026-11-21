@@ -183,7 +183,7 @@ const screen = (
     ) : (
       <SpaceGalleryFrame
         search={search}
-        height="44rem"
+        height="64rem"
         {...(view.version ? { version: view.version } : {})}
       >
         <SpaceScreen slots={SLOTS} phone={view.phone ?? false} />
