@@ -1,0 +1,61 @@
+{
+  "bar": {
+    "spaces": "Workspaces",
+    "menu": "Actions for workspace \"{{name}}\"",
+    "refresh": "Refresh",
+    "switchTo": "Open \"{{name}}\"",
+    "connectCatalog": "Connect to the Studio catalog",
+    "delete": "Delete",
+    "deleteTitle": "Delete workspace \"{{name}}\"?",
+    "deleteGit": "The clone in Studio will be deleted. The repository on the host is not changed.",
+    "deleteFolder": "Only the Studio entry is deleted, the folder on disk stays.",
+    "cancel": "Cancel",
+    "refreshFailed": "Refresh failed"
+  },
+  "crumb": {
+    "label": "Where you are: pack, template, version",
+    "packOf": "Pack: {{name}}",
+    "packHint": "Pack: a set of templates for a programme",
+    "templateOf": "Template: {{name}}",
+    "version": "Version {{version}}",
+    "default": "default",
+    "mine": "My changes: {{template}}, {{version}}",
+    "templatesNone": "no templates",
+    "versionsNone": "no versions",
+    "newPack": "Create a pack",
+    "newTemplate": "Create a template"
+  },
+  "state": {
+    "draft": "draft",
+    "released": "released"
+  },
+  "edited_one": "{{count}} change",
+  "edited_few": "{{count}} changes",
+  "edited_many": "{{count}} changes",
+  "edited_other": "{{count}} changes",
+  "where": {
+    "title": "Where to go",
+    "place": "{{template}} · {{version}}",
+    "mine": "My changes",
+    "mineLead": "{{template}}, version {{version}}, {{edited}}",
+    "pack": "Pack",
+    "template": "Template",
+    "version": "Version"
+  },
+  "empty": {
+    "noPacks": {
+      "title": "This workspace has no templates yet",
+      "lead": "Create the first pack: that is what a set of templates for a programme is called.",
+      "action": "Create a pack"
+    },
+    "noTemplates": {
+      "title": "Pack \"{{pack}}\" has no templates",
+      "lead": "Add the first template and it will open here.",
+      "action": "Create a template"
+    },
+    "noVersions": {
+      "title": "Template \"{{template}}\" has no versions",
+      "lead": "Add a version in the repository and refresh the workspace: it will open here."
+    }
+  }
+}

@@ -1,14 +1,14 @@
-import type {
-  PackTree,
-  PackTreeTemplate,
-  PackVersionRef,
-  SpaceTab,
-} from "@entities/pack-studio";
+import type { PackTree, PackVersionRef, SpaceTab } from "@entities/pack-studio";
+import {
+  changedFilesOf,
+  countByVersion,
+  pickDefaultVersion,
+} from "../nav/pickDefaultVersion";
 import type { SpacePlace } from "./memory";
 
-// Вход в пространство без версии (`/w/:ws`, старые адреса без версии): куда открыть.
-// Срез S2 заменяет выбор на `pickDefaultVersion` (версия с моими изменениями, затем последняя
-// посещённая, затем умолчание); контракт тот же: дерево и подсказки на входе, место на выходе.
+// Вход в пространство без версии (`/w/:ws`, старые адреса без версии): куда открыть. Версию
+// внутри шаблона выбирает `pickDefaultVersion` (срез S2): с моими изменениями, затем последняя
+// посещённая, затем по умолчанию.
 
 export type EntryPlace = {
   ref: PackVersionRef;
@@ -22,6 +22,8 @@ export type EntryHints = {
   template?: { pack: string; template: string } | null | undefined;
   tab?: SpaceTab | null | undefined;
   last?: SpacePlace | null | undefined;
+  /** Файлы, изменённые в пространстве (от папки паков): по ним находится версия с правками. */
+  changed?: readonly string[] | undefined;
 };
 
 export const hasVersion = (tree: PackTree, ref: PackVersionRef): boolean =>
@@ -35,33 +37,46 @@ export const hasVersion = (tree: PackTree, ref: PackVersionRef): boolean =>
       ),
   );
 
-const defaultOf = (
+/** Версия, где человек был в этом шаблоне, если последнее место относится к нему. */
+const lastIn = (
   pack: string,
-  template: PackTreeTemplate,
-): PackVersionRef | null => {
-  const chosen =
-    template.versions.find((v) => v.version === template.default_version) ??
-    template.versions[template.versions.length - 1];
-  return chosen
-    ? { pack, template: template.id, version: chosen.version }
+  template: string,
+  last: SpacePlace | null | undefined,
+): string | null =>
+  last && last.ref.pack === pack && last.ref.template === template
+    ? last.ref.version
     : null;
-};
 
-/** Первая версия по умолчанию в дереве (с необязательным сужением до шаблона). */
+/**
+ * Первая подходящая версия дерева (с необязательным сужением до шаблона). Без сужения шаблон с
+ * моими изменениями идёт первым.
+ */
 const firstDefault = (
   tree: PackTree,
-  only?: { pack: string; template: string } | null,
+  only: { pack: string; template: string } | null | undefined,
+  changed: readonly string[],
+  last: SpacePlace | null | undefined,
 ): PackVersionRef | null => {
+  const counts = countByVersion(changed);
+  const found: { ref: PackVersionRef; edited: boolean }[] = [];
   for (const pack of tree.packs) {
     for (const template of pack.templates) {
       if (only && (only.pack !== pack.id || only.template !== template.id)) {
         continue;
       }
-      const ref = defaultOf(pack.id, template);
-      if (ref) return ref;
+      const version = pickDefaultVersion(
+        template,
+        changed,
+        lastIn(pack.id, template.id, last),
+      );
+      if (!version) continue;
+      found.push({
+        ref: { pack: pack.id, template: template.id, version },
+        edited: template.versions.some((v) => changedFilesOf(counts, v) > 0),
+      });
     }
   }
-  return null;
+  return (found.find((item) => item.edited) ?? found[0])?.ref ?? null;
 };
 
 /** Порядок: версия из адреса, версия шаблона из адреса, последнее место, первая по умолчанию. */
@@ -69,14 +84,14 @@ export const resolveEntryPlace = (
   tree: PackTree,
   hints: EntryHints = {},
 ): EntryPlace | null => {
-  const { ref, template, tab, last } = hints;
+  const { ref, template, tab, last, changed = [] } = hints;
   const explicit =
     (ref && hasVersion(tree, ref) ? ref : null) ??
-    (template ? firstDefault(tree, template) : null);
+    (template ? firstDefault(tree, template, changed, last) : null);
   if (explicit) return { ref: explicit, tab: tab ?? "result", inputs: {} };
   if (last && hasVersion(tree, last.ref)) {
     return { ref: last.ref, tab: tab ?? last.tab, inputs: last.inputs };
   }
-  const first = firstDefault(tree);
+  const first = firstDefault(tree, null, changed, null);
   return first ? { ref: first, tab: tab ?? "result", inputs: {} } : null;
 };
