@@ -1,0 +1,318 @@
+/* Вкладка «Содержимое» (pack-studio-ux.md, 5.5). Область: content. Префикс sp-ct-, токены темы.
+   Раскладку по ширине решает @container sp каркаса (ширина экрана пространства, а не окна). */
+
+/* ── левая навигация «что редактируем» ── */
+.sp-ct-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+.sp-ct-kicker {
+  padding: 0.25rem 0.625rem 0.375rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+}
+.sp-ct-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: var(--r-2);
+  color: var(--fg-1);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+a.sp-ct-item:hover,
+.sp-ct-sub:hover {
+  background: var(--bg-hover);
+}
+.sp-ct-item.on {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.sp-ct-label {
+  min-width: 0;
+  line-height: 1.25;
+}
+.sp-ct-count,
+.sp-ct-hint {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--fg-2);
+}
+.sp-ct-item.on .sp-ct-count,
+.sp-ct-item.on .sp-ct-hint {
+  color: var(--accent);
+}
+.sp-ct-hint {
+  font-size: 0.6875rem;
+}
+.sp-ct-docs {
+  list-style: none;
+  margin: 0 0 0.25rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.0625rem;
+}
+.sp-ct-docs > li[data-group-start] {
+  margin-top: 0.375rem;
+  padding-top: 0.375rem;
+  border-top: 1px solid var(--border-soft);
+}
+.sp-ct-sub {
+  display: block;
+  min-height: 1.75rem;
+  padding: 0.3125rem 0.625rem 0.3125rem 1.75rem;
+  border-radius: var(--r-2);
+  color: var(--fg-1);
+  font-size: 0.8125rem;
+  line-height: 1.25;
+  text-decoration: none;
+}
+.sp-ct-sub.on {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+.sp-ct-search {
+  position: relative;
+  display: block;
+  margin: 0.125rem 0.25rem 0.375rem;
+}
+.sp-ct-search svg {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0.5rem;
+  margin-block: auto;
+  color: var(--fg-2);
+  pointer-events: none;
+}
+.sp-ct-search .input {
+  width: 100%;
+  padding-inline-start: 1.75rem;
+}
+.sp-ct-rule {
+  margin: 0.5rem 0.25rem;
+  border: 0;
+  border-top: 1px solid var(--border);
+}
+.sp-ct-empty {
+  margin: 0.25rem 0.625rem;
+  color: var(--fg-2);
+  font-size: 0.8125rem;
+}
+
+/* ── центр: документ или раздел ── */
+.sp-ct {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  min-width: 0;
+}
+.sp-ct-doc {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.sp-ct-head {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 0.625rem 1rem;
+}
+.sp-ct-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+.sp-ct-title .sp-ct-kicker {
+  padding: 0;
+}
+.sp-ct-h1 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.sp-ct-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.0625rem 0.5rem;
+  border-radius: var(--r-pill);
+  background: var(--bg-3);
+  color: var(--fg-1);
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+.sp-ct-seg {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  background: var(--bg-1);
+}
+.sp-ct-seg-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.875rem;
+  padding: 0 0.875rem;
+  color: var(--fg-2);
+  font-size: 0.8125rem;
+  text-decoration: none;
+}
+.sp-ct-seg-btn + .sp-ct-seg-btn {
+  border-left: 1px solid var(--border);
+}
+.sp-ct-seg-btn:hover {
+  color: var(--fg-0);
+}
+.sp-ct-seg-btn.on {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+.sp-ct-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  background: var(--bg-1);
+  color: var(--fg-1);
+  font-size: 0.8125rem;
+}
+.sp-ct-banner svg {
+  margin-top: 0.125rem;
+  flex-shrink: 0;
+}
+.sp-ct-banner span {
+  color: var(--fg-2);
+}
+
+/* ── сегмент «Текст» и «Все файлы»: прежний редактор ── */
+.sp-ct-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.sp-ct-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+.sp-ct-chip {
+  padding: 0.1875rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  color: var(--fg-1);
+  font-size: 0.75rem;
+  text-decoration: none;
+}
+.sp-ct-chip[aria-current="page"] {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.sp-ct-editor {
+  display: flex;
+  flex-direction: column;
+  height: max(26rem, calc(100dvh - 16rem));
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-3);
+  overflow: hidden;
+  background: var(--bg-0);
+}
+.sp-ct-legacy {
+  min-width: 0;
+}
+.sp-ct-files-part {
+  display: grid;
+  grid-template-columns: minmax(12rem, 16rem) minmax(0, 1fr);
+  gap: 0.75rem;
+  min-width: 0;
+}
+.sp-ct-tree {
+  min-width: 0;
+  max-height: max(26rem, calc(100dvh - 16rem));
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--r-3);
+  background: var(--bg-1);
+}
+.sp-ct-tree-main {
+  min-width: 0;
+}
+.sp-ct-stub {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1.5rem 0;
+  color: var(--fg-2);
+}
+.sp-ct-stub h2 {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--fg-0);
+}
+.sp-ct-stub p {
+  margin: 0;
+  font-size: 0.8125rem;
+}
+
+/* ── телефон: «что редактируем» сворачивается полосой над документом ── */
+.sp-ct-phone-nav {
+  display: none;
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  background: var(--bg-1);
+}
+.sp-ct-phone-nav > summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--touch-min);
+  padding: 0 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sp-ct-phone-nav[open] > summary {
+  border-bottom: 1px solid var(--border);
+}
+.sp-ct-phone-nav .sp-ct-nav {
+  padding: 0.5rem;
+}
+.sp-root[data-phone] .sp-ct-phone-nav {
+  display: block;
+}
+.sp-root[data-phone] .sp-ct-files-part {
+  grid-template-columns: minmax(0, 1fr);
+}
+.sp-root[data-phone] .sp-ct-tree {
+  max-height: 14rem;
+}
+.sp-root[data-phone] .sp-ct-seg {
+  flex: 1 0 100%;
+}
+.sp-root[data-phone] .sp-ct-seg-btn {
+  flex: 1;
+  justify-content: center;
+}

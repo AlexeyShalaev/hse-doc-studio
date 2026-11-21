@@ -1,1 +1,59 @@
-{}
+{
+  "nav": {
+    "label": "What we edit",
+    "documents": "Documents",
+    "fields": "Project data",
+    "forms": "Questionnaires",
+    "deadlines": "Deadlines and submission",
+    "signatures": "Signatures and places",
+    "languages": "Languages",
+    "rules": "Check rules",
+    "files": "All files",
+    "filesHint": "for experts",
+    "search": "Find a document",
+    "searchEmpty": "No such document",
+    "noDocuments": "This version has no documents yet.",
+    "current": "What we edit: {{name}}"
+  },
+  "doc": {
+    "kicker": "Document",
+    "segments": "What to show",
+    "terms": "Terms",
+    "text": "Text",
+    "signatures": "Signatures",
+    "notFoundTitle": "There is no document \"{{id}}\" in this version",
+    "notFoundLead": "The link may be left over from another version. Pick a document on the left."
+  },
+  "text": {},
+  "part": {
+    "fields": "Project data",
+    "forms": "Questionnaires",
+    "deadlines": "Deadlines and submission",
+    "signatures": "Signatures and places",
+    "languages": "Languages",
+    "rules": "Check rules",
+    "files": "All files"
+  },
+  "released": {
+    "title": "Version {{version}} is released and does not change.",
+    "lead": "Press \"Edit a copy\": your changes go into it.",
+    "readOnly": "read only"
+  },
+  "signatures": {},
+  "loadFailed": "Could not read the version",
+  "leave": "There are unsaved changes. Leave without saving them?",
+  "noDocumentsTitle": "This version has no documents",
+  "noDocumentsLead": "Project data, questionnaires and deadlines are on the left.",
+  "stub": {
+    "title": "Coming soon",
+    "signatures": "Signature places on the document PDF will appear here."
+  },
+  "parts": {},
+  "legacy": {
+    "file": "File",
+    "noText": "The document has no text files that can be edited here.",
+    "treeTitle": "Template files",
+    "pickTitle": "Pick a file",
+    "pickLead": "Open a file in the tree on the left."
+  }
+}
