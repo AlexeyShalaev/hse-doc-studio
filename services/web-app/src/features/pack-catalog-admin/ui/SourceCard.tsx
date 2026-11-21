@@ -20,12 +20,27 @@ import {
 import { formatPastTime } from "@shared/lib";
 import { ActionMenu, Badge, Button, Spinner } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
+import {
+  needsAttention,
+  sourceStatus,
+  type SourceStatus,
+} from "../lib/sourceStatus";
 import { PackLine, PackList } from "./PackList";
 
 export type SourceAction =
   "check" | "edit" | "replace" | "toggle" | "history" | "remove";
 
 const SMALL = { fontSize: "0.71875rem", lineHeight: 1.5 } as const;
+
+const STATUS_BADGE = {
+  busy: "warning",
+  failed: "error",
+  off: "default",
+  new: "info",
+  blocked: "warning",
+  update: "success",
+  ok: "success",
+} as const satisfies Record<SourceStatus, string>;
 
 /** Состояние последней проверки словами. */
 const checkLine = (source: CatalogSource, t: TFunction): string => {
@@ -53,6 +68,7 @@ export const SourceCard = ({
   const { t } = useTranslation("adminPackCatalog");
   const location = sourceLocation(source);
   const errorText = source.error ? sourceErrorText(source.error) : null;
+  const status = sourceStatus(source);
   return (
     <article
       className="card"
@@ -60,7 +76,10 @@ export const SourceCard = ({
       data-testid={`pc-source-${source.id}`}
       data-enabled={source.enabled ? "true" : "false"}
     >
-      <div className="flex items-start" style={{ gap: "0.75rem" }}>
+      <div
+        className="flex items-start"
+        style={{ gap: "0.5rem 0.75rem", flexWrap: "wrap" }}
+      >
         <span
           className="adm-row-icon"
           data-tone={source.enabled ? "accent" : "neutral"}
@@ -74,7 +93,7 @@ export const SourceCard = ({
         </span>
         <div
           className="flex flex-col"
-          style={{ gap: "0.25rem", flex: 1, minWidth: 0 }}
+          style={{ gap: "0.25rem", flex: "1 1 14rem", minWidth: 0 }}
         >
           <div
             className="flex items-center"
@@ -83,10 +102,14 @@ export const SourceCard = ({
             <strong style={{ fontSize: "0.8125rem" }}>{source.label}</strong>
             <Badge variant="subtle">{t(`source.kind.${source.kind}`)}</Badge>
             <Badge
-              variant={source.enabled ? "success" : "default"}
-              title={source.enabled ? undefined : t("source.disabledHint")}
+              variant={STATUS_BADGE[status]}
+              title={status === "off" ? t("source.disabledHint") : undefined}
+              data-testid="pc-source-status"
             >
-              {source.enabled ? t("source.enabled") : t("source.disabled")}
+              {status === "busy" && <Spinner size="sm" />}
+              {status === "update"
+                ? t("source.pending", { count: source.pending_versions })
+                : t(`source.status.${status}`)}
             </Badge>
             {source.track && (
               <Badge variant="info" title={t("source.trackingHint")}>
@@ -95,12 +118,6 @@ export const SourceCard = ({
             )}
             {source.replace_builtin && (
               <Badge variant="accent">{t("source.replacesBuiltin")}</Badge>
-            )}
-            {source.busy && (
-              <Badge variant="warning">
-                <Spinner size="sm" />
-                {t("source.busy")}
-              </Badge>
             )}
           </div>
           <span
@@ -128,13 +145,6 @@ export const SourceCard = ({
           <span className="dim" style={SMALL} data-testid="pc-source-checked">
             {checkLine(source, t)}
           </span>
-          {source.pending_versions > 0 && (
-            <div>
-              <Badge variant="success" data-testid="pc-source-pending">
-                {t("source.pending", { count: source.pending_versions })}
-              </Badge>
-            </div>
-          )}
           {source.error && errorText && (
             <Notice
               tone="err"
@@ -162,10 +172,13 @@ export const SourceCard = ({
             />
           )}
         </div>
-        <div className="flex items-center" style={{ gap: "0.25rem" }}>
+        <div
+          className="flex items-center"
+          style={{ gap: "0.25rem", marginLeft: "auto" }}
+        >
           <Button
             size="sm"
-            variant="secondary"
+            variant={needsAttention(status) ? "primary" : "secondary"}
             disabled={source.busy}
             onClick={() => {
               onAction("check", source);

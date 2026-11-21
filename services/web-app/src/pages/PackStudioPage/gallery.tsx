@@ -5,18 +5,15 @@ import {
   type PackEditorHints,
   type PackGit,
   type PackPreviewOptions,
-  type PackServiceAccess,
   type PackFile,
   type PackLint,
   type PackOfficial,
-  type PackStudioAdmin,
   type PackTree,
   type PackWorkspace,
 } from "@entities/pack-studio";
 import { PackFileEditor } from "@features/pack-file-editor";
 import { PackGitBar } from "@features/pack-git";
 import { PackPreviewPane } from "@features/pack-preview";
-import { PackStudioAdminPage } from "@features/pack-studio-admin";
 import { PackTreePanel } from "@features/pack-tree";
 import {
   CreateWorkspaceDialog,
@@ -24,6 +21,7 @@ import {
 } from "@features/pack-workspaces";
 import type { GalleryGroup } from "@shared/lib/stateGallery";
 import { DialogLauncher } from "@shared/ui/StateGallery";
+import { getPackStudioAdminGallery } from "./gallery.admin";
 import "./packStudio.css";
 
 // Галерея Студии шаблонов (/dev/server-screens): список пространств во всех
@@ -258,35 +256,6 @@ const HINTS: PackEditorHints = {
   ],
 };
 
-const ADMIN: PackStudioAdmin = {
-  enabled: true,
-  locked: false,
-  grants: [
-    {
-      id: "g1",
-      subject: "user",
-      subject_id: "u1",
-      name: "Анна Петрова",
-      email: "a.petrova@edu.hse.ru",
-      org_slug: null,
-      org_name: null,
-      granted_by: "admin",
-      created_at: NOW,
-    },
-    {
-      id: "g2",
-      subject: "group",
-      subject_id: "g-methodists",
-      name: "Методисты",
-      email: null,
-      org_slug: "fcs",
-      org_name: "ФКН",
-      granted_by: "admin",
-      created_at: NOW,
-    },
-  ],
-};
-
 const noop = () => undefined;
 
 const BRANCH = "pack-studio/anna/hse-cs-sse-coursework-2026.1.6";
@@ -396,18 +365,6 @@ const PREVIEW_OPTIONS: PackPreviewOptions = {
   default_example: "auto:normal",
   combination: { lang: "ru", staffing: "solo", supervisor: "university" },
 };
-
-const SERVICE_ACCESS: PackServiceAccess[] = [
-  {
-    id: "sa1",
-    url: "https://gitlab.hse.ru/fcs/packs.git",
-    label: "fcs/packs",
-    token_family: "glpat",
-    created_by: "admin",
-    created_by_name: "Администратор",
-    created_at: NOW,
-  },
-];
 
 const GitBarScreen = ({ git }: { git: PackGit }) => (
   <div className="ps-shell">
@@ -678,25 +635,5 @@ export const getPackStudioGallery = (): GalleryGroup[] => [
       },
     ],
   },
-  {
-    id: "pack-studio-admin",
-    title: "Админка: Студия шаблонов",
-    entries: [
-      {
-        id: "ps_admin",
-        title: "Раздел включён, право у человека и группы",
-        frame: "page",
-        width: 720,
-        seed: (client) => {
-          client.setQueryData(packStudioKeys.admin(), ADMIN);
-          client.setQueryData(packStudioKeys.serviceAccess(), SERVICE_ACCESS);
-        },
-        render: () => (
-          <div style={{ padding: "1.25rem" }}>
-            <PackStudioAdminPage />
-          </div>
-        ),
-      },
-    ],
-  },
+  ...getPackStudioAdminGallery(),
 ];

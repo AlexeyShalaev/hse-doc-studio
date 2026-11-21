@@ -80,14 +80,14 @@ const AdminMcpPage = lazy(() =>
   import("@features/mcp-server").then((m) => ({ default: m.AdminMcpPage })),
 );
 
-// Студия шаблонов: включение раздела и право «Автор шаблонов» людям и группам.
+// Студия шаблонов: включение раздела, кто может править шаблоны и подключённые репозитории.
 const AdminPackStudioPage = lazy(() =>
   import("@features/pack-studio-admin").then((m) => ({
     default: m.PackStudioAdminPage,
   })),
 );
 
-// Каталоги паков: источники git и архивы, проверка и применение.
+// Источники шаблонов: репозитории git и архивы, проверка и применение.
 const AdminPackCatalogPage = lazy(() =>
   import("@features/pack-catalog-admin").then((m) => ({
     default: m.PackCatalogAdminPage,

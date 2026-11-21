@@ -568,7 +568,7 @@ describe("окно подключения", () => {
     );
   });
 
-  it("служебный доступ на сервере живёт под «Дополнительно»", async () => {
+  it("доступ подключённого репозитория на сервере живёт под «Дополнительно»", async () => {
     vi.spyOn(gitRemoteApi, "listCredentials").mockResolvedValue([]);
     const created = fixture("git_service_access");
     const create = vi
@@ -578,7 +578,7 @@ describe("окно подключения", () => {
     await pasteUrl("https://gitlab.hse.ru/fcs/packs.git");
     await userEvent.click(screen.getByText("Дополнительно"));
     await userEvent.click(
-      screen.getByRole("button", { name: "Служебный доступ" }),
+      screen.getByRole("button", { name: "Подключённый репозиторий" }),
     );
     expect(screen.getByTestId("ws-create-service-hint")).toBeInTheDocument();
     expect(screen.queryByLabelText("Доступ")).not.toBeInTheDocument();
@@ -595,12 +595,12 @@ describe("окно подключения", () => {
     });
   });
 
-  it("в локальной Студии служебного доступа нет", async () => {
+  it("в локальной Студии доступа подключённого репозитория нет", async () => {
     vi.spyOn(gitRemoteApi, "listCredentials").mockResolvedValue([]);
     dialog({ allowServiceAccess: false });
     await userEvent.click(screen.getByText("Дополнительно"));
     expect(
-      screen.queryByRole("button", { name: "Служебный доступ" }),
+      screen.queryByRole("button", { name: "Подключённый репозиторий" }),
     ).not.toBeInTheDocument();
   });
 });

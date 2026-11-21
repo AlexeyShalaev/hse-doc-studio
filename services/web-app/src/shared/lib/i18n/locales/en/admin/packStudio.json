@@ -1,26 +1,56 @@
 {
   "title": "Template Studio",
-  "lead": "A section for pack authors: edit templates and propose changes to the packs repository. The git host decides on merging.",
-  "section": {
-    "title": "Section",
-    "enabled": "Template Studio is on",
-    "enabledHint": "Only people with the “Template author” right and installation administrators see the section.",
-    "locked": "The switch is set by the server environment."
+  "lead": "A section for template authors: edit document templates and propose changes. The git host decides on merging.",
+  "setup": {
+    "title_one": "Setup: {{count}} step of {{total}}",
+    "title_other": "Setup: {{count}} steps of {{total}}",
+    "titleDone": "Setup is complete",
+    "optional": "optional",
+    "status": {
+      "ready": "section is working",
+      "off": "section is off",
+      "needAccess": "access still to grant"
+    },
+    "enabled": {
+      "title": "Section is on",
+      "hintOn": "People with access see “Template Studio” in the header.",
+      "hintOff": "Template Studio is off: people do not get the header button.",
+      "locked": "The switch is set when the server starts and cannot be changed here.",
+      "switchOn": "On",
+      "switchOff": "Off"
+    },
+    "access": {
+      "title": "Who can edit templates",
+      "hintDone": "{{who}}. Administrators always have access.",
+      "hintTodo": "Nobody yet. Administrators always have access.",
+      "group": "group “{{name}}”",
+      "more_one": "{{list}} and {{count}} more",
+      "more_other": "{{list}} and {{count}} more",
+      "action": "Grant access"
+    },
+    "repo": {
+      "title": "Repository for sending changes",
+      "hintDone": "Connected: {{list}}.",
+      "hintTodo": "Without it, each author sends changes with their own git access, for example from their fork.",
+      "hintError": "Could not find out whether repositories are connected. The list below shows the reason.",
+      "action": "Connect a repository"
+    }
   },
   "grants": {
-    "title": "“Template author” right",
-    "lead": "Who can open the section. Installation administrators always have it.",
-    "add": "Grant the right",
-    "emptyTitle": "Nobody has the right yet",
-    "emptyLead": "Grant it to a person or an organization group.",
+    "title": "Who can edit templates",
+    "lead": "People and organization groups who can open Template Studio. New group members get access automatically.",
+    "add": "Grant access",
+    "emptyTitle": "Nobody has access yet",
+    "emptyLead": "Grant access to yourself or to a group of methodists.",
     "person": "person",
     "group": "group",
     "since": "granted {{when}}",
-    "revoke": "Revoke the right from “{{name}}”"
+    "revokeLabel": "Revoke access",
+    "revoke": "Revoke access from “{{name}}”"
   },
   "grant": {
-    "title": "Grant the “Template author” right",
-    "lead": "To a person or a whole organization group: new group members get the right automatically.",
+    "title": "Grant access to Template Studio",
+    "lead": "To a person or a whole organization group: new group members get access automatically.",
     "toUser": "Person",
     "toGroup": "Group",
     "user": "Person",
@@ -29,47 +59,55 @@
     "orgPlaceholder": "Choose an organization",
     "group": "Group",
     "groupPlaceholder": "Choose a group",
-    "submit": "Grant",
+    "submit": "Grant access",
     "cancel": "Cancel"
   },
   "service": {
-    "title": "Service access",
-    "lead": "An instance-level token for a pack repository: workspaces of people with the Template author right push branches with it, commits are signed by the person. One access per repository.",
+    "title": "Connected repositories",
+    "lead": "Template repositories the service sends changes to on its own behalf. The author of each change is still the person. A repository is connected once.",
     "add": "Add",
-    "emptyTitle": "No service access",
-    "emptyLead": "Without it, template authors use their own tokens.",
-    "since": "added {{when}}, {{who}}",
-    "remove": "Remove access “{{name}}”",
-    "removeTitle": "Remove service access “{{name}}”?",
-    "removeLead": "Workspaces that use it lose access to the repository.",
+    "emptyTitle": "No repositories yet",
+    "emptyLead": "Without them, each author sends changes with their own git access. Connect a repository so the service does it.",
+    "tokenFamily": "{{family}}… token",
+    "since": "added {{when}}",
+    "sinceBy": "added {{when}}, {{who}}",
+    "checkedOk": "access works",
+    "checkedFailed": "access has problems",
+    "removeLabel": "Remove",
+    "remove": "Remove “{{name}}”",
+    "removeTitle": "Remove the connected repository “{{name}}”?",
+    "removeLead": "Workspaces that send changes through it lose access to the repository.",
     "removeSubmit": "Remove",
-    "addTitle": "Service access to a pack repository",
+    "addTitle": "Connect a repository",
     "addLead": "The token is stored encrypted and never shown again. Every use is written to the audit log.",
     "url": "Repository address",
-    "label": "Label",
-    "labelHint": "Empty: the repository path.",
-    "token": "Token",
-    "tokenHint": "https only. Rights as in the pack repository profile: write, pull requests, checks status.",
-    "submit": "Add",
+    "label": "Name",
+    "labelHint": "How the repository is named in the list. Empty: the path from the address.",
+    "token": "Access token",
+    "tokenHint": "https only. Needs rights: write to the repository, pull requests, checks status.",
+    "submit": "Connect",
     "check": {
-      "button": "Check \"{{name}}\"",
-      "title": "Check of \"{{name}}\"",
+      "label": "Check",
+      "button": "Check access to “{{name}}”",
+      "title": "Check of “{{name}}”",
       "ok": "The access works.",
       "failed": "The access has problems.",
       "login": "Token account: {{login}}",
-      "scopes": "Token scopes: {{scopes}}",
+      "scopes": "Token rights: {{scopes}}",
       "close": "Done"
     },
     "problem": {
       "token_rejected": "GitHub did not accept the token: it is revoked, expired or mistyped.",
-      "cannot_push": "The token has no write access to the repository: the service access cannot push the branch.",
-      "provider_unsupported": "The check only supports GitHub."
+      "cannot_push": "The token has no write access to the repository: the service cannot send changes.",
+      "provider_unsupported": "The check only works for GitHub."
     }
   },
   "official": {
-    "title": "Official packs",
-    "lead": "The Official packs button in the Pack Studio opens the packs of the Studio repository. Changes to them are proposed only with your own GitHub account: the branch goes to your fork, the PR is opened in your name.",
-    "repo": "Repository: {{url}}, folder {{path}}, branch {{branch}}. Set by HSE_STUDIO__PACK_STUDIO__OFFICIAL_REPO_URL.",
-    "hidden": "No official repository is set (HSE_STUDIO__PACK_STUDIO__OFFICIAL_REPO_URL is empty): there is no Official packs button."
+    "title": "Official templates",
+    "lead": "People propose changes to the official HSE templates from their own GitHub account: changes go to their copy of the repository (a fork), and the merge request is opened in their name.",
+    "path": "folder {{path}}",
+    "branch": "main branch {{branch}}",
+    "license": "{{license}} license",
+    "hidden": "No official repository is set, so Template Studio has no “Official templates” button. To add it, set the address in HSE_STUDIO__PACK_STUDIO__OFFICIAL_REPO_URL."
   }
 }

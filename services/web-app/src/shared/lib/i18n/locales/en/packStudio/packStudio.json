@@ -61,8 +61,8 @@
     "labelHint": "Empty: from the address or the folder name.",
     "access": {
       "personal": "My git access",
-      "service": "Service access",
-      "serviceHint": "Changes are sent with the instance token the administrator set up for this repository. Commits are signed by you. Your own copy of the repository (a fork) is not available with service access."
+      "service": "Connected repository",
+      "serviceHint": "Changes are sent with the access the administrator set up for this repository under “Connected repositories”. Commits are signed by you. Your own copy of the repository (a fork) is not available with this access."
     },
     "tokenHelp": "Which token is needed to send changes",
     "newToken": "New token…",
