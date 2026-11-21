@@ -433,7 +433,8 @@
       "references": "References and captions",
       "content": "Content",
       "custom": "Custom rules",
-      "language": "Language and spelling"
+      "language": "Language and spelling",
+      "typography": "Typography"
     }
   }
 }

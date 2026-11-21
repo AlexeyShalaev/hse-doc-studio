@@ -322,7 +322,8 @@
         "references": "References and captions",
         "content": "Content",
         "custom": "Custom rules",
-        "language": "Language and spelling"
+        "language": "Language and spelling",
+        "typography": "Typography"
       }
     },
     "route": "The signing order is edited as a whole in the Form tab (Submission and signatures): open the rule and change the steps there."
