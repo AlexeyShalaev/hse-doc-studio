@@ -675,7 +675,7 @@ export const ChangesPanel = ({
             onAction={onAction}
           />
         )}
-        {showVerdict && impact}
+        {showVerdict && status.errors === 0 && impact}
         {showVerdict && (
           <Checks
             data={data}
@@ -685,6 +685,7 @@ export const ChangesPanel = ({
             onGoCheck={onGoCheck}
           />
         )}
+        {showVerdict && status.errors > 0 && impact}
         {showVerdict && submit}
         {git && (request.kind === "none" || request.kind === "open") && (
           <p className="sp-ch-muted" data-testid="sp-ch-where">
