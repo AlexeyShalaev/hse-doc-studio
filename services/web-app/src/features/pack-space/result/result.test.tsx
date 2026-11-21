@@ -130,7 +130,7 @@ describe("центр «Результата»", () => {
     await mount();
     const pick = within(screen.getByTestId("sp-doc-report")).getAllByRole(
       "button",
-    )[0] as HTMLElement;
+    )[0]!;
     fireEvent.click(pick);
     expect(location()).toContain("sel=documents%3Areport");
     expect(pick).toHaveAttribute("aria-pressed", "true");
@@ -266,9 +266,7 @@ describe("центр «Результата»", () => {
         "у каждого автора",
       );
       fireEvent.click(
-        within(screen.getByTestId("sp-field-year")).getAllByRole(
-          "button",
-        )[0] as HTMLElement,
+        within(screen.getByTestId("sp-field-year")).getAllByRole("button")[0]!,
       );
       expect(location()).toContain("sel=meta%3Ayear");
     });
@@ -286,7 +284,7 @@ describe("центр «Результата»", () => {
       const row = screen.getByTestId("sp-point-topic-approval");
       expect(row).toHaveTextContent("Обычно в середине ноября");
       expect(row).toHaveTextContent("2 документа");
-      fireEvent.click(within(row).getAllByRole("button")[0] as HTMLElement);
+      fireEvent.click(within(row).getAllByRole("button")[0]!);
       expect(location()).toContain("sel=points%3Atopic-approval");
     });
 
@@ -299,7 +297,7 @@ describe("центр «Результата»", () => {
       expect(row).toHaveTextContent("5 подписей");
       // Точки без подписей в список не попадают.
       expect(screen.queryByTestId("sp-sign-pre-defence")).toBeNull();
-      fireEvent.click(within(row).getAllByRole("button")[0] as HTMLElement);
+      fireEvent.click(within(row).getAllByRole("button")[0]!);
       expect(location()).toContain("sel=route%3Atopic-approval");
     });
   });
@@ -351,9 +349,9 @@ describe("центр «Результата»", () => {
           constructor(callback: IntersectionObserverCallback) {
             notify = callback;
           }
-          observe() {}
-          disconnect() {}
-          unobserve() {}
+          observe = vi.fn();
+          disconnect = vi.fn();
+          unobserve = vi.fn();
         },
       );
       await mount();

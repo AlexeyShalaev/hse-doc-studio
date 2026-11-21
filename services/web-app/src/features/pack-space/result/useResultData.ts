@@ -64,15 +64,13 @@ export const useResultData = (): ResultData => {
   const calculating = outcome.isFetching;
   const [slow, setSlow] = useState(false);
   useEffect(() => {
-    if (!calculating) {
-      setSlow(false);
-      return undefined;
-    }
+    if (!calculating) return undefined;
     const timer = setTimeout(() => {
       setSlow(true);
     }, SLOW_AFTER_MS);
     return () => {
       clearTimeout(timer);
+      setSlow(false);
     };
   }, [calculating]);
   return {
