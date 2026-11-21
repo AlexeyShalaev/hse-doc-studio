@@ -10,7 +10,7 @@ import {
   type ContentDocument,
   type DocSegment,
 } from "./contract";
-import { PART_COMPONENTS } from "./registry";
+import { SEGMENT_COMPONENTS } from "./registry";
 import { MEMORY_DOC, MEMORY_SEGMENT } from "./useContentRoute";
 import { useContentNav } from "./useContentNav";
 import type { ContentData } from "./useContentData";
