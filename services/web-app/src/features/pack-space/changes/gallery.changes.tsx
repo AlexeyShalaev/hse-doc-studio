@@ -21,6 +21,7 @@ import {
   SpaceGalleryFrame,
 } from "../galleryKit";
 import { SpaceScreen } from "../shell/SpaceScreen";
+import { versionStateOf } from "../next-step/fixtures";
 import { slots } from "./slots";
 
 // Состояния панели «Изменения» без сервера (макет 04-changes.html): git, проверки, заметки и
@@ -231,6 +232,11 @@ const seedOf =
     client.setQueryData(
       packStudioKeys.model(WS, GALLERY_REF),
       modelOf(spec.notes ?? null),
+    );
+    // Раздел отправки (S4) читает отчёт версии: класс, номера, записанные заметки.
+    client.setQueryData(
+      packStudioKeys.versionState(WS, GALLERY_REF, "0"),
+      versionStateOf({ changes: spec.notes ?? { ru: [], en: [] } }),
     );
     if (spec.ci && spec.git.workspace.pushed_sha) {
       client.setQueryData(

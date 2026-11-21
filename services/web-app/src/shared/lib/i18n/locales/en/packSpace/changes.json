@@ -281,6 +281,8 @@
       "running": "Sending…",
       "retry": "Retry",
       "errors_one": "Fix {{count}} error",
+      "errors_few": "Fix {{count}} errors",
+      "errors_many": "Fix {{count}} errors",
       "errors_other": "Fix {{count}} errors",
       "notes": "Describe the changes first"
     },

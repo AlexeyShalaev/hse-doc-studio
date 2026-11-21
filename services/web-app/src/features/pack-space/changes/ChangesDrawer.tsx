@@ -172,7 +172,7 @@ export const ChangesDrawer = () => {
         onAction={onAction}
         notesAction={
           <Button size="xs" variant="ghost" onClick={submit.focusNotes}>
-            {t("submit.notes.write")}
+            {t("changes.submit.notes.write")}
           </Button>
         }
         submit={

@@ -161,13 +161,15 @@ const mount = (setup: Setup = {}) => {
       .spyOn(packStudioApi, "versionModel")
       .mockResolvedValue(modelOf(setup.notes ?? true)),
     // Отчёт версии нужен разделу отправки (класс, номера, что записано в заметках).
-    state: vi.spyOn(packStudioApi, "versionState").mockResolvedValue(
-      versionStateOf(
-        setup.notes === false
-          ? {}
-          : { changes: { ru: ["Раз"], en: ["One"] } },
+    state: vi
+      .spyOn(packStudioApi, "versionState")
+      .mockResolvedValue(
+        versionStateOf(
+          setup.notes === false
+            ? {}
+            : { changes: { ru: ["Раз"], en: ["One"] } },
+        ),
       ),
-    ),
     checks: vi
       .spyOn(packStudioApi, "checks")
       .mockResolvedValue(setup.ci ?? ci()),
