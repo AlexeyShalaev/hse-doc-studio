@@ -1,0 +1,233 @@
+/* Область «Главная кнопка и отправка» (pack-studio-ux.md, 4.3 и 5.6). Префиксы sp-ns- (кнопка в
+   полосе) и sp-sb- (раздел отправки в панели «Изменения»). Только токены темы; внешний вид панели
+   (sp-ch-) задаёт область «Изменения», здесь лишь то, чего в ней нет. */
+
+.sp-ns {
+  gap: 0.375rem;
+  max-width: 100%;
+}
+.sp-ns-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sp-ns-note,
+.sp-ns-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: var(--touch-min, 2rem);
+  padding: 0 0.625rem;
+  border-radius: var(--r-pill);
+  background: var(--bg-3);
+  color: var(--fg-1);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+}
+.sp-ns-note {
+  background: transparent;
+  color: var(--fg-2);
+}
+
+/* Раздел отправки: блоки друг под другом. */
+.sp-sb {
+  gap: 0.875rem;
+}
+.sp-sb-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.sp-sb-block + .sp-sb-block {
+  padding-top: 0.75rem;
+  border-top: 1px dashed var(--border);
+}
+.sp-sb-pair {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.5rem;
+}
+.sp-sb-row {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  flex-wrap: wrap;
+}
+.sp-sb-status {
+  color: var(--fg-2);
+  font-size: 0.75rem;
+}
+.sp-sb-warn {
+  margin: 0;
+  color: var(--c-warn);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+.sp-sb-text {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--fg-2);
+}
+
+.sp-sb-release {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+}
+.sp-sb-release-meta {
+  display: inline-flex;
+  gap: 0.25rem;
+  align-items: baseline;
+}
+.sp-sb-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sp-sb-check input,
+.sp-sb-choice input {
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+
+.sp-sb-more > summary {
+  cursor: pointer;
+  color: var(--fg-1);
+  font-size: 0.8125rem;
+}
+.sp-sb-more-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  padding-top: 0.5rem;
+}
+
+.sp-sb-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  background: var(--bg-1);
+  font-size: 0.78125rem;
+  cursor: pointer;
+}
+.sp-sb-choice[data-disabled="true"] {
+  cursor: default;
+  opacity: 0.6;
+}
+.sp-sb-choice input {
+  margin-top: 0.1875rem;
+}
+.sp-sb-choice-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+.sp-sb-choice-hint {
+  font-size: 0.6875rem;
+  color: var(--fg-2);
+}
+.sp-sb-links {
+  display: flex;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+}
+
+/* Ход отправки: шаги и что с ними случилось. */
+.sp-sb-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sp-sb-steps li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--fg-2);
+}
+.sp-sb-steps li[data-state="now"] {
+  color: var(--fg-0);
+}
+.sp-sb-steps li[data-state="done"] {
+  color: var(--fg-1);
+}
+.sp-sb-steps li[data-state="failed"] {
+  color: var(--c-err);
+  font-weight: 600;
+}
+.sp-sb-step-mark {
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: var(--bg-3);
+  flex-shrink: 0;
+}
+.sp-sb-steps li[data-state="done"] .sp-sb-step-mark {
+  background: var(--c-ok-soft);
+  color: var(--c-ok);
+}
+.sp-sb-steps li[data-state="failed"] .sp-sb-step-mark {
+  background: var(--c-err-soft);
+  color: var(--c-err);
+}
+.sp-sb-steps li[data-state="now"] .sp-sb-step-mark {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.sp-sb-spin {
+  animation: sp-sb-rotate 1s linear infinite;
+}
+@keyframes sp-sb-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sp-sb-spin {
+    animation: none;
+  }
+}
+.sp-sb-failure {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.375rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--r-3);
+  background: var(--c-err-soft);
+  border: 1px solid color-mix(in oklab, var(--c-err) 30%, transparent);
+  line-height: 1.45;
+}
+.sp-sb-findings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0;
+  padding-left: 1rem;
+}
+.sp-sb-blocker {
+  margin: 0;
+  color: var(--fg-2);
+  font-size: 0.8125rem;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .sp-sb-more[open] .sp-sb-more-body {
+    animation: sp-sb-fade 0.15s ease-out;
+  }
+}
+@keyframes sp-sb-fade {
+  from {
+    opacity: 0;
+  }
+}

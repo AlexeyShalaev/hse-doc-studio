@@ -20,19 +20,29 @@ import {
   RepoAccessDialog,
   StartOverDialog,
   impactVersions,
+  type ImpactReport,
 } from "@features/pack-git";
 import { pickLocalized, toast } from "@shared/lib";
 import { Button } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import { useSpace } from "../context/SpaceContext";
 import { useSpaceNav } from "../context/useSpaceNav";
+import { SubmitPrimary } from "../next-step/SubmitPrimary";
+import { SubmitSection } from "../next-step/SubmitSection";
+import { useSubmit } from "../next-step/useSubmit";
 import { ChangesPanel, type ChangesAction } from "./ChangesPanel";
+import { describePath } from "./describeChanges";
 import { useChangesData } from "./useChangesStatus";
 import "./space-changes.css";
 
 type Dialog = "commit" | "branch" | "diff" | "checks" | "access" | "reset";
 
-const noop = () => undefined;
+/** Блок «до и после» не загрузился: отправку он не держит и ничего не требует. */
+const NO_IMPACT: ImpactReport = {
+  pending: false,
+  needsAck: false,
+  summary: "",
+};
 
 /** Название документа из данных его манифеста (`name: {ru, en}`); нет: пусто. */
 const docName = (data: unknown, lang: string): string => {
@@ -48,7 +58,9 @@ const docName = (data: unknown, lang: string): string => {
 /**
  * Панель «Изменения» (слот `changes`): данные и действия. Показывает `ChangesPanel`, держит окна
  * прежнего интерфейса (построчное сравнение, точка, ветка, доступ, сброс, проверки хостинга,
- * конфликт слияния) и операцию «Забрать новое». Отправку, заметки и выпуск версии добавляет S4.
+ * конфликт слияния) и операцию «Забрать новое». Отправка (заметки, выпуск версии, запрос) это
+ * область «Главная кнопка и отправка» (S4): её состояние `useSubmit` общее у раздела отправки и
+ * кнопки подвала.
  */
 export const ChangesDrawer = () => {
   const { t, i18n } = useTranslation("packSpace");
@@ -63,6 +75,7 @@ export const ChangesDrawer = () => {
   const busy = running || (git?.workspace.busy ?? workspace.busy);
   const [dialog, setDialog] = useState<Dialog | null>(null);
   const [conflict, setConflict] = useState<string[] | null>(null);
+  const [impact, setImpact] = useState<ImpactReport | null>(null);
 
   // Та же модель версии, что читает статус (заметки): запрос один на двоих.
   const model = usePackVersionModel(
@@ -92,6 +105,8 @@ export const ChangesDrawer = () => {
     () => impactVersions(git?.changed ?? [], versionRef).versions,
     [git, versionRef],
   );
+
+  const submit = useSubmit({ data, impact, hasImpact: versions.length > 0 });
 
   const close = () => {
     setDialog(null);
@@ -155,6 +170,28 @@ export const ChangesDrawer = () => {
           nav.go({ tab: "check", part: "issues" });
         }}
         onAction={onAction}
+        notesAction={
+          <Button size="xs" variant="ghost" onClick={submit.focusNotes}>
+            {t("changes.submit.notes.write")}
+          </Button>
+        }
+        submit={
+          <SubmitSection
+            c={submit}
+            data={data}
+            onAccess={() => {
+              setDialog("access");
+            }}
+            onOpenFile={(path) => {
+              openFile(describePath(path).version, path);
+            }}
+          />
+        }
+        primary={
+          submit.available ? (
+            <SubmitPrimary c={submit} errors={status.errors} />
+          ) : null
+        }
         notice={
           merge.isError ? (
             <Notice
@@ -180,8 +217,10 @@ export const ChangesDrawer = () => {
             <ImpactSlot
               workspaceId={id}
               versions={versions}
-              onReport={noop}
-              onFail={noop}
+              onReport={setImpact}
+              onFail={() => {
+                setImpact(NO_IMPACT);
+              }}
               onLeave={closePanel}
             />
           ) : null

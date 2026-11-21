@@ -700,7 +700,8 @@ export const ChangesPanel = ({
     );
     if (request.kind === "open" && request.url) {
       foot = (
-        <Button asChild>
+        // Когда рядом главная кнопка «Обновить запрос», ссылка на сам запрос вторична.
+        <Button asChild variant={primary ? "secondary" : "primary"}>
           <a href={request.url} target="_blank" rel="noopener noreferrer">
             <ExternalLink size="0.8125rem" aria-hidden="true" />
             {t("changes.request.open", { label: request.label })}
