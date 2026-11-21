@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   packStudioKeys,
   resetPackStudioUx,
-  type PackGit,
   type PackTree,
   type PackWorkspace,
 } from "@entities/pack-studio";
@@ -54,7 +53,7 @@ const open = (
   });
   client.setQueryData(packStudioKeys.tree(WS), tree);
   if (changed) {
-    client.setQueryData(packStudioKeys.git(WS), gitStatus(changed) as PackGit);
+    client.setQueryData(packStudioKeys.git(WS), gitStatus(changed));
   }
   render(
     <QueryClientProvider client={client}>

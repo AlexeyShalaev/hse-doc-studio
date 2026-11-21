@@ -43,7 +43,7 @@ const lastIn = (
   template: string,
   last: SpacePlace | null | undefined,
 ): string | null =>
-  last && last.ref.pack === pack && last.ref.template === template
+  last?.ref.pack === pack && last.ref.template === template
     ? last.ref.version
     : null;
 

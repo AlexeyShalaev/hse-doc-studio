@@ -4,8 +4,9 @@ import { GALLERY_TREE } from "../galleryKit";
 import { refForPack, refForTemplate } from "./targets";
 
 const BASE = "hse-cs-sse/templates/coursework/versions";
-const PACK = GALLERY_TREE.packs[0] as PackTreePack;
-const TEMPLATE = PACK.templates[0] as PackTreePack["templates"][number];
+const [PACK] = GALLERY_TREE.packs;
+const [TEMPLATE] = PACK?.templates ?? [];
+if (!PACK || !TEMPLATE) throw new Error("в дереве-фикстуре нет шаблона");
 const none = () => null;
 
 const second: PackTreePack = {
@@ -77,8 +78,9 @@ describe("переход по крошкам не теряет работу", ()
 
   it("в паке нет шаблонов с версиями: переходить некуда", () => {
     expect(refForPack({ ...second, templates: [] }, [], none)).toBeNull();
+    const [empty] = second.templates;
     expect(
-      refForPack({ ...second, templates: [second.templates[0]!] }, [], none),
+      refForPack({ ...second, templates: empty ? [empty] : [] }, [], none),
     ).toBeNull();
   });
 });
