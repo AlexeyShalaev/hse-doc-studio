@@ -1,5 +1,11 @@
-import { useRef, type ReactNode, type SyntheticEvent } from "react";
+import {
+  useRef,
+  type ReactElement,
+  type ReactNode,
+  type SyntheticEvent,
+} from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { Slot } from "@radix-ui/react-slot";
 import { Check, MoreHorizontal } from "lucide-react";
 import { useIsPhoneWidth } from "../../lib/viewport";
 
@@ -29,6 +35,13 @@ export type ActionMenuProps = {
   label: string;
   testId?: string | undefined;
   align?: "start" | "end" | undefined;
+  /**
+   * Своя кнопка вместо «⋯» (например, главная кнопка экрана с меню путей): элемент
+   * button, подпись и доступное имя ему задаёт вызывающий.
+   */
+  trigger?: ReactElement<{
+    onPointerDown?: (event: React.PointerEvent) => void;
+  }>;
   /** Куда вернуть фокус после закрытия: preventDefault оставляет его там, куда увёл пункт. */
   onCloseAutoFocus?: ((event: Event) => void) | undefined;
 };
@@ -39,6 +52,7 @@ export const ActionMenu = ({
   testId,
   align = "end",
   onCloseAutoFocus,
+  trigger,
 }: ActionMenuProps) => {
   // Телефон: длинное меню - шторка снизу с крупными строками (index.css, .adm-menu).
   const isSheet = useIsPhoneWidth();
@@ -111,20 +125,33 @@ export const ActionMenu = ({
       }}
     >
       <DropdownMenu.Trigger asChild>
-        <button
-          type="button"
-          className="icon-btn"
-          aria-label={label}
-          data-testid={testId}
-          onPointerDown={(event) => {
-            // Те же условия, при которых Radix открывает меню по нажатию.
-            if (isSheet && event.button === 0 && !event.ctrlKey) {
-              armOpeningGesture();
-            }
-          }}
-        >
-          <MoreHorizontal size="1rem" aria-hidden="true" />
-        </button>
+        {trigger ? (
+          <Slot
+            onPointerDown={(event: React.PointerEvent) => {
+              // Те же условия, при которых Radix открывает меню по нажатию.
+              if (isSheet && event.button === 0 && !event.ctrlKey) {
+                armOpeningGesture();
+              }
+            }}
+          >
+            {trigger}
+          </Slot>
+        ) : (
+          <button
+            type="button"
+            className="icon-btn"
+            aria-label={label}
+            data-testid={testId}
+            onPointerDown={(event: React.PointerEvent) => {
+              // Те же условия, при которых Radix открывает меню по нажатию.
+              if (isSheet && event.button === 0 && !event.ctrlKey) {
+                armOpeningGesture();
+              }
+            }}
+          >
+            <MoreHorizontal size="1rem" aria-hidden="true" />
+          </button>
+        )}
       </DropdownMenu.Trigger>
       {isSheet && (
         <DropdownMenu.Portal>
