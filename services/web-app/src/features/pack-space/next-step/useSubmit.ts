@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useEffectEvent, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   forkRequired,
@@ -192,8 +192,15 @@ export const useSubmit = ({
     state !== null &&
     !(state.registered && !state.release_outdated);
   const autoNotes = state !== null && notes.canAutoFill;
-  const [releaseChoice, setReleaseChoice] = useState<boolean | null>(null);
-  const release = releasable && (releaseChoice ?? defaultRelease);
+  // Выбор «выпускать» помнит, к какой версии он относится: после смены номера (`number`) он
+  // переезжает на новую версию, а при смене версии любым другим способом сбрасывается.
+  const [releaseChoice, setReleaseChoice] = useState<{
+    value: boolean;
+    key: string;
+  } | null>(null);
+  const choiceKey = `${versionRef.pack}/${versionRef.template}/${versionRef.version}`;
+  const chosen = releaseChoice?.key === choiceKey ? releaseChoice.value : null;
+  const release = releasable && (chosen ?? defaultRelease);
   const [setDefault, setSetDefault] = useState(true);
   const releaseClass = state ? currentClass(state) : null;
 
@@ -237,7 +244,7 @@ export const useSubmit = ({
   const moveApi = useMovePackVersionEdits(id);
   const renumberApi = useRenumberPackVersion(id);
   // Номер сменён, а отправка ещё не закончена: после перехода на новую версию она продолжается.
-  const [resume, setResume] = useState<string | null>(null);
+  const resume = useRef<string | null>(null);
 
   // Версия сменилась (номер, перенос правок, другая версия): прежний ход к ней не относится.
   const versionKey = `${versionRef.pack}/${versionRef.template}/${versionRef.version}`;
@@ -248,8 +255,6 @@ export const useSubmit = ({
     setDone([]);
     setFailure(null);
     setOutcome(null);
-    // Выбор «выпускать» человек сделал до смены номера: он остаётся и для новой версии.
-    if (resume !== versionKey) setReleaseChoice(null);
   }
 
   const forkChoice: PackForkChoice | null = !fork
@@ -324,7 +329,9 @@ export const useSubmit = ({
             template: moved.version.template,
             version: moved.version.version,
           };
-          setResume(`${ref.pack}/${ref.template}/${ref.version}`);
+          const key = `${ref.pack}/${ref.template}/${ref.version}`;
+          resume.current = key;
+          setReleaseChoice((prev) => (prev ? { ...prev, key } : prev));
           nav.go({ ref });
         },
         release: async () => {
@@ -367,7 +374,7 @@ export const useSubmit = ({
       setPlan(null);
       setDone([]);
       setFork(null);
-      setResume(null);
+      resume.current = null;
       const result = out.result;
       const pull = result.pull_request;
       if (pull) {
@@ -446,15 +453,16 @@ export const useSubmit = ({
     run();
   });
   useEffect(() => {
-    if (resume === null || resume !== versionKey) return;
+    if (resume.current === null || resume.current !== versionKey) return;
     if (!available || state === null) return;
     if (blocker !== null && !WAITING.has(blocker)) {
-      setResume(null);
+      resume.current = null;
     } else if (blocker === null && !running) {
-      setResume(null);
-      resumeRun();
+      resume.current = null;
+      // Не в теле эффекта: запуск отправки ставит состояние хода.
+      queueMicrotask(resumeRun);
     }
-  }, [resume, versionKey, available, state, blocker, running]);
+  }, [versionKey, available, state, blocker, running]);
 
   return {
     available,
@@ -464,7 +472,9 @@ export const useSubmit = ({
     stateLoading: wantState && loadingState,
     notes,
     release,
-    setRelease: setReleaseChoice,
+    setRelease: (value: boolean) => {
+      setReleaseChoice({ value, key: choiceKey });
+    },
     releasable,
     numberFix,
     autoNotes,

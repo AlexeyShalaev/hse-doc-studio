@@ -85,8 +85,14 @@ describe("resolveNumberFix: правки требуют номера выше", 
       state({
         reasons: [
           {
-            ...(state().reasons[0] as PackVersionState["reasons"][number]),
             code: "something_new",
+            path: "x",
+            change: "changed",
+            minimum: "minor",
+            suggested: "minor",
+            hard: true,
+            exception: false,
+            message: { ru: "", en: "" },
           },
         ],
       }),

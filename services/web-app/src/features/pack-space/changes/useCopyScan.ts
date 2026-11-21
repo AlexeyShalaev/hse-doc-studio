@@ -58,8 +58,7 @@ export const useCopyScan = (
     "copy-base",
   );
   const loaded = stateQuery.data;
-  const base =
-    loaded && loaded.version.version === open.version ? loaded.base : null;
+  const base = loaded?.version.version === open.version ? loaded.base : null;
   // Отчёт не пришёл совсем (сервер не ответил): считаем по git, а не прячем изменения навсегда.
   const stateReady =
     dir === null ||
@@ -75,6 +74,8 @@ export const useCopyScan = (
     candidates.length > 0 &&
     candidates.length <= MAX_SCAN_FILES;
 
+  // `open` и `candidates` определяются каталогом (`dir`), основой и записями (`revision`) ключа.
+  /* eslint-disable @tanstack/query/exhaustive-deps */
   const scan = useQuery({
     queryKey: [
       ...packStudioKeys.workspace(workspaceId),
@@ -121,6 +122,7 @@ export const useCopyScan = (
       });
     },
   });
+  /* eslint-enable @tanstack/query/exhaustive-deps */
 
   return useMemo((): CopyScan | null => {
     if (dir === null) return null;
