@@ -1081,3 +1081,80 @@ export const slots = defineSpaceSlots({
 - Новый адрес без флага (`/t/...`) ведёт в список пространств: реверс-перенаправления в старый вид нет. Ссылку на новый вид отправляйте с `?ux=2`.
 - Слоты каркаса шире списка 8.6: добавлены `changesButton`, `nextStep`, `changes` и полоса `mainTop`, потому что S3, S4 и S5 кладут в экран разные части, и никому нельзя править файлы другого.
 - Планшет: подробности выезжают поверх справа (как в тексте 4.5), а не уходят вниз, как на макете `02-result.html`.
+
+### 12.7. Область «Содержимое» (S8a): как подключаться S8b - S8d
+
+Область `content` (`features/pack-space/content/`) занята срезом S8a: он кладёт в каркас левую навигацию «Что редактируем» (`nav.content`) и центр (`main.content`) и держит маршрутизацию внутри вкладки. Слот `details.content` (предпросмотр PDF справа) остаётся свободным для S9. Срезы S8b, S8c и S8d не трогают файлы S8a: каждый заменяет **свой файл-расширение** (список ниже) и пишет в **свою группу строк**. Так три PR идут параллельно и не конфликтуют.
+
+**Адреса вкладки.** К таблице 4.2 добавлено:
+
+| Параметр | Значения | Смысл |
+|---|---|---|
+| `doc` | id документа (имя папки `files/<id>`) | открыт экран документа |
+| `seg` | `terms`, `text`, `signatures` (умолчание `text`) | сегмент экрана документа: «Условия», «Текст», «Подписи» |
+| `part` | `fields`, `forms`, `deadlines`, `signatures`, `languages`, `rules`, `files` | раздел версии вместо документа |
+| `file` | путь | открытый файл. В сегменте «Текст» принимается любое из: полный путь от папки паков, путь от `files/` версии с языковым суффиксом или без него (`technical_specification/technical_specification.tex`, это и есть `source_file` из «Результата»). В «Все файлы» полный путь |
+| `at` | JSON Pointer | переход к записи манифеста версии (как прежний экран) |
+
+Без `doc`, `part` и `file` вкладка открывает последний документ (память пространства), иначе первый, с сегментом «Текст» (замена адреса, а не новая запись). Старый `?file=` (из `legacyToSpace`) разбирается тут же: файл внутри `files/<id>/` ведёт на этот документ («Текст», для `doc.yaml` «Условия»), `version.yaml` с `at` на раздел по указателю, прочее в «Все файлы».
+
+**Ссылки на «Содержимое» из других областей** (`result` строит «Текст документа», `check` строит «Исправить» у находки): `content/link.ts` без тяжёлых импортов.
+
+```ts
+import { contentDocumentPatch, contentPartPatch } from "../content/link";
+
+nav.go(contentDocumentPatch("technical_specification", { segment: "text", file: doc.source_file }));
+nav.go(contentPartPatch("deadlines"));
+```
+
+Обе функции возвращают `SpaceNavPatch` с `tab: "content"`. Выбранный документ и сегмент не нужно передавать никакой другой дорогой.
+
+**Файлы-расширения** лежат в `content/extend/`, находятся глобом по имени (`content/registry.ts`), грузятся лениво. Имя файла это ключ, значение это `export default` компонент нужного вида. Второго претендента нет: в S8a в каждом файле стоит временная реализация (старая форма или заглушка с пометкой `S8x:` в комментарии), срез просто заменяет файл целиком.
+
+| Файл | Кто | Props | Что там в S8a |
+|---|---|---|---|
+| `segment-terms.tsx` | S8a | `DocumentSegmentProps` | форма документа `pack-forms` (виды работы, состав, языки, имя файла) |
+| `segment-text.tsx` | **S8b** | `DocumentSegmentProps` | прежний `PackFileEditor` с его кнопкой «Сохранить» и охраной «есть несохранённые правки» |
+| `segment-signatures.tsx` | **S8c** | `DocumentSegmentProps` | заглушка «Скоро» |
+| `part-fields.tsx`, `part-forms.tsx`, `part-deadlines.tsx`, `part-signatures.tsx`, `part-languages.tsx`, `part-rules.tsx` | **S8d** | `ContentPartProps` | раздел прежней формы версии (`PackFormPane` с `at` по разделу, полоса вкладок формы скрыта стилем) |
+| `part-files.tsx` | **S8d** | `ContentPartProps` | прежнее дерево `PackTreePanel` и редактор файла |
+
+```ts
+type DocumentSegmentProps = {
+  workspaceId: string;
+  versionDir: string;      // каталог версии от папки паков: <пак>/templates/<шаблон>/versions/<версия>
+  doc: ContentDocument;    // id, name (на языке интерфейса), group, manifestPath, files, mainFile
+  file: string | null;     // значение `file` из адреса, как есть
+  readOnly: boolean;       // выпущенная версия: не пишем, показываем «только чтение»
+};
+type ContentPartProps = {
+  workspaceId: string;
+  versionDir: string;
+  part: ContentPart;       // тот, что в адресе
+  at: string | null;
+  file: string | null;
+  readOnly: boolean;
+};
+type ContentDocument = {
+  id: string;
+  name: string;
+  group: string | null;
+  manifestPath: string;    // <versionDir>/files/<id>/doc.yaml
+  files: { path: string; bare: string; lang: string }[];  // файлы папки документа, path полный
+  mainFile: string | null; // bare основного файла (source_file первого варианта)
+};
+```
+
+Что компонент берёт из области, не изобретая своего: `useContentNav()` (`content/useContentNav.ts`: `toDocument(id, { segment, file })`, `toPart(part, { file, at })`, обёртка над `useSpaceNav`), `resolveDocumentFile(doc, file, lang)` (по значению `file` и языку находит файл правки, основной файл на языке интерфейса или первом имеющемся), `contentGuard` (`content/contentGuard.ts`: `setDirty(owner, bool)`; переход из «Содержимого» спрашивает подтверждение, пока кто-то грязный; S8b с автосохранением его не использует). Права и замок: `readOnly` уже посчитан (выпущенная версия, ответ сервера `read_only`); плашку «выпущена и не меняется» и кнопку «Править копию» рисует область, срезы их не дублируют.
+
+**Строки.** `packSpace/content.json` (ru и en): S8a занимает ключи `nav`, `doc`, `released`, `stub`, `legacy`. Группы `text` (S8b), `signatures` (S8c) и `parts` (S8d) заведены пустыми: пишите только в свою и только в обоих языках, `vocabulary.test.ts` проверяет запретные слова (например, «исходник», «манифест», «слот», «ветка» нельзя; пишите «Текст», «Описание версии», «Подпись»).
+
+**Стили и галерея.** Свои стили: `content/<подпапка>/space-content-<имя>.css` с префиксом `sp-ct-<имя>-`; общая раскладка S8a это `content/space-content.css` (`sp-ct-`). Свои записи галереи: `content/gallery.<имя>.tsx` (`sp_content_<имя>_*`), глоб `gallery.ts` их подберёт. Фикстуры модели версии для записей и тестов: `content/fixtures.ts` (`CONTENT_MODEL`, `seedContentModel(client)`).
+
+**Тесты S8b - S8d.** `renderContent(ui, search)` из `content/contentTestKit.tsx` ставит `renderSpace` на вкладку `content`, подкладывает модель версии в кэш и словарь.
+
+**Отклонения S8a от документа.**
+- Сегмент документа живёт в параметре `seg`, а не в `part`: у `part` свой смысл (разделы версии), а «Подписи» есть и там, и тут.
+- «Подписи и места» и «Сроки и сдача» в S8a показывают один и тот же раздел прежней формы («Сдача и подписи»): в прежней форме это один раздел. S8d их разделяет.
+- На телефоне нет левой колонки: навигация «Что редактируем» стоит в центре сворачиваемой полосой «Техническое задание ▾» (раздел 4.5, до S11).
+- Временный охранник несохранённых правок (`contentGuard`) нужен, пока текст сохраняется кнопкой: смена документа без него теряла бы набранное. Живёт до S8b.
