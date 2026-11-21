@@ -10,8 +10,10 @@ import { useTranslation } from "react-i18next";
 import { packErrorText, type PackOutcome } from "@entities/pack-studio";
 import { EmptyState, ErrorState } from "@shared/ui";
 import { useSpace } from "../context/SpaceContext";
+import { useSituationDelta } from "../situation/useSituationDelta";
 import { DocumentsBody } from "./DocumentsPart";
 import { PartShell } from "./PartShell";
+import { DeltaContext } from "./rows";
 import {
   DataBody,
   DeadlinesBody,
@@ -23,6 +25,7 @@ import {
   countResult,
   headline,
   leadLine,
+  partOfKey,
   partSummary,
   type PartId,
 } from "./model";
@@ -99,7 +102,20 @@ const Parts = ({
     () => makeReasoner(t, i18n.language, outcome, data.inputs),
     [t, i18n.language, outcome, data.inputs],
   );
+  const delta = useSituationDelta();
   useScrollSpy(parts.setCurrent, true);
+  const rowDelta = useMemo(
+    () => ({
+      changed: delta.changed,
+      highlight: delta.highlight,
+      onlyChanged: delta.onlyChanged,
+    }),
+    [delta.changed, delta.highlight, delta.onlyChanged],
+  );
+  // «Только изменившееся»: части без изменений не показываем вовсе.
+  const touched = new Set(
+    [...delta.changed.keys()].map((key) => partOfKey(key)),
+  );
   const body = (id: PartId): ReactNode => {
     switch (id) {
       case "documents":
@@ -121,29 +137,33 @@ const Parts = ({
     }
   };
   return (
-    <div
-      className="sp-parts"
-      role="group"
-      aria-label={t("result.sections")}
-      aria-busy={data.calculating || undefined}
-      data-stale={data.stale ? "true" : undefined}
-    >
-      {PART_IDS.map((id) => (
-        <PartShell
-          key={id}
-          id={id}
-          icon={ICONS[id]}
-          title={t(`result.parts.${id}`)}
-          summary={partSummary(t, i18n.language, outcome, counts, id)}
-          open={parts.open.has(id)}
-          onToggle={() => {
-            parts.toggle(id);
-          }}
-        >
-          {body(id)}
-        </PartShell>
-      ))}
-    </div>
+    <DeltaContext.Provider value={rowDelta}>
+      <div
+        className="sp-parts"
+        role="group"
+        aria-label={t("result.sections")}
+        aria-busy={data.calculating || undefined}
+        data-stale={data.stale ? "true" : undefined}
+      >
+        {PART_IDS.filter((id) => !delta.onlyChanged || touched.has(id)).map(
+          (id) => (
+            <PartShell
+              key={id}
+              id={id}
+              icon={ICONS[id]}
+              title={t(`result.parts.${id}`)}
+              summary={partSummary(t, i18n.language, outcome, counts, id)}
+              open={parts.open.has(id)}
+              onToggle={() => {
+                parts.toggle(id);
+              }}
+            >
+              {body(id)}
+            </PartShell>
+          ),
+        )}
+      </div>
+    </DeltaContext.Provider>
   );
 };
 

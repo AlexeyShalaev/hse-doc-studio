@@ -27,6 +27,9 @@
   "navMore": "More",
   "navMap": "What affects what",
   "navCases": "Typical cases",
+  "delta": {
+    "added": "new"
+  },
   "parts": {
     "documents": "Documents",
     "data": "Project data",

@@ -27,6 +27,26 @@ export type PartId = (typeof PART_IDS)[number];
 export const isIncluded = (doc: OutcomeDocument): boolean =>
   doc.state === "active";
 
+/** В какой части результата лежит элемент с ключом `<раздел>:<id>` (как у `sel`). */
+export const partOfKey = (key: string): PartId | null => {
+  const section = key.slice(0, key.indexOf(":"));
+  switch (section) {
+    case "documents":
+      return "documents";
+    case "meta":
+    case "forms":
+      return "data";
+    case "participants":
+      return "people";
+    case "points":
+      return "deadlines";
+    case "route":
+      return "signatures";
+    default:
+      return null;
+  }
+};
+
 export const sections = {
   document: (id: string): string => `documents:${id}`,
   field: (id: string): string => `meta:${id}`,

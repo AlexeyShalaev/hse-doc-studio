@@ -21,6 +21,8 @@ import banned from "../vocabulary.banned.json";
 import { SpaceScreen } from "../shell/SpaceScreen";
 import { renderSpace, SPACE_BASE } from "../spaceTestKit";
 import { seedResult, type ResultSeed } from "./gallery.result";
+import { deltaStore } from "../situation/deltaStore";
+import { seededClient } from "../situation/testKit";
 import { slots } from "./slots";
 
 // Центр «Результата» на фикстурах PackOutcome (coursework_company_cosupervisor,
@@ -461,5 +463,65 @@ describe("центр «Результата»", () => {
       for (const row of rows)
         expect(controls(row).length).toBeLessThanOrEqual(3);
     });
+  });
+});
+
+describe("подсветка после смены условия (useSituationDelta)", () => {
+  const SCOPE = "gallery-ws/hse-cs-sse/coursework/2026.1.3";
+  const QUERY = "i.supervisor=company";
+  const COMPARE = {
+    left: { state: "work_tree" as const, inputs: {} },
+    right: { state: "work_tree" as const, inputs: { supervisor: "company" } },
+  };
+
+  beforeAll(async () => {
+    await loadPackSpaceNamespace();
+  });
+  beforeEach(() => {
+    window.localStorage.clear();
+    deltaStore.reset();
+  });
+  afterEach(cleanup);
+
+  const mountDelta = async (extra = "") => {
+    const client = seededClient({ compare: COMPARE });
+    seedResult(client, { open: ["people", "signatures"], search: QUERY });
+    deltaStore.record({
+      scope: SCOPE,
+      before: { inputs: {}, caseId: null },
+      after: { inputs: { supervisor: "company" }, caseId: null },
+      label: "Научный руководитель: Из компании",
+    });
+    renderSpace(
+      <QueryClientProvider client={client}>
+        <SpaceScreen slots={slots} phone={false} />
+      </QueryClientProvider>,
+      `${SPACE_BASE}/2026.1.3/result?${QUERY}${extra}`,
+    );
+    await screen.findByTestId("sp-result", undefined, { timeout: 5000 });
+  };
+
+  it("изменившиеся строки подсвечены, новое помечено, остальные нет", async () => {
+    await mountDelta();
+    const added = screen.getByTestId("sp-person-co_supervisor");
+    expect(added).toHaveAttribute("data-flash", "true");
+    expect(added).toHaveTextContent("новое");
+    // Точка сдачи изменилась по шагам маршрута: строка подсвечена целиком.
+    expect(screen.getByTestId("sp-sign-topic-approval")).toHaveAttribute(
+      "data-flash",
+      "true",
+    );
+    expect(screen.getByTestId("sp-person-author")).not.toHaveAttribute(
+      "data-flash",
+    );
+  });
+
+  it("«только изменившееся»: остальные строки и части скрыты", async () => {
+    await mountDelta("&delta=1");
+    expect(screen.getByTestId("sp-person-co_supervisor")).toBeInTheDocument();
+    expect(screen.queryByTestId("sp-person-author")).toBeNull();
+    expect(screen.queryByTestId("sp-doc-report")).toBeNull();
+    expect(screen.queryByTestId("sp-part-documents")).toBeNull();
+    expect(screen.getByTestId("sp-part-people")).toBeInTheDocument();
   });
 });

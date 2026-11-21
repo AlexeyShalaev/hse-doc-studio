@@ -1,12 +1,50 @@
-import { useId, type ReactNode } from "react";
+import { createContext, useContext, useId, type ReactNode } from "react";
 import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSpace } from "../context/SpaceContext";
 import { useSituation } from "../context/useSituation";
+import type { ChangeSymbol } from "../situation/deltaSummary";
 import { useSpaceNav } from "../context/useSpaceNav";
 import { useParts } from "./partsStore";
 import type { Reason, ShowAction } from "./reasons";
 import "./space-result.css";
+
+/** Что изменилось после смены условия: ключи `<раздел>:<id>` как у `sel` (`useSituationDelta`). */
+export type RowDelta = {
+  changed: ReadonlyMap<string, ChangeSymbol>;
+  highlight: boolean;
+  onlyChanged: boolean;
+};
+export const DeltaContext = createContext<RowDelta | null>(null);
+
+/**
+ * Знак изменения строки. Точка сдачи и порядок подписей это целая строка, а сервер отдаёт изменения
+ * по их пунктам и шагам (`route:<точка>/step/2`): такая строка считается изменённой.
+ */
+const changeOf = (
+  changed: ReadonlyMap<string, ChangeSymbol>,
+  sel: string,
+): ChangeSymbol | undefined => {
+  const own = changed.get(sel);
+  if (own !== undefined || !/^(points|route):[^/]+$/.test(sel)) return own;
+  for (const key of changed.keys()) {
+    if (key.startsWith(`${sel}/`)) return "~";
+  }
+  return undefined;
+};
+
+/** Состояние строки относительно последней смены условия; `hidden`: «только изменившееся». */
+export const useRowDelta = (
+  sel: string,
+): { change: ChangeSymbol | undefined; flash: boolean; hidden: boolean } => {
+  const delta = useContext(DeltaContext);
+  const change = delta ? changeOf(delta.changed, sel) : undefined;
+  return {
+    change,
+    flash: delta?.highlight === true && change !== undefined,
+    hidden: delta?.onlyChanged === true && change === undefined,
+  };
+};
 
 /** Выбрана ли строка: `sel` из адреса. Нажатие выбирает, повторное нажатие снимает выбор. */
 export const useRowSelection = (
@@ -47,9 +85,14 @@ export const PickRow = ({
   testId: string;
 }) => {
   const { selected, toggle } = useRowSelection(sel);
+  const { t } = useTranslation("packSpace");
+  const { change, flash, hidden } = useRowDelta(sel);
+  if (hidden) return null;
   return (
     <li
       className="sp-row"
+      data-change={change}
+      data-flash={flash ? "true" : undefined}
       data-selected={selected ? "true" : undefined}
       data-muted={muted ? "true" : undefined}
       data-testid={testId}
@@ -66,6 +109,11 @@ export const PickRow = ({
         <span className="sp-row-text">
           <span className="sp-row-name">
             <span className="sp-row-title">{title}</span>
+            {change === "+" ? (
+              <span className="chip accent sp-badge" data-testid="sp-new">
+                {t("result.delta.added")}
+              </span>
+            ) : null}
             {badges}
           </span>
           {sub ? <span className="sp-row-sub">{sub}</span> : null}
@@ -123,7 +171,7 @@ export type MissingRow = {
  */
 export const Missing = ({
   title,
-  rows,
+  rows: all,
   open: forced = false,
   testId,
 }: {
@@ -137,7 +185,12 @@ export const Missing = ({
   const parts = useParts();
   const local = parts.isMissingOpen(testId);
   const id = useId();
-  if (rows.length === 0) return null;
+  const delta = useContext(DeltaContext);
+  // «Только изменившееся»: в «Не вошло» остаются строки, которые изменились (например, пропали).
+  const shown = delta?.onlyChanged
+    ? all.filter((row) => delta.changed.has(row.sel))
+    : all;
+  if (shown.length === 0) return null;
   const open = local || forced;
   const Chevron = open ? ChevronDown : ChevronRight;
   return (
@@ -154,11 +207,11 @@ export const Missing = ({
       >
         <Chevron size="0.875rem" aria-hidden="true" />
         <span>{title}</span>
-        <span className="sp-count">{rows.length}</span>
+        <span className="sp-count">{shown.length}</span>
       </button>
       <ul id={id} className="sp-rows" hidden={!open}>
         {open
-          ? rows.map((row) => (
+          ? shown.map((row) => (
               <PickRow
                 key={row.key}
                 sel={row.sel}

@@ -8,6 +8,7 @@ import {
 } from "@entities/pack-studio";
 import { useSpace } from "../context/SpaceContext";
 import { readSituation } from "../context/situation";
+import { EXAMPLE_PARAM } from "../situation/useSituationDelta";
 
 /** Последнее значение, которое не было пустым: после сбоя расчёта на экране остаётся прежний результат. */
 const useKept = <T>(value: T | undefined): T | undefined => {
@@ -48,9 +49,12 @@ export const useResultData = (): ResultData => {
     [location.search],
   );
   const found = version !== undefined;
+  // Пример данных задаёт полоса «Для какого студента» (`example`); ключ кэша общий с ней.
+  const example = new URLSearchParams(location.search).get(EXAMPLE_PARAM);
   const request: PackOutcomeRequest = {
     state: "work_tree",
     scenario: situation.caseId,
+    example,
     inputs: situation.inputs,
   };
   const outcome = usePackOutcome(workspace.id, versionRef, request, found);
