@@ -15,3 +15,4 @@ export { ImpactSlot } from "./ui/ImpactSlot";
 export { MergeConflictDialog } from "./ui/MergeConflictDialog";
 export { StartOverDialog } from "./ui/StartOverDialog";
 export { impactVersions } from "./lib/impactVersions";
+export type { ImpactReport } from "./ui/ImpactSlot";

@@ -39,6 +39,7 @@ import { SpaceScreen } from "../shell/SpaceScreen";
 import { renderSpace, SPACE_BASE } from "../spaceTestKit";
 import { ChangesPanel } from "./ChangesPanel";
 import { deriveChangesStatus } from "./deriveChangesStatus";
+import { versionStateOf } from "../next-step/fixtures";
 import { slots } from "./slots";
 
 // Первая панель грузит отдельный чанк и модули диалогов: на нагруженной машине это секунды.
@@ -159,6 +160,16 @@ const mount = (setup: Setup = {}) => {
     model: vi
       .spyOn(packStudioApi, "versionModel")
       .mockResolvedValue(modelOf(setup.notes ?? true)),
+    // Отчёт версии нужен разделу отправки (класс, номера, что записано в заметках).
+    state: vi
+      .spyOn(packStudioApi, "versionState")
+      .mockResolvedValue(
+        versionStateOf(
+          setup.notes === false
+            ? {}
+            : { changes: { ru: ["Раз"], en: ["One"] } },
+        ),
+      ),
     checks: vi
       .spyOn(packStudioApi, "checks")
       .mockResolvedValue(setup.ci ?? ci()),
@@ -374,7 +385,7 @@ describe("панель «Изменения»", () => {
     expect(location()).not.toContain("changes=1");
   });
 
-  it("запросов при открытии панели не больше шести", async () => {
+  it("запросов при открытии панели не больше семи (шесть панели и отчёт версии для отправки)", async () => {
     const { spies } = mount({ lint: lintOf([]) });
     const root = await panel();
     await within(root).findByTestId("sp-ch-ok");
@@ -393,11 +404,12 @@ describe("панель «Изменения»", () => {
       git: 1,
       lint: 1,
       model: 1,
+      state: 1,
       impact: 1,
       inputs: 1,
       checks: 0,
     });
-    expect(total).toBeLessThanOrEqual(6);
+    expect(total).toBeLessThanOrEqual(7);
   });
 });
 
