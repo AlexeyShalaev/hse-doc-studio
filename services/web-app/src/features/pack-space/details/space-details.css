@@ -1,0 +1,371 @@
+/* Подробности «Результата» (pack-studio-ux.md, 5.4). Область: details. Префикс sp-, токены темы. */
+
+.sp-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+  min-width: 0;
+  color: var(--fg-0);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+.sp-details p {
+  margin: 0;
+}
+.sp-details-handle {
+  display: none;
+  width: 2.25rem;
+  height: 0.25rem;
+  margin: 0 auto;
+  border-radius: 0.125rem;
+  background: var(--border-strong);
+}
+.sp-root[data-phone] .sp-details-handle {
+  display: block;
+}
+.sp-details-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.sp-details-head {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+.sp-details-kicker {
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+  font-weight: 600;
+}
+.sp-details-title {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.sp-details-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+.sp-details-muted {
+  color: var(--fg-2);
+}
+.sp-details-grow {
+  flex: 1;
+  min-width: 0;
+}
+.sp-details-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+.sp-details-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.sp-details-sub {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.sp-details-block[data-stale="true"] .sp-why {
+  opacity: 0.6;
+}
+.sp-details-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.sp-details-skeleton .shimmer {
+  height: 0.875rem;
+  border-radius: var(--r-2);
+}
+.sp-details-skeleton .shimmer[data-short="true"] {
+  width: 60%;
+}
+.sp-details-note {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  align-items: flex-start;
+  padding: 0.625rem 0.75rem;
+  border: 1px solid var(--c-warn);
+  border-radius: var(--r-3);
+  background: var(--c-warn-soft);
+}
+.sp-details-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.75rem;
+  background: var(--bg-0);
+  border: 1px solid var(--border);
+  border-radius: var(--r-3);
+}
+.sp-details-card-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+/* «Почему так»: строка с галочкой или предупреждением. */
+.sp-why {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sp-why-row {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr);
+  gap: 0.5rem;
+  align-items: start;
+}
+.sp-why-mark {
+  margin-top: 0.125rem;
+  color: var(--c-ok);
+}
+.sp-why-row[data-tone="no"] .sp-why-mark {
+  color: var(--c-warn);
+}
+.sp-why-row[data-tone="skip"] .sp-why-mark,
+.sp-why-row[data-tone="info"] .sp-why-mark {
+  color: var(--fg-2);
+}
+.sp-why-row[data-tone="skip"] {
+  color: var(--fg-2);
+}
+
+/* «Что изменится, если…» */
+.sp-whatif {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sp-whatif-btn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  width: 100%;
+  min-height: var(--touch-min);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-3);
+  cursor: pointer;
+}
+.sp-whatif-btn:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+}
+.sp-whatif-cond {
+  font-weight: 500;
+}
+.sp-whatif-then {
+  color: var(--fg-2);
+}
+.sp-details-applied {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r-3);
+}
+.sp-details-applied > span {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Кнопки панели. */
+.sp-details-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* Правка условия: мини-формы с подписью фразой и чипами. */
+.sp-details-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r-3);
+}
+.sp-details-form:focus {
+  outline: none;
+}
+.sp-details-form:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.sp-edit-rule {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+.sp-cond {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-self: stretch;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.sp-cond-legend {
+  padding: 0;
+  font-weight: 600;
+}
+.sp-cond-hint {
+  color: var(--fg-2);
+}
+.sp-cond-input {
+  width: 100%;
+  min-height: var(--touch-min);
+  font-size: var(--field-fs);
+}
+.sp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+}
+.sp-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch-min);
+  padding: 0 0.75rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-pill);
+  background: var(--bg-1);
+  cursor: pointer;
+  user-select: none;
+}
+.sp-chip {
+  position: relative;
+}
+.sp-chip input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.sp-chip:has(input:checked) {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.sp-chip:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.sp-chip:has(input:disabled) {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.sp-flag {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: var(--touch-min);
+  cursor: pointer;
+}
+
+/* Что изменилось от правки. */
+.sp-details-feedback {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.sp-details-delta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 0.625rem 0.75rem;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r-3);
+}
+.sp-delta-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sp-delta-word {
+  margin-right: 0.5rem;
+  font-weight: 600;
+}
+.sp-delta-list [data-symbol="+"] .sp-delta-word {
+  color: var(--c-ok);
+}
+.sp-delta-list [data-symbol="-"] .sp-delta-word {
+  color: var(--c-err);
+}
+.sp-delta-list [data-symbol="~"] .sp-delta-word {
+  color: var(--c-warn);
+}
+
+/* История правок. */
+.sp-history {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sp-history [data-state="undone"] {
+  color: var(--fg-2);
+  text-decoration: line-through;
+}
+
+/* Технические подробности. */
+.sp-details-tech summary {
+  color: var(--fg-2);
+  cursor: pointer;
+}
+.sp-tech-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  margin: 0.5rem 0 0;
+}
+.sp-tech-list dt {
+  color: var(--fg-2);
+}
+.sp-tech-list dd {
+  margin: 0.125rem 0 0;
+  overflow-wrap: anywhere;
+}
+.sp-details-tech .mono {
+  font-size: 0.75rem;
+}
