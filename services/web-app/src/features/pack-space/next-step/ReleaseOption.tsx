@@ -36,12 +36,14 @@ export const ReleaseOption = ({
             data-testid="sp-sb-release-input"
           />
           <span>
-            {t("submit.release.label", { version: state.version.version })}
+            {t("changes.submit.release.label", {
+              version: state.version.version,
+            })}
           </span>
         </label>
         <span className="sp-ch-muted sp-sb-release-meta">
           {cls
-            ? `${t(`submit.class.${CLASS_KEYS[cls]}`).toLowerCase()} · `
+            ? `${t(`changes.submit.class.${CLASS_KEYS[cls]}`).toLowerCase()} · `
             : ""}
           <button
             type="button"
@@ -50,14 +52,14 @@ export const ReleaseOption = ({
             onClick={onNumber}
             data-testid="sp-sb-number"
           >
-            {t("submit.release.number")}
+            {t("changes.submit.release.number")}
           </button>
         </span>
       </div>
-      <p className="sp-ch-muted">{t("submit.release.lead")}</p>
+      <p className="sp-ch-muted">{t("changes.submit.release.lead")}</p>
       {!state.number_ok && (
         <p className="sp-sb-warn" role="status" data-testid="sp-sb-number-bad">
-          {t("submit.release.numberBad", {
+          {t("changes.submit.release.numberBad", {
             version: state.minimum ? (state.numbers[state.minimum] ?? "") : "",
           })}
         </p>
@@ -65,15 +67,15 @@ export const ReleaseOption = ({
       {state.release_outdated && (
         <p className="sp-ch-muted" data-testid="sp-sb-outdated">
           <Check size="0.75rem" aria-hidden="true" />{" "}
-          {t("submit.release.outdated")}
+          {t("changes.submit.release.outdated")}
         </p>
       )}
       <details className="sp-sb-more">
-        <summary>{t("submit.release.advanced")}</summary>
+        <summary>{t("changes.submit.release.advanced")}</summary>
         <div className="sp-sb-more-body">
           {state.base && (
             <p className="sp-ch-muted">
-              {t("submit.release.base", { version: state.base })}
+              {t("changes.submit.release.base", { version: state.base })}
             </p>
           )}
           <label className="sp-sb-check" htmlFor={`${uid}-default`}>
@@ -87,7 +89,7 @@ export const ReleaseOption = ({
               }}
               data-testid="sp-sb-default-input"
             />
-            <span>{t("submit.release.setDefault")}</span>
+            <span>{t("changes.submit.release.setDefault")}</span>
           </label>
         </div>
       </details>

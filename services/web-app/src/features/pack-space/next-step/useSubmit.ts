@@ -316,9 +316,14 @@ export const useSubmit = ({
       if (pull) {
         const label = `${result.git.provider === "gitlab" ? "!" : "#"}${String(pull.number)}`;
         toast.success(
-          t(pull.created ? "submit.done.opened" : "submit.done.updated", {
-            label,
-          }),
+          t(
+            pull.created
+              ? "changes.submit.done.opened"
+              : "changes.submit.done.updated",
+            {
+              label,
+            },
+          ),
         );
       } else {
         // Ветка отправлена, а запрос не создался: подробности и ссылка остаются в разделе.
@@ -335,7 +340,7 @@ export const useSubmit = ({
       {
         onSuccess: (moved) => {
           toast.success(
-            t("submit.move.done", { version: moved.version.version }),
+            t("changes.submit.move.done", { version: moved.version.version }),
           );
           void client
             .refetchQueries({ queryKey: packStudioKeys.tree(id) })

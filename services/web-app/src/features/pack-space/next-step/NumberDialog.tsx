@@ -73,7 +73,9 @@ export const NumberDialog = ({
           {
             onSuccess: (moved) => {
               toast.success(
-                t("submit.number.done", { version: moved.version.version }),
+                t("changes.submit.number.done", {
+                  version: moved.version.version,
+                }),
               );
               onClose();
               void client
@@ -97,13 +99,15 @@ export const NumberDialog = ({
     <Modal
       isOpen={isOpen}
       onClose={close}
-      title={t("submit.number.title")}
-      description={t("submit.number.lead", { version: state.version.version })}
+      title={t("changes.submit.number.title")}
+      description={t("changes.submit.number.lead", {
+        version: state.version.version,
+      })}
       width={520}
       footer={
         <>
           <Button variant="secondary" onClick={close}>
-            {t("submit.number.cancel")}
+            {t("changes.submit.number.cancel")}
           </Button>
           <Button
             disabled={renumber.isPending || !number || same}
@@ -112,7 +116,7 @@ export const NumberDialog = ({
             }}
             data-testid="sp-number-submit"
           >
-            {t("submit.number.submit", { version: number ?? "" })}
+            {t("changes.submit.number.submit", { version: number ?? "" })}
           </Button>
         </>
       }
@@ -120,8 +124,8 @@ export const NumberDialog = ({
       <div className="flex flex-col" style={{ gap: "0.5rem" }}>
         {state.minimum && (
           <p className="sp-sb-text">
-            {t("submit.number.minimum", {
-              minimum: t(`submit.class.${CLASS_KEYS[state.minimum]}`),
+            {t("changes.submit.number.minimum", {
+              minimum: t(`changes.submit.class.${CLASS_KEYS[state.minimum]}`),
             })}
           </p>
         )}
@@ -129,7 +133,7 @@ export const NumberDialog = ({
           className="flex flex-col"
           style={{ gap: "0.375rem" }}
           role="radiogroup"
-          aria-label={t("submit.number.class")}
+          aria-label={t("changes.submit.number.class")}
         >
           {UPDATE_CLASSES.map((value) => {
             const blocked =
@@ -156,13 +160,13 @@ export const NumberDialog = ({
                 />
                 <span className="sp-sb-choice-text">
                   <span>
-                    {t(`submit.class.${key}`)}{" "}
+                    {t(`changes.submit.class.${key}`)}{" "}
                     <span className="mono">{state.numbers[value] ?? ""}</span>
                   </span>
                   <span className="sp-sb-choice-hint">
                     {blocked
-                      ? t("submit.number.blocked")
-                      : t(`submit.classHint.${key}`)}
+                      ? t("changes.submit.number.blocked")
+                      : t(`changes.submit.classHint.${key}`)}
                   </span>
                 </span>
               </label>
@@ -171,8 +175,8 @@ export const NumberDialog = ({
         </div>
         {cls === "major" && (
           <Input
-            label={t("submit.number.majorNumber")}
-            hint={t("submit.number.majorHint")}
+            label={t("changes.submit.number.majorNumber")}
+            hint={t("changes.submit.number.majorHint")}
             value={number ?? ""}
             onChange={(e) => {
               setMajor(e.target.value.trim());
@@ -184,7 +188,7 @@ export const NumberDialog = ({
           <Notice
             tone="info"
             role="status"
-            text={t("submit.number.unrelease")}
+            text={t("changes.submit.number.unrelease")}
           />
         )}
         {renumber.isError && (
@@ -201,7 +205,7 @@ export const NumberDialog = ({
                     submit(suggested);
                   }}
                 >
-                  {t("submit.number.take", { version: suggested })}
+                  {t("changes.submit.number.take", { version: suggested })}
                 </Button>
               ) : undefined
             }

@@ -84,18 +84,18 @@ export const NextStepButton = () => {
   const label = ((): string => {
     switch (step.kind) {
       case "toDraft":
-        return t("next.toDraft", { version: step.version.version });
+        return t("changes.next.toDraft", { version: step.version.version });
       case "fixErrors":
-        return t("next.fixErrors", { count: step.count });
+        return t("changes.next.fixErrors", { count: step.count });
       case "request":
         return t(
           step.checks === "unknown"
-            ? "next.requestOpen"
-            : `next.request.${step.checks}`,
+            ? "changes.next.requestOpen"
+            : `changes.next.request.${step.checks}`,
           { label: step.label, ...(step.progress ?? {}) },
         );
       default:
-        return t(`next.${step.kind}`);
+        return t(`changes.next.${step.kind}`);
     }
   })();
 
@@ -111,7 +111,7 @@ export const NextStepButton = () => {
     return (
       <span
         className="sp-ns-chip"
-        title={t("next.folderTitle")}
+        title={t("changes.next.folderTitle")}
         data-testid="sp-next-step"
         data-step={step.kind}
       >
@@ -161,7 +161,7 @@ export const NextStepButton = () => {
         type="button"
         className={`btn sp-ns${isPrimaryStep(step) ? " primary" : ""}`}
         disabled={busy}
-        title={t(`next.hint.${step.kind}`)}
+        title={t(`changes.next.hint.${step.kind}`)}
         onClick={act}
         data-testid="sp-next-step"
         data-step={step.kind}

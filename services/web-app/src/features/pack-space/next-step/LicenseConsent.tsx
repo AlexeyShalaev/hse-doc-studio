@@ -34,21 +34,23 @@ export const LicenseConsent = ({
         />
         <span className="sp-sb-choice-text">
           <span>
-            {t("submit.license.consent", {
+            {t("changes.submit.license.consent", {
               license:
                 info.license !== ""
                   ? info.license
-                  : t("submit.license.repoLicense"),
+                  : t("changes.submit.license.repoLicense"),
             })}
           </span>
-          <span className="sp-sb-choice-hint">{t("submit.license.hint")}</span>
+          <span className="sp-sb-choice-hint">
+            {t("changes.submit.license.hint")}
+          </span>
         </span>
       </label>
       {(info.licenseUrl ?? info.contributingUrl) !== null && (
         <span className="sp-sb-links">
           {info.licenseUrl && (
             <a href={info.licenseUrl} target="_blank" rel="noopener noreferrer">
-              {t("submit.license.license")}
+              {t("changes.submit.license.license")}
             </a>
           )}
           {info.contributingUrl && (
@@ -57,12 +59,12 @@ export const LicenseConsent = ({
               target="_blank"
               rel="noopener noreferrer"
             >
-              {t("submit.license.rules")}
+              {t("changes.submit.license.rules")}
             </a>
           )}
         </span>
       )}
-      <p className="sp-ch-muted">{t("submit.license.afterMerge")}</p>
+      <p className="sp-ch-muted">{t("changes.submit.license.afterMerge")}</p>
     </div>
   );
 };

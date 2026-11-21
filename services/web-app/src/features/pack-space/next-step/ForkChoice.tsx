@@ -23,12 +23,12 @@ export const ForkChoice = ({
   const useUrl = c.forkMode === "url" || !canCreate;
   return (
     <div className="sp-sb-block" data-testid="sp-sb-fork">
-      <h3 className="sp-ch-h">{t("submit.fork.title")}</h3>
-      <p className="sp-ch-muted">{t("submit.fork.lead")}</p>
+      <h3 className="sp-ch-h">{t("changes.submit.fork.title")}</h3>
+      <p className="sp-ch-muted">{t("changes.submit.fork.lead")}</p>
       {fork.reason && (
         <p className="sp-sb-warn" role="alert">
-          {t(`submit.fork.reason.${fork.reason}`, {
-            defaultValue: t("submit.fork.reasonOther"),
+          {t(`changes.submit.fork.reason.${fork.reason}`, {
+            defaultValue: t("changes.submit.fork.reasonOther"),
           })}
         </p>
       )}
@@ -47,9 +47,9 @@ export const ForkChoice = ({
               data-testid="sp-sb-fork-create"
             />
             <span className="sp-sb-choice-text">
-              <span>{t("submit.fork.create")}</span>
+              <span>{t("changes.submit.fork.create")}</span>
               <span className="sp-sb-choice-hint">
-                {t("submit.fork.createHint")}
+                {t("changes.submit.fork.createHint")}
               </span>
             </span>
           </label>
@@ -65,9 +65,9 @@ export const ForkChoice = ({
               }}
             />
             <span className="sp-sb-choice-text">
-              <span>{t("submit.fork.own")}</span>
+              <span>{t("changes.submit.fork.own")}</span>
               <span className="sp-sb-choice-hint">
-                {t("submit.fork.ownHint")}
+                {t("changes.submit.fork.ownHint")}
               </span>
             </span>
           </label>
@@ -75,8 +75,8 @@ export const ForkChoice = ({
       )}
       {useUrl && (
         <Input
-          label={t("submit.fork.url")}
-          hint={t("submit.fork.urlHint")}
+          label={t("changes.submit.fork.url")}
+          hint={t("changes.submit.fork.urlHint")}
           placeholder="https://github.com/me/packs.git"
           value={c.forkUrl}
           maxLength={2048}

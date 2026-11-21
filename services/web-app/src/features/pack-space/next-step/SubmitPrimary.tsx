@@ -19,24 +19,24 @@ export const SubmitPrimary = ({
   const { t } = useTranslation("packSpace");
   if (!c.available) return null;
   const label = c.running
-    ? t("submit.primary.running")
+    ? t("changes.submit.primary.running")
     : c.failure
-      ? t("submit.primary.retry")
+      ? t("changes.submit.primary.retry")
       : c.blocker === "errors"
-        ? t("submit.primary.errors", { count: errors })
+        ? t("changes.submit.primary.errors", { count: errors })
         : c.blocker === "notes"
-          ? t("submit.primary.notes")
+          ? t("changes.submit.primary.notes")
           : c.fork
-            ? t("submit.primary.fork")
+            ? t("changes.submit.primary.fork")
             : c.update
-              ? t("submit.primary.update")
-              : t("submit.primary.send");
+              ? t("changes.submit.primary.update")
+              : t("changes.submit.primary.send");
   const why = c.running ? null : c.blocker;
   return (
     <Button
       id={PRIMARY_BUTTON_ID}
       disabled={c.running || why !== null}
-      title={why ? t(`submit.blocker.${why}`) : undefined}
+      title={why ? t(`changes.submit.blocker.${why}`) : undefined}
       aria-describedby={why ? "sp-sb-blocker" : undefined}
       onClick={c.run}
       data-testid="sp-sb-primary"
@@ -58,7 +58,7 @@ export const BlockerText = ({ c }: { c: SubmitController }) => {
   if (!c.available || c.running || c.blocker === null) return null;
   return (
     <p className="sp-sb-blocker" id="sp-sb-blocker" data-testid="sp-sb-blocker">
-      {t(`submit.blocker.${c.blocker}`)}
+      {t(`changes.submit.blocker.${c.blocker}`)}
     </p>
   );
 };

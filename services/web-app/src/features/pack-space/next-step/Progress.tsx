@@ -17,8 +17,8 @@ const stepText = (
   c: SubmitController,
 ): string =>
   step === "send" && c.update
-    ? t("submit.steps.send_update")
-    : t(`submit.steps.${step}`, { version: c.version.version });
+    ? t("changes.submit.steps.send_update")
+    : t(`changes.submit.steps.${step}`, { version: c.version.version });
 
 /**
  * Ход отправки (pack-studio-ux.md, 5.6): шаги по порядку, что уже сделано, на каком месте
@@ -75,7 +75,7 @@ export const Progress = ({
       {failure && (
         <div className="sp-sb-failure" role="alert" data-testid="sp-sb-failure">
           <strong>
-            {t("submit.failure.stopped", {
+            {t("changes.submit.failure.stopped", {
               step: stepText(t, failure.step, c),
             })}
           </strong>
@@ -86,7 +86,7 @@ export const Progress = ({
           )}
           {lint && (
             <>
-              <span>{t("submit.failure.lint")}</span>
+              <span>{t("changes.submit.failure.lint")}</span>
               <ul className="sp-sb-findings" data-testid="sp-sb-findings">
                 {lint.findings.map((finding, index) => (
                   <li key={`${finding.path}:${String(index)}`}>
@@ -107,7 +107,7 @@ export const Progress = ({
           {taken && (
             <>
               <span>
-                {t("submit.failure.taken", {
+                {t("changes.submit.failure.taken", {
                   version: c.version.version,
                   suggested: taken,
                 })}
@@ -121,17 +121,19 @@ export const Progress = ({
                 }}
                 data-testid="sp-sb-move"
               >
-                {t("submit.failure.moveTo", { version: taken })}
+                {t("changes.submit.failure.moveTo", { version: taken })}
               </Button>
             </>
           )}
           {isPushDenied(failure.error) && (
             <Button size="xs" variant="secondary" onClick={onAccess}>
-              {t("submit.failure.access")}
+              {t("changes.submit.failure.access")}
             </Button>
           )}
           {!needFork && !taken && (
-            <span className="sp-ch-muted">{t("submit.failure.resume")}</span>
+            <span className="sp-ch-muted">
+              {t("changes.submit.failure.resume")}
+            </span>
           )}
           {c.moveError !== null && c.moveError !== undefined && (
             <span>
@@ -159,17 +161,17 @@ export const Outcome = ({
   return (
     <div className="sp-sb-block" data-testid="sp-sb-outcome">
       <div className="sp-sb-failure" role="status">
-        <strong>{t("submit.outcome.title")}</strong>
+        <strong>{t("changes.submit.outcome.title")}</strong>
         <span>
           {prError
             ? i18n.exists(`errors:code.${prError.code}`)
               ? t(`errors:code.${prError.code}`)
               : prError.detail
-            : t("submit.outcome.lead")}
+            : t("changes.submit.outcome.lead")}
         </span>
         {prError && (
           <Button size="xs" variant="secondary" onClick={onAccess}>
-            {t("submit.failure.access")}
+            {t("changes.submit.failure.access")}
           </Button>
         )}
         {outcome.compare_url && (
@@ -181,7 +183,7 @@ export const Outcome = ({
             data-testid="sp-sb-compare"
           >
             <ExternalLink size="0.75rem" aria-hidden="true" />
-            {t("submit.outcome.open")}
+            {t("changes.submit.outcome.open")}
           </a>
         )}
       </div>

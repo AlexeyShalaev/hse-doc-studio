@@ -17,12 +17,12 @@ export const NotesFields = ({ c }: { c: SubmitController }) => {
   const disabled = c.running;
   return (
     <div className="sp-sb-block" data-testid="sp-sb-notes">
-      <h3 className="sp-ch-h">{t("submit.notes.title")}</h3>
-      <p className="sp-ch-muted">{t("submit.notes.lead")}</p>
+      <h3 className="sp-ch-h">{t("changes.submit.notes.title")}</h3>
+      <p className="sp-ch-muted">{t("changes.submit.notes.lead")}</p>
       <div className="sp-sb-pair">
         <Textarea
           id={NOTES_FIELD_ID}
-          label={t("submit.notes.ru")}
+          label={t("changes.submit.notes.ru")}
           value={notes.draft.ru}
           rows={3}
           maxLength={20_000}
@@ -33,7 +33,7 @@ export const NotesFields = ({ c }: { c: SubmitController }) => {
           data-testid="sp-sb-notes-ru"
         />
         <Textarea
-          label={t("submit.notes.en")}
+          label={t("changes.submit.notes.en")}
           value={notes.draft.en}
           rows={3}
           maxLength={20_000}
@@ -47,7 +47,7 @@ export const NotesFields = ({ c }: { c: SubmitController }) => {
       {notes.breaking && (
         <div className="sp-sb-pair">
           <Textarea
-            label={t("submit.notes.breakingRu")}
+            label={t("changes.submit.notes.breakingRu")}
             value={notes.draft.breakingRu}
             rows={2}
             maxLength={20_000}
@@ -57,7 +57,7 @@ export const NotesFields = ({ c }: { c: SubmitController }) => {
             }}
           />
           <Textarea
-            label={t("submit.notes.breakingEn")}
+            label={t("changes.submit.notes.breakingEn")}
             value={notes.draft.breakingEn}
             rows={2}
             maxLength={20_000}
@@ -70,8 +70,8 @@ export const NotesFields = ({ c }: { c: SubmitController }) => {
       )}
       {notes.classNote && (
         <Textarea
-          label={t("submit.notes.classNote")}
-          hint={t("submit.notes.classNoteHint")}
+          label={t("changes.submit.notes.classNote")}
+          hint={t("changes.submit.notes.classNoteHint")}
           value={notes.draft.note}
           rows={2}
           maxLength={2000}
@@ -83,7 +83,7 @@ export const NotesFields = ({ c }: { c: SubmitController }) => {
       )}
       {notes.problem === "pairs" && (
         <p className="sp-sb-warn" role="status" data-testid="sp-sb-pairs">
-          {t("submit.notes.pairs")}
+          {t("changes.submit.notes.pairs")}
         </p>
       )}
       <div className="sp-sb-row">
@@ -92,21 +92,21 @@ export const NotesFields = ({ c }: { c: SubmitController }) => {
             size="xs"
             variant="secondary"
             disabled={disabled}
-            title={t("submit.notes.suggestHint")}
+            title={t("changes.submit.notes.suggestHint")}
             onClick={notes.suggest}
             data-testid="sp-sb-suggest"
           >
             <Wand2 size="0.75rem" aria-hidden="true" />
-            {t("submit.notes.suggest")}
+            {t("changes.submit.notes.suggest")}
           </Button>
         )}
         <span className="sp-sb-status" role="status" data-testid="sp-sb-saved">
           {notes.saving
-            ? t("submit.notes.saving")
+            ? t("changes.submit.notes.saving")
             : notes.saved
-              ? t("submit.notes.saved")
+              ? t("changes.submit.notes.saved")
               : notes.problem === "empty"
-                ? t("submit.notes.needed")
+                ? t("changes.submit.notes.needed")
                 : ""}
         </span>
       </div>

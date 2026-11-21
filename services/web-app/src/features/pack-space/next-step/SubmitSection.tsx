@@ -40,7 +40,7 @@ export const SubmitSection = ({
     <section className="sp-ch-section sp-sb" data-testid="sp-sb">
       {c.stateLoading && (
         <p className="sp-ch-muted" role="status">
-          {t("submit.loading")}
+          {t("changes.submit.loading")}
         </p>
       )}
       <NotesFields c={c} />
@@ -55,26 +55,28 @@ export const SubmitSection = ({
         <div className="sp-ch-banner-text">
           <span>
             {requestLabel
-              ? t("submit.where.update", { label: requestLabel })
-              : t("submit.where.new", { base: git?.base_branch ?? "" })}
+              ? t("changes.submit.where.update", { label: requestLabel })
+              : t("changes.submit.where.new", { base: git?.base_branch ?? "" })}
           </span>
           {git?.workspace.service_access && (
-            <span>{t("submit.where.service")}</span>
+            <span>{t("changes.submit.where.service")}</span>
           )}
           {git?.workspace.fork_url && (
             <span>
-              {t("submit.where.viaFork", { url: git.workspace.fork_url })}
+              {t("changes.submit.where.viaFork", {
+                url: git.workspace.fork_url,
+              })}
             </span>
           )}
         </div>
       </div>
       {requestLabel === null && (
         <details className="sp-sb-more" data-testid="sp-sb-request">
-          <summary>{t("submit.request.summary")}</summary>
+          <summary>{t("changes.submit.request.summary")}</summary>
           <div className="sp-sb-more-body">
             <Input
-              label={t("submit.request.title")}
-              hint={t("submit.request.titleHint")}
+              label={t("changes.submit.request.title")}
+              hint={t("changes.submit.request.titleHint")}
               value={c.title}
               maxLength={200}
               disabled={lock}
@@ -84,8 +86,8 @@ export const SubmitSection = ({
               data-testid="sp-sb-title"
             />
             <Textarea
-              label={t("submit.request.description")}
-              hint={t("submit.request.descriptionHint")}
+              label={t("changes.submit.request.description")}
+              hint={t("changes.submit.request.descriptionHint")}
               value={c.description}
               rows={3}
               maxLength={20_000}
@@ -118,8 +120,10 @@ export const SubmitSection = ({
             data-testid="sp-sb-ack-input"
           />
           <span className="sp-sb-choice-text">
-            <span>{t("submit.ack.label")}</span>
-            <span className="sp-sb-choice-hint">{t("submit.ack.hint")}</span>
+            <span>{t("changes.submit.ack.label")}</span>
+            <span className="sp-sb-choice-hint">
+              {t("changes.submit.ack.hint")}
+            </span>
           </span>
         </label>
       )}
@@ -129,7 +133,7 @@ export const SubmitSection = ({
           role="status"
           data-testid="sp-sb-impact-wait"
         >
-          {t("submit.impactWaiting")}
+          {t("changes.submit.impactWaiting")}
         </p>
       )}
       <ForkChoice
