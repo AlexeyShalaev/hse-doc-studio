@@ -136,7 +136,7 @@ describe("разделы версии «Содержимого»", () => {
     });
     expect(screen.getAllByTestId(/^ct-rule-file-/)).toHaveLength(1);
     fireEvent.click(screen.getByTestId("ct-rule-file-format.yaml"));
-    expect(decodeURIComponent(location() ?? "")).toContain(
+    expect(decodeURIComponent(location())).toContain(
       `part=files&file=${rules}`,
     );
   });
@@ -196,7 +196,7 @@ describe("«Все файлы»", () => {
       seed([text, other]),
     );
     fireEvent.click(screen.getByTestId(`tree-file-${other}`));
-    expect(decodeURIComponent(location() ?? "")).toContain(`file=${other}`);
+    expect(decodeURIComponent(location())).toContain(`file=${other}`);
   });
 
   it("текстовый файл: редактор, формы нет", () => {

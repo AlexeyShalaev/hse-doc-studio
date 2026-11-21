@@ -79,7 +79,7 @@ export const ContentNavView = ({
         to={nav.partHref("documents")}
         className={clsx(
           "sp-ct-item",
-          (activeDoc || activePart === "documents") && "on",
+          (activeDoc !== null || activePart === "documents") && "on",
         )}
         aria-current={activePart === "documents" ? "page" : undefined}
         title={t("content.nav.documentsHint")}

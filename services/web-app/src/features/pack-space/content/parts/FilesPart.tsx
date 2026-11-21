@@ -25,7 +25,7 @@ const FilesPart = ({
   const space = useSpaceNav();
   const [create, setCreate] = useState<NewPackTarget | null>(null);
   // Замок версии, которая открыта в Студии: чужую выпущенную версию закрывает сервер.
-  const locked = readOnly && file !== null && file.startsWith(`${versionDir}/`);
+  const locked = readOnly && (file?.startsWith(`${versionDir}/`) ?? false);
   const open = (ref: PackVersionRef) => {
     space.go({ ref });
   };

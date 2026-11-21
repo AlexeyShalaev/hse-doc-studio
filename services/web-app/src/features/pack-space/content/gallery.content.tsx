@@ -1,14 +1,7 @@
-import type { QueryClient } from "@tanstack/react-query";
-import { packStudioKeys } from "@entities/pack-studio";
 import type { GalleryEntry } from "@shared/lib/stateGallery";
-import {
-  GALLERY_TREE,
-  GALLERY_WORKSPACE,
-  SpaceGalleryFrame,
-} from "../galleryKit";
+import { SpaceGalleryFrame } from "../galleryKit";
 import { SpaceScreen } from "../shell/SpaceScreen";
 import {
-  CONTENT_VERSION_DIR,
   RELEASED_MODEL,
   modelWithDocuments,
   seedContentModel,
@@ -33,26 +26,6 @@ const frameFor = (
   </SpaceGalleryFrame>
 );
 
-const seedTree = (client: QueryClient) => {
-  client.setQueryData(packStudioKeys.tree(GALLERY_WORKSPACE.id), {
-    ...GALLERY_TREE,
-    files: [
-      {
-        path: `${CONTENT_VERSION_DIR}/version.yaml`,
-        is_dir: false,
-        size: 30733,
-        read_only: null,
-      },
-      {
-        path: `${CONTENT_VERSION_DIR}/files/common/meta.tex.j2`,
-        is_dir: false,
-        size: 4120,
-        read_only: null,
-      },
-    ],
-  });
-};
-
 export const galleryEntries: GalleryEntry[] = [
   {
     id: "sp_content_text",
@@ -73,27 +46,6 @@ export const galleryEntries: GalleryEntry[] = [
     seed: seedContentModel,
     render: () =>
       frameFor("doc=technical_specification&seg=terms", { height: "40rem" }),
-  },
-  {
-    id: "sp_content_part",
-    title: "Содержимое: раздел «Данные проекта»",
-    note: "Раздел версии на прежней форме (до S8d).",
-    frame: "screen",
-    width: 1280,
-    seed: seedContentModel,
-    render: () => frameFor("part=fields", { height: "40rem" }),
-  },
-  {
-    id: "sp_content_files",
-    title: "Содержимое: «Все файлы»",
-    note: "Прежнее дерево для опытных (до S8d).",
-    frame: "screen",
-    width: 1280,
-    seed: (client) => {
-      seedContentText(client);
-      seedTree(client);
-    },
-    render: () => frameFor("part=files", { height: "36rem" }),
   },
   {
     id: "sp_content_released",
