@@ -215,7 +215,7 @@
 .sp-root[data-phone] .sp-side {
   position: absolute;
   inset-inline: 0;
-  inset-block: auto 0;
+  inset-block: auto var(--kb-inset, 0px);
   z-index: 4;
   width: auto;
   max-height: 60%;
