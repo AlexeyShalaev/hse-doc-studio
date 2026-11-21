@@ -9,6 +9,7 @@ import {
 import { ApiError } from "@shared/api";
 import { Button, ErrorState, Spinner } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
+import type { VersionSection } from "../lib/focus";
 import { ModelEditorProvider, useModelEditor } from "../model/modelEditor";
 import { ChecksFileSection } from "./checks/ChecksSections";
 import { DocForm } from "./documents/DocForm";
@@ -24,6 +25,11 @@ export type PackFormPaneProps = {
   onOpenFile?: ((path: string) => void) | undefined;
   /** Переход к правилу: указатель JSON записи манифеста, которую форма выделяет. */
   at?: string | null | undefined;
+  /**
+   * Показать только один раздел формы версии, без полосы вкладок и без плашки «версия выпущена»:
+   * «Содержимое» (pack-space) выбирает раздел навигацией и само говорит про выпущенную версию.
+   */
+  section?: VersionSection | undefined;
 };
 
 /** Причина отказа сервера под текстом ошибки (`model_invalid`, `yaml_patch_conflict`). */
@@ -33,13 +39,15 @@ const reasonOf = (error: unknown): string | null => {
   return typeof reason === "string" ? reason : null;
 };
 
-const Status = () => {
+const Status = ({ quietReadOnly }: { quietReadOnly: boolean }) => {
   const { t } = useTranslation("packForms");
   const { busy, error, stale, readOnly, clearError, model } = useModelEditor();
   const reason = reasonOf(error);
   return (
     <div className="pf-status" aria-live="polite">
-      {readOnly && <Notice tone="info" role="status" text={t("readOnly")} />}
+      {readOnly && !quietReadOnly && (
+        <Notice tone="info" role="status" text={t("readOnly")} />
+      )}
       {stale ? (
         <Notice
           tone="warn"
@@ -95,6 +103,7 @@ export const PackFormPane = ({
   onSaved,
   onOpenFile,
   at,
+  section,
 }: PackFormPaneProps) => {
   const { t } = useTranslation("packForms");
   const ref = versionRefOf(path);
@@ -125,7 +134,7 @@ export const PackFormPane = ({
       onSaved={onSaved}
     >
       <div className="pf-pane" data-testid="pack-form-pane">
-        <Status />
+        <Status quietReadOnly={section !== undefined} />
         {kind === "checks" ? (
           <ChecksFileSection
             workspaceId={workspaceId}
@@ -141,6 +150,7 @@ export const PackFormPane = ({
             onSaved={onSaved}
             onOpenFile={onOpenFile}
             at={at}
+            section={section}
           />
         )}
       </div>

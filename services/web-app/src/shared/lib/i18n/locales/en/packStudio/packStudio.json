@@ -641,7 +641,7 @@
     "done": "Done"
   },
   "submission": {
-    "lead": "Checkpoints and signing order of this version. Every change is written to version.yaml right away as a targeted edit: comments and key order stay, checks and the version class are recalculated as after an edit in Source.",
+    "lead": "Checkpoints and signing order of this version. Every change is saved right away; comments and the order of entries in the version description stay.",
     "missingTranslation": "Translation missing",
     "stale": "The file changed outside the form. The form shows the fresh version; repeat the change.",
     "profiles": "Checkpoints",
@@ -652,7 +652,7 @@
     "up": "Up: {{what}}",
     "down": "Down: {{what}}",
     "remove": "Remove: {{what}}",
-    "brokenEntry": "The template does not read this entry: {{error}}. Fix it in Source.",
+    "brokenEntry": "The template does not read this entry: {{error}}. Fix it in the file text.",
     "route": {
       "step": "Step {{n}}",
       "parallel": "in parallel",
@@ -670,7 +670,7 @@
       "inherit": "Drop the own order ({{what}})",
       "inherited": "In effect: {{what}}: {{steps}}.",
       "missing": "Not in the order, they go as the last steps: {{slots}}.",
-      "unknown": "The order names slots outside the catalog; the route skips them: {{slots}}.",
+      "unknown": "The order names signatures that are not in the version; they will be skipped: {{slots}}.",
       "profileTitle": "Checkpoint signing order",
       "profileHint": "Who signs first. Within a step people sign in parallel. Without an own order the version order applies.",
       "versionTitle": "Version signing order",
@@ -679,16 +679,16 @@
       "versionName": "the version order"
     },
     "preview": {
-      "title": "Route in this combination",
+      "title": "Signing order under these conditions",
       "unreadable": "The template does not read this checkpoint, it has no route.",
       "none": "The route is not calculated yet.",
       "noSignatures": "This checkpoint needs no signatures: there is no route.",
       "pair": "{{slot}} on “{{doc}}”",
       "added": "Added by the template: {{pair}} ({{when}}).",
       "optional": "Optional: {{pair}}.",
-      "skipped": "Not in this combination: {{pair}} ({{when}}).",
+      "skipped": "Not under these conditions: {{pair}} ({{when}}).",
       "mayAdd": "The project author may add: {{pairs}}.",
-      "itemsOff": "Not submitted in this combination: {{docs}}.",
+      "itemsOff": "Not submitted under these conditions: {{docs}}.",
       "order": {
         "profile": "Order: the checkpoint's own order.",
         "version": "Order: the version order.",
@@ -723,7 +723,7 @@
       "title": "Items",
       "hint": "The checkpoint's documents and their signatures. No signing method ticked means any method.",
       "document": "Item document",
-      "noSlots": "No signature slot applies to this document.",
+      "noSlots": "No signature applies to this document.",
       "unknownSlots": "Signatures outside the catalog or not for this document: {{slots}}.",
       "skipIfNda": "Not submitted under NDA",
       "addPlaceholder": "Document of the new item",
@@ -754,7 +754,7 @@
       "slot": "Signature",
       "when": "Condition",
       "optional": "Optional",
-      "requiredSlot": "The slot is required in the catalog (required): it cannot be optional",
+      "requiredSlot": "The signature is required by the version rules: it cannot be optional",
       "ofPoint": "A checkpoint item requires this signature: no condition, it can only be marked optional.",
       "extra": "A signature beyond the checkpoint: the template adds it {{when}}.",
       "noItems": "Add items first: the preset refers to their documents.",
@@ -789,12 +789,12 @@
       "create": "Create checkpoint"
     },
     "combo": {
-      "title": "Combination for the route",
+      "title": "Student conditions for the signing order",
       "hint": "The same switches as in the preview: the route below is calculated for these project people."
     }
   },
   "checksForm": {
-    "lead": "The group header and the rules of this file. Every change goes to the file as a targeted edit: comments and keys the form does not know stay, checks and the version class are recalculated.",
+    "lead": "The group header and the rules of this file. Every change is saved right away; comments and keys the form does not know stay.",
     "notFound": "This rules file is not in the version.",
     "fileError": "The template does not fully understand the file: {{error}}",
     "rules_one": "{{count}} rule",
@@ -813,7 +813,7 @@
     "run": {
       "title": "Check on the preview",
       "document": "Document to check",
-      "noDocuments": "No documents of these rules in this combination",
+      "noDocuments": "No documents of these rules under these conditions",
       "start": "Build and check",
       "hint": "The document is built with the preview data set and switches, then the version rules run with the same engine as in a project. LanguageTool rules do not run on the preview.",
       "running": "Building…",
@@ -850,7 +850,7 @@
     "param": {
       "notNumber": "A number is needed",
       "none": "This check has no parameters.",
-      "unknownCheck": "The form does not know this check: edit its parameters in Source.",
+      "unknownCheck": "The form does not know this check: edit its parameters in the file text.",
       "expected.left_mm": "Left margin, mm",
       "expected.right_mm": "Right margin, mm",
       "expected.top_mm": "Top margin, mm",
@@ -889,14 +889,14 @@
       "typography": "Typography (typography)"
     },
     "config": {
-      "lead": "Which version rules are on and with what severity. Written to checks_version in version.yaml.",
+      "lead": "Which version rules are on and with what severity.",
       "categories": "Categories",
       "categoriesHint": "A ticked category is off entirely.",
       "noCategories": "The version rules have no categories.",
       "off": "Off",
       "severity": "Severity in this version",
       "asRule": "As in the rule: {{severity}}",
-      "orphans": "checks_version names rules that are not in the rules files: {{ids}}."
+      "orphans": "The version check settings name rules that are not in the rules files: {{ids}}."
     }
   },
   "scaffold": {

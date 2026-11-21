@@ -1,5 +1,2 @@
-import { LegacyVersionPart } from "../legacy/LegacyVersionPart";
-
-// S8d: ЗАМЕНИТЬ ЭТОТ ФАЙЛ. Раздел «forms» пока показывает прежнюю форму версии на своём разделе
-// (docs/design/pack-studio-ux.md, 12.7). Props: `ContentPartProps`.
-export default LegacyVersionPart;
+// S8d: раздел «forms»: форма версии на один раздел (docs/design/pack-studio-ux.md, 12.11).
+export { VersionPart as default } from "../parts/VersionPart";

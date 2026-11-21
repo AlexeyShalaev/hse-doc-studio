@@ -13,7 +13,12 @@ export const CONTENT_BASE = `${SPACE_BASE}/2026.1.3/content`;
 export const renderContent = (
   ui: ReactNode,
   search = "",
-  options: { model?: PackVersionModel | null; version?: string } = {},
+  options: {
+    model?: PackVersionModel | null;
+    version?: string;
+    /** Подложить ещё что-то в кэш запросов (дерево файлов и т. п.). */
+    before?: (client: QueryClient) => void;
+  } = {},
 ): RenderResult & { client: QueryClient } => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
@@ -21,6 +26,7 @@ export const renderContent = (
   if (options.model !== null) {
     seedContentModel(client, options.model ?? CONTENT_MODEL);
   }
+  options.before?.(client);
   const base = options.version
     ? `${SPACE_BASE}/${options.version}/content`
     : CONTENT_BASE;

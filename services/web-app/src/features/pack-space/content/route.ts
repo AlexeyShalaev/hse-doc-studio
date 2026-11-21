@@ -25,6 +25,9 @@ export type ContentRoute =
 /** Раздел формы версии по указателю записи манифеста (как `sectionOfPointer` прежней формы). */
 export const partOfPointer = (pointer: string | null): ContentPart | null => {
   switch (pointer?.split("/")[1]) {
+    case "documents":
+    case "dynamic_includes":
+      return "documents";
     case "meta_fields":
     case "meta_groups":
       return "fields";

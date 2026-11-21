@@ -1,5 +1,5 @@
 import type { DocumentSegmentProps } from "../contract";
-import { LegacyFormPane } from "../legacy/LegacyFormPane";
+import { FormPane } from "../FormPane";
 import { useContentNav } from "../useContentNav";
 
 // «Условия» документа: когда он нужен студенту (виды работы, состав, языки), название, имя
@@ -8,7 +8,7 @@ import { useContentNav } from "../useContentNav";
 const TermsSegment = ({ workspaceId, doc }: DocumentSegmentProps) => {
   const nav = useContentNav();
   return (
-    <LegacyFormPane
+    <FormPane
       workspaceId={workspaceId}
       path={doc.manifestPath}
       onOpenFile={nav.toFile}

@@ -3,31 +3,35 @@ import { useQueryClient } from "@tanstack/react-query";
 import { notifyPackFilesSaved, packStudioKeys } from "@entities/pack-studio";
 import { loadPackFormsNamespace } from "@shared/lib/i18n/packFormsNamespace";
 import { Spinner } from "@shared/ui";
+import type { VersionSection } from "@features/pack-forms";
 
-// ВРЕМЕННО (S8a): формы манифестов прежнего интерфейса, подключённые к новой навигации. S8d
-// заменяет их разделами на тех же формах `pack-forms`, S8a держит ими «Условия» документа и
-// разделы версии, чтобы ни одна функция не пропала раньше времени (карта паритета, 7.4).
-// Свой чанк, как в прежнем экране: форма и её словарь грузятся с первым открытием.
+// Формы манифестов `pack-forms` (версия, документ, файл правил) в новой навигации: «Условия»
+// документа, разделы версии и форма файла в «Все файлы». Свой чанк, как в прежнем экране: форма и
+// её словарь грузятся с первым открытием. `section` показывает один раздел формы версии без
+// полосы вкладок: раздел выбирает левая навигация «Содержимого».
 const PackFormPane = lazy(() =>
   Promise.all([import("@features/pack-forms"), loadPackFormsNamespace()]).then(
     ([m]) => ({ default: m.PackFormPane }),
   ),
 );
 
-export type LegacyFormPaneProps = {
+export type FormPaneProps = {
   workspaceId: string;
   /** Манифест, форма которого нужна: `version.yaml`, `doc.yaml` или файл правил. */
   path: string;
   at?: string | null;
+  /** Раздел формы версии (только для `version.yaml`). */
+  section?: VersionSection | undefined;
   onOpenFile?: ((path: string) => void) | undefined;
 };
 
-export const LegacyFormPane = ({
+export const FormPane = ({
   workspaceId,
   path,
   at,
+  section,
   onOpenFile,
-}: LegacyFormPaneProps) => {
+}: FormPaneProps) => {
   const client = useQueryClient();
   // Форма записала файлы версии: как сохранение в редакторе, плюс места подписей и git.
   const onSaved = useCallback(() => {
@@ -53,6 +57,7 @@ export const LegacyFormPane = ({
           path={path}
           onSaved={onSaved}
           at={at ?? null}
+          section={section}
           onOpenFile={onOpenFile}
         />
       </Suspense>
