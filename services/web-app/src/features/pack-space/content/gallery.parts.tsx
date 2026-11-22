@@ -150,7 +150,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     id: "sp_content_part_released",
     title: "Содержимое: раздел версии, выпущенная версия",
-    note: "Замок, пометка «только смотреть» и «Править копию».",
+    note: "Замок и «Править копию».",
     frame: "screen",
     width: 1280,
     seed: (client) => {

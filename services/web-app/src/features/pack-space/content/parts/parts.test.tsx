@@ -1,10 +1,10 @@
-import { cleanup, fireEvent, screen } from "@testing-library/react";
+import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { packStudioKeys, type PackTree } from "@entities/pack-studio";
 import type { QueryClient } from "@tanstack/react-query";
 import { loadPackSpaceNamespace } from "@shared/lib/i18n/packSpaceNamespace";
 import { GALLERY_TREE, GALLERY_WORKSPACE } from "../../galleryKit";
-import { renderContent } from "../contentTestKit";
+import { mockCopyCreated, renderContent } from "../contentTestKit";
 import type { ContentPart, ContentPartProps } from "../contract";
 import { CONTENT_VERSION_DIR } from "../fixtures";
 import FilesPart from "./FilesPart";
@@ -100,7 +100,8 @@ describe("разделы версии «Содержимого»", () => {
     expect(probe("probe-form").at).toBe("/meta_fields/3");
   });
 
-  it("выпущенная версия: пометка и «Править копию»", () => {
+  it("выпущенная версия: пометка и «Править копию» создаёт копию и остаётся на экране", async () => {
+    const created = mockCopyCreated("2026.1.4");
     renderContent(
       <VersionPart {...props("fields", { readOnly: true })} />,
       "part=fields",
@@ -113,7 +114,12 @@ describe("разделы версии «Содержимого»", () => {
       screen.getByRole("img", { name: /Версия выпущена/ }),
     ).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("ct-part-copy"));
-    expect(location()).toContain("copy=1");
+    await waitFor(() => {
+      expect(location()).toContain("/2026.1.4/");
+    });
+    expect(created).toHaveBeenCalledOnce();
+    expect(location()).toContain("part=fields");
+    expect(location()).not.toContain("copy=1");
   });
 
   it("«Сроки и сдача»: порядок подписания и подписи в точках сдачи в одной форме", () => {

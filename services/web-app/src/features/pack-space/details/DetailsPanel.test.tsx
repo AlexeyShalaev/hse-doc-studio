@@ -26,6 +26,7 @@ import {
   resetReferenceManifests,
   setExplainBehavior,
 } from "@entities/pack-studio/reference";
+import { ApiError } from "@shared/api";
 import { i18n, useToastStore } from "@shared/lib";
 import { loadPackSpaceNamespace } from "@shared/lib/i18n/packSpaceNamespace";
 import { render } from "@testing-library/react";
@@ -480,6 +481,47 @@ describe("«Подробности»", () => {
       // Условия и выбранный элемент не потерялись.
       expect(location()).toContain("i.kind=project");
       expect(location()).toContain("sel=documents%3Aproject_proposal");
+    });
+  });
+
+  describe("выпущенная версия, номер занят", () => {
+    it("«Править копию» берёт свободный номер, как главная кнопка (S13)", async () => {
+      const made = (version: string) => ({
+        version: {
+          pack: "hse-cs-sse",
+          template: "coursework",
+          version,
+          path: `hse-cs-sse/templates/coursework/versions/${version}`,
+        },
+        base: "2026.1.2",
+        update_class: "patch" as const,
+        warnings: [],
+      });
+      const create = vi
+        .spyOn(packStudioApi, "createVersion")
+        .mockRejectedValueOnce(
+          new ApiError("занят", "version_taken", 409, {
+            suggested: "2026.1.4",
+          }),
+        )
+        .mockResolvedValueOnce(made("2026.1.4"));
+      mount(
+        `${SPACE_BASE}/2026.1.2/result?${DOC}`.replace(
+          "technical_specification",
+          "project_proposal",
+        ),
+      );
+      await userEvent.click(await screen.findByTestId("sp-make-copy"));
+      await waitFor(() => {
+        expect(create).toHaveBeenCalledTimes(2);
+      });
+      expect(create.mock.calls[1]?.[3]).toEqual({
+        base: "2026.1.2",
+        version: "2026.1.4",
+      });
+      await waitFor(() => {
+        expect(location()).toContain("/2026.1.4/result");
+      });
     });
   });
 

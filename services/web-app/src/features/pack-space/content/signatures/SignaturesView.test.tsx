@@ -15,6 +15,7 @@ import {
   SIGNATURES_RELEASED,
   signaturesBuild,
 } from "./fixtures";
+import { mockCopyCreated } from "../contentTestKit";
 import { seedDocumentBuild } from "./buildSeed";
 import { renderSignatures } from "./signaturesTestKit";
 
@@ -188,14 +189,14 @@ describe("«Подписи» документа", () => {
     );
   });
 
-  it("выпущенная версия: только чтение, действий нет, «Править копию» идёт по контракту каркаса", async () => {
+  it("выпущенная версия: только чтение, действий нет, «Править копию» создаёт копию", async () => {
     renderSignatures(<ContentMain />, DOC, {
       released: true,
       seed: { data: SIGNATURES_RELEASED },
     });
 
     const lock = await screen.findByTestId("ct-sg-readonly");
-    expect(lock).toHaveTextContent("только смотреть");
+    expect(lock).toHaveTextContent("нужна копия версии");
     expect(screen.getByTestId("stamp-editor")).toHaveAttribute(
       "data-readonly",
       "true",
@@ -203,10 +204,15 @@ describe("«Подписи» документа", () => {
     expect(screen.queryByTestId("places-author-shared")).toBeNull();
     expect(screen.queryByTestId("places-line-author.day")).toBeNull();
 
+    const created = mockCopyCreated("2026.1.3");
     fireEvent.click(within(lock).getByTestId("ct-sg-copy"));
     await vi.waitFor(() => {
-      expect(screen.getByTestId("location").textContent).toContain("copy=1");
+      expect(screen.getByTestId("location").textContent).toContain(
+        "/2026.1.3/",
+      );
     });
+    expect(created).toHaveBeenCalledOnce();
+    expect(screen.getByTestId("location").textContent).not.toContain("copy=1");
   });
 
   it("подписей у документа нет: короткое пояснение и ссылка на раздел, PDF не собирается", async () => {

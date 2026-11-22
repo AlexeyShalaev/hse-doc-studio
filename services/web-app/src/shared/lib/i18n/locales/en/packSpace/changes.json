@@ -11,7 +11,7 @@
   "close": "Close panel",
   "badge": {
     "draft": "draft {{version}}",
-    "released": "released {{version}}",
+    "released": "version {{version}}",
     "open": "request {{label}}",
     "merged": "accepted",
     "closed": "request closed",
@@ -30,7 +30,7 @@
   "empty": {
     "title": "No changes yet",
     "draft": "Open a document and press “Change conditions” or “Document text”. Everything you edit will be collected here.",
-    "released": "Version {{version}} is released and cannot change. Make a copy with “Edit a copy” and edit the copy."
+    "released": "Press “Edit a copy”: your edits go into a copy of version {{version}}, and everything you change will appear here."
   },
   "folder": {
     "title": "Your edits are already written to the folder.",

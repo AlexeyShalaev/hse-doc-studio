@@ -11,7 +11,7 @@ import { Button, EmptyState, ErrorState, Spinner } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import { useSpace } from "../../context/SpaceContext";
 import { useSituation } from "../../context/useSituation";
-import { useSpaceNav } from "../../context/useSpaceNav";
+import { useCopyVersion } from "../../next-step/useCopyVersion";
 import type { DocumentSegmentProps } from "../contract";
 import { useContentNav } from "../useContentNav";
 import { PlacesEditor } from "./PlacesEditor";
@@ -34,7 +34,7 @@ const SignaturesView = ({
 }: DocumentSegmentProps) => {
   const { t } = useTranslation("packSpace");
   const { versionRef } = useSpace();
-  const space = useSpaceNav();
+  const copy = useCopyVersion({ toastOnError: true });
   const nav = useContentNav();
   const situation = useSituation();
   const slots = usePackSignatures(workspaceId, versionRef, null);
@@ -81,11 +81,7 @@ const SignaturesView = ({
           docName={doc.name}
           inputs={situation.inputs}
           readOnly={readOnly}
-          onCopy={() => {
-            // Кнопку «Править копию» делает главная кнопка пространства (S4); параметр `copy`
-            // зарезервирован за ним (12.6), как у «Текста».
-            space.go({ extra: { copy: "1" } });
-          }}
+          onCopy={() => void copy.run()}
           onReset={situation.reset}
         />
       )}
