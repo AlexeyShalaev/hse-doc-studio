@@ -1,4 +1,4 @@
-import type { ElementKind } from "@features/pack-outcome/lib/elements";
+import type { ElementKind } from "@entities/pack-studio/outcome/elements";
 
 // Слова о выбранном элементе зависят от того, что это: документ «входит в комплект», поле
 // «показывается», участник «участвует». Виды элементов сервера собраны в семь групп, и по группе

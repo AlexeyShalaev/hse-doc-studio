@@ -228,10 +228,7 @@
   background: var(--bg-0);
   font-size: 0.75rem;
 }
-.psf-chip-id {
-  font-size: 0.625rem;
-  color: var(--fg-3);
-}
+
 .psf-step-new {
   display: flex;
   align-items: center;

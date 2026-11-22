@@ -13,7 +13,7 @@ import {
   scenarioName,
   type ScenarioFailure,
   type ScenarioForm,
-} from "@features/pack-outcome/check";
+} from "@entities/pack-studio/outcome/scenarios";
 import { toast } from "@shared/lib";
 
 /** Сколько живёт кнопка «Вернуть» после удаления и «Отменить» после «Принять». */

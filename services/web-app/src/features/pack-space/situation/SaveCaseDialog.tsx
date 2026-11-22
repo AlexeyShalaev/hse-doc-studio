@@ -11,7 +11,7 @@ import {
   scenarioName,
   slugify,
   type ScenarioFailure,
-} from "@features/pack-outcome/lib/scenarios";
+} from "@entities/pack-studio/outcome/scenarios";
 import { useSpace } from "../context/SpaceContext";
 import { useSituation } from "../context/useSituation";
 import { EXAMPLE_PARAM } from "./useSituationDelta";

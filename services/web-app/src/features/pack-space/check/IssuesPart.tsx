@@ -15,7 +15,7 @@ import {
   countsOf,
   indexFindings,
   type Severity,
-} from "@features/pack-outcome/check";
+} from "@entities/pack-studio/outcome/lint";
 import { EmptyState } from "@shared/ui";
 import { useSpace, parseSelection } from "../context/SpaceContext";
 import { CheckFailure } from "./CheckFailure";

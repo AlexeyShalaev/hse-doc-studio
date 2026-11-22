@@ -12,10 +12,7 @@
       "ready": "Ready"
     },
     "open": "Open",
-    "retry": "Retry",
     "actions": "Actions for “{{name}}”",
-    "refresh": "Update base",
-    "refreshHint": "Fetch the latest base branch and recount released versions",
     "delete": "Delete",
     "deleteTitle": "Delete “{{name}}”?",
     "deleteGitHint": "The clone in the Studio is deleted. The repository on the host does not change.",
@@ -68,10 +65,8 @@
       "service": "Connected repository",
       "serviceHint": "Changes are sent with the access the administrator set up for this repository under “Connected repositories”. Commits are signed by you. Your own copy of the repository (a fork) is not available with this access."
     },
-    "tokenHelp": "Which token is needed to send changes",
     "newToken": "New token…",
     "newTokenHint": "A token is needed for a private repository and to send changes. Paste it below: Studio checks it and selects it right away.",
-    "pasteHint": "Press “Add a token” and paste it into the field.",
     "titleFolder": "Connect a folder",
     "openHint": "A public repository connects without a token. A private one needs a token.",
     "withToken": "We will connect with your access “{{name}}”.",
@@ -90,15 +85,7 @@
     "cloningTitle": "Cloning the repository",
     "cloningLead": "This takes up to a couple of minutes. The page updates by itself.",
     "failedTitle": "Clone failed",
-    "failedLead": "Check the address and access, then retry.",
-    "noVersionsTitle": "The workspace has no template versions",
-    "noVersionsLead": "Create a pack and a template in the Files mode and the outcome will appear here.",
-    "openFiles": "Open files",
-    "outcome": "Outcome",
-    "outcomeHint": "What a student gets: documents, fields, participants and route",
-    "backToResult": "Back to the outcome",
-    "pickTitle": "Pick a file",
-    "pickLead": "Open a file in the tree on the left: a version manifest, a document or a Jinja template."
+    "failedLead": "Check the address and access, then retry."
   },
   "tree": {
     "title": "Files",
@@ -117,24 +104,10 @@
     "newPack": "New pack",
     "newTemplate": "New template in the {{pack}} pack"
   },
-  "crumbs": {
-    "label": "File location"
-  },
   "editor": {
-    "views": "File view",
-    "source": "Source",
-    "form": "Form",
-    "formSoon": "A form over YAML is coming in future releases",
     "save": "Save",
-    "saving": "Saving…",
-    "saved": "Saved",
-    "unsaved": "Unsaved changes",
-    "revert": "Discard changes",
     "readOnlyReleased": "This version is released: its files are read-only. Edits go into a new template version.",
-    "readOnlyRegistry": "The “New version” wizard keeps the release registry: it is not edited by hand.",
-    "binaryTitle": "Binary file",
-    "binaryLead": "Images, fonts and office files do not open in the code editor.",
-    "formDirty": "Save or revert the source edits first"
+    "readOnlyRegistry": "The “New version” wizard keeps the release registry: it is not edited by hand."
   },
   "stale": {
     "title": "The file changed since you opened it.",
@@ -237,10 +210,7 @@
     "label": "Propose changes"
   },
   "leave": {
-    "title": "Unsaved changes",
-    "lead": "If you open another file, the changes to this one are lost.",
-    "stay": "Stay",
-    "discard": "Discard"
+    "title": "Unsaved changes"
   },
   "completion": {
     "context": "template context",
@@ -249,18 +219,6 @@
     "prints": "prints: {{keys}}"
   },
   "git": {
-    "loading": "Reading git state",
-    "noBranch": "no branch, at {{base}}",
-    "clean": "all saved",
-    "uncommitted_one": "{{count}} edit since the version",
-    "uncommitted_other": "{{count}} edits since the version",
-    "ahead": "ahead",
-    "behind": "behind",
-    "aheadBehind": "{{ahead}} commits ahead of {{base}}, {{behind}} behind",
-    "serviceAccess": "Connected repository",
-    "openCompare": "Open PR in the browser",
-    "menu": "Branch actions",
-    "dismiss": "Hide",
     "editorDirty": "The editor has an unsaved edit: it will not get into the version. Press “Save” first.",
     "status": {
       "added": "new",
@@ -268,7 +226,6 @@
       "deleted": "deleted"
     },
     "commit": {
-      "button": "Save version",
       "title": "Save version",
       "leadBranch": "Commit to branch {{branch}} on your behalf.",
       "leadNoBranch": "There is no branch yet: the Studio creates one and commits on your behalf.",
@@ -294,9 +251,6 @@
       "done": "Branch {{branch}}"
     },
     "merge": {
-      "button": "Update from {{base}}",
-      "done": "{{base}} merged into the work branch.",
-      "upToDate": "The work branch already has everything from {{base}}.",
       "conflictTitle": "Conflict with the base branch",
       "conflictLead": "{{base}} changes the same lines as your branch. The merge was cancelled, your branch is unchanged.",
       "conflictHint": "Edit these files in your branch so they agree with the base branch, save a version and update again.",
@@ -327,7 +281,6 @@
       "remoteSpace": "The Studio forgets the open merge request and the pushed branch. On the hosting they stay as they are."
     },
     "diff": {
-      "button": "Changes",
       "title": "Changes from the base branch",
       "lead": "Branch commits and edits on disk compared to {{base}}.",
       "emptyTitle": "No changes",
@@ -338,16 +291,6 @@
       "title": "Hosting checks",
       "lead": "For the pushed commit {{sha}}.",
       "notPushed": "The branch is not pushed yet.",
-      "open": "Hosting checks",
-      "loading": "Checks",
-      "state": {
-        "none": "No checks",
-        "pending": "Checks running",
-        "success": "Checks passed",
-        "failure": "Checks failed",
-        "unknown": "Status unknown",
-        "awaiting_approval": "Awaiting approval"
-      },
       "check": {
         "queued": "queued",
         "running": "running",
@@ -365,81 +308,6 @@
       "refresh": "Refresh",
       "approval": "GitHub waits for a repository maintainer to allow the checks to run: it does so for PRs from forks by new contributors. This is not an error in your proposal, the checks start on their own once approved. The status refreshes every 2 minutes."
     },
-    "fork": {
-      "title": "Push to a fork",
-      "chip": "Fork",
-      "lead": "You cannot write to this repository. The branch can go to your fork, and the pull request opens from it.",
-      "create": "Create a fork with my token",
-      "createHint": "The Studio creates a fork on GitHub and pushes the branch there.",
-      "own": "Use my fork",
-      "ownHint": "A fork on the same server as the repository.",
-      "url": "Fork address",
-      "urlHint": "The same server as the repository. The Studio remembers the fork for this workspace.",
-      "back": "Back",
-      "submit": "Push to fork",
-      "reason": {
-        "fork_host_mismatch": "The fork must be on the same server as the repository: the token is bound to the server.",
-        "fork_unavailable": "The fork could not be created or found. Enter the address of your fork."
-      }
-    },
-    "propose": {
-      "where": {
-        "pr": "Branch {{branch}} goes to the hosting, and a pull request (PR) into {{base}} opens.",
-        "mr": "Branch {{branch}} goes to the hosting, and a merge request (MR) into {{base}} opens."
-      },
-      "autoBranch": "(the Studio creates it)",
-      "service": "The push uses the connected repository access, commits are signed by you.",
-      "viaFork": "Via fork {{url}}",
-      "files_one": "{{count}} file differs from the base branch",
-      "files_other": "{{count}} files differ from the base branch",
-      "title": {
-        "pr": "PR title",
-        "mr": "MR title"
-      },
-      "titleHint": "Empty: the Studio writes the title from the changed versions.",
-      "description": "Description",
-      "descriptionHint": "Goes before the summary the Studio adds itself: versions, change class, notes and checks.",
-      "message": "Commit message",
-      "messageHint_one": "For {{count}} unsaved edit. Empty: the Studio writes it.",
-      "messageHint_other": "For {{count}} unsaved edits. Empty: the Studio writes it.",
-      "checksHint": "Before pushing, the Studio checks the changed packs. Errors show up under “Problems”.",
-      "submit": {
-        "pr": "Push and open PR",
-        "mr": "Push and open MR"
-      },
-      "sending": "Sending",
-      "opened": {
-        "pr": "PR #{{number}} opened",
-        "mr": "MR !{{number}} opened"
-      },
-      "existing": {
-        "pr": "Branch updated, PR #{{number}} was already open",
-        "mr": "Branch updated, MR !{{number}} was already open"
-      },
-      "pushed": "Branch pushed",
-      "toRepo": "To repository {{url}}",
-      "toFork": "To fork {{url}}",
-      "openPr": {
-        "pr": "Open PR #{{number}}",
-        "mr": "Open MR !{{number}}"
-      },
-      "compare": {
-        "pr": "Open PR in the browser",
-        "mr": "Open MR in the browser"
-      },
-      "classes": "Change class",
-      "ciHint": "The hosting checks status shows up in the git bar and refreshes by itself.",
-      "close": "Done",
-      "impact": {
-        "ack": "I know the result of these scenarios will change",
-        "ackHint": "It does not block sending, but the confirmation is required while any scenario changed or failed.",
-        "anyway": "Propose anyway",
-        "waiting": "The before and after calculation is running: sending becomes available when it finishes or is cancelled.",
-        "include": "Add the before and after summary to the description",
-        "includeHint": "The summary goes at the end of the description: how many scenarios change and the list of changes.",
-        "extra": "More versions with changes: {{count}}. Their result is not calculated."
-      }
-    },
     "access": {
       "title": "Repository access",
       "close": "Close",
@@ -453,19 +321,6 @@
       "newToken": "Issue a token with the right permissions",
       "pasteNew": "Paste it in the new workspace window, “New token” item.",
       "pasteReplace": "Click “Replace token” above and paste it into the field."
-    },
-    "official": {
-      "consent": "I agree that the contribution is public and goes under the repository license ({{license}})",
-      "repoLicense": "the repository license",
-      "consentHint": "Everyone will see the PR and its commits. You are asked once for this workspace.",
-      "license": "License",
-      "rules": "Contributing rules",
-      "afterMerge": "Official packs ship with the Studio: after the PR is merged, the new version reaches users with the next release."
-    },
-    "merged": {
-      "official": "The PR is merged. The new version reaches users with the next Studio release.",
-      "other": "The PR is merged. To propose something else, start over from the base branch.",
-      "closed": "The PR was closed without merging."
     }
   },
   "official": {
@@ -633,7 +488,6 @@
     "dateLines": "Mark on a date line:"
   },
   "catalog": {
-    "open": "Connect to this Studio catalog",
     "title": "This Studio catalog",
     "lead": "Released pack versions from this folder appear in the project wizard. Unreleased versions do not enter the catalog.",
     "notConnected": "The folder is not connected to the catalog yet.",
@@ -654,7 +508,6 @@
     "disconnect": "Disconnect",
     "disconnectTitle": "Disconnect the folder from the catalog?",
     "disconnectLead": "The folder packs disappear from the project wizard. Versions stay: existing projects keep working on them.",
-    "close": "Close",
     "done": "Done"
   },
   "submission": {

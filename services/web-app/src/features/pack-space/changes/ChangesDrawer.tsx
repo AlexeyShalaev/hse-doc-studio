@@ -15,12 +15,9 @@ import {
   ChecksDialog,
   CommitDialog,
   DiffDialog,
-  ImpactSlot,
   MergeConflictDialog,
   RepoAccessDialog,
   StartOverDialog,
-  impactVersions,
-  type ImpactReport,
 } from "@features/pack-git";
 import { pickLocalized, toast } from "@shared/lib";
 import { Button } from "@shared/ui";
@@ -33,6 +30,8 @@ import { useSubmit } from "../next-step/useSubmit";
 import { ChangesPanel, type ChangesAction } from "./ChangesPanel";
 import { MoveEditsNotice } from "./MoveEditsNotice";
 import { describePath } from "./describeChanges";
+import { ImpactSlot, type ImpactReport } from "./impact/ImpactSlot";
+import { impactVersions } from "./impact/impactVersions";
 import { useChangesData } from "./useChangesStatus";
 import "./space-changes.css";
 

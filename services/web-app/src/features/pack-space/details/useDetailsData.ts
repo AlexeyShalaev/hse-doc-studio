@@ -18,7 +18,7 @@ import {
 import {
   describeElement,
   type ElementInfo,
-} from "@features/pack-outcome/lib/elements";
+} from "@entities/pack-studio/outcome/elements";
 import { parseSelection, useSpace } from "../context/SpaceContext";
 import { useSituation } from "../context/useSituation";
 import { useSpaceNav } from "../context/useSpaceNav";

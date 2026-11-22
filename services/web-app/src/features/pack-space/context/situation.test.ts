@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   parseOutcomeSearch,
   writeOutcomeSearch,
-} from "@features/pack-outcome/lib/urlState";
+} from "@entities/pack-studio/outcome/urlState";
 import { MAX_INPUTS, readSituation, writeInputs } from "./situation";
 
 describe("условия студента в адресе", () => {

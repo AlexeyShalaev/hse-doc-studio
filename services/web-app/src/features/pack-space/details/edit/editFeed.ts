@@ -1,10 +1,7 @@
 import { useSyncExternalStore } from "react";
-import type { DeltaItem } from "@features/pack-outcome/lib/edit/delta";
-import {
-  emptyHistory,
-  type History,
-} from "@features/pack-outcome/lib/edit/history";
-import type { RuleEdit } from "@features/pack-outcome/lib/edit/plan";
+import type { DeltaItem } from "./model/delta";
+import { emptyHistory, type History } from "./model/history";
+import type { RuleEdit } from "./model/plan";
 
 // Что человек поправил в условиях и что от этого изменилось в результате. Живёт вне React, по
 // версии: переход на другую вкладку и обратно не теряет ленту правок, а центр «Результата»

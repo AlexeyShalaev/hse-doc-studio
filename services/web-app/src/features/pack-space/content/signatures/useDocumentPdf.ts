@@ -14,7 +14,7 @@ import {
 import {
   INPUTS_SOURCE,
   previewTarget,
-} from "@features/pack-outcome/lib/previewRequest";
+} from "@features/pack-preview/lib/previewRequest";
 import { readDocumentBuildSeed } from "./buildSeed";
 
 // PDF документа для расстановки подписей (pack-studio-ux.md, 5.5, срез S8c): человек ничего не

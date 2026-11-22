@@ -283,49 +283,5 @@
       "engineDefault": "as the version",
       "variantId": "Short name of the variant"
     }
-  },
-  "rule": {
-    "list": {
-      "kinds": "Kinds of work",
-      "staffing": "Staffing",
-      "langs": "Languages",
-      "hint": "The values the rule applies to are ticked. With everything ticked there is no restriction."
-    },
-    "flag": {
-      "skip_if_nda": "Skip the item under NDA",
-      "skip_if_ndaHint": "If the project has an NDA, the point will not have this item.",
-      "optional": "The signature is optional",
-      "optionalHint": "The slot stays in the route, but the point can be submitted without it."
-    },
-    "when": {
-      "label": "Slot condition",
-      "hint": "The signature slot joins the route only when the condition holds.",
-      "always": "always",
-      "any": "if the {{person}} is set",
-      "university": "if the {{person}} is set and from HSE",
-      "company": "if the {{person}} is set and from a company",
-      "person": {
-        "supervisor": "supervisor",
-        "co_supervisor": "consultant",
-        "academic_supervisor": "academic supervisor"
-      }
-    },
-    "checks": {
-      "disabled": "Disabled check rules",
-      "categories": "Disabled check categories",
-      "hint": "The ticked rules do not apply in this version.",
-      "category": {
-        "structure": "Document structure",
-        "formatting": "Formatting",
-        "bibliography": "Bibliography",
-        "metadata": "Project data",
-        "references": "References and captions",
-        "content": "Content",
-        "custom": "Custom rules",
-        "language": "Language and spelling",
-        "typography": "Typography"
-      }
-    },
-    "route": "The signing order is edited as a whole in the Form tab (Submission and signatures): open the rule and change the steps there."
   }
 }
