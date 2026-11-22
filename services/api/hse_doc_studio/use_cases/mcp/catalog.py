@@ -38,6 +38,7 @@ from hse_doc_studio.use_cases.mcp.tools import (
     documents,
     files,
     git,
+    pack_changes,
     pack_edit,
     pack_git,
     pack_help,
@@ -282,6 +283,9 @@ MCP_TOOL_RULES: tuple[McpToolRule, ...] = (
     _rule("pack_outcome_atlas", _G.packs, _R, rate=PACK_ATLAS, scope=MCP_PACKS_SCOPE),
     _rule("pack_outcome_explain", _G.packs, _R, rate=PACK_OUTCOME, scope=MCP_PACKS_SCOPE),
     _rule("pack_outcome_matrix", _G.packs, _R, rate=PACK_IMPACT, scope=MCP_PACKS_SCOPE),
+    # Студия шаблонов целиком (pack-studio-mcp.md): свод панели «Изменения» и следующий шаг; хостинг спрашивается
+    # только у открытого запроса, частота как у `pack_git_checks`.
+    _rule("pack_changes", _G.packs, _R, rate=GIT_SYNC, scope=MCP_PACKS_SCOPE),
     # Push и PR на хостинге доступом пространства: внешнее действие, как синхронизация проекта с git-remote.
     _rule("pack_propose", _G.packs, _X, dangerous=True, rate=GIT_SYNC, scope=MCP_PACKS_SCOPE),
     # Админка (сценарии сами требуют админа установки)
@@ -394,6 +398,7 @@ MCP_TOOL_CLASSES: tuple[type[McpTool], ...] = (
     pack_outcome.PackOutcomeLintTool,
     pack_outcome_compare.PackOutcomeCompareTool,
     pack_outcome_compare.PackOutcomeImpactTool,
+    pack_changes.PackChangesTool,
     admin.AdminListUsersTool,
     admin.AdminQueueSummaryTool,
     admin.AdminRunnerSummaryTool,

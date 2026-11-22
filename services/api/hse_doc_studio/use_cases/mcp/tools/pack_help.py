@@ -84,6 +84,7 @@ GROUPS: Final[dict[str, tuple[str, tuple[str, ...]]]] = {
             "pack_git_checks",
             "pack_git_merge_base",
             "pack_git_start_over",
+            "pack_changes",
             "pack_propose",
         ),
     ),
@@ -110,7 +111,10 @@ FLOW_RU: Final = (
         "pack_outcome_lint ищет дефекты правил и показывает покрытие сценариями."
     ),
     "7. pack_preview_build: настоящая сборка PDF на раннере (по необходимости).",
-    "8. pack_git_commit: сохранить версию; pack_git_diff и pack_outcome_impact: что изменится против базы.",
+    (
+        "8. pack_changes: что изменено и следующий шаг (как кнопка «Изменения»); pack_git_commit: сохранить точку; "
+        "pack_git_diff и pack_outcome_impact: что изменится против основной ветки."
+    ),
     "9. pack_git_checks: ошибки перед предложением; pack_git_merge_base: влить свежую базу.",
     (
         "10. pack_propose (опасный, выключен по умолчанию): сначала confirm false (сводка), затем confirm true. "
@@ -139,7 +143,10 @@ FLOW_EN: Final = (
         "pack_outcome_lint finds rule defects and shows the scenario coverage."
     ),
     "7. pack_preview_build: a real PDF build on a runner (when needed).",
-    "8. pack_git_commit: save; pack_git_diff and pack_outcome_impact: what changes against the base.",
+    (
+        "8. pack_changes: what changed and the next step (like the Changes button); pack_git_commit: save a point; "
+        "pack_git_diff and pack_outcome_impact: what changes against the main branch."
+    ),
     "9. pack_git_checks: errors before proposing; pack_git_merge_base: merge the fresh base.",
     (
         "10. pack_propose (dangerous, off by default): confirm false first (summary), then confirm true. After the PR "

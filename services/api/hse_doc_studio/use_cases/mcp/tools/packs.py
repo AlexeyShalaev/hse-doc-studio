@@ -65,7 +65,7 @@ from hse_doc_studio.use_cases.pack_studio.git import ForkChoice, GitView, PackGi
 from hse_doc_studio.use_cases.pack_studio.insight import PackInsightService
 from hse_doc_studio.use_cases.pack_studio.official import OfficialPacks
 from hse_doc_studio.use_cases.pack_studio.places import PackPlacesService
-from hse_doc_studio.use_cases.pack_studio.preview import PackPreviewService, StartPreviewInput
+from hse_doc_studio.use_cases.pack_studio.preview import PackPreviewService, PreviewOptions, StartPreviewInput
 from hse_doc_studio.use_cases.pack_studio.scaffold import CreatePackInput, CreateTemplateInput, PackScaffoldService
 from hse_doc_studio.use_cases.pack_studio.versions import CreateVersionInput, PackVersionService, ReleaseInput
 from hse_doc_studio.use_cases.pack_studio.workspaces import PackWorkspaceService, WorkspaceView
@@ -337,7 +337,8 @@ class PackReadTool(PackTool):
         description=(
             "Студия шаблонов: без version дерево пространства (паки, шаблоны, версии со статусом; released: "
             "выпущена и только для чтения). С version разобранная модель версии: документы, поля анкеты, слоты "
-            "подписей, точки сдачи, анкеты, языки и файлы версии. Пример: "
+            "подписей, точки сдачи, анкеты, языки, файлы версии и preview: что можно собрать в pack_preview_build "
+            "(документы, переключатели combination с допустимыми значениями, наборы данных, умолчания). Пример: "
             '{"workspace_id": "<uuid>", "version": "hse-cs-sse/coursework/2026.1.7"}.'
         ),
         parameters=_schema({"workspace_id": _WORKSPACE_ID, "version": _VERSION}, ("workspace_id",)),
@@ -366,16 +367,32 @@ class PackReadTool(PackTool):
             False,
         )
         model = _model(desc.version)
+        options = await previews.options(actor, workspace_id, ref.pack, ref.template, ref.version)
         model.update(
             {
                 "path": ref.dir,
                 "released": released,
                 "examples": [e.id for e in desc.examples],
+                "preview": _preview_options(options),
                 "files": [{"path": f.path, "size": f.size, "read_only": f.read_only} for f in listed[:_MAX_LISTED]],
                 "files_total": len(listed),
             }
         )
         return json_result(model, truncated=len(listed) > _MAX_LISTED)
+
+
+def _preview_options(options: PreviewOptions) -> dict[str, Any]:
+    """Что можно собрать (как `GET .../preview`): документы, переключатели, наборы данных и умолчания."""
+    return {
+        "documents": [d.id for d in options.documents],
+        "switches": [
+            {"id": s.id, "values": list(s.values), "default": s.default, "label": s.label} for s in options.switches
+        ],
+        "examples": [{"id": e.id, "source": e.source, "label": e.label, "error": e.error} for e in options.examples],
+        "default_example": options.default_example,
+        "combination": dict(options.combination),
+        "languages": {doc: list(langs) for doc, langs in options.languages.items()},
+    }
 
 
 def _model(version: TemplateVersion) -> dict[str, Any]:
@@ -953,7 +970,8 @@ class PackNewVersionTool(PackTool):
         description=(
             "Студия шаблонов: шаг 1 мастера «Новая версия». Каталог базы (по умолчанию последняя выпущенная) "
             "копируется в черновик beta с пустыми заметками; номер явно (version) или по классу update_class "
-            "(patch по умолчанию). Занятый номер отвечает version_taken с suggested. Пример: "
+            "(patch по умолчанию). Занятый номер отвечает version_taken с suggested. dry_run: true ничего не "
+            "создаёт и показывает варианты: версии шаблона, базу по умолчанию и номера по классам. Пример: "
             '{"workspace_id": "<uuid>", "pack": "hse-cs-sse", "template": "coursework", "update_class": "patch"}.'
         ),
         parameters=_schema(
@@ -964,6 +982,7 @@ class PackNewVersionTool(PackTool):
                 "base": {"type": "string", "description": "Версия-база копии"},
                 "version": {"type": "string", "description": "Номер новой версии, ГОД.MINOR.PATCH"},
                 "update_class": {"type": "string", "enum": ["patch", "minor", "major"]},
+                "dry_run": {"type": "boolean", "default": False, "description": "true: только варианты, без записи"},
             },
             ("workspace_id", "pack", "template"),
         ),
@@ -971,7 +990,21 @@ class PackNewVersionTool(PackTool):
     kind = ToolKind.write
 
     async def run(self, actor: Actor, args: dict[str, object]) -> ToolResult:
-        created = await (await self._deps.get(PackVersionService)).create(
+        service = await self._deps.get(PackVersionService)
+        if bool_arg(args, "dry_run", False):
+            options = await service.options(
+                actor, uuid_arg(args, "workspace_id"), text_arg(args, "pack"), text_arg(args, "template")
+            )
+            return json_result(
+                {
+                    "template": f"{options.template.pack}/{options.template.template}",
+                    "versions": [jsonable(v) for v in options.versions],
+                    "default_base": options.default_base,
+                    "default_version": options.default_version,
+                    "numbers": {str(getattr(k, "value", k)): v for k, v in options.numbers.items()},
+                }
+            )
+        created = await service.create(
             actor,
             uuid_arg(args, "workspace_id"),
             text_arg(args, "pack"),
