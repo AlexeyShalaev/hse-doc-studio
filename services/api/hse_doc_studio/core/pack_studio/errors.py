@@ -307,8 +307,8 @@ _TABLE: dict[PackStudioErrorCode, tuple[int, str, str]] = {
     ),
     _C.paths_outside_packs: (
         409,
-        "Ветка меняет файлы вне папки с шаблонами. В официальные шаблоны и через подключённый репозиторий можно отправлять только папку шаблонов.",
-        "The branch changes files outside the templates folder. Official templates and connected repositories take only the templates folder.",
+        "Ветка меняет файлы вне папки с шаблонами. Отправлять можно только саму папку шаблонов.",
+        "The branch changes files outside the templates folder. Only that folder can be sent.",
     ),
     _C.place_invalid: (
         400,
