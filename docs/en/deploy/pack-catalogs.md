@@ -8,7 +8,7 @@ tags:
 
 # Pack catalogs
 
-<p class="hds-lede">The project wizard shows the packs built into the Studio image. Your own packs (another programme, department or university) can live in your own git repository and be edited in the Pack Studio. The Template sources section of the admin panel connects such packs to this instance: they appear in the project wizard without rebuilding the image and without a restart.</p>
+<p class="hds-lede">The project wizard shows the packs built into the Studio image. Your own packs (another programme, department or university) can live in your own git repository and be edited in Template Studio. The Template sources section of the admin panel connects such packs to this instance: they appear in the project wizard without rebuilding the image and without a restart.</p>
 
 ## Sources
 
@@ -17,9 +17,9 @@ tags:
 | Git | repository address, packs folder (`packs` by default), tag, branch or sha (empty: the default branch), access | the server can reach the repository |
 | Archive | a .zip or .tar.gz file with the packs folder | closed network without access to the hosting |
 
-Access to a private repository: your personal access from Git access (a token for that host) or the repository service access from the Pack Studio section. A public repository needs no access.
+Access to a private repository: your personal access from Git access (a token for that host) or a connected repository from the Template Studio section. A public repository needs no access.
 
-Locally (the Studio on your own computer) there is no admin panel: in the Pack Studio a workspace over a folder has the **Connect to this Studio's catalog** button, the rest works the same way.
+Locally (the Studio on your own computer) there is no admin panel: in Template Studio the **More** menu of a space over a folder has the **Connect to this Studio's catalog** item, the rest works the same way.
 
 ## Check and apply
 

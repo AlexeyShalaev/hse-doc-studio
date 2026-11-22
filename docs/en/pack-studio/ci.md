@@ -13,8 +13,8 @@ tags:
 ## Running it locally
 
 - **Pack author:** the "Template Studio only" profile in Docker, without sign-in or projects: [Template Studio on your computer](../deploy/pack-studio-local.md).
-- **Studio developer:** `make pack-studio` in a repository checkout, at <http://localhost:3001/pack-studio>, with a workspace over the checkout's `packs/`.
-- **Your local Studio:** turn the section on in **Settings** and open the packs folder as a workspace.
+- **Studio developer:** `make pack-studio` in a repository checkout, at <http://localhost:3001/pack-studio>, with a space over the checkout's `packs/`.
+- **Your local Studio:** turn the section on in **Settings** and connect the templates folder as a space.
 
 ## The `hse-doc-studio pack` command
 
@@ -33,6 +33,6 @@ The check for every PR is `hse-doc-studio pack check <packs folder> --base <base
 
 `hse-doc-studio pack ci init` in the root of the packs repository puts a ready CI file there: `--provider github` (default) writes `.github/workflows/hse-packs.yml`, `--provider gitlab` writes `.gitlab-ci.yml`. The job runs `pack check` in the Studio image of the same version as the command, against the base branch on PRs and MRs. Options and details: [Packs and templates, CI for a packs repository](../reference/pack.md#pack-ci). After a Studio update run the command again with `--force` so that CI takes the new image.
 
-Template Studio shows the hosting check status in the git panel, see [Propose changes](propose.md#hosting-checks).
+Template Studio shows the hosting check status in the "Changes" panel, see [Send for review](propose.md#hosting-checks).
 
-<!-- T16 (MCP): an "AI agents (MCP)" section here: the pack_* tools, the "Template author" right, the packs PAT scope. -->
+<!-- T16 (MCP): an "AI agents (MCP)" section here: the pack_* tools, access to Template Studio, the packs PAT scope. -->

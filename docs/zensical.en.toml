@@ -76,10 +76,10 @@ nav = [
     ] },
     { "Template Studio" = [
         { "What it is" = "pack-studio/index.md" },
-        { "Editing a pack" = "pack-studio/editing.md" },
-        { "Preview and signature places" = "pack-studio/preview.md" },
-        { "New version" = "pack-studio/versions.md" },
-        { "Propose changes" = "pack-studio/propose.md" },
+        { "Content" = "pack-studio/editing.md" },
+        { "PDF preview and signature places" = "pack-studio/preview.md" },
+        { "Editing a copy and releasing" = "pack-studio/versions.md" },
+        { "Send for review" = "pack-studio/propose.md" },
         { "Command line and CI" = "pack-studio/ci.md" },
     ] },
     { "Reference" = [

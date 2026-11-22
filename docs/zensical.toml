@@ -76,10 +76,10 @@ nav = [
     ] },
     { "Студия шаблонов" = [
         { "Что это" = "pack-studio/index.md" },
-        { "Правка пака" = "pack-studio/editing.md" },
-        { "Предпросмотр и места подписей" = "pack-studio/preview.md" },
-        { "Новая версия" = "pack-studio/versions.md" },
-        { "Предложить изменения" = "pack-studio/propose.md" },
+        { "Содержимое" = "pack-studio/editing.md" },
+        { "Предпросмотр PDF и места подписей" = "pack-studio/preview.md" },
+        { "Править копию и выпуск" = "pack-studio/versions.md" },
+        { "Отправить на рассмотрение" = "pack-studio/propose.md" },
         { "Командная строка и CI" = "pack-studio/ci.md" },
     ] },
     { "Справочник" = [

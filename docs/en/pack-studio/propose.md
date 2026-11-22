@@ -1,50 +1,61 @@
 ---
-title: Propose changes
-description: The branch, commits and merge request from Template Studio, forks, hosting checks and contributing to the official packs with your own GitHub account.
+title: Send for review
+description: The "Changes" panel of Template Studio: what you changed, the main button, the merge request, your own copy of the repository (a fork), hosting checks and the official templates.
 tags:
   - Templates
   - Pack authors
 ---
 
-# Propose changes
+# Send for review
 
-<p class="hds-lede">In a git workspace edits go to a working branch and then as a merge request into the base branch: a PR on GitHub, an MR on GitLab. The hosting and the repository maintainers decide on the merge, the Studio only prepares the proposal.</p>
+<p class="hds-lede">Everything you changed and have not sent yet is collected in the "Changes" panel. For a space from a repository the edits go into a work branch and with a merge request (a request on the hosting: PR on GitHub, MR on GitLab) into the main one. The decision to merge is made by the repository maintainers, the Studio only prepares the proposal.</p>
 
-## Branch and versions
+## The "Changes" panel
 
-Under the workspace title is the git panel: the branch, the edits since the last commit, how many commits the branch is ahead of and behind the base, the open PR and the check status.
+The **Changes** button with a counter sits in the strip on every tab (on a phone it is a tab at the bottom). The panel opens on the right and shows:
 
-- **Save version**: a commit to the working branch in your name. No branch yet: the Studio creates it. The message can stay empty, the Studio writes it from the changed versions (`fix(packs): ...` for patch, `feat(packs): ...` otherwise).
-- **Branch**: a new branch named by the Studio, your own name or a switch to an existing branch (only without unsaved edits).
-- **Changes**: what differs from the base branch, file by file.
-- **Update from** the base branch into the working one. If the main branch edits the same places, the merge is cancelled and the Studio names the files: fix them in your branch, save a version and update again.
-- **Start over**: the tree on the fresh base without a branch. Unsaved edits are dropped only with a separate checkbox; the branch and the request on the hosting stay as they are.
+- **What changed**: files by groups ("New version … and my edits", "Shared pack files", "Other files") under human names: "Version description", "Technical specification: terms", "Technical specification: text", "Check rules". If there are no changes the panel says so.
+- **What changed for students and supervisors** and the release of the version: [Editing a copy and releasing](versions.md).
+- **Checks**: template errors that prevent sending (the "Fix errors" button leads to "Check").
+- **The state of the request**: "request #412 is open", checks are running or passed, the request is accepted or closed.
+- At the bottom is the panel's **main button**: **Send for review**, **Update request** or **Retry** if a step failed (completed steps are not repeated).
+
+The **More** menu of the panel holds what is needed rarely:
+
+- **Save a point**: fix the edits in the work branch under your name without sending. If there is no branch yet the Studio creates it itself. The message is composed by the Studio from the changed versions.
+- **Branch…**: a branch is the working line of your changes. Here you can create a new one with a name from the Studio, give your own name or switch to an existing one (only without unsaved edits).
+- **Take news from the main branch**: add to your branch what appeared in the main one. If the main branch edits the same places, the merge is cancelled and the Studio names the files: fix them in your branch and take again.
+- **Repository access**: checks the token and helps to issue a new one.
+- **Open comparison on the hosting**.
+- **Reset all my changes**: return the space to the fresh main branch. Unsaved edits are discarded only after confirmation; the branch and the request on the hosting stay as they are. After an accepted request the same action is called **Start a new edit**.
+
+The main button of the strip repeats the next step while the panel is closed: **Describe changes**, **Fix errors**, **Send for review** or "Request #412 · checks are running". A space on a folder without git has no button: edits are written to the folder at once, with the caption "Saved to the folder".
 
 ## The merge request
 
-**Propose changes**:
+**Send for review**:
 
-1. The Studio checks the changed packs with the same code as `hse-doc-studio pack check --base`: the linter, immutability of released versions, the schemas, the version class. Errors stop the push and show in "Problems"; other people's errors in untouched packs do not get in the way.
-2. Unsaved edits are committed and the branch is pushed.
-3. A PR or MR to the base branch opens. Write the title and description or leave them to the Studio: it adds a summary to the description (versions, change class, notes, check results). If a request from this branch is already open, the branch is just updated.
+1. The Studio checks the changed packs with the same code as `hse-doc-studio pack check --base`: the linter, immutability of released versions, schemas, the version number. Errors stop the sending and appear in "Check", "Issues"; other people's errors in untouched packs do not interfere.
+2. The notes are written, the version is released (if the tick is set), the edits are committed, the branch goes to the hosting. What is being done now is shown as a list; the failed step is highlighted and the retry starts from it.
+3. A merge request into the main branch is opened. You can write the title and description (the "Request title and description" section) or leave them to the Studio: it adds a summary to the description (versions, the size of changes, notes, check results, how many ready cases change). If a request from this branch is already open, the branch is just updated, and the button is called "Update request".
 
-If the hosting did not let the API open the request, there is an **Open PR in the browser** link to the compare page.
+If the hosting did not let the request be opened through the API, there is a link to the request page on the hosting.
 
-**No right to write to the repository.** The Studio offers **Push to a fork**: **Create a fork with my token** (GitHub) or **Use my fork** on the same server. The fork is remembered for the workspace.
+**No right to write to the repository.** The Studio offers **Send to my copy**: **Create my copy automatically** (GitHub) or **Enter my own copy** on the same server. Your own copy of the repository (a fork) is remembered for the space.
 
 ## Hosting checks { #hosting-checks }
 
-After the push the panel shows the check status of the pushed head: GitHub (check runs and commit statuses) or GitLab (the pipeline, the token needs `read_api`). While checks run, the status refreshes every 30 seconds. **Hosting checks** opens the list with links. If the hosting does not give the status to this token, the link leads to the checks page.
+After sending, the panel shows the status of the checks for the sent tip: GitHub (check runs and commit statuses) or GitLab (a pipeline, a token with `read_api` is needed). While the checks run the status refreshes every 30 seconds. **Checks on the hosting** expand a list with links. If the hosting does not give the status to this token, the link leads to the checks page.
 
-Ready CI for your packs repository: [Command line and CI](ci.md#ci).
+A ready CI for your own packs repository: [Command line and CI](ci.md#ci).
 
-## Official packs { #official }
+## Official templates { #official }
 
-The Studio's own packs live in its repository (`packs/`). Anyone with a GitHub account can propose a fix:
+The Studio's own templates live in its repository (`packs/`). Anyone with a GitHub account can send a fix to them:
 
-1. The **Official packs** card, the **Start** button. You need your GitHub token: a classic one with the `public_repo` scope (a fork, a branch in the fork and a PR into the public repository). Without a token the dialog gives a link to create one and a field to paste it into: the Studio checks the token, saves it under "Repository access" and selects it right away. The Studio downloads only the packs folder.
-2. Edits and a new version as usual.
-3. **Propose changes**: the branch goes to your fork and the PR is opened from your account. There is no other way: there is no installation bot for the official packs, this is safer. Commits may touch only the packs folder.
-4. Before the first push tick the consent: the contribution is public and licensed under the repository licence. Contribution rules: "Contributing to the official packs" in [CONTRIBUTING.md](https://github.com/AlexeyShalaev/hse-doc-studio/blob/master/CONTRIBUTING.md#contributing-to-the-official-packs).
+1. In the list of spaces pick **Official HSE templates**, the **Start** button. Your GitHub token is needed: a classic one with the `public_repo` scope (your own copy of the repository, a branch in it and a request into a public repository). If there is no token the window gives a link to create one and a field to paste it into: the Studio checks the token, saves it under "Repository access" and selects it at once. The Studio downloads only the templates folder.
+2. Edits and a copy of the version as usual.
+3. **Send for review**: the branch goes to your copy of the repository (a fork), and the merge request is opened from your account. There are no other ways: there is no installation bot for the official templates, it is safer this way. Commits may touch only the templates folder.
+4. Before the first sending tick the consent: the contribution is public and distributed under the repository license. The contribution rules: the "Contributing to the official packs" section of [CONTRIBUTING.md](https://github.com/AlexeyShalaev/hse-doc-studio/blob/master/CONTRIBUTING.md#contributing-to-the-official-packs).
 
-For a PR from a fork of a new contributor GitHub does not run checks until a maintainer approves the run. The Studio shows **Awaiting approval**: this is not an error. The official packs ship with the Studio: after the PR is merged the new version reaches users with the next release.
+For a request from a new contributor's copy GitHub does not run checks until a maintainer allows it. The Studio shows "Awaiting approval": that is not an error. Official templates ship with the Studio: after the request is merged the new version reaches users with the next release.
