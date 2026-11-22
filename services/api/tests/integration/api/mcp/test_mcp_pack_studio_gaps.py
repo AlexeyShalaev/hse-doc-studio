@@ -7,6 +7,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from tests.integration.api.mcp.test_mcp_pack_parity import (
     _DRAFT,
     _DRAFT_DIR,
@@ -14,6 +16,7 @@ from tests.integration.api.mcp.test_mcp_pack_parity import (
     _client,
     _connect,
     _json,
+    _refused,
     _text,
     studio,
 )
@@ -89,3 +92,108 @@ async def test__read_preview_block_and_new_version_dry_run(studio: Studio) -> No
     assert options["default_base"]
     versions = [v["version"] for p in tree["packs"] for t in p["templates"] if t["id"] == "vkr" for v in t["versions"]]
     assert options["numbers"]["patch"] not in versions
+
+
+# ── срез B: правила проверки, номер версии, отмена сборки ─────────────────────
+
+_CHECKS = """\
+label: { ru: Демо, en: Demo }
+ref: { ru: Демо, en: Demo }
+rules:
+  - id: demo/a
+    title: { ru: Поля, en: Margins }
+    default_severity: warn
+    engine: structural
+    params: { check: page_geometry }
+"""
+
+
+def _demo(view: dict[str, Any]) -> dict[str, Any]:
+    return dict(next(f for f in view["files"] if f["name"] == "demo.yaml"))
+
+
+async def test__checks__read_add_rule_config_and_released_refused(studio: Studio) -> None:
+    async with _client(studio) as client:
+        _, ws = await _connect(studio, client)
+        await _json(
+            client,
+            "pack_write_file",
+            {"workspace_id": ws, "path": f"{_DRAFT_DIR}/checks/demo.yaml", "content": _CHECKS},
+        )
+        read = await _json(client, "pack_checks", {"workspace_id": ws, "version": _DRAFT})
+        added = await _json(
+            client,
+            "pack_checks",
+            {
+                "workspace_id": ws,
+                "version": _DRAFT,
+                "file": "demo.yaml",
+                "if_match": _demo(read)["etag"],
+                "ops": [
+                    {
+                        "op": "add_rule",
+                        "rule": {
+                            "id": "demo/b",
+                            "title": {"ru": "Интервал", "en": "Spacing"},
+                            "default_severity": "info",
+                            "engine": "structural",
+                            "params": {"check": "line_spacing", "expected": 1.5},
+                        },
+                    }
+                ],
+            },
+        )
+        configured = await _json(
+            client,
+            "pack_checks",
+            {
+                "workspace_id": ws,
+                "version": _DRAFT,
+                "config": {"disabled": ["demo/b"], "severity_override": {"demo/a": "err"}},
+            },
+        )
+        stale = await _refused(
+            client,
+            "pack_checks",
+            {
+                "workspace_id": ws,
+                "version": _DRAFT,
+                "file": "demo.yaml",
+                "if_match": _demo(read)["etag"],
+                "ops": [{"op": "remove_rule", "index": 0}],
+            },
+        )
+        released = await _refused(
+            client, "pack_checks", {"workspace_id": ws, "version": _RELEASED, "config": {"disabled": ["x"]}}
+        )
+        text = await _text(client, "pack_checks", {"workspace_id": ws, "version": _DRAFT})
+
+    assert len(read["files"]) > 1
+    assert [r["id"] for r in _demo(read)["rules"]] == ["demo/a"]
+    assert [r["id"] for r in _demo(added)["rules"]] == ["demo/a", "demo/b"]
+    assert configured["config"]["disabled"] == ["demo/b"]
+    assert configured["config"]["severity_override"] == {"demo/a": "err"}
+    assert stale["code"] == "stale_file"
+    assert released["code"] == "version_released"
+    assert "demo/b (structural, info): Интервал" in text
+
+
+async def test__version_number__renumber_by_class_and_cancel_unknown_build(studio: Studio) -> None:
+    async with _client(studio) as client:
+        _, ws = await _connect(studio, client)
+        state = await _json(client, "pack_classify", {"workspace_id": ws, "version": _DRAFT})
+        moved = await _json(
+            client,
+            "pack_version_number",
+            {"workspace_id": ws, "version": _DRAFT, "action": "renumber", "update_class": "minor"},
+        )
+        missing = await _refused(
+            client,
+            "pack_preview_build",
+            {"workspace_id": ws, "build_id": "00000000-0000-0000-0000-000000000001", "cancel": True},
+        )
+
+    assert moved["previous"] == "2026.1.9"
+    assert moved["version"].endswith("/" + state["numbers"]["minor"])
+    assert moved["state"]["version"] == moved["version"]
+    assert missing["code"] == "preview_not_found"
