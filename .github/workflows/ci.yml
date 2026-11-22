@@ -139,7 +139,7 @@ jobs:
   # Быстрый прогон unit-тестов там, где реально исполняются платформенные ветки и нижняя граница Python.
   # Полный набор на ubuntu и py3.14 (с unit) идёт в backend-full, поэтому ubuntu/py3.14 здесь не повторяется.
   backend-test-unit:
-    name: Backend · Unit (${{ matrix.os }}, py${{ matrix.python }})
+    name: Backend · Unit (${{ matrix.os }}, py${{ matrix.python }}, ${{ matrix.shard }}/${{ matrix.of }})
     needs: changes
     if: needs.changes.outputs.backend == 'true'
     runs-on: ${{ matrix.os }}
@@ -161,11 +161,13 @@ jobs:
           ${{ github.event_name == 'pull_request'
               && !contains(github.event.pull_request.labels.*.name, 'ci:all-os')
               && fromJSON('[
-                   {"os":"ubuntu-latest","python":"3.12"}]')
+                   {"os":"ubuntu-latest","python":"3.12","shard":1,"of":2},
+                   {"os":"ubuntu-latest","python":"3.12","shard":2,"of":2}]')
               || fromJSON('[
-                   {"os":"ubuntu-latest","python":"3.12"},
-                   {"os":"windows-latest","python":"3.14"},
-                   {"os":"macos-latest","python":"3.14"}]') }}
+                   {"os":"ubuntu-latest","python":"3.12","shard":1,"of":2},
+                   {"os":"ubuntu-latest","python":"3.12","shard":2,"of":2},
+                   {"os":"windows-latest","python":"3.14","shard":1,"of":1},
+                   {"os":"macos-latest","python":"3.14","shard":1,"of":1}]') }}
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
@@ -173,10 +175,10 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Sync
         run: uv sync --frozen --all-extras
-      # На ubuntu в 4 процесса xdist (12 минут последовательно, 4 с xdist); на windows и macos по-прежнему один процесс:
-      # платформенные ветки там проверяют без параллельности.
+      # На ubuntu два шарда по файлам, в каждом 4 процесса xdist (последовательно это 12 минут); на windows и macos
+      # по-прежнему один процесс и весь набор: платформенные ветки там проверяют без параллельности.
       - name: Pytest (unit)
-        run: uv run pytest -m unit --no-cov ${{ runner.os == 'Linux' && '-n logical --dist worksteal' || '' }}
+        run: uv run pytest -m unit --no-cov --shard=${{ matrix.shard }}/${{ matrix.of }} ${{ runner.os == 'Linux' && '-n logical --dist worksteal' || '' }}
 
   # Полный набор (unit + integration + pg на настоящем Postgres 16, включая миграции) — единственный источник
   # числа покрытия. Последовательно это ~65 минут процессорного времени, поэтому набор делится на 10 шардов по файлам
@@ -302,8 +304,9 @@ jobs:
   # Локальный режим обязан работать без extra server: sqlalchemy, boto3 и прочие не установлены,
   # серверные тесты не собираются (tests/conftest.py). Полный набор без серверной части это 90% полного набора
   # (17 тысяч тестов из 19), и он уже идёт в backend-full с extra server, поэтому на PR здесь идёт сокращённый набор:
-  # весь unit и contract (импорты локального режима не тянут серверные пакеты) и лёгкие integration-каталоги.
-  # Тяжёлые каталоги (Студия шаблонов, маршрут подписания, MCP, git, доступ к проекту, ревью, админка) на PR идут
+  # unit и contract (импорты локального режима не тянут серверные пакеты) и лёгкие integration-каталоги.
+  # Тяжёлые каталоги (Студия шаблонов с каталогом паков, маршрут подписания, MCP, git, общий доступ, ревью, админка;
+  # unit-тесты Студии шаблонов это треть процессорного времени набора, а к режиму не относятся) на PR идут
   # только с extra server (backend-full). Весь набор без extra server идёт на push в master/next и на PR с меткой
   # ci:full-local (метка читается из события: поставленная после push, подействует со следующего push в PR).
   backend-test-no-server:
@@ -332,8 +335,11 @@ jobs:
         run: |
           args=()
           if [ "$LIGHT" = true ]; then
-            for dir in pack_studio signing_routes mcp git_sync git_remote sharing review signatures admin vcs; do
+            for dir in pack_studio pack_catalog signing_routes mcp git_sync git_remote sharing review signatures admin vcs; do
               args+=(--ignore="tests/integration/api/$dir")
+            done
+            for dir in tests/unit/use_cases/pack_studio tests/unit/infra/pack_studio tests/unit/core/pack_studio; do
+              args+=(--ignore="$dir")
             done
           fi
           uv run pytest -n logical --dist worksteal --shard=${{ matrix.shard }}/2 -m "not pg and not s3" --no-cov --durations=15 "${args[@]}"
