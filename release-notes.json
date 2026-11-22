@@ -1,6 +1,28 @@
 {
   "releases": [
     {
+      "version": "0.39.0",
+      "date": "2026-11-22",
+      "notes": [
+        {
+          "ru": "Студия паков: новый интерфейс теперь единственный и открывается сразу, без ?ux в адресе. Старый вид («Файлы», прежний «Результат», «Матрица», «Атлас») удалён, старые ссылки ведут на нужный экран нового интерфейса. В панели «Изменения» вернулась кнопка «Перенести правки в новую версию» для выпущенной версии, которую правили вне Студии.",
+          "en": "Pack Studio: the new interface is now the only one and opens right away, without ?ux in the address. The old view (Files, the former Result, Matrix and Atlas) is removed, and old links lead to the right screen of the new interface. The Changes panel again has the Move edits to a new version button for a released version that was edited outside the Studio."
+        },
+        {
+          "ru": "Студия паков: после описания изменений, выпуска или смены номера главная кнопка сразу показывает следующий шаг, а не просит описать изменения снова. На узкой колонке название документа в «Содержимом» больше не перекрывается кнопками.",
+          "en": "Pack Studio: after describing the changes, releasing or renumbering, the main button shows the next step right away instead of asking to describe the changes again. In a narrow column the document title in Content is no longer covered by the buttons."
+        },
+        {
+          "ru": "MCP: Студией паков можно управлять агентом целиком. Новые инструменты: pack_changes (статус правок и следующий шаг с инструментом, который его делает), pack_checks (правила проверки), pack_version_number (номер версии), пробный режим создания версии, отмена сборки превью. Находки проверки пака по умолчанию теми же словами, что во вкладке «Проверка».",
+          "en": "MCP: Pack Studio can be run by an agent end to end. New tools: pack_changes (status of the edits and the next step with the tool that does it), pack_checks (check rules), pack_version_number (version number), a dry run for creating a version, cancelling a preview build. Pack check findings use the same words as the Check tab by default."
+        },
+        {
+          "ru": "MCP: места подписей может ставить агент. pack_signature_render рисует страницы превью с рамками мест подписей и отдаёт их картинкой, pack_signature_check проверяет каждое место (на странице, не на тексте, не поверх другой подписи, рядом со своей строкой «Подпись») и предлагает исправления, которые применяются через pack_set_placement.",
+          "en": "MCP: signature places can be set by an agent. pack_signature_render draws the preview pages with signature boxes and returns them as images, pack_signature_check checks each place (on the page, not over text, not over another signature, next to its own signature line) and suggests fixes that are applied with pack_set_placement."
+        }
+      ]
+    },
+    {
       "version": "0.38.0",
       "date": "2026-11-22",
       "notes": [

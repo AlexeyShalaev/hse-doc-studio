@@ -6,24 +6,12 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.39.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.38.0...v0.39.0) (2026-11-22)
+## [0.39.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.38.0...v0.39.0) - 2026-11-22
 
-
-### Features
-
-* **mcp:** места подписей агентом: картинка страницы и автоматическая проверка ([9170543](https://github.com/AlexeyShalaev/hse-doc-studio/commit/917054352585d0e3611fd2d09e21af33ad0992d8))
-* **mcp:** места подписей агентом: картинка страницы с рамками и автоматическая проверка ([1e456b5](https://github.com/AlexeyShalaev/hse-doc-studio/commit/1e456b5ca4e3e28fa82b28d5b7947e6d8143d8f7))
-* **mcp:** Студия шаблонов целиком через MCP, срез A: дизайн, pack_changes, слова интерфейса у замечаний ([aae565c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/aae565c06b71181faf16a34a508d4cb00b87249b))
-* **mcp:** Студия шаблонов через MCP, срез A: дизайн, pack_changes, слова интерфейса ([a80134c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/a80134c29755469f5c89a3805fb3c411aec0f4a4))
-* **mcp:** Студия шаблонов через MCP, срез B: правила проверки, номер версии, отмена сборки ([fc142ce](https://github.com/AlexeyShalaev/hse-doc-studio/commit/fc142ce88fc42bc9523f7e74306ce5a05822f79f))
-* **mcp:** Студия шаблонов через MCP, срез B: правила проверки, номер версии, отмена сборки ([9119219](https://github.com/AlexeyShalaev/hse-doc-studio/commit/91192198dd83c38f4a0d49b5ef14a5cc902dbc3a))
-* **pack-studio:** новый интерфейс Студии паков единственный (S14) ([0605973](https://github.com/AlexeyShalaev/hse-doc-studio/commit/0605973797d252d1ca93962ab1a90934142908cb))
-
-
-### Bug Fixes
-
-* **pack-studio:** e2e и бюджеты под единственный интерфейс (S14) ([f81a707](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f81a7078afd7770b0456f02ff5c7f22d51c2efad))
-* **pack-studio:** модель версии перечитывается после записи манифеста (S14) ([9526136](https://github.com/AlexeyShalaev/hse-doc-studio/commit/9526136b6207f0b2ff22f66f2696a2f1b69d17e6))
+- Pack Studio: the new interface is now the only one and opens right away, without ?ux in the address. The old view (Files, the former Result, Matrix and Atlas) is removed, and old links lead to the right screen of the new interface. The Changes panel again has the Move edits to a new version button for a released version that was edited outside the Studio.
+- Pack Studio: after describing the changes, releasing or renumbering, the main button shows the next step right away instead of asking to describe the changes again. In a narrow column the document title in Content is no longer covered by the buttons.
+- MCP: Pack Studio can be run by an agent end to end. New tools: pack_changes (status of the edits and the next step with the tool that does it), pack_checks (check rules), pack_version_number (version number), a dry run for creating a version, cancelling a preview build. Pack check findings use the same words as the Check tab by default.
+- MCP: signature places can be set by an agent. pack_signature_render draws the preview pages with signature boxes and returns them as images, pack_signature_check checks each place (on the page, not over text, not over another signature, next to its own signature line) and suggests fixes that are applied with pack_set_placement.
 
 ## [0.38.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.37.0...v0.38.0) - 2026-11-22
 
