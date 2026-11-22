@@ -144,6 +144,9 @@ SERVER_LITE_DIR = $(DEV_SCRIPTS_DIR)/server-lite
 SERVER_LITE_ENV = $(SERVER_LITE_DIR)/.env
 # Имя проекта compose можно сменить, чтобы держать рядом второй стенд (порт задаёт SERVER_LITE_PORT в .env).
 SERVER_LITE_PROJECT ?= hse-doc-studio-server-lite
+# Локально образ собирает compose (`--build`); CI собирает его заранее, кладёт в docker под SERVER_LITE_IMAGE и ставит
+# SERVER_LITE_BUILD пустым: стенд поднимается из готового образа без второй сборки.
+SERVER_LITE_BUILD ?= --build
 SERVER_LITE_COMPOSE = $(DOCKER_COMPOSE) -p $(SERVER_LITE_PROJECT) -f $(SERVER_LITE_DIR)/compose.yml --env-file $(SERVER_LITE_ENV)
 
 # Секреты стенда создаются один раз и лежат в server-lite/.env (не коммитится); ключ Fernet: 32 случайных байта base64url.
@@ -157,11 +160,11 @@ $(SERVER_LITE_ENV):
 	@echo "Created $(SERVER_LITE_ENV)"
 
 server-lite-up: $(SERVER_LITE_ENV)
-	$(SERVER_LITE_COMPOSE) up --build -d --wait
+	$(SERVER_LITE_COMPOSE) up $(SERVER_LITE_BUILD) -d --wait
 	@$(MAKE) --no-print-directory server-lite-credentials
 
 server-lite-seed: $(SERVER_LITE_ENV)
-	$(SERVER_LITE_COMPOSE) --profile seed run --rm --build seed
+	$(SERVER_LITE_COMPOSE) --profile seed run --rm $(SERVER_LITE_BUILD) seed
 
 server-lite-credentials: $(SERVER_LITE_ENV)
 	@. $(SERVER_LITE_ENV); echo "Stand: http://localhost:$${SERVER_LITE_PORT:-8100}"; \
@@ -174,7 +177,7 @@ server-lite-down: $(SERVER_LITE_ENV)
 # Общий раннер с поддельным TeX (fake_tex_runner.py): собранный PDF и проверка подписей без образа TeX Live.
 # Пока он запущен, сборки всех людей стенда идут на нём, поэтому сценарии «стенд без раннеров» идут до него.
 server-lite-runner-up: $(SERVER_LITE_ENV)
-	$(SERVER_LITE_COMPOSE) --profile runner up --build -d --no-deps runner
+	$(SERVER_LITE_COMPOSE) --profile runner up $(SERVER_LITE_BUILD) -d --no-deps runner
 
 server-lite-runner-down: $(SERVER_LITE_ENV)
 	$(SERVER_LITE_COMPOSE) --profile runner stop runner

@@ -8,11 +8,14 @@ name: E2E server-lite
 # только когда меняются код сервера, стенд или сами тесты.
 #
 # Сценарии делят одну базу стенда и идут в один воркер, поэтому параллельность здесь только между джобами:
-# три шарда, у каждого свой стенд. Телефонный проект (~16 минут из ~20) делится по файлам по замеренной
-# длительности; файл, не закреплённый ни за одним шардом, уходит в rest, так что новый сценарий не потеряется.
-# Отчёты шардов сводит джоб report: один HTML-отчёт e2e-report и общий артефакт e2e-screenshots.
-# Маршрут подписания (signing-route, signing-snapshot, signing-dates, signing-deadlines и signing-presets.spec.ts, ~5 мин) идёт в rest последним: ему нужен общий раннер с поддельным
-# TeX, а M1 проверяет стенд без раннеров.
+# шесть шардов, у каждого свой стенд. Телефонный проект (~16 минут) делится по файлам по замеренной длительности;
+# файл, не закреплённый ни за одним шардом, уходит в phone-main, так что новый сценарий не потеряется. Каждый шард несёт
+# накладные расходы на стенд (~1,5 минуты) и приёмку M1 (~1,5 минуты), которую телефонные сценарии берут за основу, поэтому
+# шардов шесть, а не больше: каждый укладывается в ~9 минут. Отчёты шардов сводит джоб report: один HTML-отчёт e2e-report
+# и общий артефакт e2e-screenshots.
+# Телефонные шарды на PR идут, только если тронуты фронтенд, e2e или стенд (джоб plan); на push в master идут всегда.
+# Маршрут подписания (signing-route, signing-snapshot, signing-dates, signing-deadlines и signing-presets.spec.ts, ~5 мин)
+# идёт отдельным шардом: ему нужен общий раннер с поддельным TeX, а M1 проверяет стенд без раннеров.
 
 on:
   push:
@@ -36,26 +39,91 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Телефонные файлы, закреплённые за шардами core и phone; остальные идут в rest. Длительности по прогону CI:
-  # mobile-admin ~4.5 мин, mobile ~3.6, mobile-rare ~3.2, sidebar-overflow ~2.5, text-scale и stale-build по ~1.1;
-  # core ещё несёт десктопные сценарии (~2.2 мин сверх M1), а M1 (~1.3 мин) идёт в каждом шарде.
-  PHONE_CORE: "/text-scale.spec.ts /sidebar-overflow.spec.ts"
-  PHONE_A: "/mobile-admin.spec.ts /stale-build.spec.ts"
+  # Телефонные файлы, закреплённые за шардами; остальные идут в phone-main. Длительности по прогону CI:
+  # mobile-admin ~4,5 мин, mobile ~3,6, mobile-rare ~3,2, sidebar-overflow ~2,5, text-scale и stale-build по ~1,1.
+  PHONE_ADMIN: "/mobile-admin.spec.ts"
+  PHONE_RARE: "/mobile-rare.spec.ts /text-scale.spec.ts"
+  PHONE_OVERFLOW: "/sidebar-overflow.spec.ts"
 
 jobs:
+  # Состав шардов. Телефонные шарды (~16 минут сценариев из ~24) нужны, когда менялся интерфейс (services/web-app),
+  # сами сценарии или стенд; на PR с правкой только бэкенда идут десктопный шард и маршрут подписания.
+  plan:
+    name: Plan shards
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        id: filter
+        if: github.event_name == 'pull_request'
+        with:
+          filters: |
+            phone:
+              - "services/web-app/**"
+              - "e2e/**"
+              - "scripts/dev/server-lite/**"
+              - "scripts/dev/Makefile"
+              - ".github/workflows/e2e-server-lite.yml"
+      - name: Matrix
+        id: matrix
+        env:
+          PHONE: ${{ github.event_name != 'pull_request' || steps.filter.outputs.phone == 'true' }}
+        run: |
+          # phone: какие телефонные файлы шарда (admin, main = всё не закреплённое, rare, overflow, none);
+          # m1: приёмка M1 перед сценариями (телефонные берут её результат за основу); desktop: десктопные сценарии
+          # на моках; signing: маршрут подписания на общем раннере с поддельным TeX; pdf: комментарии из превью PDF.
+          base='[
+            {"shard":"desktop","phone":"none","m1":true,"desktop":true,"signing":false,"pdf":false},
+            {"shard":"signing","phone":"none","m1":false,"desktop":false,"signing":true,"pdf":false}]'
+          phone='[
+            {"shard":"phone-admin","phone":"admin","m1":true,"desktop":false,"signing":false,"pdf":false},
+            {"shard":"phone-main","phone":"main","m1":true,"desktop":false,"signing":false,"pdf":false},
+            {"shard":"phone-rare","phone":"rare","m1":true,"desktop":false,"signing":false,"pdf":false},
+            {"shard":"phone-overflow","phone":"overflow","m1":true,"desktop":false,"signing":false,"pdf":true}]'
+          if [ "$PHONE" = true ]; then
+            matrix="$(jq -c -n --argjson a "$base" --argjson b "$phone" '{include: ($a + $b)}')"
+          else
+            matrix="$(jq -c -n --argjson a "$base" '{include: $a}')"
+          fi
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "$matrix"
+
   e2e:
     name: M1 acceptance (Playwright, ${{ matrix.shard }})
+    needs: plan
     runs-on: ubuntu-latest
     timeout-minutes: 40
     strategy:
       fail-fast: false
-      matrix:
-        # core: десктопные сценарии и короткие телефонные; phone и rest: телефон. По ~7 минут сценариев на шард.
-        shard: [core, phone, rest]
+      matrix: ${{ fromJSON(needs.plan.outputs.matrix) }}
     env:
       BLOB_DIR: ${{ github.workspace }}/e2e/blob-report
+      # Образ собирается один раз шагом ниже (слои из кэша, общего с deploy-smoke), а стенд поднимается из него без
+      # пересборки compose (SERVER_LITE_BUILD пуст: без --build).
+      SERVER_LITE_IMAGE: hse-doc-studio-server-lite:ci
+      SERVER_LITE_BUILD: ""
     steps:
       - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # Тот же образ (production, extra server), что собирает server-stack-smoke в deploy-smoke.yml: слои берутся из его
+      # кэша (пишет только push в master). Без кэша это полная сборка, как раньше внутри compose.
+      - name: Build image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: deploy/all-in-one/Dockerfile
+          target: production
+          build-args: BACKEND_EXTRAS=--extra server
+          load: true
+          platforms: linux/amd64
+          tags: ${{ env.SERVER_LITE_IMAGE }}
+          cache-from: type=gha,scope=server-stack
 
       - name: Stand up
         run: make server-lite-up
@@ -91,37 +159,40 @@ jobs:
         working-directory: e2e
 
       - name: Typecheck
-        if: matrix.shard == 'core'
+        if: matrix.desktop
         run: pnpm typecheck
         working-directory: e2e
 
       # Порядок как у прежнего последовательного прогона: M1, лендинг, телефон, затем остальные десктопные сценарии.
       # Телефонные сценарии рассчитаны на стенд после M1 (например, первым проектом Анны идёт созданный M1), поэтому
-      # M1 идёт и в шардах phone и rest; там его отчёт не попадает в сводный, чтобы не дублировать результаты.
+      # M1 идёт и в телефонных шардах; там его отчёт не попадает в сводный, чтобы не дублировать результаты.
       # Каждый запуск пишет blob-отчёт в свой каталог: reporter чистит каталог перед записью.
       - name: Run scenarios
+        if: matrix.m1
         env:
-          PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ matrix.shard == 'core' && format('{0}/m1', env.BLOB_DIR) || format('{0}/m1-prep', runner.temp) }}
+          PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ matrix.desktop && format('{0}/m1', env.BLOB_DIR) || format('{0}/m1-prep', runner.temp) }}
         run: make e2e-m1
 
       - name: Landing page
-        if: matrix.shard == 'core'
+        if: matrix.desktop
         env:
           PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ env.BLOB_DIR }}/landing
         run: make e2e-landing
 
-      # Файлы телефонного проекта для этого шарда; rest берёт всё, что не закреплено за core и phone.
+      # Файлы телефонного проекта для этого шарда; phone-main берёт всё, что не закреплено за остальными.
       - name: Phone layout files
         id: phone
+        if: matrix.phone != 'none'
         working-directory: e2e
         run: |
-          case "${{ matrix.shard }}" in
-            core) files="$PHONE_CORE" ;;
-            phone) files="$PHONE_A" ;;
-            rest)
+          case "${{ matrix.phone }}" in
+            admin) files="$PHONE_ADMIN" ;;
+            rare) files="$PHONE_RARE" ;;
+            overflow) files="$PHONE_OVERFLOW" ;;
+            main)
               files=""
               for f in $(pnpm exec playwright test --project=mobile --list --reporter=json | jq -r '[.suites[].file] | unique | .[]'); do
-                case " $PHONE_CORE $PHONE_A " in *" /$f "*) ;; *) files="$files /$f" ;; esac
+                case " $PHONE_ADMIN $PHONE_RARE $PHONE_OVERFLOW " in *" /$f "*) ;; *) files="$files /$f" ;; esac
               done
               ;;
           esac
@@ -131,45 +202,46 @@ jobs:
           echo "Phone files: $files"
 
       - name: Phone layout
+        if: matrix.phone != 'none'
         env:
           PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ env.BLOB_DIR }}/mobile
         run: make e2e-mobile E2E_MOBILE_FILES="${{ steps.phone.outputs.files }}"
 
       - name: Model servers admin page (mocked API)
-        if: matrix.shard == 'core'
+        if: matrix.desktop
         env:
           PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ env.BLOB_DIR }}/model-servers
         run: make e2e-model-servers
 
       - name: Template Studio (admin switch, mocked workspaces)
-        if: matrix.shard == 'core'
+        if: matrix.desktop
         env:
           PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ env.BLOB_DIR }}/pack-studio
         run: make e2e-pack-studio
 
       - name: Passkeys (virtual authenticator)
-        if: matrix.shard == 'core'
+        if: matrix.desktop
         env:
           PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ env.BLOB_DIR }}/passkeys
         run: make e2e-passkeys
 
       - name: Runner install commands
-        if: matrix.shard == 'core'
+        if: matrix.desktop
         env:
           PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ env.BLOB_DIR }}/runner-install
         run: make e2e-runner-install
 
-      # Последним в rest: цель поднимает общий раннер с поддельным TeX и гасит его после прогона. gpg для
-      # готовой открепленной подписи академрука есть на раннере GitHub.
+      # Цель поднимает общий раннер с поддельным TeX и гасит его после прогона. gpg для готовой открепленной подписи
+      # академрука есть на раннере GitHub.
       - name: Signing route (fake-TeX runner, gpg)
-        if: matrix.shard == 'rest'
+        if: matrix.signing
         env:
           PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ env.BLOB_DIR }}/signing-route
         run: make e2e-signing-route
 
       # Тот же раннер с поддельным TeX: сборка печатает строки исходника и кладёт SyncTeX (~1,5 мин).
       - name: PDF preview comments (fake-TeX runner, SyncTeX)
-        if: matrix.shard == 'rest'
+        if: matrix.pdf || matrix.signing
         env:
           PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ env.BLOB_DIR }}/pdf-comments
         run: make e2e-pdf-comments

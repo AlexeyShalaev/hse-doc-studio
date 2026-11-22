@@ -254,10 +254,24 @@ jobs:
   # ── Tier 1b — полный серверный набор (deploy/server) проходит приёмочный смоук Playwright ──
   # Мастер, регистрация, изоляция, сборка и PDF через раннер и MinIO, очередь 15 против 1, потеря раннера,
   # рестарт api, лимит квоты. Образ собирается с extra server: без него режим server не стартует.
+  # Проекты Playwright делятся на три группы, у каждой свой стенд и свой джоб (по ~6 минут сценариев вместо 17 подряд).
+  # Сценарии не зависят друг от друга: каждый заводит администратора сам (ensureAdmin: мастер на свежем стенде или вход),
+  # а порядок внутри группы сохранён там, где он важен: acknowledge до backups (на стенде ещё нет бэкапов), backups
+  # перезапускает api и подменяет данные, storage-cleanup последним (чистит образы и кэш раннера).
   server-stack-smoke:
-    name: Server stack smoke (Playwright)
+    name: Server stack smoke (Playwright, ${{ matrix.group }})
     runs-on: ubuntu-latest
     timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - group: full
+            projects: full
+          - group: misc
+            projects: acknowledge backups updates onboarding storage-cleanup
+          - group: mail
+            projects: presence mail-log signing-optional
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
@@ -327,73 +341,30 @@ jobs:
           fi
           docker image inspect texlive/texlive:TL2024-historic --format '{{.Id}}'
 
-      - name: Run full smoke
+      # Проекты группы подряд на одном стенде. Что делает каждый:
+      #   full             полный смоук: мастер, регистрация, изоляция, сборка, очередь, потеря раннера, рестарт api
+      #   acknowledge      принятие предупреждений самодиагностики (пока на стенде нет бэкапов, поэтому до backups)
+      #   backups          бэкапы; восстановление в конце перезапускает api и заменяет данные из бэкапа
+      #   updates          страница «Обновления»
+      #   onboarding       тур и демо-проект без раннеров и ИИ
+      #   presence         люди в проекте: аватары, переход к документу, подпись у курсора, уход по окну присутствия
+      #   mail-log         журнал писем (mail-log.md, E1): поддельный SMTP из compose.mail.yml, админ настраивает на него
+      #                    почту, сценарии проверяют строки журнала и пойманные письма; в конце почта снова выключена
+      #   signing-optional необязательные подписи и пропуск (signing-route.md, раздел 13, E3): маршрут из трёх участников,
+      #                    пропуск академрука, письмо на поддельном SMTP, журналы писем и аудита, пакет
+      #   storage-cleanup  очистка места (storage-cleanup.md, E1): «Диск» общего и личного раннера, «Освободить место»;
+      #                    последней: чистит висячие образы и кэш раннера и оставляет личный раннер остановленным
+      - name: Run e2e projects (${{ matrix.group }})
+        working-directory: e2e
         run: |
           eval "$(../scripts/dev/server-stack/stack.sh env)"
-          pnpm exec playwright test --project=full
-        working-directory: e2e
-
-      # Принятие предупреждений самодиагностики: пока на стенде нет бэкапов, поэтому до бэкапов.
-      - name: Run acknowledge e2e
-        run: |
-          eval "$(../scripts/dev/server-stack/stack.sh env)"
-          pnpm exec playwright test --project=acknowledge
-        working-directory: e2e
-
-      # Бэкапы идут на том же стенде: восстановление в конце перезапускает api и заменяет данные из бэкапа.
-      - name: Run backups e2e
-        run: |
-          eval "$(../scripts/dev/server-stack/stack.sh env)"
-          pnpm exec playwright test --project=backups
-        working-directory: e2e
-
-      # Страница «Обновления» на том же стенде (администратор создан полным смоуком).
-      - name: Run updates page e2e
-        run: |
-          eval "$(../scripts/dev/server-stack/stack.sh env)"
-          pnpm exec playwright test --project=updates
-        working-directory: e2e
-
-      # Онбординг на том же стенде: тур и демо-проект без раннеров и ИИ.
-      - name: Run onboarding e2e
-        run: |
-          eval "$(../scripts/dev/server-stack/stack.sh env)"
-          pnpm exec playwright test --project=onboarding
-        working-directory: e2e
-
-      # Люди в проекте на том же стенде: аватары, переход к документу, подпись у курсора, уход по окну присутствия.
-      - name: Run presence e2e
-        run: |
-          eval "$(../scripts/dev/server-stack/stack.sh env)"
-          pnpm exec playwright test --project=presence
-        working-directory: e2e
-
-      # Журнал писем (mail-log.md, E1): поддельный SMTP из compose.mail.yml, админ настраивает на него почту, сценарии
-      # проверяют строки журнала и пойманные письма; в конце почта снова выключена. Маршрут подписания собирает документы
-      # на общем раннере, поэтому до очистки места.
-      - name: Run mail log e2e
-        run: |
-          ../scripts/dev/server-stack/stack.sh mail-up
-          eval "$(../scripts/dev/server-stack/stack.sh env)"
-          pnpm exec playwright test --project=mail-log
-        working-directory: e2e
-
-      # Необязательные подписи и пропуск (signing-route.md, раздел 13, E3): маршрут из трёх участников, пропуск академрука,
-      # письмо на поддельном SMTP, журналы писем и аудита, пакет. Почту включает и выключает сам сценарий.
-      - name: Run signing optional e2e
-        run: |
-          ../scripts/dev/server-stack/stack.sh mail-up
-          eval "$(../scripts/dev/server-stack/stack.sh env)"
-          pnpm exec playwright test --project=signing-optional
-        working-directory: e2e
-
-      # Очистка места (storage-cleanup.md, E1): «Диск» общего и личного раннера, «Освободить место». Идёт последней:
-      # чистит висячие образы и кэш раннера, удаляет состаренную задачу сборки и оставляет личный раннер остановленным.
-      - name: Run storage cleanup e2e
-        run: |
-          eval "$(../scripts/dev/server-stack/stack.sh env)"
-          pnpm exec playwright test --project=storage-cleanup
-        working-directory: e2e
+          for project in ${{ matrix.projects }}; do
+            echo "::group::playwright --project=$project"
+            # Почту поднимают mail-log и signing-optional: поддельный SMTP из compose.mail.yml.
+            case "$project" in mail-log|signing-optional) ../scripts/dev/server-stack/stack.sh mail-up ;; esac
+            pnpm exec playwright test --project="$project"
+            echo "::endgroup::"
+          done
 
       - name: Stand logs on failure
         if: failure()
@@ -420,14 +391,14 @@ jobs:
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: server-stack-screenshots
+          name: server-stack-screenshots-${{ matrix.group }}
           path: e2e/screenshots
           if-no-files-found: warn
 
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: server-stack-report
+          name: server-stack-report-${{ matrix.group }}
           path: |
             e2e/playwright-report
             e2e/test-results
