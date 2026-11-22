@@ -81,6 +81,11 @@ export const NotesFields = ({ c }: { c: SubmitController }) => {
           }}
         />
       )}
+      {notes.canAutoFill && (
+        <p className="sp-ch-muted" data-testid="sp-sb-auto">
+          {t("changes.submit.notes.auto")}
+        </p>
+      )}
       {notes.problem === "pairs" && (
         <p className="sp-sb-warn" role="status" data-testid="sp-sb-pairs">
           {t("changes.submit.notes.pairs")}
@@ -105,7 +110,7 @@ export const NotesFields = ({ c }: { c: SubmitController }) => {
             ? t("changes.submit.notes.saving")
             : notes.saved
               ? t("changes.submit.notes.saved")
-              : notes.problem === "empty"
+              : notes.problem === "empty" && !notes.canAutoFill
                 ? t("changes.submit.notes.needed")
                 : ""}
         </span>

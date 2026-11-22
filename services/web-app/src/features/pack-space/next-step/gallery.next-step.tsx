@@ -206,6 +206,8 @@ const controller = (
     set: () => undefined,
     suggest: () => undefined,
     canSuggest: true,
+    canAutoFill: false,
+    fillSuggested: () => Promise.resolve(),
     breaking: false,
     classNote: false,
     problem: null,
@@ -218,6 +220,8 @@ const controller = (
   release: true,
   setRelease: () => undefined,
   releasable: true,
+  numberFix: null,
+  autoNotes: false,
   setDefault: true,
   setSetDefault: () => undefined,
   releaseClass: "patch",
@@ -297,7 +301,7 @@ export const galleryEntries: GalleryEntry[] = [
   screen(
     "sp_ns_describe",
     "Главная кнопка: «Описать изменения»",
-    "Заметок к версии ещё нет: кнопка открывает панель на полях заметок; «Подсказать по изменениям» заполняет черновик.",
+    "Заметок к версии ещё нет: кнопка открывает панель на полях заметок; главная кнопка панели «Подсказать и отправить» подставит подсказку сама, отдельный шаг не нужен.",
     { git: gitOf(), lint: [lintOf()], notes: false },
   ),
   screen(
@@ -389,7 +393,7 @@ export const galleryEntries: GalleryEntry[] = [
     "sp_ns_progress",
     "Отправка: оборвалась на выпуске",
     "Заметки записаны, выпуск не прошёл; сказано, на каком месте остановились, повтор начнётся с него.",
-    (c) => <Progress c={c} onAccess={none} onOpenFile={none} />,
+    (c) => <Progress c={c} onAccess={none} onOpenFile={none} onNumber={none} />,
     {
       done: ["notes"],
       failure: {
@@ -402,7 +406,7 @@ export const galleryEntries: GalleryEntry[] = [
     "sp_ns_taken",
     "Отправка: номер уже выпущен",
     "Номер занят в основной ветке: предлагается перенести правки в свободный.",
-    (c) => <Progress c={c} onAccess={none} onOpenFile={none} />,
+    (c) => <Progress c={c} onAccess={none} onOpenFile={none} onNumber={none} />,
     {
       done: ["notes"],
       failure: {
@@ -410,6 +414,24 @@ export const galleryEntries: GalleryEntry[] = [
         error: new ApiError("занят", "version_taken", 409, {
           suggested: "2026.1.4",
         }),
+      },
+    },
+  ),
+  part(
+    "sp_ns_number_failed",
+    "Отправка: номер не подошёл",
+    "Сервер отказал из-за номера: человеческая фраза, кнопка «изменить номер», сырой текст свёрнут в «Подробности».",
+    (c) => <Progress c={c} onAccess={none} onOpenFile={none} onNumber={none} />,
+    {
+      plan: ["release", "send"],
+      done: [],
+      failure: {
+        step: "send",
+        error: new ApiError(
+          "release: номер 2026.1.3 после 2026.1.2 это patch, а изменения требуют не меньше minor",
+          "class_softer_than_changes",
+          422,
+        ),
       },
     },
   ),
@@ -428,6 +450,21 @@ export const galleryEntries: GalleryEntry[] = [
     {
       release: false,
       releasable: false,
+      state: versionStateOf({
+        number_ok: false,
+        minimum: "minor",
+        changes: NOTES,
+      }),
+    },
+  ),
+  part(
+    "sp_ns_number_fix",
+    "Отправка: номер подберём сами",
+    "Копия сделана небольшой правкой, а условия меняют состав документов: одна фраза с номером и «изменить номер» вместо ошибки.",
+    (c) => <ReleaseOption c={c} onNumber={none} />,
+    {
+      release: true,
+      numberFix: { to: "2026.2.0", cls: "minor", cause: "document_scope" },
       state: versionStateOf({
         number_ok: false,
         minimum: "minor",

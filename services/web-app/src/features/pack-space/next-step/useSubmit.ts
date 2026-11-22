@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useEffectEvent, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   forkRequired,
@@ -11,6 +11,7 @@ import {
   usePackVersionState,
   useProposePack,
   useReleasePackVersion,
+  useRenumberPackVersion,
   type ForkRequired,
   type PackForkChoice,
   type PackProposeResponse,
@@ -30,6 +31,7 @@ import {
   focusElement,
   isFocusTarget,
 } from "./focus";
+import { resolveNumberFix, type NumberFix } from "./numberFix";
 import { consentAsked, type LicenseInfo } from "./submitErrors";
 import { planSteps, runSteps, type SubmitStep } from "./submitSteps";
 import { useVersionNotes, type VersionNotes } from "./useVersionNotes";
@@ -54,6 +56,14 @@ export type SubmitBlocker =
   | "fork"
   | "moving";
 
+/** Помехи, которые сами проходят: продолжение отправки после смены номера их дожидается. */
+const WAITING: ReadonlySet<SubmitBlocker> = new Set([
+  "loading",
+  "saving",
+  "impact",
+  "moving",
+]);
+
 export type SubmitFailure = { step: SubmitStep; error: unknown };
 
 export type SubmitController = {
@@ -71,6 +81,13 @@ export type SubmitController = {
   setRelease: (value: boolean) => void;
   /** Выпуск в этой отправке возможен: версия черновик, номер подходит. */
   releasable: boolean;
+  /**
+   * Правки требуют номера выше, чем у копии: Студия сменит его сама при отправке. `null`: номер
+   * подходит.
+   */
+  numberFix: NumberFix | null;
+  /** Заметки пусты, при отправке подставим подсказку («Подсказать и отправить»). */
+  autoNotes: boolean;
   setDefault: boolean;
   setSetDefault: (value: boolean) => void;
   releaseClass: ReturnType<typeof currentClass>;
@@ -167,11 +184,23 @@ export const useSubmit = ({
   const loadingState = stateQuery.isPending || stateQuery.isPlaceholderData;
   const notes = useVersionNotes(id, state);
 
-  const releasable = state?.number_ok === true;
+  const numberFix = resolveNumberFix(state);
+  // Номер подберём сами при отправке: выпуск возможен и до смены номера.
+  const releasable = state?.number_ok === true || numberFix !== null;
   const defaultRelease =
-    releasable && !(state.registered && !state.release_outdated);
-  const [releaseChoice, setReleaseChoice] = useState<boolean | null>(null);
-  const release = releasable && (releaseChoice ?? defaultRelease);
+    releasable &&
+    state !== null &&
+    !(state.registered && !state.release_outdated);
+  const autoNotes = state !== null && notes.canAutoFill;
+  // Выбор «выпускать» помнит, к какой версии он относится: после смены номера (`number`) он
+  // переезжает на новую версию, а при смене версии любым другим способом сбрасывается.
+  const [releaseChoice, setReleaseChoice] = useState<{
+    value: boolean;
+    key: string;
+  } | null>(null);
+  const choiceKey = `${versionRef.pack}/${versionRef.template}/${versionRef.version}`;
+  const chosen = releaseChoice?.key === choiceKey ? releaseChoice.value : null;
+  const release = releasable && (chosen ?? defaultRelease);
   const [setDefault, setSetDefault] = useState(true);
   const releaseClass = state ? currentClass(state) : null;
 
@@ -213,6 +242,9 @@ export const useSubmit = ({
   const releaseApi = useReleasePackVersion(id);
   const proposeApi = useProposePack(id);
   const moveApi = useMovePackVersionEdits(id);
+  const renumberApi = useRenumberPackVersion(id);
+  // Номер сменён, а отправка ещё не закончена: после перехода на новую версию она продолжается.
+  const resume = useRef<string | null>(null);
 
   // Версия сменилась (номер, перенос правок, другая версия): прежний ход к ней не относится.
   const versionKey = `${versionRef.pack}/${versionRef.template}/${versionRef.version}`;
@@ -223,7 +255,6 @@ export const useSubmit = ({
     setDone([]);
     setFailure(null);
     setOutcome(null);
-    setReleaseChoice(null);
   }
 
   const forkChoice: PackForkChoice | null = !fork
@@ -236,8 +267,9 @@ export const useSubmit = ({
   if (moveApi.isPending) blocker = "moving";
   else if (status.errors > 0) blocker = "errors";
   else if (wantState && loadingState) blocker = "loading";
-  else if (state !== null && notes.problem !== null) blocker = "notes";
-  else if (notes.saving) blocker = "saving";
+  else if (state !== null && notes.problem !== null && !autoNotes) {
+    blocker = "notes";
+  } else if (notes.saving) blocker = "saving";
   else if (consent !== null && !accepted) blocker = "consent";
   else if (impactPending) blocker = "impact";
   else if (needsAck && !ack) blocker = "ack";
@@ -265,7 +297,13 @@ export const useSubmit = ({
 
   const run = () => {
     if (blocker !== null || running || !live) return;
-    const steps = plan ?? planSteps({ notesPending: notes.pending, release });
+    const steps =
+      plan ??
+      planSteps({
+        notesPending: notes.pending || autoNotes,
+        release,
+        renumber: numberFix !== null,
+      });
     const resumed = plan !== null;
     setPlan(steps);
     if (!resumed) setDone([]);
@@ -276,7 +314,26 @@ export const useSubmit = ({
       steps,
       resumed ? done : [],
       {
-        notes: notes.flush,
+        notes: autoNotes ? notes.fillSuggested : notes.flush,
+        number: async () => {
+          if (!state || !numberFix) return;
+          // Заметки в версии должны переехать вместе с каталогом.
+          await notes.flush().catch(() => undefined);
+          const moved = await renumberApi.mutateAsync({
+            ref: state.version,
+            version: numberFix.to,
+          });
+          await client.refetchQueries({ queryKey: packStudioKeys.tree(id) });
+          const ref = {
+            pack: moved.version.pack,
+            template: moved.version.template,
+            version: moved.version.version,
+          };
+          const key = `${ref.pack}/${ref.template}/${ref.version}`;
+          resume.current = key;
+          setReleaseChoice((prev) => (prev ? { ...prev, key } : prev));
+          nav.go({ ref });
+        },
         release: async () => {
           if (!state || releaseClass === null) return;
           await releaseApi.mutateAsync({
@@ -291,6 +348,12 @@ export const useSubmit = ({
       setRunning(false);
       setCurrent(null);
       setDone(out.done);
+      if (out.ok && out.paused) {
+        // Номер сменён: экран идёт за версией и продолжит отправку с оставшимися шагами.
+        setPlan(null);
+        setDone([]);
+        return;
+      }
       if (!out.ok) {
         setFailure({ step: out.step, error: out.error });
         const needFork = forkRequired(out.error);
@@ -311,6 +374,7 @@ export const useSubmit = ({
       setPlan(null);
       setDone([]);
       setFork(null);
+      resume.current = null;
       const result = out.result;
       const pull = result.pull_request;
       if (pull) {
@@ -382,6 +446,24 @@ export const useSubmit = ({
     if (isFocusTarget(wanted) && ready) applyFocus();
   }, [wanted, ready]);
 
+  // Номер сменился и экран перешёл на новую версию: продолжаем отправку с оставшимися шагами.
+  // Ждём, пока дочитаются сведения новой версии; любая другая помеха отменяет продолжение
+  // (человек видит её и нажимает «Отправить» сам).
+  const resumeRun = useEffectEvent(() => {
+    run();
+  });
+  useEffect(() => {
+    if (resume.current === null || resume.current !== versionKey) return;
+    if (!available || state === null) return;
+    if (blocker !== null && !WAITING.has(blocker)) {
+      resume.current = null;
+    } else if (blocker === null && !running) {
+      resume.current = null;
+      // Не в теле эффекта: запуск отправки ставит состояние хода.
+      queueMicrotask(resumeRun);
+    }
+  }, [versionKey, available, state, blocker, running]);
+
   return {
     available,
     update,
@@ -390,8 +472,12 @@ export const useSubmit = ({
     stateLoading: wantState && loadingState,
     notes,
     release,
-    setRelease: setReleaseChoice,
+    setRelease: (value: boolean) => {
+      setReleaseChoice({ value, key: choiceKey });
+    },
     releasable,
+    numberFix,
+    autoNotes,
     setDefault,
     setSetDefault,
     releaseClass,

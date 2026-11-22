@@ -461,9 +461,10 @@ describe("«Подробности»", () => {
       );
       const button = await screen.findByTestId("sp-make-copy");
       expect(screen.queryByTestId("sp-edit-open")).toBeNull();
-      expect(screen.getByTestId("sp-released-note")).toHaveTextContent(
-        "выпущена и не меняется",
-      );
+      // Главная кнопка «Править копию» одна, в полосе пространства; здесь вторичная, а
+      // слова «выпущена и не меняется» живут в плашке над условиями, не в панели.
+      expect(button).not.toHaveClass("primary");
+      expect(screen.queryByTestId("sp-released-note")).toBeNull();
       await userEvent.click(button);
       await waitFor(() => {
         expect(created).toHaveBeenCalledWith(

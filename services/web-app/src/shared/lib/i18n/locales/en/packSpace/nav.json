@@ -10,7 +10,8 @@
     "deleteGit": "The clone in Studio will be deleted. The repository on the host is not changed.",
     "deleteFolder": "Only the Studio entry is deleted, the folder on disk stays.",
     "cancel": "Cancel",
-    "refreshFailed": "Refresh failed"
+    "refreshFailed": "Refresh failed",
+    "deleteUnsent": "There are unsent changes: they will be lost with the space. Send them for review first if you need them."
   },
   "crumb": {
     "label": "Where you are: pack, template, version",

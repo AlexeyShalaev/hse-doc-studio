@@ -346,6 +346,87 @@ describe("панель «Изменения»", () => {
     expect(await within(root).findByText("Изменений пока нет")).toBeVisible();
     expect(within(root).queryByTestId("sp-ch-what")).not.toBeInTheDocument();
     expect(screen.queryByTestId("sp-changes-count")).not.toBeInTheDocument();
+    // «Правки пока только у вас» рядом с «Изменений пока нет» противоречило бы друг другу.
+    expect(within(root).queryByTestId("sp-ch-where")).not.toBeInTheDocument();
+  });
+
+  it("свежая копия версии: 87 файлов новые для git, а изменений две, и они названы по документам", async () => {
+    const OLD = "hse-cs-sse/templates/coursework/versions/2026.1.2";
+    const docs = Array.from({ length: 28 }, (_, i) => `doc_${String(i)}`);
+    const names = [
+      "technical_specification",
+      "source_listing",
+      ...docs.slice(2),
+    ];
+    const copy: PackFileChange[] = [
+      { path: `${V}/version.yaml`, status: "added" },
+      ...names.flatMap((doc) => [
+        { path: `${V}/files/${doc}/doc.yaml`, status: "added" as const },
+        { path: `${V}/files/${doc}/${doc}.ru.tex`, status: "added" as const },
+      ]),
+    ];
+    expect(copy.length).toBeGreaterThan(50);
+    // Правка человека: условия ТЗ и текст программы. Остальное совпадает с версией 2026.1.2.
+    const mine = new Set([
+      `${V}/files/technical_specification/doc.yaml`,
+      `${V}/files/source_listing/source_listing.ru.tex`,
+    ]);
+    const { spies } = mount({
+      git: gitOf({ changed: copy, uncommitted: copy, branch: null }),
+    });
+    const reads = vi
+      .spyOn(packStudioApi, "readFile")
+      .mockImplementation((_id, path) =>
+        Promise.resolve({
+          path,
+          content: "",
+          etag: mine.has(path)
+            ? `"mine-${path}"`
+            : `"same-${path.split("/").slice(-2).join("/")}"`,
+          readOnly: null,
+        }),
+      );
+    // Манифест версии отличается только полями, которые пишет Студия.
+    spies.model.mockImplementation((_id, ref) =>
+      Promise.resolve({
+        ...modelOf(true),
+        manifest: {
+          path: `${ref.version === "2026.1.2" ? OLD : V}/version.yaml`,
+          etag: "e",
+          data:
+            ref.version === "2026.1.2"
+              ? { id: "2026.1.2", kinds: [1] }
+              : { id: "2026.1.3", status: "beta", kinds: [1] },
+        },
+      }),
+    );
+    const root = await panel();
+    await waitFor(() => {
+      expect(screen.getByTestId("sp-changes-count")).toHaveTextContent("2");
+    });
+    expect(reads).toHaveBeenCalled();
+    const what = await within(root).findByTestId("sp-ch-what");
+    expect(what).toHaveTextContent("Новая версия 2026.1.3 и мои правки");
+    expect(what).toHaveTextContent("2 файла");
+    expect(
+      within(what)
+        .getAllByTestId("sp-ch-item")
+        .map((item) => item.textContent),
+    ).toEqual(["Техническое задание: условия", "Текст программы: текст"]);
+    // Внутренних имён и «новое» у каждой строки нет.
+    expect(what.textContent).not.toMatch(/doc_\d|новое/);
+  });
+
+  it("«Сбросить все мои изменения»: окно с теми же словами, без «свежей main без ветки»", async () => {
+    mount();
+    const root = await panel();
+    await userEvent.click(await within(root).findByTestId("sp-ch-menu"));
+    await userEvent.click(await screen.findByTestId("sp-ch-menu-reset"));
+    const dialog = await screen.findByRole("dialog", undefined, {
+      timeout: 15000,
+    });
+    expect(dialog).toHaveTextContent("Сбросить все мои изменения");
+    expect(dialog.textContent).not.toMatch(/main|без ветки|Начать заново/);
   });
 
   it("выпущенная версия без изменений: подсказка про копию", async () => {

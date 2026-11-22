@@ -44,8 +44,8 @@
   "status": {
     "saved": "Saved",
     "dirty": "Unsaved changes",
-    "recalculating": "Recalculating...",
-    "slow": "Recalculation is taking long...",
+    "recalculating": "Calculating...",
+    "slow": "Calculating, this takes longer than usual...",
     "failed": "Could not recalculate",
     "retry": "Retry"
   },
@@ -1104,8 +1104,8 @@
       "noBase": {
         "no_git": "The workspace is a plain folder without git: it has neither a last commit nor a base.",
         "no_base": "The workspace has no base branch. Fetch it in the Files section or compare two scenarios.",
-        "new_version": "This version is not on the base: it is new, so there is nothing to compare it with. Compare two scenarios.",
-        "unknown": "The version is not on the base, or the workspace has no git."
+        "new_version": "This version is not in the main branch: it is new, so there is nothing to compare it with. Compare two scenarios.",
+        "unknown": "The version is not in the main branch, or the workspace is not connected to a repository."
       },
       "inputsTitle": "The inputs do not fit the version",
       "inputsField": "Field {{field}}, value “{{value}}”.",
@@ -1277,9 +1277,9 @@
       "removed": "Removed: {{count}}"
     },
     "scenarioErrorPlain": "The scenario cannot be read on one of the sides.",
-    "loading": "Computing the result on the base and in the work tree, {{seconds}} s...",
+    "loading": "Calculating what changes for students, {{seconds}} s...",
     "progress": "Calculation progress",
-    "cancel": "Cancel calculation",
+    "cancel": "Stop",
     "run": "Calculate",
     "busyRetry": "The server is busy, retrying in {{seconds}} s...",
     "busyTitle": "The server is busy calculating",
@@ -1289,10 +1289,10 @@
     "offlineTitle": "No connection to the server",
     "offlineLead": "Check the connection and retry.",
     "failedTitle": "Could not compute before and after",
-    "notBlocking": "You can still propose the changes.",
+    "notBlocking": "You can still send the changes for review.",
     "cancelled": {
       "title": "Calculation cancelled",
-      "lead": "You can propose the changes without it."
+      "lead": "You can send the changes for review without it."
     },
     "released": {
       "title": "The version is released and immutable",
@@ -1301,19 +1301,19 @@
     "noBase": {
       "no_git": {
         "title": "A folder without git",
-        "lead": "The workspace has no last commit and no base, so there is nothing to compare with. You can propose the changes without a comparison."
+        "lead": "The workspace is not connected to a repository, so there is nothing to compare with. You can send the changes for review without a comparison."
       },
       "no_base": {
-        "title": "No base",
-        "lead": "The workspace has no base branch. Fetch it in the Files section and the comparison will appear here."
+        "title": "Nothing to compare with",
+        "lead": "The workspace has no main branch. Fetch it in Content, All files, and the comparison will appear here."
       },
       "new_version": {
         "title": "The version is new, nothing to compare",
-        "lead": "This version is not on the base, so there is no \"before\". You can propose the changes without a comparison."
+        "lead": "This version is not in the main branch, so there is no \"before\". You can send the changes for review without a comparison."
       },
       "unknown": {
         "title": "Nothing to compare with",
-        "lead": "The version is not on the base, or the workspace has no git."
+        "lead": "The version is not in the main branch, or the workspace is not connected to a repository."
       }
     },
     "noScenarios": {

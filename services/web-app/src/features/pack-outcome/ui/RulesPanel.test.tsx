@@ -492,7 +492,7 @@ describe("панель «Правила и причины»: «Почему?»",
         "true",
       );
       expect(screen.getByTestId("outcome-why-refreshing")).toHaveTextContent(
-        "Пересчитываю",
+        "Считаю",
       );
       await waitFor(() => {
         expect(screen.getByTestId("outcome-why")).not.toHaveAttribute(

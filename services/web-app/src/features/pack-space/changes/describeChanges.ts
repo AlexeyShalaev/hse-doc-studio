@@ -42,6 +42,8 @@ export type ChangeGroup = {
   pack: string | null;
   items: ChangeItem[];
   files: number;
+  /** Группа это копия версии: подпись «Новая версия X и мои правки». */
+  copy: boolean;
 };
 
 const ORDER: ChangeKind[] = [
@@ -127,6 +129,7 @@ const keyOfRef = (ref: PackVersionRef): string =>
 export const describeChanges = (
   changed: readonly PackFileChange[],
   open: PackVersionRef,
+  copyDir: string | null = null,
 ): ChangeGroup[] => {
   type Draft = {
     group: ChangeGroup;
@@ -149,6 +152,7 @@ export const describeChanges = (
           pack: ref ? null : (change.path.split("/")[0] ?? null),
           items: [],
           files: 0,
+          copy: dir !== null && dir === copyDir,
         },
         items: new Map(),
       };

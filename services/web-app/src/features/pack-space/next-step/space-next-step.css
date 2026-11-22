@@ -231,3 +231,17 @@
     opacity: 0;
   }
 }
+
+.sp-sb-tech {
+  font-size: 0.75rem;
+  color: var(--fg-2);
+}
+.sp-sb-tech summary {
+  cursor: pointer;
+}
+.sp-sb-tech .mono {
+  display: block;
+  margin-top: 0.25rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

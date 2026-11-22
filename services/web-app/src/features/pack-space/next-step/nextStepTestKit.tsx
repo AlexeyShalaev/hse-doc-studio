@@ -7,6 +7,7 @@ import {
   type PackCiStatus,
   type PackGit,
   type PackLint,
+  type PackVersionRef,
   type PackVersionState,
 } from "@entities/pack-studio";
 import {
@@ -43,6 +44,10 @@ export type Setup = {
   state?: PackVersionState;
   ci?: PackCiStatus;
   url?: string;
+  /** Отчёт версии по ссылке на неё (когда номер меняется и ответ зависит от версии). */
+  stateFor?: (ref: PackVersionRef) => PackVersionState;
+  /** git на каждый запрос (когда файлы переезжают вместе с номером). */
+  gitFor?: () => PackGit;
 };
 
 /** Слоты областей «Изменения» и «Главная кнопка» вместе, как их собирает реестр. */
@@ -69,7 +74,11 @@ export const mount = (
 } => {
   const notes = setup.notes ?? true;
   const spies = {
-    git: vi.spyOn(packStudioApi, "git").mockResolvedValue(setup.git ?? gitOf()),
+    git: vi
+      .spyOn(packStudioApi, "git")
+      .mockImplementation(() =>
+        Promise.resolve(setup.gitFor ? setup.gitFor() : (setup.git ?? gitOf())),
+      ),
     lint: vi
       .spyOn(packStudioApi, "lint")
       .mockResolvedValue(setup.lint ?? lintOf()),
@@ -78,11 +87,15 @@ export const mount = (
       .mockResolvedValue(modelOf(notes)),
     state: vi
       .spyOn(packStudioApi, "versionState")
-      .mockResolvedValue(
-        setup.state ??
-          versionStateOf(
-            notes ? { changes: { ru: ["Раз"], en: ["One"] } } : {},
-          ),
+      .mockImplementation((_id, ref) =>
+        Promise.resolve(
+          setup.stateFor
+            ? setup.stateFor(ref)
+            : (setup.state ??
+                versionStateOf(
+                  notes ? { changes: { ru: ["Раз"], en: ["One"] } } : {},
+                )),
+        ),
       ),
     checks: vi
       .spyOn(packStudioApi, "checks")
