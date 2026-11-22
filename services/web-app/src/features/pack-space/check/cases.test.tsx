@@ -21,7 +21,7 @@ import { seedCases, seedMap, seedVersion } from "./seeds";
 import { slots } from "./slots";
 
 // Возвращённые функции «Типовых случаев» и «Что на что влияет» (карта паритета 7.4): окно случая,
-// «Принять текущий результат как ожидаемый», удаление с подтверждением, «Посмотреть как студент»,
+// «Принять текущий результат как ожидаемый», удаление с подтверждением, «Так увидит студент»,
 // стрелки по таблице, выпущенная версия, «По результатам», порядок, фильтры, «сейчас на экране».
 
 const DRAFT = `${SPACE_BASE}/2026.1.3/check`;
@@ -203,7 +203,7 @@ describe("Типовые случаи: окно случая и действия
     expect(dialog.getAllByTestId("case-expect-item").length).toBeGreaterThan(3);
   });
 
-  it("«Посмотреть как студент» открывает вид студента по словарю нового интерфейса", async () => {
+  it("«Так увидит студент» открывает вид студента по словарю нового интерфейса", async () => {
     openCases();
     const dialog = await openRow(COMPANY);
     fireEvent.click(dialog.getByTestId("case-student-open"));
@@ -218,7 +218,7 @@ describe("Типовые случаи: окно случая и действия
     );
   });
 
-  it("«Посмотреть как студент» есть и в карточке клетки таблицы", async () => {
+  it("«Так увидит студент» есть и в карточке клетки таблицы", async () => {
     openCases();
     const [cell] = await screen.findAllByRole("button", {
       name: new RegExp(`^${COMPANY}, Участники`),
@@ -244,7 +244,7 @@ describe("Типовые случаи: окно случая и действия
     expect(dialog.queryByTestId("case-delete")).toBeNull();
     expect(dialog.queryByTestId("case-save")).toBeNull();
     expect(dialog.queryByRole("button", { name: /^Убрать: / })).toBeNull();
-    // Посмотреть как студент остаётся доступным.
+    // Так увидит студент остаётся доступным.
     expect(dialog.getByTestId("case-student-open")).toBeInTheDocument();
   });
 
