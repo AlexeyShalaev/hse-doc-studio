@@ -46,6 +46,7 @@ from hse_doc_studio.use_cases.mcp.tools import (
     pack_outcome,
     pack_outcome_compare,
     pack_scenarios,
+    pack_signatures,
     pack_workspaces,
     packs,
     people,
@@ -290,6 +291,9 @@ MCP_TOOL_RULES: tuple[McpToolRule, ...] = (
     # Правила проверки формой (`.../checks`) и номер версии (`renumber`, `move-edits`): записи черновика, как маршруты.
     _rule("pack_checks", _G.packs, _W, rate=UPLOAD, scope=MCP_PACKS_SCOPE),
     _rule("pack_version_number", _G.packs, _W, scope=MCP_PACKS_SCOPE),
+    # Места подписей агентом (pack-studio-mcp.md, раздел 4): растр PDF сборки, частота как у сборки.
+    _rule("pack_signature_render", _G.packs, _R, rate=COMPILE, scope=MCP_PACKS_SCOPE),
+    _rule("pack_signature_check", _G.packs, _R, rate=COMPILE, scope=MCP_PACKS_SCOPE),
     # Push и PR на хостинге доступом пространства: внешнее действие, как синхронизация проекта с git-remote.
     _rule("pack_propose", _G.packs, _X, dangerous=True, rate=GIT_SYNC, scope=MCP_PACKS_SCOPE),
     # Админка (сценарии сами требуют админа установки)
@@ -405,6 +409,8 @@ MCP_TOOL_CLASSES: tuple[type[McpTool], ...] = (
     pack_changes.PackChangesTool,
     pack_forms.PackChecksTool,
     pack_forms.PackVersionNumberTool,
+    pack_signatures.PackSignatureRenderTool,
+    pack_signatures.PackSignatureCheckTool,
     admin.AdminListUsersTool,
     admin.AdminQueueSummaryTool,
     admin.AdminRunnerSummaryTool,

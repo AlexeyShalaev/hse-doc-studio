@@ -33,17 +33,27 @@ class ToolCall:
 
 
 @dataclass(frozen=True)
+class ToolImage:
+    # A picture attached to a tool result (MCP `ImageContent`): raw bytes and the
+    # media type, e.g. a rendered PDF page with signature boxes (pack-studio-mcp.md, P5).
+    data: bytes
+    mime_type: str = "image/png"
+
+
+@dataclass(frozen=True)
 class ToolResult:
     # The outcome of running a tool, fed back to the model as a tool message.
     # `text` is human-readable (no opaque identifiers); `truncated` flags that a
-    # token cap was applied so the model knows it can paginate.
+    # token cap was applied so the model knows it can paginate. `images` go to MCP
+    # clients after the text; the built-in agent ignores them for now.
     text: str
     is_error: bool = False
     truncated: bool = False
+    images: tuple[ToolImage, ...] = ()
 
     @classmethod
-    def ok(cls, text: str, *, truncated: bool = False) -> ToolResult:
-        return cls(text=text, is_error=False, truncated=truncated)
+    def ok(cls, text: str, *, truncated: bool = False, images: tuple[ToolImage, ...] = ()) -> ToolResult:
+        return cls(text=text, is_error=False, truncated=truncated, images=images)
 
     @classmethod
     def error(cls, text: str) -> ToolResult:

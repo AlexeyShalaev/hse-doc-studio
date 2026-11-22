@@ -38,6 +38,7 @@ from hse_doc_studio.core.pack_studio.protocols import (
     IPackWorkspaceFiles,
     IPackWorkspaceGit,
     IPackWorkspaceRepository,
+    IPdfPages,
     IPdfTextReader,
     IPreviewDispatcher,
     IPreviewStore,
@@ -59,6 +60,7 @@ from hse_doc_studio.infra.pack_studio.hosting import HttpPackHosting
 from hse_doc_studio.infra.pack_studio.inspector import PackInspector
 from hse_doc_studio.infra.pack_studio.local_store import JsonPackWorkspaceRepository, LocalSectionStore
 from hse_doc_studio.infra.pack_studio.outcome_lint_files import JinjaProbeLimits, PackJinjaProbe
+from hse_doc_studio.infra.pack_studio.pdf_pages import PdfPages
 from hse_doc_studio.infra.pack_studio.places import PackPlacesEditor
 from hse_doc_studio.infra.pack_studio.plumbing import PackGitPlumbing
 from hse_doc_studio.infra.pack_studio.preview_dispatch import PreviewJobDispatcher
@@ -87,6 +89,7 @@ from hse_doc_studio.use_cases.pack_studio.outcome_atlas import PackAtlasService
 from hse_doc_studio.use_cases.pack_studio.outcome_compare import PackCompareService
 from hse_doc_studio.use_cases.pack_studio.outcome_lint import PackOutcomeLintService
 from hse_doc_studio.use_cases.pack_studio.outcome_service import OutcomeLimits, PackOutcomeService
+from hse_doc_studio.use_cases.pack_studio.place_check import PackPlaceCheckService
 from hse_doc_studio.use_cases.pack_studio.places import PackPlacesService
 from hse_doc_studio.use_cases.pack_studio.preview import PackPreviewService, PreviewLimits
 from hse_doc_studio.use_cases.pack_studio.scaffold import PackScaffoldService
@@ -328,6 +331,16 @@ class PackStudioProvider(Provider):
     @provide
     def get_places_service(self, files: PackFilesService, previews: PackPreviewService) -> PackPlacesService:
         return PackPlacesService(files, previews, PackPlacesEditor())
+
+    @provide
+    def get_pdf_pages(self) -> IPdfPages:
+        return PdfPages()
+
+    @provide
+    def get_place_check_service(
+        self, places: PackPlacesService, previews: PackPreviewService, pages: IPdfPages
+    ) -> PackPlaceCheckService:
+        return PackPlaceCheckService(places, previews, pages)
 
     @provide
     def get_model_service(self, workspaces: PackWorkspaceService, files: PackFilesService) -> PackModelService:
