@@ -228,10 +228,10 @@
     "limit": "2.2 kB"
   },
   {
-    "name": "Студия шаблонов (lazy, pages/PackStudioPage и фичи pack-*)",
+    "name": "Студия шаблонов (lazy, pages/PackStudioPage: список пространств и маршруты)",
     "path": "dist/assets/pack-studio-app-*.js",
     "gzip": true,
-    "limit": "33.2 kB"
+    "limit": "7.5 kB"
   },
   {
     "name": "Студия шаблонов, формы проверок (lazy, features/pack-checks-form)",
@@ -264,18 +264,6 @@
     "limit": "15.2 kB"
   },
   {
-    "name": "Студия шаблонов, мини-форма правила (lazy, features/pack-forms/rule, правка по месту)",
-    "path": "dist/assets/pack-rule-form-*.js",
-    "gzip": true,
-    "limit": "1.8 kB"
-  },
-  {
-    "name": "Студия шаблонов, правка по месту на экране «Результат» (lazy, ui/edit)",
-    "path": "dist/assets/outcome-edit-*.js",
-    "gzip": true,
-    "limit": "3.6 kB"
-  },
-  {
     "name": "Словарь форм Студии шаблонов (ru и en, features/pack-forms)",
     "path": "dist/assets/locale-packForms-*.js",
     "gzip": true,
@@ -297,7 +285,7 @@
     "name": "Словарь Студии шаблонов (ru и en)",
     "path": "dist/assets/locale-packStudio-*.js",
     "gzip": true,
-    "limit": "30.5 kB"
+    "limit": "28.5 kB"
   },
   {
     "name": "Студия шаблонов: экраны пространства (lazy, pages/PackStudioPage/space и все области features/pack-space, вместе)",
@@ -312,25 +300,13 @@
     "limit": "50 kB"
   },
   {
-    "name": "Режимы «Матрица», «Атлас», «Сравнить» экрана «Результат» (lazy, features/pack-outcome/modes)",
-    "path": "dist/assets/pack-outcome-modes-*.js",
-    "gzip": true,
-    "limit": "12 kB"
-  },
-  {
-    "name": "Режим «Проверка» экрана «Результат»: линтер и покрытие (lazy, features/pack-outcome/lint)",
-    "path": "dist/assets/pack-outcome-lint-*.js",
-    "gzip": true,
-    "limit": "6 kB"
-  },
-  {
-    "name": "Словарь экрана «Результат» (ru и en, features/pack-outcome)",
+    "name": "Словарь сравнения, вида студента и «до и после» Студии (ru и en, packOutcome)",
     "path": "dist/assets/locale-packOutcome-*.js",
     "gzip": true,
-    "limit": "34 kB"
+    "limit": "21 kB"
   },
   {
-    "name": "Блок «Что изменится в результате» в «Предложить изменения» (lazy, features/pack-outcome/impact)",
+    "name": "Блок «Что изменится у студентов» в панели «Изменения» (lazy, features/pack-space/changes/impact)",
     "path": "dist/assets/impact-*.js",
     "gzip": true,
     "limit": "5.2 kB"
