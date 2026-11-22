@@ -39,9 +39,26 @@ export {
 } from "./lib/atlas";
 export type { AtlasFilter, AtlasRowView, OutcomeMini } from "./lib/atlas";
 export {
+  ASSERTION_KINDS,
+  SCENARIO_LANGS,
+  assertionKey,
+  badgeOf,
+  classifyFailure,
+  formOf,
   mergedInputs,
+  nameProblem,
+  requestOf,
   resultsById,
+  retryable,
   scenarioName,
+  suggestAssertions,
   tallyOf,
 } from "./lib/scenarios";
-export type { RunTally } from "./lib/scenarios";
+export type {
+  AssertionKind,
+  RunTally,
+  ScenarioBadge,
+  ScenarioFailure,
+  ScenarioForm,
+} from "./lib/scenarios";
+export { StudentView } from "./ui/student/StudentView";

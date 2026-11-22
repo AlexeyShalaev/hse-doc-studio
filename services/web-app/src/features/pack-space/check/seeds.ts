@@ -3,6 +3,7 @@ import {
   packOutcomeKeys,
   packStudioKeys,
   packSubmissionKeys,
+  type PackVersionRef,
   type PackOutcomeAtlas,
   type PackOutcomeCompare,
   type PackOutcomeLint,
@@ -13,6 +14,7 @@ import {
   COURSEWORK_COMPARE,
   COURSEWORK_INPUTS,
   COURSEWORK_MATRIX,
+  COURSEWORK_OUTCOME,
   COURSEWORK_RUN,
   COURSEWORK_SCENARIOS,
   pinnedAtlas,
@@ -29,7 +31,12 @@ import {
 // что у старых режимов, положенные прямо в кэш запросов. Сервер не нужен.
 
 const WS = GALLERY_WORKSPACE.id;
-const REF = GALLERY_REF;
+let REF: PackVersionRef = GALLERY_REF;
+
+/** Версия, под которую кладутся данные (тесты выпущенной версии); без аргумента: черновик галереи. */
+export const seedVersion = (version?: string): void => {
+  REF = version ? { ...GALLERY_REF, version } : GALLERY_REF;
+};
 const STATE = { state: "work_tree" } as const;
 
 const identity = <T extends { workspace_id: string }>(value: T): T => ({
@@ -86,6 +93,16 @@ const seedBase = (client: QueryClient, withCases = true): void => {
     list,
   );
   if (withCases) {
+    // Результат каждого готового случая: окно случая и «Как студент» читают его же.
+    for (const entry of COURSEWORK_SCENARIOS.scenarios) {
+      client.setQueryData(
+        packOutcomeKeys.result(WS, REF, {
+          state: "work_tree",
+          scenario: entry.id,
+        }),
+        identity(structuredClone(COURSEWORK_OUTCOME)),
+      );
+    }
     client.setQueryData(
       packOutcomeKeys.scenarioRun(
         WS,

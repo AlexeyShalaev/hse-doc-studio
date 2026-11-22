@@ -157,7 +157,10 @@
     "noDiff": "The part matches the expectation, no differences.",
     "noDiffList": "There is no detailed list of changes for this cell: open the case and look at the result.",
     "show": "Show the result",
-    "compare": "Compare with another"
+    "compare": "Compare with another",
+    "open": "Open case",
+    "openOne": "Open case: {{name}}",
+    "student": "See it as a student"
   },
   "map": {
     "title": "What affects what",
@@ -188,7 +191,29 @@
     "current": "on screen now",
     "showResult": "Show the result",
     "chooseTitle": "What to fix",
-    "chooseLead": "Choose the values of conditions that need not be tried: the calculation will repeat with fewer variants."
+    "chooseLead": "Choose the values of conditions that need not be tried: the calculation will repeat with fewer variants.",
+    "nowLabel": "On screen now",
+    "nowTitle": "On screen now (the student’s conditions)",
+    "nowNone": "The conditions on screen are not in the table: there is no such combination among the variants.",
+    "outcomeLabel": "Result variant {{n}}",
+    "outcomeRows": "in {{count}} combinations of conditions",
+    "outcomesCount": "Result variants: {{count}}",
+    "onlyOutcome": "Showing combinations only for result variant {{n}}.",
+    "allOutcomes": "Show all",
+    "resetFilter": "Reset the filter",
+    "showRows": "Show these combinations",
+    "group": {
+      "label": "How to show",
+      "rows": "By combinations",
+      "outcomes": "By results"
+    },
+    "sort": {
+      "label": "Order",
+      "table": "As in the table",
+      "rows": "Most common first"
+    },
+    "filters": "Filters by condition",
+    "filterAll": "Any value"
   },
   "compare": {
     "title": "Compare with another situation",
@@ -235,6 +260,178 @@
         "points": "Deadlines and submission",
         "route": "Signatures",
         "branches": "Variants"
+      }
+    }
+  },
+  "case": {
+    "title": "Ready-made case",
+    "lead": "What one ready-made case gives and what is expected of it.",
+    "result": "What came out",
+    "badge": {
+      "passed": "The result matches what is expected",
+      "failed": "The result differs from what is expected",
+      "error": "The case does not fit this version",
+      "broken": "The case file cannot be read",
+      "unchecked": "The case has no expectations: it only shows the result",
+      "pending": "Checking…",
+      "unknown": "Not checked yet"
+    },
+    "mismatch": "What did not match",
+    "expectedLine": "Expected: {{text}}",
+    "snapshotMismatch": "The result differs from the one remembered as expected",
+    "techExpected": "Expected (as the server says)",
+    "techActual": "Got (as the server says)",
+    "changes": "How it differs from what is expected",
+    "properties": "Name and expectations",
+    "name_ru": "Name in Russian",
+    "name_en": "Name in English",
+    "nameRequired": "Give a name in at least one language",
+    "save": "Save",
+    "saved": "Case “{{name}}” saved",
+    "accept": "Accept the current result as expected",
+    "record": "Remember the result as expected",
+    "acceptHint": "The new expected result replaces the old one. You can undo it within ten seconds.",
+    "accepted": "Expected result of case “{{name}}” updated",
+    "acceptUndone": "The previous expected result of case “{{name}}” is back",
+    "undo": "Undo",
+    "released": "The version is released and does not change: the case can only be viewed. To change it, make a copy of the version.",
+    "copy": "Edit a copy",
+    "delete": "Delete case",
+    "confirmTitle": "Delete case “{{name}}”?",
+    "confirmYes": "Yes, delete",
+    "confirmNo": "Keep it",
+    "deleted": "Case “{{name}}” deleted",
+    "restore": "Restore",
+    "restored": "Case “{{name}}” restored",
+    "refresh": "Refresh",
+    "close": "Close",
+    "failure": {
+      "title": "Could not write the case",
+      "stale": "The case file was changed after you opened it. Refresh to see the current one.",
+      "missing": "This case no longer exists. Refresh the list.",
+      "taken": "A case with this file name already exists.",
+      "invalid": "The server did not accept the changes. Check the name and the expectations.",
+      "offline": "No connection to the server. The changes were not written.",
+      "busy": "The server is busy calculating, try again in a moment.",
+      "server": "The server could not write the case."
+    },
+    "words": {
+      "modes": {
+        "compare": {
+          "left": "Expected",
+          "right": "Got"
+        }
+      },
+      "scenarios": {
+        "diff": {
+          "was": "{{value}}",
+          "now": "{{value}}"
+        }
+      }
+    }
+  },
+  "expect": {
+    "title": "What should come out",
+    "lead": "The case checks every time that the result stays the same.",
+    "none": "No expectations yet: the case only shows the result.",
+    "list": "What is expected",
+    "remove": "Remove",
+    "removeOne": "Remove: {{text}}",
+    "removeAll": "Remove all",
+    "addLabel": "Add an expectation",
+    "addPlaceholder": "Choose what to expect",
+    "add": "Add",
+    "addAll": "Add everything shown now ({{count}})",
+    "noResult": "The result of the case is not loaded yet, nothing to suggest.",
+    "allAdded": "Everything the result shows now is already added.",
+    "kind": {
+      "document_state": "Documents",
+      "document_count": "Number of documents",
+      "participant_present": "Participants",
+      "item_active": "Documents in a submission",
+      "route_steps": "Signing order",
+      "route_pair": "Who signs",
+      "meta_visible": "Field visibility"
+    },
+    "say": {
+      "document_state": {
+        "active": "Document “{{doc}}” is in the kit",
+        "inactive": "Document “{{doc}}” is switched off",
+        "absent": "Document “{{doc}}” is not in the project"
+      },
+      "document_count": {
+        "active": "Documents in the kit: {{count}}",
+        "inactive": "Switched-off documents: {{count}}",
+        "absent": "Documents outside the project: {{count}}"
+      },
+      "meta_visible": {
+        "yes": "Field “{{field}}” is shown to the student",
+        "no": "Field “{{field}}” is hidden"
+      },
+      "participant_present": {
+        "yes": "Participant “{{role}}” is present",
+        "no": "Participant “{{role}}” is absent"
+      },
+      "item_active": {
+        "yes": "Document “{{doc}}” is needed in “{{point}}”",
+        "no": "Document “{{doc}}” is not needed in “{{point}}”"
+      },
+      "route_steps": "Signing order in “{{point}}”: {{steps}}",
+      "noSteps": "no signatures",
+      "route_pair": {
+        "yes": "In “{{point}}” document “{{doc}}” is signed by: {{role}} (signature “{{signature}}”)",
+        "no": "In “{{point}}” document “{{doc}}” is not signed by: {{role}} (signature “{{signature}}”)"
+      }
+    }
+  },
+  "student": {
+    "title": "What the student will see",
+    "lead": "Case “{{name}}”: documents, what to fill in and who signs.",
+    "loading": "Building the student view",
+    "failed": "Could not get the result of the case",
+    "words": {
+      "student": {
+        "label": "Student view",
+        "summary": "This is what the student’s project looks like under these conditions.",
+        "optional": "optional",
+        "perAuthor": "each author",
+        "documents": {
+          "title": "Documents",
+          "lead_one": "{{count}} document in the kit",
+          "lead_other": "{{count}} documents in the kit",
+          "empty": "There are no documents under these conditions.",
+          "other": "Other"
+        },
+        "fields": {
+          "title": "What to fill in",
+          "lead": "Required project data and forms the student has to fill in.",
+          "create": "When the project is created",
+          "finalize": "Before submission",
+          "empty": "Nothing to fill in."
+        },
+        "forms": {
+          "title": "Forms",
+          "required": "required",
+          "fieldRequired": "required"
+        },
+        "route": {
+          "title": "Who signs",
+          "lead": "The order of signatures for each submission.",
+          "step": "Step {{n}}",
+          "parallel": "at the same time",
+          "optional": "optional",
+          "deadline": "Due: {{hint}}",
+          "empty": "There are no signatures under these conditions."
+        }
+      },
+      "participants": {
+        "authorN": "Author {{n}}",
+        "role": {
+          "author": "Author",
+          "supervisor": "Supervisor",
+          "co_supervisor": "Consultant",
+          "academic_supervisor": "Academic supervisor"
+        }
       }
     }
   }

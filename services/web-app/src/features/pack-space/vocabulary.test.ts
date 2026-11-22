@@ -38,11 +38,16 @@ const allowed = (area: string): Set<string> =>
 describe("словарь packSpace", () => {
   it("ru и en: те же области и те же ключи", () => {
     expect(areasOf("en")).toEqual(areasOf("ru"));
+    // Формы числа (`_one`, `_few`...) у языков разные: сравниваем ключи без них.
+    const keys = (lng: string, area: string): string[] => [
+      ...new Set(
+        leaves(read(lng, area)).map(([key]) =>
+          key.replace(/_(zero|one|two|few|many|other)$/, ""),
+        ),
+      ),
+    ];
     for (const area of areasOf("ru")) {
-      expect(
-        leaves(read("en", area)).map(([key]) => key),
-        area,
-      ).toEqual(leaves(read("ru", area)).map(([key]) => key));
+      expect(keys("en", area), area).toEqual(keys("ru", area));
     }
   });
 
