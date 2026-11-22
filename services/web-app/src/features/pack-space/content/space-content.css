@@ -148,7 +148,9 @@ a.sp-ct-item:hover,
   gap: 0.625rem 1rem;
 }
 .sp-ct-title {
-  flex: 1;
+  /* Основа ширины: на узком центре (рядом предпросмотр) сегменты уходят под заголовок, а не
+     ложатся поверх него. */
+  flex: 1 1 14rem;
   min-width: 0;
   display: flex;
   flex-direction: column;

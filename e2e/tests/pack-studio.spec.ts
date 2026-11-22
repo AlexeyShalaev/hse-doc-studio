@@ -583,9 +583,9 @@ const mockPlaces = async (page: Page): Promise<{ patches: { body: unknown; ifMat
   return record;
 };
 
-/** Дерево «Все файлы» раскрывает только паки: открыть путь до черновой версии (шаблон, версии, сама версия). */
+/** Дерево «Все файлы» раскрывает только паки: открыть путь до общих файлов черновой версии. */
 const expandToDraft = async (page: Page): Promise<void> => {
-  for (const dir of ["hse-cs-sse/templates", TPL, `${TPL}/versions`, DRAFT]) {
+  for (const dir of ["hse-cs-sse/templates", TPL, `${TPL}/versions`, DRAFT, `${DRAFT}/files`, `${DRAFT}/files/common`]) {
     await page.getByTestId(`tree-dir-${dir}`).click();
   }
 };
@@ -855,6 +855,8 @@ for (const lang of LANGS) {
         `[title="${lang === "ru" ? "Научный руководитель (общее место)" : "Supervisor (shared place)"}"]`,
       );
       await expect(frame).toBeVisible({ timeout: 15_000 });
+      // Страница PDF ниже списка подписей: мышь тянет только то, что на экране.
+      await frame.scrollIntoViewIfNeeded();
       await shot(page, L, "ps-70-places");
       const box = await frame.boundingBox();
       if (!box) throw new Error("рамки нет");
