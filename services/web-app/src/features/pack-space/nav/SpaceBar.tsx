@@ -12,12 +12,14 @@ import {
   PACK_STUDIO_PATH,
   packErrorText,
   useDeletePackWorkspace,
+  usePackGit,
   usePackWorkspaces,
   useRefreshPackWorkspace,
   workspaceErrorText,
   type PackWorkspace,
 } from "@entities/pack-studio";
 import { useBootstrap } from "@entities/session";
+import { hasUnsent, workspaceStatus } from "@features/pack-workspaces";
 import {
   ActionMenu,
   Badge,
@@ -65,6 +67,12 @@ export const WorkspaceBar = ({
   const [confirming, setConfirming] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
   const git = workspace.kind === "git";
+  // Что пропадёт вместе с пространством: неотправленные правки (тот же расчёт, что в списке).
+  const gitState = usePackGit(
+    workspace.id,
+    git && workspace.state === "ready" && confirming,
+  );
+  const unsent = hasUnsent(workspaceStatus(workspace, gitState.data));
 
   const others = (all.data ?? [])
     .filter((item) => item.id !== workspace.id && item.state === "ready")
@@ -185,6 +193,15 @@ export const WorkspaceBar = ({
           </>
         }
       >
+        {unsent ? (
+          <p
+            className="sp-bar-error"
+            role="alert"
+            data-testid="sp-ws-delete-unsent"
+          >
+            {t("nav.bar.deleteUnsent")}
+          </p>
+        ) : null}
         {remove.isError ? (
           <p className="sp-bar-error" role="alert">
             {packErrorText(remove.error)}

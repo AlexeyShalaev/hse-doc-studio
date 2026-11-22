@@ -349,6 +349,44 @@ describe("список пространств", () => {
   });
 });
 
+describe("удаление пространства", () => {
+  afterEach(() => {
+    cleanup();
+    vi.restoreAllMocks();
+  });
+  beforeAll(async () => {
+    await loadPackStudioNamespace();
+    await i18n.changeLanguage("ru");
+  });
+
+  it("есть неотправленные правки: окно предупреждает, что они пропадут", async () => {
+    const unsent = { ...fixture("git_ready"), id: "unsent" };
+    mountView([unsent], { git: { unsent: gitOf(unsent) } });
+    const card = within(await screen.findByTestId("ws-card-unsent"));
+    await waitFor(() => {
+      expect(card.getByTestId("ws-status-unsent")).toBeInTheDocument();
+    });
+    await userEvent.click(card.getByTestId("ws-menu"));
+    await userEvent.click(await screen.findByTestId("ws-delete"));
+    expect(await screen.findByTestId("ws-delete-unsent")).toHaveTextContent(
+      "они пропадут вместе с пространством",
+    );
+  });
+
+  it("всё отправлено: предупреждения нет", async () => {
+    const same = { ...fixture("git_ready"), id: "same" };
+    mountView([same], { git: { same: gitOf(same, clean) } });
+    const card = within(await screen.findByTestId("ws-card-same"));
+    await waitFor(() => {
+      expect(card.getByTestId("ws-status-clean")).toBeInTheDocument();
+    });
+    await userEvent.click(card.getByTestId("ws-menu"));
+    await userEvent.click(await screen.findByTestId("ws-delete"));
+    await screen.findByRole("dialog");
+    expect(screen.queryByTestId("ws-delete-unsent")).toBeNull();
+  });
+});
+
 const dialog = (
   props: Partial<React.ComponentProps<typeof CreateWorkspaceDialog>> = {},
 ) => {

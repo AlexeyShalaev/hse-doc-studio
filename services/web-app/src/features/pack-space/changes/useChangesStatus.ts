@@ -11,12 +11,14 @@ import {
   type PackLint,
 } from "@entities/pack-studio";
 import { useSpace } from "../context/SpaceContext";
+import { mineOf } from "./copyEdits";
 import {
   deriveChangesStatus,
   lintTargets,
   readNotes,
   type ChangesRaw,
 } from "./deriveChangesStatus";
+import { useCopyScan } from "./useCopyScan";
 import type { ChangesStatus } from "./types";
 
 /** Статус вместе с тем, из чего он собран: панель «Изменения» показывает и детали. */
@@ -54,7 +56,13 @@ export const useChangesData = (): ChangesData => {
   const hasRequest = live && ws.pr_number !== null;
   const ci = usePackChecks(id, hasRequest ? ws.pushed_sha : null);
 
-  const changed = useMemo(() => data?.changed ?? [], [data]);
+  const gitChanged = useMemo(() => data?.changed ?? [], [data]);
+  // У копии версии «изменено» это только то, что отличается от версии, с которой она сделана.
+  const copy = useCopyScan(id, gitChanged, versionRef, live);
+  const changed = useMemo(
+    () => mineOf(gitChanged, copy?.same ?? null),
+    [gitChanged, copy],
+  );
   const targets = useMemo(
     () => lintTargets(changed, versionRef),
     [changed, versionRef],
@@ -116,6 +124,7 @@ export const useChangesData = (): ChangesData => {
             ? "ready"
             : "loading",
       ci: ci.data ?? null,
+      copy,
       lint,
       notes: model.data ? readNotes(model.data.manifest.data) : null,
     }),
@@ -127,6 +136,7 @@ export const useChangesData = (): ChangesData => {
       live,
       git.isError,
       ci.data,
+      copy,
       lint,
       model.data,
     ],

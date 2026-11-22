@@ -105,9 +105,13 @@ describe("разделы версии «Содержимого»", () => {
       <VersionPart {...props("fields", { readOnly: true })} />,
       "part=fields",
     );
-    expect(screen.getByTestId("ct-part-lock")).toHaveTextContent(
-      "Версия выпущена",
+    // Слов о выпуске на экране нет (они в плашке и у названия версии): замок с подсказкой.
+    expect(screen.getByTestId("ct-part-lock")).not.toHaveTextContent(
+      "выпущена",
     );
+    expect(
+      screen.getByRole("img", { name: /Версия выпущена/ }),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("ct-part-copy"));
     expect(location()).toContain("copy=1");
   });

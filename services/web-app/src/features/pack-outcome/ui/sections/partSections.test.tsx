@@ -423,7 +423,7 @@ describe("секции F5: проверки, ветки и варианты", ()
       await waitFor(() => {
         expect(
           screen.getByTestId("outcome-checks-refreshing"),
-        ).toHaveTextContent("Пересчитываю");
+        ).toHaveTextContent("Считаю");
       });
       expect(
         screen.getByTestId("outcome-check-gost-7.32-2017/line-spacing"),

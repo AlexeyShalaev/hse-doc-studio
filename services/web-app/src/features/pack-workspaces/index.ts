@@ -14,3 +14,5 @@ export type {
 export { hostOfUrl } from "./lib/hostOfUrl";
 export { OfficialPacksDialog } from "./ui/OfficialPacks";
 export type { OfficialPacksDialogProps } from "./ui/OfficialPacks";
+export { hasUnsent, workspaceStatus } from "./lib/workspaceStatus";
+export type { WorkspaceStatus } from "./lib/workspaceStatus";

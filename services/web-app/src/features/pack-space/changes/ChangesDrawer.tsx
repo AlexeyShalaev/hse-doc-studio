@@ -244,6 +244,7 @@ export const ChangesDrawer = () => {
           />
           <StartOverDialog
             git={git}
+            variant={status.request.kind === "merged" ? "next" : "reset"}
             isOpen={dialog === "reset"}
             onClose={close}
             onDone={() => {

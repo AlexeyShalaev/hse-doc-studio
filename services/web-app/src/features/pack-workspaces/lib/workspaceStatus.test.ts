@@ -8,6 +8,7 @@ import {
   type PackWorkspace,
 } from "@entities/pack-studio";
 import {
+  hasUnsent,
   pickContinueId,
   unsentCount,
   workspaceStatus,
@@ -47,7 +48,12 @@ describe("workspaceStatus", () => {
     ["папка", ws("folder"), undefined, { kind: "folder" }],
     ["git ещё не пришёл", ready, undefined, { kind: "unknown" }],
     ["чисто", ready, clean(ready), { kind: "clean" }],
-    ["не отправлено", ready, gitOf(ready), { kind: "unsent", unsent: 2 }],
+    [
+      "не отправлено",
+      ready,
+      gitOf(ready),
+      { kind: "unsent", unsent: 2, copy: false },
+    ],
   ] as const)("%s", (_name, workspace, git, expected) => {
     expect(workspaceStatus(workspace, git)).toEqual(expected);
   });
@@ -58,18 +64,88 @@ describe("workspaceStatus", () => {
       kind: "request",
       number: 412,
       unsent: 0,
+      copy: false,
     });
     expect(workspaceStatus(proposed, gitOf(proposed))).toEqual({
       kind: "request",
       number: 412,
       unsent: 2,
+      copy: false,
     });
     // Пока git не пришёл, число правок не придумывается.
     expect(workspaceStatus(proposed, undefined)).toEqual({
       kind: "request",
       number: 412,
       unsent: 0,
+      copy: false,
     });
+  });
+
+  it("ветка уже на хостинге, запроса нет: «отправлено», а не «87 не отправлены»", () => {
+    const changed = Array.from({ length: 87 }, (_, i) => ({
+      path: `p/templates/t/versions/2026.1.3/f${String(i)}.tex`,
+      status: "added" as const,
+    }));
+    const pushed = {
+      ...ready,
+      pr_number: null,
+      pushed_sha: "abc",
+    };
+    // Вершина совпадает с отправленной, на диске чисто: всё уже на хостинге.
+    expect(
+      workspaceStatus(
+        pushed,
+        gitOf(pushed, {
+          head_sha: "abc",
+          changed,
+          uncommitted: [],
+          dirty: false,
+        }),
+      ),
+    ).toEqual({ kind: "pushed" });
+    expect(
+      unsentCount(
+        gitOf(pushed, { head_sha: "abc", changed, uncommitted: [] }),
+        pushed,
+      ),
+    ).toBe(0);
+    // Правки после отправки: считаются только они.
+    expect(
+      workspaceStatus(
+        pushed,
+        gitOf(pushed, {
+          head_sha: "abc",
+          changed,
+          uncommitted: [{ path: "x", status: "modified" }],
+          dirty: true,
+        }),
+      ),
+    ).toEqual({ kind: "unsent", unsent: 1, copy: false });
+    // Вершина ушла вперёд отправленной: отправлено не всё.
+    expect(
+      workspaceStatus(
+        pushed,
+        gitOf(pushed, { head_sha: "def", changed, uncommitted: [] }),
+      ),
+    ).toMatchObject({ kind: "unsent", unsent: 87 });
+  });
+
+  it("свежая копия версии: число файлов ничего не говорит, статус помнит об этом", () => {
+    const dir = "p/templates/t/versions/2026.1.3";
+    const status = workspaceStatus(
+      ready,
+      gitOf(ready, {
+        uncommitted: [],
+        changed: [
+          { path: `${dir}/version.yaml`, status: "added" },
+          { path: `${dir}/files/a.tex`, status: "added" },
+        ],
+      }),
+    );
+    expect(status).toMatchObject({ kind: "unsent", copy: true });
+    expect(hasUnsent(status)).toBe(true);
+    expect(hasUnsent({ kind: "clean" })).toBe(false);
+    expect(hasUnsent({ kind: "pushed" })).toBe(false);
   });
 
   it("unsentCount: без запроса всё, что отличается от основной ветки", () => {

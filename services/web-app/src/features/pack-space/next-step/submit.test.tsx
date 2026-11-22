@@ -18,6 +18,7 @@ import { loadPackStudioNamespace } from "@shared/lib/i18n/packStudioNamespace";
 import { GALLERY_WORKSPACE } from "../galleryKit";
 import { proposeOf, releaseOf, versionStateOf } from "./fixtures";
 import {
+  FILES,
   SENT,
   gitOf,
   lintOf,
@@ -43,6 +44,26 @@ const ready = async (): Promise<HTMLElement> => {
 };
 
 const sentGit = () => gitOf(SENT);
+
+/** Отчёт копии: сделана небольшой правкой, а условия меняют состав документов (нужен minor). */
+const softer = () =>
+  versionStateOf({
+    number_ok: false,
+    minimum: "minor",
+    changes: { ru: ["Раз"], en: ["One"] },
+    reasons: [
+      {
+        code: "document_scope",
+        path: "documents[ts].supported_kinds",
+        change: "changed",
+        minimum: "minor",
+        suggested: "minor",
+        hard: true,
+        exception: false,
+        message: { ru: "Состав документа", en: "Document scope" },
+      },
+    ],
+  });
 
 /** Номер первого вызова: по нему видно, что выпуск шёл раньше отправки. */
 const firstCall = (spy: { mock: { invocationCallOrder: number[] } }): number =>
@@ -136,23 +157,25 @@ describe("отправка в панели «Изменения»", () => {
     expect(release).not.toHaveBeenCalled();
   });
 
-  it("нет заметок: кнопка выключена и объясняет почему; написал, записалось само, отправилось", async () => {
+  it("нет заметок и подсказки нет: кнопка выключена и объясняет почему; написал, записалось само, отправилось", async () => {
     const { notes, release, propose } = stubWrite();
-    mount({ notes: false });
+    mount({
+      notes: false,
+      state: versionStateOf({
+        draft_changes: { ru: [], en: [] },
+      }),
+    });
     const button = await primary();
     expect(button).toBeDisabled();
     expect(button).toHaveTextContent("Сначала опишите изменения");
     expect(await screen.findByTestId("sp-sb-blocker")).toHaveTextContent(
       "на русском и английском",
     );
-    // «Подсказать по изменениям» заполняет черновик.
-    await userEvent.click(await screen.findByTestId("sp-sb-suggest"));
-    expect(screen.getByTestId("sp-sb-notes-ru")).toHaveValue(
-      "Условия выдачи технического задания: только для проектной работы.",
+    await userEvent.type(
+      await screen.findByTestId("sp-sb-notes-ru"),
+      "Условия выдачи",
     );
-    expect(screen.getByTestId("sp-sb-notes-en")).toHaveValue(
-      "Statement of Work is now issued for project-type work only.",
-    );
+    await userEvent.type(screen.getByTestId("sp-sb-notes-en"), "Terms");
     // Автозапись: сама, без кнопки.
     await waitFor(
       () => {
@@ -161,12 +184,7 @@ describe("отправка в панели «Изменения»", () => {
       { timeout: 8000 },
     );
     expect(notes.mock.calls[0]?.[2]).toEqual({
-      changes: {
-        ru: [
-          "Условия выдачи технического задания: только для проектной работы.",
-        ],
-        en: ["Statement of Work is now issued for project-type work only."],
-      },
+      changes: { ru: ["Условия выдачи"], en: ["Terms"] },
     });
     await waitFor(() => {
       expect(screen.getByTestId("sp-sb-saved")).toHaveTextContent("Записано");
@@ -178,6 +196,49 @@ describe("отправка в панели «Изменения»", () => {
     expect(release).toHaveBeenCalledTimes(1);
     // Заметки уже записаны автозаписью: второй раз их не пишут.
     expect(notes).toHaveBeenCalledTimes(1);
+  });
+
+  it("нет заметок, а подсказка есть: одна кнопка «Подсказать и отправить» записывает их и отправляет", async () => {
+    const { notes, release, propose } = stubWrite();
+    mount({ notes: false });
+    const button = await ready();
+    expect(button).toHaveTextContent("Подсказать и отправить");
+    expect(await screen.findByTestId("sp-sb-auto")).toHaveTextContent(
+      "Заметки можно не писать",
+    );
+    expect(screen.queryByTestId("sp-sb-blocker")).toBeNull();
+
+    await userEvent.click(button);
+    await waitFor(() => {
+      expect(propose).toHaveBeenCalledTimes(1);
+    });
+    // Подсказка записана в версию до выпуска и отправки.
+    expect(notes.mock.calls[0]?.[2]).toEqual({
+      changes: {
+        ru: [
+          "Условия выдачи технического задания: только для проектной работы.",
+        ],
+        en: ["Statement of Work is now issued for project-type work only."],
+      },
+    });
+    expect(firstCall(notes)).toBeLessThan(firstCall(release));
+    expect(firstCall(release)).toBeLessThan(firstCall(propose));
+  });
+
+  it("«Подсказать по изменениям» остаётся: заполняет поля, автозапись пишет", async () => {
+    const { notes } = stubWrite();
+    mount({ notes: false });
+    await primary();
+    await userEvent.click(await screen.findByTestId("sp-sb-suggest"));
+    expect(screen.getByTestId("sp-sb-notes-ru")).toHaveValue(
+      "Условия выдачи технического задания: только для проектной работы.",
+    );
+    await waitFor(
+      () => {
+        expect(notes).toHaveBeenCalledTimes(1);
+      },
+      { timeout: 8000 },
+    );
   });
 
   it("пунктов по-русски и по-английски поровну: иначе предупреждение и кнопка выключена", async () => {
@@ -475,20 +536,118 @@ describe("отправка в панели «Изменения»", () => {
     });
   });
 
-  it("номер мягче, чем нужно: выпуск выключен, объяснение и «изменить номер»", async () => {
-    mount({
-      state: versionStateOf({
-        number_ok: false,
-        minimum: "minor",
-        changes: { ru: ["Раз"], en: ["One"] },
-      }),
-    });
+  it("правки требуют номера выше: одна фраза с номером вместо ошибки, выпуск включён", async () => {
+    mount({ state: softer() });
     const section = await screen.findByTestId("sp-sb", undefined, {
       timeout: 15000,
     });
-    expect(within(section).getByTestId("sp-sb-release-input")).toBeDisabled();
-    expect(within(section).getByTestId("sp-sb-number-bad")).toHaveTextContent(
-      "не меньше 2026.2.0",
+    expect(within(section).getByTestId("sp-sb-release-input")).toBeEnabled();
+    expect(within(section).getByTestId("sp-sb-number-fix")).toHaveTextContent(
+      "Эти правки меняют состав документов, номер будет 2026.2.0.",
     );
+    expect(section).toHaveTextContent("Выпустить версию 2026.2.0");
+    expect(within(section).queryByTestId("sp-sb-number-bad")).toBeNull();
+    expect(section.textContent).not.toMatch(/release:|supported_kinds/);
+  });
+
+  it("правки требуют номера выше: «Отправить» одним нажатием меняет номер, выпускает и отправляет", async () => {
+    const V2 = "hse-cs-sse/templates/coursework/versions/2026.2.0";
+    let moved = false;
+    const { release, propose } = stubWrite();
+    const renumber = vi
+      .spyOn(packStudioApi, "renumberVersion")
+      .mockImplementation(() => {
+        moved = true;
+        return Promise.resolve({
+          version: {
+            pack: "hse-cs-sse",
+            template: "coursework",
+            version: "2026.2.0",
+            path: V2,
+          },
+          previous: "2026.1.3",
+          unreleased: false,
+          restored: false,
+        });
+      });
+    mount({
+      stateFor: (ref) =>
+        ref.version === "2026.2.0"
+          ? versionStateOf({
+              version: { ...ref, path: V2 },
+              changes: { ru: ["Раз"], en: ["One"] },
+              by_number: "minor",
+              minimum: "minor",
+              numbers: {
+                patch: "2026.2.1",
+                minor: "2026.3.0",
+                major: "2027.1.0",
+              },
+            })
+          : softer(),
+      gitFor: () =>
+        moved
+          ? gitOf({
+              changed: FILES.map((f) => ({
+                ...f,
+                path: f.path.replace("2026.1.3", "2026.2.0"),
+              })),
+            })
+          : gitOf(),
+    });
+    await userEvent.click(await ready());
+    await waitFor(
+      () => {
+        expect(propose).toHaveBeenCalledTimes(1);
+      },
+      { timeout: 15000 },
+    );
+    expect(renumber).toHaveBeenCalledWith(
+      "gallery-ws",
+      expect.objectContaining({ version: "2026.1.3" }),
+      "2026.2.0",
+    );
+    // Выпуск идёт уже по новой версии и по её классу, а не по прежней небольшой правке.
+    expect(release).toHaveBeenCalledWith(
+      "gallery-ws",
+      expect.objectContaining({ version: "2026.2.0" }),
+      { kind: "minor", set_default: true },
+    );
+    expect(firstCall(renumber)).toBeLessThan(firstCall(release));
+    expect(firstCall(release)).toBeLessThan(firstCall(propose));
+    expect(location()).toContain("/2026.2.0/");
+  });
+
+  it("сервер отказал из-за номера: человеческая фраза и «изменить номер», сырой текст свёрнут", async () => {
+    stubWrite();
+    vi.spyOn(packStudioApi, "propose").mockRejectedValue(
+      new ApiError("Проверки пака не прошли", "lint_failed", 422, {
+        errors: 1,
+        warnings: 0,
+        findings: [
+          {
+            severity: "error",
+            check: "lint",
+            path: "hse-cs-sse/templates/coursework/versions/2026.1.3",
+            message:
+              "release: номер 2026.1.3 после 2026.1.2 это patch, а изменения требуют не меньше minor: documents[ts].supported_kinds",
+          },
+        ],
+      }),
+    );
+    mount();
+    await userEvent.click(await ready());
+    const failure = await screen.findByTestId("sp-sb-number-failure");
+    expect(failure).toHaveTextContent("Номер версии не подходит");
+    const box = screen.getByTestId("sp-sb-failure");
+    // Сырой текст линтера лежит только внутри «Подробностей».
+    const visible = box.cloneNode(true) as HTMLElement;
+    visible.querySelectorAll("details").forEach((d) => {
+      d.remove();
+    });
+    expect(visible.textContent).not.toMatch(/release:|supported_kinds/);
+    expect(box.querySelector("details")?.textContent).toContain("release:");
+    await userEvent.click(screen.getByTestId("sp-sb-fix-number"));
+    expect(await screen.findByRole("dialog")).toHaveTextContent("Номер версии");
   });
 });

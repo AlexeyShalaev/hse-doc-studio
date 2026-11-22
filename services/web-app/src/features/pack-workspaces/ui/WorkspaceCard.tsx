@@ -19,7 +19,7 @@ import {
 import { RepoAccessDialog } from "@features/pack-git";
 import { ActionMenu, Badge, Button, Modal, Spinner } from "@shared/ui";
 import { shortUrl } from "../lib/workspaceSource";
-import type { WorkspaceStatus } from "../lib/workspaceStatus";
+import { hasUnsent, type WorkspaceStatus } from "../lib/workspaceStatus";
 import "./space-list.css";
 
 export type WorkspaceCardProps = {
@@ -78,7 +78,9 @@ export const WorkspaceStatusBadges = ({
           </Badge>
           {status.unsent > 0 && (
             <Badge variant="warning" data-testid="ws-status-unsent">
-              {t("workspaces.status.newUnsent", { count: status.unsent })}
+              {status.copy
+                ? t("workspaces.status.newUnsentCopy")
+                : t("workspaces.status.newUnsent", { count: status.unsent })}
             </Badge>
           )}
         </span>
@@ -86,7 +88,15 @@ export const WorkspaceStatusBadges = ({
     case "unsent":
       return (
         <Badge variant="warning" data-testid="ws-status-unsent">
-          {t("workspaces.status.unsent", { count: status.unsent })}
+          {status.copy
+            ? t("workspaces.status.unsentCopy")
+            : t("workspaces.status.unsent", { count: status.unsent })}
+        </Badge>
+      );
+    case "pushed":
+      return (
+        <Badge variant="info" data-testid="ws-status-pushed">
+          {t("workspaces.status.pushed")}
         </Badge>
       );
     case "clean":
@@ -304,6 +314,11 @@ export const WorkspaceCard = ({
           </>
         }
       >
+        {hasUnsent(status) && (
+          <p className="sp-ws-err" role="alert" data-testid="ws-delete-unsent">
+            {t("workspaces.deleteUnsent")}
+          </p>
+        )}
         {remove.isError && (
           <p className="sp-ws-err" role="alert">
             {packErrorText(remove.error)}

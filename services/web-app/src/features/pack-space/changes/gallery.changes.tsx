@@ -45,6 +45,32 @@ const FILES: PackFileChange[] = [
   },
 ];
 
+/** Свежая копия версии: вся папка нова для git (87 файлов), человек тронул три. */
+const COPY_DOCS = Array.from({ length: 13 }, (_, i) =>
+  i === 0
+    ? "technical_specification"
+    : i === 1
+      ? "source_listing"
+      : `doc_${String(i)}`,
+);
+const COPY_FILES: PackFileChange[] = [
+  { path: `${DRAFT}/version.yaml`, status: "added" },
+  ...COPY_DOCS.flatMap((doc) => [
+    { path: `${DRAFT}/files/${doc}/doc.yaml`, status: "added" as const },
+    { path: `${DRAFT}/files/${doc}/${doc}.ru.tex`, status: "added" as const },
+    { path: `${DRAFT}/files/${doc}/${doc}.en.tex`, status: "added" as const },
+  ]),
+  ...Array.from({ length: 47 }, (_, i) => ({
+    path: `${DRAFT}/files/common/part_${String(i)}.tex`,
+    status: "added" as const,
+  })),
+];
+const COPY_MINE = new Set([
+  `${DRAFT}/files/technical_specification/doc.yaml`,
+  `${DRAFT}/files/source_listing/source_listing.ru.tex`,
+  `${DRAFT}/files/source_listing/source_listing.en.tex`,
+]);
+
 const workspaceOf = (patch: Partial<PackWorkspace> = {}): PackWorkspace => ({
   ...GALLERY_WORKSPACE,
   work_branch: BRANCH,
@@ -192,6 +218,8 @@ type Spec = {
   ci?: PackCiStatus;
   workspace?: PackWorkspace;
   tree?: PackTree;
+  /** Открытая версия это свежая копия: файлы совпавшие с основой скрыты. */
+  copy?: boolean;
 };
 
 const never = () => new Promise<never>(() => undefined);
@@ -238,6 +266,18 @@ const seedOf =
       packStudioKeys.versionState(WS, GALLERY_REF, "0"),
       versionStateOf({ changes: spec.notes ?? { ru: [], en: [] } }),
     );
+    if (spec.copy) {
+      client.setQueryData(
+        packStudioKeys.versionState(WS, GALLERY_REF, "copy-base"),
+        versionStateOf({ changes: spec.notes ?? { ru: [], en: [] } }),
+      );
+      client.setQueryData(
+        [...packStudioKeys.workspace(WS), "copy-same", DRAFT, "2026.1.2", "0"],
+        new Set(
+          COPY_FILES.map((c) => c.path).filter((path) => !COPY_MINE.has(path)),
+        ),
+      );
+    }
     if (spec.ci && spec.git.workspace.pushed_sha) {
       client.setQueryData(
         packStudioKeys.checks(WS, spec.git.workspace.pushed_sha),
@@ -310,6 +350,22 @@ export const galleryEntries: GalleryEntry[] = [
       git: gitOf({ ahead: 1 }),
       lint: [lintOf(WARNINGS)],
       notes: NOTES,
+    },
+  ),
+  screen(
+    "sp_ch_copy",
+    "Изменения: свежая копия версии",
+    "В папке копии 87 файлов, и все они новые для git. Счётчик и список показывают только то, что человек изменил после копирования: «Новая версия 2026.1.3 и мои правки, 3 файла».",
+    {
+      git: gitOf({
+        changed: COPY_FILES,
+        uncommitted: COPY_FILES,
+        branch: null,
+        ahead: 0,
+      }),
+      lint: [lintOf([])],
+      notes: NOTES,
+      copy: true,
     },
   ),
   screen(

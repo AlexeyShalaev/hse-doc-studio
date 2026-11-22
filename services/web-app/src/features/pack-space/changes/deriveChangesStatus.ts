@@ -12,6 +12,8 @@ import {
   type PackVersionRef,
   type PackWorkspace,
 } from "@entities/pack-studio";
+import { mineOf } from "./copyEdits";
+import type { CopyScan } from "./useCopyScan";
 import {
   NO_CHANGES,
   type ChangesChecks,
@@ -41,6 +43,11 @@ export type ChangesRaw = {
   gitLoad: "loading" | "ready" | "failed";
   /** Проверки хостинга отправленной вершины; `null`: не запрошены или ещё не пришли. */
   ci: PackCiStatus | null;
+  /**
+   * Открытая версия это копия, сверенная с версией-основой: какие её файлы совпали и потому не
+   * считаются правкой. `null`: версия не копия (или сверять не нужно), счёт по git как есть.
+   */
+  copy?: CopyScan | null;
   /** Ответы линтера по `lintTargets`; ещё не пришедшие просто отсутствуют. */
   lint: readonly PackLint[];
   /** Заметки открытой версии (`changes` манифеста); `null`: манифест ещё не прочитан. */
@@ -125,6 +132,22 @@ const NOTES_FINDING = /`changes(\.[a-z]+)?`/;
 export const isNotesFinding = (finding: PackDiagnostic): boolean =>
   finding.severity === "error" && NOTES_FINDING.test(finding.message);
 
+/**
+ * Находка про номер версии: «release: номер 2026.1.3 после 2026.1.2 это patch, а изменения
+ * требуют не меньше minor». Это тоже шаг, а не тупик: номер подбирается сам (`resolveNumberFix`),
+ * поэтому в ошибки она не идёт. Находка про `release.kind` мягче класса сюда не относится: номером
+ * её не исправить.
+ */
+const NUMBER_FINDING =
+  /^release: номер \S+ после \S+ это (patch|minor|major), а изменения/u;
+
+/** Текст находки про номер версии (из линтера и из отказа отправки). */
+export const isNumberMessage = (message: string): boolean =>
+  NUMBER_FINDING.test(message);
+
+export const isNumberFinding = (finding: PackDiagnostic): boolean =>
+  finding.severity === "error" && isNumberMessage(finding.message);
+
 /** Заметки версии из данных манифеста (`changes: {ru: [...], en: [...]}`); нет блока: пусто. */
 export const readNotes = (manifest: unknown): PackLocalizedList => {
   const block =
@@ -202,6 +225,10 @@ const requestOf = (git: PackGit, ci: PackCiStatus | null): ChangesRequest => {
   };
 };
 
+/** Что человек изменил: список git без файлов копии, совпавших с основой. */
+export const changedOf = (raw: ChangesRaw): PackFileChange[] =>
+  mineOf(raw.git?.changed ?? [], raw.copy?.same ?? null);
+
 export const deriveChangesStatus = (raw: ChangesRaw): ChangesStatus => {
   const { workspace, tree, open, git } = raw;
   const base: ChangesStatus = {
@@ -220,7 +247,8 @@ export const deriveChangesStatus = (raw: ChangesRaw): ChangesStatus => {
     return { ...base, load: raw.gitLoad === "failed" ? "failed" : "loading" };
   }
 
-  const changedInVersion = git.changed.filter((change) => {
+  const changed = changedOf(raw);
+  const changedInVersion = changed.filter((change) => {
     const ref = versionRefOf(change.path);
     return ref !== null && sameVersion(ref, open);
   }).length;
@@ -229,20 +257,23 @@ export const deriveChangesStatus = (raw: ChangesRaw): ChangesStatus => {
   let warnings = 0;
   let notesFinding = false;
   for (const report of raw.lint) {
-    const own = report.findings.filter(isNotesFinding).length;
-    // Для выпущенной версии заметки уже не напишешь: это обычная ошибка.
-    const skip = report.released ? 0 : own;
+    const notes = report.findings.filter(isNotesFinding).length;
+    const number = report.findings.filter(isNumberFinding).length;
+    // Для выпущенной версии заметки и номер уже не поменяешь: это обычные ошибки.
+    const skipNotes = report.released ? 0 : notes;
+    const skip = skipNotes + (report.released ? 0 : number);
     const target = report.target ? versionRefOf(report.target) : null;
-    notesFinding ||= skip > 0 && target !== null && sameVersion(target, open);
+    notesFinding ||=
+      skipNotes > 0 && target !== null && sameVersion(target, open);
     errors += Math.max(0, report.errors - skip);
     warnings += report.warnings;
   }
 
   return {
     ...base,
-    changedFiles: git.changed.length,
+    changedFiles: changed.length,
     changedInVersion,
-    changedElsewhere: pickElsewhere(tree, open, git.changed),
+    changedElsewhere: pickElsewhere(tree, open, changed),
     errors,
     warnings,
     notesNeeded:

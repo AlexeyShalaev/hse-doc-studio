@@ -20,7 +20,12 @@ import {
   type PackVersionRef,
 } from "@entities/pack-studio";
 import { ActionMenu, Badge, Button, Spinner } from "@shared/ui";
-import { isNotesFinding, lintTargets } from "./deriveChangesStatus";
+import {
+  changedOf,
+  isNotesFinding,
+  isNumberFinding,
+  lintTargets,
+} from "./deriveChangesStatus";
 import {
   describeChanges,
   describePath,
@@ -148,8 +153,8 @@ const WhatChanged = ({
   const { t } = useTranslation("packSpace");
   const { raw } = data;
   const groups = useMemo(
-    () => describeChanges(raw.git?.changed ?? [], raw.open),
-    [raw.git, raw.open],
+    () => describeChanges(changedOf(raw), raw.open, raw.copy?.dir ?? null),
+    [raw],
   );
   return (
     <section className="sp-ch-section" data-testid="sp-ch-what">
@@ -158,14 +163,18 @@ const WhatChanged = ({
         <div className="sp-ch-group" key={group.key}>
           <div className="sp-ch-group-head">
             <span>
-              {group.version
-                ? t("changes.what.group", {
-                    template: templateName(group.version),
+              {group.copy && group.version
+                ? t("changes.what.groupCopy", {
                     version: group.version.version,
                   })
-                : group.pack
-                  ? t("changes.what.groupPack", { pack: group.pack })
-                  : t("changes.what.groupOther")}
+                : group.version
+                  ? t("changes.what.group", {
+                      template: templateName(group.version),
+                      version: group.version.version,
+                    })
+                  : group.pack
+                    ? t("changes.what.groupPack", { pack: group.pack })
+                    : t("changes.what.groupOther")}
             </span>
             <span>{t("changes.what.files", { count: group.files })}</span>
           </div>
@@ -179,7 +188,8 @@ const WhatChanged = ({
               return (
                 <ChangeRow
                   key={item.key}
-                  item={item}
+                  // У копии «новое» не значит ничего: новая вся папка, мои правки это отличия.
+                  item={group.copy ? { ...item, status: "modified" } : item}
                   label={label}
                   onOpen={
                     path
@@ -215,7 +225,10 @@ const findingsOf = (data: ChangesData) => {
   for (const report of data.raw.lint) {
     for (const finding of report.findings) {
       if (finding.severity === "warning") warnings.push(finding);
-      else if (report.released || !isNotesFinding(finding)) {
+      else if (
+        report.released ||
+        !(isNotesFinding(finding) || isNumberFinding(finding))
+      ) {
         errors.push(finding);
       }
     }
@@ -238,7 +251,7 @@ const Checks = ({
   const { status, raw } = data;
   const { errors, warnings } = useMemo(() => findingsOf(data), [data]);
   const waiting =
-    raw.lint.length < lintTargets(raw.git?.changed ?? [], raw.open).length;
+    raw.lint.length < lintTargets(changedOf(raw), raw.open).length;
 
   const where = (finding: PackDiagnostic): string => {
     if (finding.path === null) {
@@ -686,16 +699,18 @@ export const ChangesPanel = ({
         )}
         {showVerdict && status.errors > 0 && impact}
         {showVerdict && submit}
-        {git && (request.kind === "none" || request.kind === "open") && (
-          <p className="sp-ch-muted" data-testid="sp-ch-where">
-            {git.branch
-              ? t("changes.where.branch", { branch: git.branch })
-              : t("changes.where.noBranch")}
-            {git.branch && git.ahead > 0
-              ? ` ${t("changes.where.ahead", { count: git.ahead })}`
-              : ""}
-          </p>
-        )}
+        {git &&
+          status.changedFiles > 0 &&
+          (request.kind === "none" || request.kind === "open") && (
+            <p className="sp-ch-muted" data-testid="sp-ch-where">
+              {git.branch
+                ? t("changes.where.branch", { branch: git.branch })
+                : t("changes.where.noBranch")}
+              {git.branch && git.ahead > 0
+                ? ` ${t("changes.where.ahead", { count: git.ahead })}`
+                : ""}
+            </p>
+          )}
       </>
     );
     if (request.kind === "open" && request.url) {

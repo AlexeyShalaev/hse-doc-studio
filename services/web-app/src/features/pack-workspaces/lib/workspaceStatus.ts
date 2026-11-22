@@ -1,4 +1,9 @@
-import type { PackGit, PackWorkspace } from "@entities/pack-studio";
+import {
+  versionDirOf,
+  type PackFileChange,
+  type PackGit,
+  type PackWorkspace,
+} from "@entities/pack-studio";
 
 /**
  * Состояние пространства в списке одним значением (pack-studio-ux.md, 5.1 и 5.10).
@@ -11,18 +16,45 @@ export type WorkspaceStatus =
   /** Пространство над папкой: git там не настроен, правки пишутся прямо в папку. */
   | { kind: "folder" }
   /** Запрос на слияние открыт; unsent это новые правки, которых в нём ещё нет. */
-  | { kind: "request"; number: number; unsent: number }
-  | { kind: "unsent"; unsent: number }
+  | { kind: "request"; number: number; unsent: number; copy: boolean }
+  /**
+   * Правки не отправлены. `copy`: среди них целая новая версия (копия), в git все её файлы
+   * «новые», и число файлов ничего не говорит о правках человека: число не показываем.
+   */
+  | { kind: "unsent"; unsent: number; copy: boolean }
+  /** Ветка уже на хостинге, но запрос на слияние не открыт: отправлять нечего, открыть запрос. */
+  | { kind: "pushed" }
   | { kind: "clean" }
   /** Сведения о правках ещё не пришли (или не получены): статус не придумываем. */
   | { kind: "unknown" };
 
 /**
- * Сколько изменений не отправлено. Когда запрос уже открыт, в нём есть всё,
- * что отправлено раньше, поэтому считаются только правки на диске после этого.
+ * Какие изменения ещё не отправлены. Когда запрос уже открыт или ветка уже отправлена на
+ * хостинг (её вершина совпадает с отправленной), всё, что было до этого, там есть: считаются
+ * только правки на диске после этого. Иначе это всё, что отличается от основной ветки.
  */
+const unsentList = (
+  git: PackGit,
+  workspace: PackWorkspace,
+): readonly PackFileChange[] =>
+  workspace.pr_number !== null ||
+  (workspace.pushed_sha !== null && git.head_sha === workspace.pushed_sha)
+    ? git.uncommitted
+    : git.changed;
+
 export const unsentCount = (git: PackGit, workspace: PackWorkspace): number =>
-  workspace.pr_number === null ? git.changed.length : git.uncommitted.length;
+  unsentList(git, workspace).length;
+
+/** Среди изменений есть новая версия целиком (копия): её `version.yaml` новый. */
+const hasFreshCopy = (list: readonly PackFileChange[]): boolean =>
+  list.some((change) => {
+    const dir = versionDirOf(change.path);
+    return (
+      change.status === "added" &&
+      dir !== null &&
+      change.path === `${dir}/version.yaml`
+    );
+  });
 
 export const workspaceStatus = (
   workspace: PackWorkspace,
@@ -32,12 +64,15 @@ export const workspaceStatus = (
   if (workspace.state === "failed") return { kind: "failed" };
   if (workspace.busy) return { kind: "fetching" };
   if (workspace.kind === "folder") return { kind: "folder" };
-  const unsent = git ? unsentCount(git, workspace) : 0;
+  const list = git ? unsentList(git, workspace) : [];
+  const unsent = list.length;
+  const copy = hasFreshCopy(list);
   if (workspace.pr_number !== null) {
-    return { kind: "request", number: workspace.pr_number, unsent };
+    return { kind: "request", number: workspace.pr_number, unsent, copy };
   }
   if (!git) return { kind: "unknown" };
-  return unsent > 0 ? { kind: "unsent", unsent } : { kind: "clean" };
+  if (unsent > 0) return { kind: "unsent", unsent, copy };
+  return git.changed.length > 0 ? { kind: "pushed" } : { kind: "clean" };
 };
 
 /**
@@ -66,3 +101,7 @@ export const pickContinueId = (
   }
   return ready.find((w) => w.id === lastOpenedId)?.id ?? null;
 };
+
+/** Есть ли в пространстве то, что пропадёт при удалении: неотправленные правки. */
+export const hasUnsent = (status: WorkspaceStatus): boolean =>
+  (status.kind === "unsent" || status.kind === "request") && status.unsent > 0;

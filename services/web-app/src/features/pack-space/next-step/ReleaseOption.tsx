@@ -2,6 +2,7 @@ import { Check } from "lucide-react";
 import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { CLASS_KEYS } from "./notesDraft";
+import { causeGroup } from "./numberFix";
 import type { SubmitController } from "./useSubmit";
 
 /**
@@ -21,6 +22,8 @@ export const ReleaseOption = ({
   const { state } = c;
   if (!state) return null;
   const cls = c.releaseClass;
+  const fix = c.numberFix;
+  const group = fix ? causeGroup(fix) : null;
   return (
     <div className="sp-sb-block" data-testid="sp-sb-release">
       <div className="sp-sb-release">
@@ -37,12 +40,12 @@ export const ReleaseOption = ({
           />
           <span>
             {t("changes.submit.release.label", {
-              version: state.version.version,
+              version: fix ? fix.to : state.version.version,
             })}
           </span>
         </label>
         <span className="sp-ch-muted sp-sb-release-meta">
-          {cls
+          {cls && !fix
             ? `${t(`changes.submit.class.${CLASS_KEYS[cls]}`).toLowerCase()} · `
             : ""}
           <button
@@ -57,7 +60,14 @@ export const ReleaseOption = ({
         </span>
       </div>
       <p className="sp-ch-muted">{t("changes.submit.release.lead")}</p>
-      {!state.number_ok && (
+      {fix && (
+        <p className="sp-sb-text" role="status" data-testid="sp-sb-number-fix">
+          {t(`changes.submit.number.auto.${group ?? "other"}`, {
+            version: fix.to,
+          })}
+        </p>
+      )}
+      {!state.number_ok && !fix && (
         <p className="sp-sb-warn" role="status" data-testid="sp-sb-number-bad">
           {t("changes.submit.release.numberBad", {
             version: state.minimum ? (state.numbers[state.minimum] ?? "") : "",

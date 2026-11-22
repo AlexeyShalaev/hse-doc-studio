@@ -28,9 +28,11 @@ export const SubmitPrimary = ({
           ? t("changes.submit.primary.notes")
           : c.fork
             ? t("changes.submit.primary.fork")
-            : c.update
-              ? t("changes.submit.primary.update")
-              : t("changes.submit.primary.send");
+            : c.autoNotes
+              ? t("changes.submit.primary.suggestSend")
+              : c.update
+                ? t("changes.submit.primary.update")
+                : t("changes.submit.primary.send");
   const why = c.running ? null : c.blocker;
   return (
     <Button

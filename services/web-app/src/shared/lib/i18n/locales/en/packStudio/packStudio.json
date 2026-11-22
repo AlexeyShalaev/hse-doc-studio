@@ -30,7 +30,10 @@
       "unsent_one": "{{count}} change not sent",
       "unsent_other": "{{count}} changes not sent",
       "newUnsent_one": "{{count}} new change not sent",
-      "newUnsent_other": "{{count}} new changes not sent"
+      "newUnsent_other": "{{count}} new changes not sent",
+      "unsentCopy": "there are unsent changes",
+      "newUnsentCopy": "there are new unsent changes",
+      "pushed": "changes sent, no request opened"
     },
     "cloningHint": "usually up to a couple of minutes",
     "failedHint": "Check the address and access.",
@@ -41,7 +44,8 @@
     "retryConnect": "Retry connecting",
     "menuRefresh": "Update",
     "connect": "Connect a space",
-    "loading": "Loading spaces"
+    "loading": "Loading spaces",
+    "deleteUnsent": "There are unsent changes: they will be lost with the space. Send them for review first if you need them."
   },
   "create": {
     "title": "Connect a repository",
@@ -307,7 +311,20 @@
       "discard_one": "Discard {{count}} unsaved edit",
       "discard_other": "Discard {{count}} unsaved edits",
       "submit": "Start over",
-      "done": "The tree is at a fresh {{base}}."
+      "done": "The tree is at a fresh {{base}}.",
+      "reset": {
+        "title": "Reset all my changes",
+        "lead": "The space goes back to the fresh state of the main branch: none of your edits stay in it.",
+        "submit": "Reset all my changes",
+        "done": "Done: your edits are gone, the space matches the main branch."
+      },
+      "next": {
+        "title": "Start a new edit",
+        "lead": "The space updates to the fresh main branch, which already has your accepted edits. New edits go into a separate request.",
+        "submit": "Start a new edit",
+        "done": "Done: you can start a new edit."
+      },
+      "remoteSpace": "The Studio forgets the open merge request and the pushed branch. On the hosting they stay as they are."
     },
     "diff": {
       "button": "Changes",
