@@ -318,7 +318,7 @@ describe("предпросмотр версии шаблона", () => {
     );
     mount();
     const error = await screen.findByTestId("preview-options-error");
-    expect(error).toHaveTextContent("Версию шаблона не удалось разобрать");
+    expect(error).toHaveTextContent("Описание версии не удалось разобрать");
     expect(error).toHaveTextContent("ValueError: version.yaml не разобран");
   });
 });

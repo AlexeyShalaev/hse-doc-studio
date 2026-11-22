@@ -449,7 +449,7 @@ describe("панель git рабочего пространства", () => {
       await screen.findByRole("menuitem", { name: "Доступ к репозиторию" }),
     );
     expect(await screen.findByTestId("git-access-service")).toHaveTextContent(
-      "Работает служебный доступ установки",
+      "Работает доступ подключённого репозитория",
     );
   });
 
