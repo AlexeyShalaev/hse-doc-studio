@@ -724,7 +724,7 @@ describe("предпросмотр PDF на экране «Результат»"
       await openPreview();
       expect(
         await screen.findByTestId("outcome-preview-start-error"),
-      ).toHaveTextContent("Сценарий не найден");
+      ).toHaveTextContent("Готовый случай не найден");
       expect(screen.getByTestId("outcome-preview-build")).toBeEnabled();
     });
 
