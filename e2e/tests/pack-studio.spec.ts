@@ -266,14 +266,14 @@ const fixture = (dir: string, name: string): Record<string, unknown> =>
   JSON.parse(fixtureText(dir, name)) as Record<string, unknown>;
 
 /** Модель версии (документы, манифест) из эталона `editable` (версия 2026.1.7) под нужную версию. */
-const modelOf = (version: string): unknown => ({
-  ...(JSON.parse(fixtureText("PackVersionModel", "editable").replaceAll("2026.1.7", version)) as Record<
-    string,
-    unknown
-  >),
-  workspace_id: WS,
-  read_only: version === "2026.1.5" ? "version_released" : null,
-});
+const modelOf = (version: string, notes: typeof NO_NOTES): unknown => {
+  const model = JSON.parse(fixtureText("PackVersionModel", "editable").replaceAll("2026.1.7", version)) as {
+    manifest: { data: Record<string, unknown> };
+  };
+  // Записанные заметки лежат в манифесте версии: по ним Студия знает, что описывать больше нечего.
+  if (notes.ru.length > 0) model.manifest.data = { ...model.manifest.data, changes: notes };
+  return { ...model, workspace_id: WS, read_only: version === "2026.1.5" ? "version_released" : null };
+};
 
 type Fake = {
   outcomes: { version: string; body: unknown }[];
@@ -422,7 +422,7 @@ const mockWorkspaces = async (page: Page): Promise<Fake> => {
     const step = VERSION_STEP.exec(rest);
     if (step) {
       const [, version = "", kind] = step;
-      if (kind === "model") return json(route, modelOf(version));
+      if (kind === "model") return json(route, modelOf(version, version === "2026.1.6" ? notes : NO_NOTES));
       if (kind === "notes") {
         fake.notes.push(req.postDataJSON());
         notes = (req.postDataJSON() as { changes: typeof NO_NOTES }).changes;
