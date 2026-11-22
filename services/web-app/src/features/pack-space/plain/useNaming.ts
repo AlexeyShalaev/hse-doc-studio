@@ -5,6 +5,7 @@ import {
   usePackSignatures,
   usePackSubmission,
   type OutcomeInput,
+  type PackOutcome,
   type PackVersionRef,
 } from "@entities/pack-studio";
 import { pickLocalized } from "@shared/lib/i18n/pickLocalized";
@@ -19,15 +20,19 @@ export const useNaming = (
   workspaceId: string,
   ref: PackVersionRef,
   inputs: readonly OutcomeInput[] | undefined,
+  /** Результат, названия документов и точек сдачи которого дополняют ответы пака (окно случая). */
+  outcome?: PackOutcome,
 ): Naming => {
   const { t, i18n } = useTranslation("packSpace");
   const options = usePackPreviewOptions(workspaceId, ref);
   const signatures = usePackSignatures(workspaceId, ref, null);
   const submission = usePackSubmission(workspaceId, ref);
   const lng = i18n.language;
-  const documents = options.data?.documents;
+  const documents = options.data?.documents ?? outcome?.documents;
   const slots = signatures.data?.slots;
-  const profiles = submission.data?.profiles;
+  const profiles =
+    submission.data?.profiles ??
+    outcome?.points.map((point) => ({ id: point.id, name: point.name }));
   return useMemo(
     () =>
       makeNaming({

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState, type KeyboardEvent } from "react";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -29,6 +29,8 @@ import { useSpaceNav } from "../context/useSpaceNav";
 import { ChangeList } from "@features/pack-outcome/check";
 import { CheckChangeEnv } from "./ChangeEnv";
 import { CheckFailure } from "./CheckFailure";
+import { CaseDialog } from "./cases/CaseDialog";
+import { StudentDialog } from "./cases/StudentDialog";
 import { useCheckEnv } from "./useCheckEnv";
 
 const CELL_ICON = {
@@ -54,6 +56,18 @@ export const CasesPart = () => {
   const params = new URLSearchParams(location.search);
   const against = git && params.get("against") === "base" ? "base" : null;
   const [chosen, setChosen] = useState<Chosen | null>(null);
+  // Окно случая и вид студента держатся в адресе: «Назад» на телефоне закрывает окно, ссылка
+  // открывает его снова.
+  const opened = params.get("open");
+  const student = params.get("student");
+  const setOpened = (id: string | null) => {
+    nav.go({ extra: { open: id, student: null } });
+  };
+  const setStudent = (id: string | null) => {
+    nav.go({ extra: { student: id } });
+  };
+  const gridRef = useRef<HTMLTableElement>(null);
+  const [active, setActive] = useState({ r: 0, c: 0 });
 
   const matrix = usePackOutcomeMatrix(
     env.workspaceId,
@@ -82,8 +96,45 @@ export const CasesPart = () => {
       ),
     [columns, rows],
   );
-  const nameOf = (row: MatrixRow): string =>
+  const nameOf = (row: Pick<MatrixRow, "name" | "scenario">): string =>
     pickLocalized(row.name, i18n.language, row.scenario);
+
+  const at = {
+    r: Math.min(active.r, Math.max(rows.length - 1, 0)),
+    c: Math.min(active.c, Math.max(columns.length - 1, 0)),
+  };
+  /** Стрелки, Home и End переходят между клетками таблицы (Ctrl: к первой и последней строке). */
+  const onGridKeyDown = (event: KeyboardEvent<HTMLTableElement>) => {
+    const step: Record<string, [number, number]> = {
+      ArrowUp: [-1, 0],
+      ArrowDown: [1, 0],
+      ArrowLeft: [0, -1],
+      ArrowRight: [0, 1],
+    };
+    const move = step[event.key];
+    let next: { r: number; c: number } | null = null;
+    if (move) {
+      next = {
+        r: Math.max(0, Math.min(rows.length - 1, at.r + move[0])),
+        c: Math.max(0, Math.min(columns.length - 1, at.c + move[1])),
+      };
+    } else if (event.key === "Home") {
+      next = { r: event.ctrlKey ? 0 : at.r, c: 0 };
+    } else if (event.key === "End") {
+      next = {
+        r: event.ctrlKey ? rows.length - 1 : at.r,
+        c: columns.length - 1,
+      };
+    }
+    if (!next) return;
+    event.preventDefault();
+    setActive(next);
+    gridRef.current
+      ?.querySelector<HTMLElement>(
+        `[data-r="${String(next.r)}"][data-c="${String(next.c)}"]`,
+      )
+      ?.focus();
+  };
 
   const toResult = (
     <button
@@ -218,31 +269,51 @@ export const CasesPart = () => {
         </p>
       )}
       <div className="sp-ck-table-wrap">
-        <table className="sp-ck-table">
+        <table
+          ref={gridRef}
+          className="sp-ck-table"
+          role="grid"
+          aria-rowcount={rows.length + 1}
+          aria-colcount={columns.length + 1}
+          onKeyDown={onGridKeyDown}
+        >
           <caption className="sr-only">{t("check.cases.tableLabel")}</caption>
           <thead>
             <tr>
-              <th scope="col">{t("check.cases.caseColumn")}</th>
+              <th scope="col" role="columnheader">
+                {t("check.cases.caseColumn")}
+              </th>
               {columns.map((section) => (
-                <th key={section} scope="col">
+                <th key={section} scope="col" role="columnheader">
                   {t(`check.sections.${section}`)}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
+            {rows.map((row, r) => (
               <tr key={row.scenario} data-status={row.status}>
-                <th scope="row">
+                <th scope="row" role="rowheader">
                   <span className="sp-ck-case-name">{nameOf(row)}</span>
                   {row.message !== null && (
                     <span className="sp-ck-note">{row.message}</span>
                   )}
+                  <button
+                    type="button"
+                    className="btn sm sp-ck-row-open"
+                    data-testid="case-open-row"
+                    aria-label={t("check.cases.openOne", { name: nameOf(row) })}
+                    onClick={() => {
+                      setOpened(row.scenario);
+                    }}
+                  >
+                    {t("check.cases.open")}
+                  </button>
                 </th>
-                {columns.map((section) => {
+                {columns.map((section, c) => {
                   const cell = cellOf(row, section);
                   return (
-                    <td key={section}>
+                    <td key={section} role="gridcell">
                       {cell ? (
                         <CellButton
                           cell={cell}
@@ -254,6 +325,12 @@ export const CasesPart = () => {
                             chosen.section === section
                           }
                           label={`${nameOf(row)}, ${t(`check.sections.${section}`)}`}
+                          tabbable={at.r === r && at.c === c}
+                          r={r}
+                          c={c}
+                          onFocus={() => {
+                            setActive({ r, c });
+                          }}
                           onClick={() => {
                             setChosen({ scenario: row.scenario, section });
                           }}
@@ -333,8 +410,58 @@ export const CasesPart = () => {
             >
               {t("check.cases.compare")}
             </button>
+            <button
+              type="button"
+              className="btn sm"
+              data-testid="case-open-detail"
+              onClick={() => {
+                setOpened(picked.scenario);
+              }}
+            >
+              {t("check.cases.open")}
+            </button>
+            <button
+              type="button"
+              className="btn sm"
+              data-testid="case-student-detail"
+              onClick={() => {
+                setStudent(picked.scenario);
+              }}
+            >
+              {t("check.cases.student")}
+            </button>
           </div>
         </section>
+      )}
+      {opened !== null && (
+        <CaseDialog
+          env={env}
+          caseId={opened}
+          onClose={() => {
+            setOpened(null);
+          }}
+          onShow={() => {
+            env.showCase(opened);
+          }}
+          onStudent={() => {
+            setStudent(opened);
+          }}
+        />
+      )}
+      {student !== null && (
+        <StudentDialog
+          env={env}
+          caseId={student}
+          name={nameOf(
+            rows.find((row) => row.scenario === student) ?? {
+              scenario: student,
+              name: {},
+            },
+          )}
+          onClose={() => {
+            setStudent(null);
+          }}
+        />
       )}
     </div>
   );
@@ -345,12 +472,20 @@ const CellButton = ({
   letter,
   selected,
   label,
+  tabbable,
+  r,
+  c,
+  onFocus,
   onClick,
 }: {
   cell: MatrixCell;
   letter: string | null;
   selected: boolean;
   label: string;
+  tabbable: boolean;
+  r: number;
+  c: number;
+  onFocus: () => void;
   onClick: () => void;
 }) => {
   const { t } = useTranslation("packSpace");
@@ -362,6 +497,10 @@ const CellButton = ({
       className="sp-ck-cell"
       data-status={cell.status}
       aria-pressed={selected}
+      tabIndex={tabbable ? 0 : -1}
+      data-r={r}
+      data-c={c}
+      onFocus={onFocus}
       aria-label={[
         label,
         word,

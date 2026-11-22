@@ -226,7 +226,7 @@ describe("вкладка «Проверка»", { timeout: 30_000 }, () => {
 
     it("таблица: готовые случаи в строках, части результата в столбцах", async () => {
       openCases();
-      const table = await screen.findByRole("table", {
+      const table = await screen.findByRole("grid", {
         name: "Типовые случаи и части результата",
       });
       expect(within(table).getAllByRole("row")).toHaveLength(4);
@@ -238,8 +238,10 @@ describe("вкладка «Проверка»", { timeout: 30_000 }, () => {
 
     it("клетка показывает, что в ней, и ведёт к результату или сравнению", async () => {
       openCases();
-      const table = await screen.findByRole("table");
-      const cells = within(table).getAllByRole("button");
+      const table = await screen.findByRole("grid");
+      const cells = within(table)
+        .getAllByRole("button")
+        .filter((item) => item.hasAttribute("data-r"));
       fireEvent.click(cells[0]!);
       expect(
         screen.getByRole("region", {
@@ -254,8 +256,12 @@ describe("вкладка «Проверка»", { timeout: 30_000 }, () => {
 
     it("«Сравнить с другим» открывает сравнение с этим случаем слева", async () => {
       openCases();
-      const table = await screen.findByRole("table");
-      fireEvent.click(within(table).getAllByRole("button")[0]!);
+      const table = await screen.findByRole("grid");
+      fireEvent.click(
+        within(table)
+          .getAllByRole("button")
+          .find((item) => item.hasAttribute("data-r"))!,
+      );
       fireEvent.click(
         screen.getByRole("button", { name: "Сравнить с другим" }),
       );
@@ -266,7 +272,7 @@ describe("вкладка «Проверка»", { timeout: 30_000 }, () => {
 
     it("переключатель «Относительно» пишет `against` в адрес", async () => {
       openCases();
-      await screen.findByRole("table");
+      await screen.findByRole("grid");
       // Пространство в галерее подключено по git: сверка с версией до правок доступна.
       fireEvent.click(
         screen.getByRole("button", { name: "Версии до моих правок" }),
