@@ -6,6 +6,13 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.39.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.38.0...v0.39.0) - 2026-11-22
+
+- Pack Studio: the new interface is now the only one and opens right away, without ?ux in the address. The old view (Files, the former Result, Matrix and Atlas) is removed, and old links lead to the right screen of the new interface. The Changes panel again has the Move edits to a new version button for a released version that was edited outside the Studio.
+- Pack Studio: after describing the changes, releasing or renumbering, the main button shows the next step right away instead of asking to describe the changes again. In a narrow column the document title in Content is no longer covered by the buttons.
+- MCP: Pack Studio can be run by an agent end to end. New tools: pack_changes (status of the edits and the next step with the tool that does it), pack_checks (check rules), pack_version_number (version number), a dry run for creating a version, cancelling a preview build. Pack check findings use the same words as the Check tab by default.
+- MCP: signature places can be set by an agent. pack_signature_render draws the preview pages with signature boxes and returns them as images, pack_signature_check checks each place (on the page, not over text, not over another signature, next to its own signature line) and suggests fixes that are applied with pack_set_placement.
+
 ## [0.38.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.37.0...v0.38.0) - 2026-11-22
 
 - Pack Studio: a new interface rebuilt from scratch. Instead of many switches, a space has three tabs, Result, Content and Check, one main button for the next step and a Changes button with the status of your edits. On entry the version with your edits opens first, then the last visited one, then the default version.
