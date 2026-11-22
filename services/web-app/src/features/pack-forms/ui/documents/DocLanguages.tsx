@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import type { PackModelDocument } from "@entities/pack-studio";
 import { Button } from "@shared/ui";
 import { fileGroups, isSource, translatable } from "../../lib/documents";
+import { langName } from "../../lib/langName";
 import { useModelEditor } from "../../model/modelEditor";
 
 /**
@@ -17,7 +18,7 @@ export const DocLanguages = ({
   doc: PackModelDocument;
   langs: string[];
 }) => {
-  const { t } = useTranslation("packForms");
+  const { t, i18n } = useTranslation("packForms");
   const { act, readOnly, busy } = useModelEditor();
   const groups = fileGroups(doc.files).filter((g) => isSource(g.bare));
   const defaultLang = langs[0] ?? "ru";
@@ -32,8 +33,8 @@ export const DocLanguages = ({
           <tr>
             <th scope="col">{t("languages.file")}</th>
             {langs.map((lang) => (
-              <th key={lang} scope="col" className="mono">
-                {lang}
+              <th key={lang} scope="col" title={lang}>
+                {langName(lang, i18n.language)}
               </th>
             ))}
             {!readOnly && (
@@ -85,7 +86,9 @@ export const DocLanguages = ({
                         size="xs"
                         variant="ghost"
                         disabled={busy}
-                        title={t("languages.splitHint", { lang: defaultLang })}
+                        title={t("languages.splitHint", {
+                          lang: langName(defaultLang, i18n.language),
+                        })}
                         data-testid={`pf-split-${group.bare}`}
                         onClick={() => {
                           void act({
@@ -117,8 +120,13 @@ export const DocLanguages = ({
               disabled={busy || !translatable(doc, lang, defaultLang)}
               title={
                 translatable(doc, lang, defaultLang)
-                  ? t("languages.translateHint", { from: defaultLang, lang })
-                  : t("languages.translateNone", { lang })
+                  ? t("languages.translateHint", {
+                      from: langName(defaultLang, i18n.language),
+                      lang: langName(lang, i18n.language),
+                    })
+                  : t("languages.translateNone", {
+                      lang: langName(lang, i18n.language),
+                    })
               }
               data-testid={`pf-translate-${doc.id}-${lang}`}
               onClick={() => {
@@ -126,7 +134,9 @@ export const DocLanguages = ({
               }}
             >
               <Languages size="0.6875rem" />
-              {t("languages.translate", { lang })}
+              {t("languages.translate", {
+                lang: langName(lang, i18n.language),
+              })}
             </Button>
           ))}
         </div>

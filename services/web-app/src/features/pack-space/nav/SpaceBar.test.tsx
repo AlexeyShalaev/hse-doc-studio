@@ -48,15 +48,17 @@ describe("SpaceBar: назад, название, «Ещё»", () => {
       await screen.findByRole("menuitem", { name: "Обновить" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("menuitem", { name: "Открыть «fcs/packs»" }),
+      screen.getByRole("menuitem", {
+        name: "Перейти в пространство «fcs/packs»",
+      }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("menuitem", { name: "Удалить" }),
     ).toBeInTheDocument();
     // Своё пространство в списке «открыть другое» не повторяется.
-    expect(screen.queryAllByRole("menuitem", { name: /Открыть/ })).toHaveLength(
-      1,
-    );
+    expect(
+      screen.queryAllByRole("menuitem", { name: /Перейти в пространство/ }),
+    ).toHaveLength(1);
   });
 
   it("«Обновить» просит обновить пространство", async () => {

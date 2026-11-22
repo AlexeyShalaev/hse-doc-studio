@@ -1,12 +1,17 @@
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Modal } from "@shared/ui";
+import { slugify, uniqueSlug } from "@shared/lib/slug";
+import { Button, Modal, TechDetails } from "@shared/ui";
 import { fieldKeyProblem } from "../lib/fields";
 import { ITEM_ID } from "../lib/raw";
 import { useModelEditor } from "../model/modelEditor";
 import { FormRow } from "./kit";
 
-/** Новый элемент: id (ключ поля или id документа, анкеты, секции) и подпись ru и en. */
+/**
+ * Новый элемент (документ, анкета, секция, поле, группа, вариант): сначала название, остальное под
+ * «Дополнительно». Короткое имя латиницей (папка документа, ключ поля) строится из названия само и
+ * правится вручную; название по-английски необязательно.
+ */
 export const NewItemDialog = ({
   isOpen,
   title,
@@ -20,6 +25,7 @@ export const NewItemDialog = ({
 }: {
   isOpen: boolean;
   title: string;
+  /** Подпись короткого имени (оно лежит под «Дополнительно»). */
   idLabel: string;
   idHint?: string | undefined;
   taken: string[];
@@ -30,9 +36,17 @@ export const NewItemDialog = ({
 }) => {
   const { t } = useTranslation("packForms");
   const { busy } = useModelEditor();
-  const [id, setId] = useState("");
+  // Своё короткое имя: пока человек его не трогал, имя следует за названием.
+  const [typed, setTyped] = useState<string | null>(null);
   const [label, setLabel] = useState<Record<string, string>>({});
-  const trimmed = id.trim();
+  const named =
+    [label.ru, label.en].map((text) => text?.trim() ?? "").find(Boolean) ?? "";
+  const generated = (() => {
+    const base = slugify(named, "_");
+    const safe = pattern === "key" && /^[0-9]/.test(base) ? `f_${base}` : base;
+    return uniqueSlug(safe, taken, "_");
+  })();
+  const trimmed = (typed ?? generated).trim();
   const problem =
     pattern === "key"
       ? fieldKeyProblem(trimmed, taken)
@@ -41,9 +55,12 @@ export const NewItemDialog = ({
         : taken.includes(trimmed)
           ? "taken"
           : null;
-  const close = () => {
-    setId("");
+  const reset = () => {
+    setTyped(null);
     setLabel({});
+  };
+  const close = () => {
+    reset();
     onClose();
   };
   return (
@@ -61,10 +78,7 @@ export const NewItemDialog = ({
             disabled={busy || problem !== null || !label.ru?.trim()}
             data-testid="pf-new-submit"
             onClick={() => {
-              void onCreate(trimmed, label).then(() => {
-                setId("");
-                setLabel({});
-              });
+              void onCreate(trimmed, label).then(reset);
             }}
           >
             {t("kit.create")}
@@ -73,47 +87,60 @@ export const NewItemDialog = ({
       }
     >
       <div className="pf-dialog">
-        <FormRow
-          label={idLabel}
-          hint={
-            trimmed && problem ? (
-              <span className="pf-error-text">
-                {t(`kit.idProblem.${problem}`)}
-              </span>
-            ) : (
-              (idHint ?? t(`kit.idHint.${pattern}`))
-            )
-          }
-        >
+        <FormRow label={t("kit.labelIn.ru")}>
           {(inputId) => (
             <input
               id={inputId}
-              className="input mono"
-              value={id}
+              className="input"
+              value={label.ru ?? ""}
               autoFocus
-              data-testid="pf-new-id"
+              data-testid="pf-new-label-ru"
               onChange={(e) => {
-                setId(e.target.value);
+                setLabel({ ...label, ru: e.target.value });
               }}
             />
           )}
         </FormRow>
-        {(["ru", "en"] as const).map((lang) => (
-          <FormRow key={lang} label={t(`kit.labelIn.${lang}`)}>
+        {extra}
+        <TechDetails title={t("kit.more")} testId="pf-new-more">
+          <FormRow label={t("kit.labelIn.en")}>
             {(inputId) => (
               <input
                 id={inputId}
                 className="input"
-                value={label[lang] ?? ""}
-                data-testid={`pf-new-label-${lang}`}
+                value={label.en ?? ""}
+                data-testid="pf-new-label-en"
                 onChange={(e) => {
-                  setLabel({ ...label, [lang]: e.target.value });
+                  setLabel({ ...label, en: e.target.value });
                 }}
               />
             )}
           </FormRow>
-        ))}
-        {extra}
+          <FormRow
+            label={idLabel}
+            hint={
+              trimmed && problem ? (
+                <span className="pf-error-text">
+                  {t(`kit.idProblem.${problem}`)}
+                </span>
+              ) : (
+                (idHint ?? t(`kit.tech.idHint.${pattern}`))
+              )
+            }
+          >
+            {(inputId) => (
+              <input
+                id={inputId}
+                className="input mono"
+                value={typed ?? generated}
+                data-testid="pf-new-id"
+                onChange={(e) => {
+                  setTyped(e.target.value);
+                }}
+              />
+            )}
+          </FormRow>
+        </TechDetails>
       </div>
     </Modal>
   );

@@ -59,7 +59,9 @@
   },
   "noDocument": {
     "title": "Pick a document",
-    "lead": "The preview shows the document open on the left. Form sections and plain files have no page."
+    "lead": "Pick a document on the left: its PDF preview will appear here.",
+    "action": "Add a document",
+    "leadEmpty": "This version has no documents yet. Add the first one and its preview will appear here."
   },
   "show": "PDF preview",
   "hide": "Hide preview",

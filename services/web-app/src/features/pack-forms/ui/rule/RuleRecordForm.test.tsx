@@ -109,7 +109,9 @@ describe("мини-форма записи манифеста", () => {
       ).not.toBeChecked();
       cleanup();
       setup({ kind: "list", list: "langs" }, "/supported_langs", ["ru"]);
-      expect(screen.getByRole("checkbox", { name: "en" })).not.toBeChecked();
+      expect(
+        screen.getByRole("checkbox", { name: "Английский" }),
+      ).not.toBeChecked();
     });
 
     it("недоступная форма отключает поля", () => {

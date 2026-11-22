@@ -10,9 +10,10 @@ import {
 import { BlockHead, Check } from "@features/pack-submission-form/ui/kit";
 import { ApiError } from "@shared/api";
 import { pickLocalized } from "@shared/lib";
-import { ErrorState, Select, Spinner } from "@shared/ui";
+import { ErrorState, Select, Spinner, TechDetails } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import { categoriesOf } from "../lib/params";
+import "@features/pack-submission-form/ui/submissionForm.css";
 import "./checksForm.css";
 
 export type PackChecksConfigFormProps = {
@@ -164,7 +165,6 @@ export const PackChecksConfigForm = ({
         <section className="psf-block" key={file.name}>
           <BlockHead
             title={pickLocalized(file.header.label, i18n.language, file.name)}
-            hint={file.name}
           />
           <ul className="pcf-config-rules">
             {file.rules.flatMap((r) => {
@@ -173,9 +173,8 @@ export const PackChecksConfigForm = ({
               const override = config.severity_override[rule.id];
               return [
                 <li key={rule.id} className="pcf-config-rule">
-                  <span className="pcf-config-name">
+                  <span className="pcf-config-name" title={rule.id}>
                     {pickLocalized(rule.title, i18n.language, rule.id)}
-                    <code className="mono pcf-id">{rule.id}</code>
                   </span>
                   <Check
                     label={t("checksForm.config.off")}
@@ -229,6 +228,28 @@ export const PackChecksConfigForm = ({
               ];
             })}
           </ul>
+          <TechDetails testId={`checks-tech-${file.name}`}>
+            <dl className="pcf-tech-list">
+              <dt>{t("checksForm.config.tech.file")}</dt>
+              <dd className="mono">{file.name}</dd>
+              {file.rules.flatMap((r) =>
+                r.entry
+                  ? [
+                      <div key={r.entry.id} className="pcf-tech-row">
+                        <dt>
+                          {pickLocalized(
+                            r.entry.title,
+                            i18n.language,
+                            r.entry.id,
+                          )}
+                        </dt>
+                        <dd className="mono">{r.entry.id}</dd>
+                      </div>,
+                    ]
+                  : [],
+              )}
+            </dl>
+          </TechDetails>
         </section>
       ))}
       {orphans.length > 0 && (

@@ -108,7 +108,9 @@ const GroupsBlock = ({
               data-testid={`pf-group-${group.id}`}
             >
               <div className="pf-item-head">
-                <span className="mono pf-id">{group.id}</span>
+                <span className="pf-item-title" title={group.id}>
+                  {pickLocalized(group.raw.label, lang, group.id)}
+                </span>
                 <span className="pf-item-sub">
                   {t("groups.count", { count: used.length })}
                 </span>
@@ -675,7 +677,7 @@ const RenameDialog = ({
               {t(`kit.idProblem.${problem}`)}
             </span>
           ) : (
-            t("kit.idHint.key")
+            t("kit.tech.idHint.key")
           )
         }
       >
@@ -818,10 +820,10 @@ export const FieldsSection = () => {
                   ) : (
                     <ChevronRight size="0.75rem" />
                   )}
-                  <span className="mono pf-id">{field.key}</span>
-                  <span className="pf-item-label truncate">
-                    {pickLocalized(field.spec.label, lang, "")}
+                  <span className="pf-item-title truncate">
+                    {pickLocalized(field.spec.label, lang, field.key)}
                   </span>
+                  <span className="pf-item-sub mono">{field.key}</span>
                   <span className="pf-item-marks">
                     <Badge variant="subtle">
                       {t(

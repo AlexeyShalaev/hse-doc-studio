@@ -1,8 +1,9 @@
-import type { ComponentType, ReactNode } from "react";
-import { useIsPhoneWidth } from "@shared/lib";
+import { useCallback, type ComponentType, type ReactNode } from "react";
+import { useIsPhoneWidth, usePackStudioCommand } from "@shared/lib";
 import { SPACE_QUERY } from "@entities/pack-studio";
 import { useSpace } from "../context/SpaceContext";
 import { useRememberPlace } from "../context/memory";
+import { isContentPart } from "../content/contract";
 import { isPreviewOpen, previewPatch } from "../preview/link";
 import { useSpaceNav } from "../context/useSpaceNav";
 import {
@@ -32,6 +33,14 @@ export const SpaceScreen = ({
   const viewportPhone = useIsPhoneWidth();
   const isPhone = phone ?? viewportPhone;
   useRememberPlace();
+  // Палитра команд (Cmd+K): «Отправить на рассмотрение» открывает панель «Изменения», где главная
+  // кнопка и проверка перед отправкой.
+  usePackStudioCommand(
+    "submit",
+    useCallback(() => {
+      nav.go({ changes: true });
+    }, [nav]),
+  );
 
   const view = (name: string, component: ComponentType | undefined) => (
     <SpaceSlotView name={name} component={component} />
@@ -45,6 +54,11 @@ export const SpaceScreen = ({
   // «Содержимое»: предпросмотр PDF справа. На широком экране колонка на месте всегда, на узком она
   // выезжает по кнопке «Предпросмотр PDF» в шапке документа (`preview=1`); у вкладки нет `sel`.
   const contentPreview = tab === "content" && isPreviewOpen(location.search);
+  // У разделов формы версии («Сроки и сдача», «Языки», «Все файлы») страницы PDF нет: правая колонка
+  // не занимает место заглушкой, форма получает всю ширину.
+  const contentPart =
+    tab === "content" &&
+    isContentPart(new URLSearchParams(location.search).get("part"));
   const orDefault = (
     component: ComponentType | undefined,
     name: string,
@@ -69,7 +83,7 @@ export const SpaceScreen = ({
       nav={perTab("nav", slots.nav)}
       mainTop={perTab("mainTop", slots.mainTop)}
       main={perTab("main", slots.main) ?? <ComingSoon />}
-      details={perTab("details", slots.details)}
+      details={contentPart ? undefined : perTab("details", slots.details)}
       detailsOpen={selection !== null || contentPreview}
       changes={slots.changes ? view("changes", slots.changes) : undefined}
       changesOpen={changesOpen}

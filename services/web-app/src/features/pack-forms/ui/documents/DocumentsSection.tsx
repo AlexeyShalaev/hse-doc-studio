@@ -13,6 +13,7 @@ import {
   isBundle,
   versionLangs,
 } from "../../lib/documents";
+import { langName } from "../../lib/langName";
 import {
   asRecord,
   asString,
@@ -47,7 +48,7 @@ const GroupSelect = ({
     { value: "", label: t("documents.noGroup") },
     ...KNOWN_DOC_GROUPS.map((g) => ({
       value: g,
-      label: `${t(docGroupLabelKey(g))} (${g})`,
+      label: t(docGroupLabelKey(g)),
     })),
   ];
   return (
@@ -77,12 +78,15 @@ const RemoveDialog = ({
   onClose: () => void;
 }) => {
   const { t } = useTranslation("packForms");
+  const lang = useLang();
   const { act, busy } = useModelEditor();
   return (
     <Modal
       isOpen={doc !== null}
       onClose={onClose}
-      title={t("documents.removeTitle", { id: doc?.id ?? "" })}
+      title={t("documents.removeTitle", {
+        name: doc ? pickLocalized(asRecord(doc.data).name, lang, doc.id) : "",
+      })}
       description={t("documents.removeLead")}
       width={520}
       footer={
@@ -169,7 +173,7 @@ export const DocumentsSection = ({
   workspaceId,
   onOpenFile,
 }: VersionSectionProps) => {
-  const { t } = useTranslation("packForms");
+  const { t, i18n } = useTranslation("packForms");
   const { model, edit, act, readOnly, busy } = useModelEditor();
   const lang = useLang();
   const langs = versionLangs(model.manifest.data);
@@ -219,9 +223,8 @@ export const DocumentsSection = ({
                 data-testid={`pf-doc-${doc.id}`}
               >
                 <div className="pf-item-head">
-                  <span className="mono pf-id">{doc.id}</span>
-                  <span className="pf-item-label truncate">
-                    {pickLocalized(data.name, lang, "")}
+                  <span className="pf-item-title truncate" title={doc.id}>
+                    {pickLocalized(data.name, lang, doc.id)}
                   </span>
                   <span className="pf-item-marks">
                     {data.required === true && (
@@ -244,7 +247,7 @@ export const DocumentsSection = ({
                               : t("languages.missing")
                         }
                       >
-                        {code}
+                        {langName(code, i18n.language)}
                       </Badge>
                     ))}
                     {!isBundle(doc) && <Badge variant="warning">v1</Badge>}
@@ -253,7 +256,7 @@ export const DocumentsSection = ({
                     <OrderButtons
                       index={i}
                       count={docs.length}
-                      label={doc.id}
+                      label={pickLocalized(data.name, lang, doc.id)}
                       disabled={busy}
                       onMove={(to) => {
                         void edit("version.yaml", [
@@ -298,7 +301,7 @@ export const DocumentsSection = ({
         isOpen={adding}
         title={t("documents.addTitle")}
         idLabel={t("documents.id")}
-        idHint={t("documents.idHint")}
+        idHint={t("documents.tech.idHint")}
         pattern="id"
         taken={docs.map((d) => d.id)}
         onClose={() => {

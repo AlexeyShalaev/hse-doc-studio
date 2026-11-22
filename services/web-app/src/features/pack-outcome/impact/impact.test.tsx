@@ -6,6 +6,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   packOutcomeApi,
   packStudioApi,
+  packStudioKeys,
   type PackTree,
   type PackVersionRef,
 } from "@entities/pack-studio";
@@ -62,7 +63,12 @@ const reply = (behavior: ModesBehavior) => ({
 const last = (list: ImpactReport[]): ImpactReport | undefined =>
   list[list.length - 1];
 
-const mount = (opts: { released?: boolean } = {}) => {
+const mount = (
+  opts: {
+    released?: boolean;
+    changed?: { path: string; status: string }[];
+  } = {},
+) => {
   vi.spyOn(packStudioApi, "tree").mockResolvedValue(
     tree(opts.released ?? false),
   );
@@ -70,6 +76,10 @@ const mount = (opts: { released?: boolean } = {}) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   });
+  // Список изменений лежит в кэше (его держит панель «Изменения»): по нему блок отличает новую версию.
+  if (opts.changed) {
+    client.setQueryData(packStudioKeys.git("ws"), { changed: opts.changed });
+  }
   render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
@@ -214,6 +224,25 @@ describe("блок «Что изменится в результате» (F10)",
       });
     },
   );
+
+  it("версия новая (её version.yaml добавлен): запрос не уходит, текст «сравнивать не с чем» тот же", async () => {
+    const impact = vi.spyOn(packOutcomeApi, "impact");
+    const { reports } = mount({
+      changed: [
+        {
+          path: `${REF.pack}/templates/${REF.template}/versions/${REF.version}/version.yaml`,
+          status: "added",
+        },
+      ],
+    });
+    expect(
+      await screen.findByTestId("impact-no-base-new_version"),
+    ).toBeInTheDocument();
+    expect(impact).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(last(reports)).toMatchObject({ pending: false, needsAck: false });
+    });
+  });
 
   it("версия выпущена: расчёта нет, объяснение", async () => {
     const impact = vi.spyOn(packOutcomeApi, "impact");

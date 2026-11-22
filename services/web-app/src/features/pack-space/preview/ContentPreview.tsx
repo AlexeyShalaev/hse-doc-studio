@@ -1,5 +1,6 @@
 import { FileText } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router";
 import { packErrorText } from "@entities/pack-studio";
 import { EmptyState, ErrorState, Spinner } from "@shared/ui";
 import { resolveDocumentFile } from "../content/documents";
@@ -41,13 +42,28 @@ const ContentPreview = () => {
       ? data.docs.find((item) => item.id === route.docId)
       : undefined;
   if (route.kind !== "document" || !doc) {
+    const empty = data.docs.length === 0;
     return (
       <div className="sp-pv" data-testid="sp-pv-none">
         <EmptyState
           compact
           icon={<FileText size="1.25rem" />}
           title={t("preview.noDocument.title")}
-          description={t("preview.noDocument.lead")}
+          description={t(
+            empty ? "preview.noDocument.leadEmpty" : "preview.noDocument.lead",
+          )}
+          action={
+            empty ? (
+              <Link
+                className="btn sm"
+                replace
+                to={nav.partHref("documents")}
+                data-testid="sp-pv-add-document"
+              >
+                {t("preview.noDocument.action")}
+              </Link>
+            ) : undefined
+          }
         />
       </div>
     );

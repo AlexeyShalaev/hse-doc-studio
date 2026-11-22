@@ -759,7 +759,7 @@
       "source": "File in the project",
       "outputName": "Name in the package",
       "format": "Format",
-      "notRequired": "Form {{form}} goes into the package but is not marked as needed for it (required_for_pack): the Studio will not warn that it is empty.",
+      "notRequired": "The form “{{form}}” goes into the package but is not marked as needed for it: the Studio will not warn that it is empty.",
       "addPlaceholder": "What to add",
       "other": "Another project file",
       "add": "Add file"
@@ -778,14 +778,16 @@
       "add": "Add entry"
     },
     "head": {
-      "id": "Identifier",
-      "idHint": "Latin letters, digits and single hyphens. Projects keep deadlines and routes by it: renaming is a change of the version.",
       "name": "Name",
       "description": "Description",
       "hint": "Deadline hint",
       "hintHint": "No concrete dates: deadlines change every year and a released version cannot be fixed. For example, “Usually mid-November; the date is announced in the LMS”.",
       "reset": "Cancel",
-      "save": "Save"
+      "save": "Save",
+      "tech": {
+        "id": "Short name of the point",
+        "idHint": "Latin letters, digits and single hyphens. Projects keep deadlines and routes by it: renaming is a change of the version."
+      }
     },
     "hintIssue": {
       "missing": "Both languages are needed",
@@ -913,46 +915,65 @@
       "off": "Off",
       "severity": "Severity in this version",
       "asRule": "As in the rule: {{severity}}",
-      "orphans": "The version check settings name rules that are not in the rules files: {{ids}}."
+      "orphans": "The version check settings name rules that are not in the rules files: {{ids}}.",
+      "tech": {
+        "file": "Rules file"
+      }
+    },
+    "category": {
+      "structure": "Document structure",
+      "formatting": "Formatting",
+      "bibliography": "Bibliography",
+      "metadata": "Project data",
+      "references": "References and captions",
+      "content": "Content",
+      "custom": "Custom rules",
+      "language": "Language and spelling",
+      "typography": "Typography"
     }
   },
   "scaffold": {
     "packTitle": "New pack",
-    "packLead": "A pack with its first template and a beta draft version.",
+    "packLead": "A pack is a set of a programme's templates. We will create it with a first template and a draft version.",
     "templateTitle": "New template",
-    "templateLead": "A template in the {{pack}} pack with a beta draft version.",
+    "templateLead": "A template in the {{pack}} pack. We will create it with a draft version.",
     "packSection": "Pack",
     "templateSection": "First template",
-    "packId": "Pack id",
-    "packIdHint": "The folder name: lowercase Latin letters, digits and hyphens, for example spbu-cs.",
-    "packIdTaken": "This id is already taken in the workspace or in the Studio catalog.",
-    "templateId": "Template id",
-    "templateIdHint": "Lowercase Latin letters, digits, hyphens or underscores, for example coursework.",
-    "idInvalid": "Invalid id.",
+    "packId": "Short name of the pack",
+    "packIdHint": "The folder name: lowercase Latin letters, digits and hyphens, for example spbu-cs. Built from the name.",
+    "packIdTaken": "This short name is already taken in the space or in the Studio catalog.",
+    "templateId": "Short name of the template",
+    "templateIdHint": "Lowercase Latin letters, digits, hyphens or underscores, for example coursework. Built from the name.",
+    "idInvalid": "Invalid short name.",
     "nameRu": "Name in Russian",
     "nameEn": "Name in English",
-    "nameHint": "An empty translation takes the text of the other language.",
+    "nameHint": "If left empty, the Russian name is used.",
     "maintainerName": "Maintainer",
     "maintainerEmail": "Maintainer email",
     "license": "License",
-    "licenseHint": "An SPDX identifier, Apache-2.0 by default.",
-    "sourceUrl": "Source address",
-    "sourceUrlHint": "Optional: a link to the pack repository.",
+    "licenseHint": "Apache-2.0 by default.",
+    "sourceUrl": "Repository address",
+    "sourceUrlHint": "Optional: where this pack lives.",
     "start": "Starting point",
     "minimal": "Minimal",
     "minimalHint": "One GOST 7.32 “Report” document with a title page, the “Academic year” and “Educational programme” fields, the author signature and one submission point.",
     "copy": "Copy of an existing one",
-    "copyHint": "The chosen version is copied with new ids: an empty release registry, a beta version, the source named in the manifest.",
+    "copyHint": "The chosen version is copied as a new template: it has no releases yet, the version is a draft, and the source of the copy is noted in the description.",
     "copyFrom": "What to copy",
     "originWorkspace": "in the workspace",
     "originCatalog": "in the Studio",
     "noSources": "Nothing to copy: the workspace and the Studio catalog have no template versions.",
     "version": "First version number",
-    "versionHint": "YEAR.1 by the intake year, for example 2026.1.",
+    "versionHint": "Intake year and number, for example 2026.1.",
     "submitPack": "Create pack",
     "submitTemplate": "Create template",
-    "donePack": "Pack {{pack}} created",
-    "doneTemplate": "Template {{template}} created"
+    "donePack": "Pack “{{pack}}” created",
+    "doneTemplate": "Template “{{template}}” created",
+    "packName": "Pack name",
+    "packNameHint": "For example, “Systems and Software Engineering”.",
+    "templateName": "Template name",
+    "templateNameHint": "For example, “Coursework”.",
+    "more": "More options"
   },
   "connect": {
     "lead": "Start with where the templates come from. A pack is a set of templates for one program.",

@@ -13,7 +13,9 @@
     "search": "Find a document",
     "searchEmpty": "No such document",
     "noDocuments": "This version has no documents yet.",
-    "documentsHint": "Document list: add, remove, reorder"
+    "documentsHint": "Document list: add, remove, reorder",
+    "more": "{{count}} more",
+    "less": "Show fewer"
   },
   "doc": {
     "kicker": "Document",

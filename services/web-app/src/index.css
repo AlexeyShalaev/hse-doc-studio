@@ -8884,3 +8884,30 @@ a.adm-row:hover .adm-row-chevron {
   align-items: center;
   gap: 0.625rem;
 }
+
+/* «Технические подробности»: свёрнутый блок с идентификаторами и именами файлов. */
+@layer components {
+  .tech-details {
+    margin-top: 0.5rem;
+    font-size: 0.8125rem;
+  }
+  .tech-details > summary {
+    cursor: pointer;
+    width: fit-content;
+    padding: 0.125rem 0;
+    color: var(--fg-2);
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  .tech-details > summary:hover {
+    color: var(--fg-0);
+  }
+  .tech-details-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    margin-top: 0.5rem;
+    padding-left: 0.75rem;
+    border-left: 2px solid var(--border);
+  }
+}

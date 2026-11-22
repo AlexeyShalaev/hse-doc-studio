@@ -3,7 +3,7 @@
     "spaces": "Workspaces",
     "menu": "Actions for workspace \"{{name}}\"",
     "refresh": "Refresh",
-    "switchTo": "Open \"{{name}}\"",
+    "switchTo": "Switch to the space “{{name}}”",
     "connectCatalog": "Connect to the Studio catalog",
     "delete": "Delete",
     "deleteTitle": "Delete workspace \"{{name}}\"?",
@@ -57,6 +57,7 @@
     "noVersions": {
       "title": "Template \"{{template}}\" has no versions",
       "lead": "Add a version in the repository and refresh the workspace: it will open here."
-    }
+    },
+    "official": "Connect official templates"
   }
 }

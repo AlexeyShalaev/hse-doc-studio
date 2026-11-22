@@ -279,7 +279,7 @@
     "name": "Словарь форм Студии шаблонов (ru и en, features/pack-forms)",
     "path": "dist/assets/locale-packForms-*.js",
     "gzip": true,
-    "limit": "9.4 kB"
+    "limit": "9.9 kB"
   },
   {
     "name": "Студия шаблонов, «Подключить к каталогу этой Студии» (lazy, features/pack-catalog-connect)",
@@ -297,7 +297,7 @@
     "name": "Словарь Студии шаблонов (ru и en)",
     "path": "dist/assets/locale-packStudio-*.js",
     "gzip": true,
-    "limit": "29.8 kB"
+    "limit": "30.5 kB"
   },
   {
     "name": "Студия шаблонов, новый интерфейс (lazy, ?ux=2: pages/PackStudioPage/space и все области features/pack-space, вместе)",

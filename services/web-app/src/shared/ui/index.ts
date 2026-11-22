@@ -274,3 +274,6 @@ export type { AvatarProps, PersonCellProps } from "./PersonCell";
 
 export { ActionMenu } from "./ActionMenu";
 export type { ActionMenuItem, ActionMenuProps } from "./ActionMenu";
+
+export { TechDetails } from "./TechDetails/TechDetails";
+export type { TechDetailsProps } from "./TechDetails/TechDetails";

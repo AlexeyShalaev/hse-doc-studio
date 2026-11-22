@@ -44,7 +44,7 @@ const EntryRedirect = ({
     last: readPlace(workspace.id),
     changed: git.data?.changed.map((file) => file.path),
   });
-  if (!place) return <NoPlace workspaceId={workspace.id} tree={tree} />;
+  if (!place) return <NoPlace workspace={workspace} tree={tree} />;
   const params = new URLSearchParams(legacy?.search ?? "");
   // Условия из памяти возвращаются, только если в адресе своих нет.
   if (

@@ -27,13 +27,16 @@
       "format": "Latin letters, digits and “_” only; starts with a letter",
       "taken": "Already exists"
     },
-    "idHint": {
-      "key": "Latin letters, digits and “_”. Templates print the field as project.meta.<key>.",
-      "id": "Latin letters, digits, “_” and a single “-”."
-    },
     "labelIn": {
-      "ru": "Label in Russian",
-      "en": "Label in English"
+      "ru": "Name",
+      "en": "Name in English"
+    },
+    "more": "More options",
+    "tech": {
+      "idHint": {
+        "key": "Latin letters, digits and “_”. Templates print the field as project.meta.<name>. Built from the name; change it only if needed.",
+        "id": "Latin letters, digits, “_” and a single “-”. Built from the name; change it only if needed."
+      }
     }
   },
   "groups": {
@@ -41,7 +44,7 @@
     "lead": "The order of groups is the order in the project settings.",
     "add": "Group",
     "addTitle": "New field group",
-    "id": "Group id",
+    "id": "Short name of the group",
     "empty": "No groups: fields come as one list.",
     "count_one": "{{count}} field",
     "count_other": "{{count}} fields",
@@ -59,7 +62,7 @@
     "lead": "What a student fills in the project wizard and settings. On the right: a sample of the field and the documents that print it.",
     "add": "Field",
     "addTitle": "New field",
-    "key": "Field key",
+    "key": "Short name of the field",
     "empty": "No fields.",
     "type": "Type",
     "types": {
@@ -100,8 +103,8 @@
     "optionAdd": "Option",
     "kinds": "Kinds of work",
     "kindsHint": "Both checked: the field is in every kind of work.",
-    "rename": "Rename key",
-    "renamePerson": "A project person lives in its own field: the key stays",
+    "rename": "Change the short name",
+    "renamePerson": "A project person lives in its own field: the short name stays",
     "delete": "Delete field",
     "sample": "What a student sees",
     "samplePerson": "The person is chosen on the supervisors step: name, position, HSE or company.",
@@ -113,9 +116,9 @@
     "printedIn_one": "in {{count}} document",
     "printedIn_other": "in {{count}} documents",
     "notPrinted": "not printed",
-    "renameTitle": "New key for the field {{key}}",
-    "renameLead": "The key changes in the version description and in every template (project.meta.<key>). For projects on older versions this removes one field and adds another: the new version needs at least new features.",
-    "renameTo": "New key",
+    "renameTitle": "New short name for the field {{key}}",
+    "renameLead": "The name changes in the version description and in every template (project.meta.<name>). For projects on older versions this removes one field and adds another:",
+    "renameTo": "New short name",
     "renameSubmit": "Rename",
     "deleteTitle": "Delete the field {{key}}?",
     "deleteLead": "The field leaves the version description. Templates that print it stay as they are.",
@@ -126,7 +129,7 @@
     "lead": "Forms a student fills in the project, such as the AI usage declaration.",
     "add": "Form",
     "addTitle": "New form",
-    "formId": "Form id",
+    "formId": "Short name of the form",
     "empty": "No forms.",
     "inPack": "in the submission pack",
     "formTitle": "Title",
@@ -138,19 +141,19 @@
     "perAuthorHint": "In a team project every author fills the form.",
     "output": "Form file in the pack",
     "outputTemplate": "Template",
-    "outputTemplateHint": "Path from the version folder, for example files/ai-usage/form.md.",
+    "outputTemplateHint": "Path of the file in the version, for example files/ai-usage/form.md.",
     "outputName": "File name",
     "outputFormat": "Format",
     "sections": "Sections",
     "sectionAdd": "Section",
     "sectionAddTitle": "New section",
-    "sectionId": "Section id",
+    "sectionId": "Short name of the section",
     "sectionTitle": "Section title",
     "fieldsCount_one": "{{count}} field",
     "fieldsCount_other": "{{count}} fields",
     "fieldAdd": "Form field",
     "fieldAddTitle": "New form field",
-    "fieldId": "Field id",
+    "fieldId": "Short name of the form field",
     "fieldType": "Field type",
     "types": {
       "text": "Line",
@@ -176,8 +179,8 @@
     "options": "Options",
     "columns": "Table columns",
     "optionDefault": "Selected by default",
-    "pairLabel": "Label of {{id}}",
-    "pairNew": "Id",
+    "pairLabel": "Label: {{name}}",
+    "pairNew": "New option",
     "pairAdd": "Add",
     "visibleIf": "Show when",
     "visibleIfHint": "The field shows only if another field of the form has the value.",
@@ -193,40 +196,42 @@
     "lead": "The order of documents here is the order in a project. A group draws a subheading in the document list.",
     "add": "Document",
     "addTitle": "New document",
-    "id": "Document id",
-    "idHint": "This is the folder name files/<id>/. Latin letters, digits, “_” and a single “-”.",
+    "id": "Document folder name",
     "empty": "No documents.",
     "source": "Starting point",
     "sourceHint": "A blank document or a copy of a document from the packs of this workspace (latest template version).",
     "blank": "Blank document",
-    "group": "Navigation group",
-    "groupHint": "A group unknown to the Studio shows as “Other”.",
+    "group": "Where in the document list",
+    "groupHint": "The list section the document sits in. Without a group the document goes to “Other”.",
     "noGroup": "No group",
     "required": "required",
     "personal": "per author",
-    "open": "Open the document form",
+    "open": "Document terms",
     "remove": "Delete document",
-    "removeTitle": "Delete the document {{id}}?",
+    "removeTitle": "Delete the document “{{name}}”?",
     "removeLead": "The document goes away and its folder with all files is deleted. For projects this removes a document: the new version needs at least new features.",
-    "referenced": "The version description mentions the document. After deletion fix these places, the check findings will show them:"
+    "referenced": "The version description mentions the document. After deletion fix these places, the check findings will show them:",
+    "tech": {
+      "idHint": "The document folder in the version (files/<name>/). Latin letters, digits, “_” and a single “-”. Built from the name."
+    }
   },
   "languages": {
     "title": "Version languages",
-    "lead": "Languages set file suffixes: report.ru.tex, report.en.tex. The first language is the main one: translations start from it and it is used when a translation is missing.",
+    "lead": "The languages the version's documents come in. The first language is the main one: translations start from it and it is used when a translation is missing.",
     "undeclared": "The version description sets no languages: the version is in Russian. An added language is written explicitly.",
     "default": "default",
     "add": "Language",
-    "newCode": "Language code, for example en",
+    "newCode": "Language, for example en",
     "lastOne": "At least one language is needed",
-    "inUse": "Files use this code: remove them first",
+    "inUse": "Files exist in this language: remove them first",
     "filesTitle": "Files by language",
-    "filesLead": "A file without a code serves all languages. Create translation copies the default edition; translate the text in the editor.",
+    "filesLead": "A file without a language serves all languages. “Create translation” copies the file in the main language; translate the text in the editor.",
     "file": "File",
     "actions": "Actions",
     "present": "present",
     "missing": "missing",
     "shared": "one file for all languages",
-    "mixed": "The file exists both without and with codes: the check treats this as an error",
+    "mixed": "The file exists both shared and per language: the check treats this as an error",
     "split": "Split by language",
     "splitHint": "The file becomes the “{{lang}}” edition and gets a copy to translate",
     "translate": "Create translation: {{lang}}",
@@ -235,16 +240,14 @@
     "noSources": "The document folder has no text files."
   },
   "doc": {
-    "title": "Document {{id}}",
-    "lead": "The document description (doc.yaml).",
-    "notInRoster": "The document {{id}} is not in the version's document list: no form, edit the file text.",
+    "title": "Document terms",
+    "lead": "Which kinds of work need the document, which languages it comes in and how the finished file is named.",
+    "notInRoster": "This document is not in the version's document list: no form, edit the file text.",
     "name": "Name",
     "code": "Code",
     "outputName": "File name on export",
-    "sourceFile": "Main file",
-    "outputFile": "Built file",
-    "gostRef": "Checked by",
-    "gostRefHint": "A checks file of the version (checks/<name>.yaml).",
+    "gostRef": "Check rules",
+    "gostRefHint": "Which set of rules checks this document.",
     "noGost": "No checks",
     "scope": "Whose document",
     "scopeHint": "In a team project each author has their own personal document.",
@@ -266,13 +269,20 @@
     "variantsLead": "Other formats of the same document: PowerPoint, HTML, Beamer.",
     "variantAdd": "Variant",
     "variantAddTitle": "New variant",
-    "variantId": "Variant id",
+    "variantId": "Short name of the variant",
     "noVariants": "No variants.",
-    "variantLabel": "Variant label",
-    "engine": "Build",
-    "engineHint": "none: the variant is not built with TeX.",
-    "engineDefault": "as the version",
-    "variantLangsHint": "Empty: the variant exists in every language."
+    "variantLabel": "Variant name",
+    "variantLangsHint": "Empty: the variant exists in every language.",
+    "tech": {
+      "sourceFile": "Main file",
+      "outputFile": "Built file",
+      "folder": "Document folder",
+      "folderHint": "The folder name changes only in the document list.",
+      "engine": "Build",
+      "engineHint": "none: the variant is not built with TeX.",
+      "engineDefault": "as the version",
+      "variantId": "Short name of the variant"
+    }
   },
   "rule": {
     "list": {
@@ -303,7 +313,18 @@
     "checks": {
       "disabled": "Disabled check rules",
       "categories": "Disabled check categories",
-      "hint": "The ticked rules do not apply in this version."
+      "hint": "The ticked rules do not apply in this version.",
+      "category": {
+        "structure": "Document structure",
+        "formatting": "Formatting",
+        "bibliography": "Bibliography",
+        "metadata": "Project data",
+        "references": "References and captions",
+        "content": "Content",
+        "custom": "Custom rules",
+        "language": "Language and spelling",
+        "typography": "Typography"
+      }
     },
     "route": "The signing order is edited as a whole in the Form tab (Submission and signatures): open the rule and change the steps there."
   }

@@ -331,5 +331,139 @@
   ],
   "allowedIn": {
     "changes": ["commit", "base", "branch", "pr", "fork"]
+  },
+  "forms": {
+    "comment": "Формы «Содержимого» (pack-forms, pack-submission-form, pack-checks-form, окно «Новый пак»): их строки живут в общих словарях packForms и packStudio, которыми пользуется и прежний интерфейс. Тест vocabulary.test.ts проверяет здесь только ключи форм (scopes) и пропускает ключи под «tech» (технические подробности: там идентификаторы и имена файлов допустимы).",
+    "ru": [
+      {
+        "id": "identifier",
+        "pattern": "идентификатор",
+        "use": "Короткое имя"
+      },
+      {
+        "id": "id-word",
+        "pattern": "\\bid\\b",
+        "use": "Короткое имя"
+      },
+      {
+        "id": "yaml",
+        "pattern": "ya?ml",
+        "use": "Описание документа, описание версии"
+      },
+      {
+        "id": "manifest",
+        "pattern": "манифест",
+        "use": "Описание версии"
+      },
+      {
+        "id": "spdx",
+        "pattern": "spdx",
+        "use": "Лицензия"
+      },
+      {
+        "id": "checkpoint",
+        "pattern": "checkpoint",
+        "use": "Точка сдачи"
+      },
+      {
+        "id": "suffix",
+        "pattern": "суффикс",
+        "use": "Язык файла"
+      },
+      {
+        "id": "beta",
+        "pattern": "\\bbeta\\b",
+        "use": "Черновик"
+      },
+      {
+        "id": "release-registry",
+        "pattern": "реестр выпусков",
+        "use": "Выпуски"
+      },
+      {
+        "id": "navigation-group",
+        "pattern": "групп[аыуе] навигации",
+        "use": "Где в списке документов"
+      },
+      {
+        "id": "unknown-to-studio",
+        "pattern": "незнакомая студии",
+        "use": "Без группы документ попадёт в «Прочее»"
+      },
+      {
+        "id": "snake-case",
+        "pattern": "[a-z]+_[a-z_]+",
+        "use": "Название словами"
+      }
+    ],
+    "en": [
+      {
+        "id": "identifier",
+        "pattern": "identifier",
+        "use": "Short name"
+      },
+      {
+        "id": "id-word",
+        "pattern": "\\bid\\b",
+        "use": "Short name"
+      },
+      {
+        "id": "yaml",
+        "pattern": "ya?ml",
+        "use": "Document description, version description"
+      },
+      {
+        "id": "manifest",
+        "pattern": "manifest",
+        "use": "Version description"
+      },
+      {
+        "id": "spdx",
+        "pattern": "spdx",
+        "use": "License"
+      },
+      {
+        "id": "suffix",
+        "pattern": "suffix",
+        "use": "File language"
+      },
+      {
+        "id": "beta",
+        "pattern": "\\bbeta\\b",
+        "use": "Draft"
+      },
+      {
+        "id": "release-registry",
+        "pattern": "release registry",
+        "use": "Releases"
+      },
+      {
+        "id": "navigation-group",
+        "pattern": "navigation group",
+        "use": "Where in the document list"
+      },
+      {
+        "id": "snake-case",
+        "pattern": "[a-z]+_[a-z_]+",
+        "use": "A name in words"
+      }
+    ],
+    "scopes": [
+      {
+        "file": "packForms/packForms.json",
+        "prefixes": [""]
+      },
+      {
+        "file": "packStudio/packStudio.json",
+        "prefixes": [
+          "scaffold",
+          "submission.head",
+          "submission.profile",
+          "submission.extras",
+          "checksForm.category",
+          "checksForm.config"
+        ]
+      }
+    ]
   }
 }
