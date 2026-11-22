@@ -56,6 +56,19 @@ async def _names(engine: AsyncEngine, parent: str) -> list[str]:
         return [r[0] for r in rows]
 
 
+async def _monthly_bounds(engine: AsyncEngine, parent: str) -> dict[str, datetime]:
+    """Месячные партиции (без legacy и default) с их верхними границами, по возрастанию."""
+    async with engine.connect() as conn:
+        rows = await conn.execute(
+            text(
+                "SELECT part_name, upper_bound FROM lifecycle_partition_bounds(:t) "
+                "WHERE NOT is_default AND part_name <> :legacy ORDER BY upper_bound"
+            ),
+            {"t": parent, "legacy": f"{parent}_legacy"},
+        )
+        return {r[0]: r[1] for r in rows}
+
+
 async def _audit_row(engine: AsyncEngine, at: datetime) -> None:
     async with engine.begin() as conn:
         await conn.execute(text("INSERT INTO audit_log (action, at) VALUES ('t.x', :at)"), {"at": at})
@@ -111,9 +124,11 @@ async def test__purge__drops_whole_old_partitions_without_delete(pg_migrated_eng
     names = await _names(pg_migrated_engine, "audit_log")
     monthly = [n for n in names if "_p2" in n]
     assert monthly
+    bounds = await _monthly_bounds(pg_migrated_engine, "audit_log")
 
-    # Граница в будущем накрывает legacy и ближайшие месячные партиции целиком.
-    result = await source.purge(_ctx(now + timedelta(days=62)))
+    # Граница на верхней границе первой месячной партиции накрывает legacy и её целиком. Привязка к «сейчас + N дней»
+    # плавала: в последние дни месяца граница legacy уходит на месяц дальше, и первая месячная партиция не попадала.
+    result = await source.purge(_ctx(bounds[monthly[0]]))
 
     after = await _names(pg_migrated_engine, "audit_log")
     assert result.partitions_dropped >= 2
@@ -182,16 +197,19 @@ async def test__ai_usage__purge_deletes_old_rows_and_keeps_recent(pg_migrated_en
 
 
 async def test__audit_log__stays_append_only_on_partitions(pg_migrated_engine: AsyncEngine) -> None:
-    await _audit_row(pg_migrated_engine, datetime.now(UTC) + timedelta(days=40))
-    names = [n for n in await _names(pg_migrated_engine, "audit_log") if "_p2" in n]
+    bounds = await _monthly_bounds(pg_migrated_engine, "audit_log")
+    assert bounds
+    # По строке в каждой месячной партиции: DELETE по пустой партиции ничего не удаляет и триггер не срабатывает,
+    # поэтому «сейчас + N дней» (куда попадёт строка, зависит от даты) для проверки не годится.
+    for upper in bounds.values():
+        await _audit_row(pg_migrated_engine, upper - timedelta(days=1))
+    placed = await _where(pg_migrated_engine, "audit_log")
+    assert all(placed.get(name) == 1 for name in bounds)
 
-    for statement in (
-        "UPDATE audit_log SET action = 'x'",
-        "DELETE FROM audit_log",
-        "TRUNCATE audit_log",
-        f"TRUNCATE {names[0]}",
-        f"DELETE FROM {names[0]}",
-    ):
+    statements = ["UPDATE audit_log SET action = 'x'", "DELETE FROM audit_log", "TRUNCATE audit_log"]
+    for name in bounds:
+        statements += [f"TRUNCATE {name}", f"DELETE FROM {name}", f"UPDATE {name} SET action = 'x'"]
+    for statement in statements:
         with pytest.raises(DBAPIError, match="append-only"):
             async with pg_migrated_engine.begin() as conn:
                 await conn.execute(text(statement))
