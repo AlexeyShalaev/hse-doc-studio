@@ -1,7 +1,7 @@
-import { useMemo, type ReactNode } from "react";
+import { useMemo } from "react";
 import { Link } from "react-router";
 import { ArrowLeft } from "lucide-react";
-import { I18nextProvider, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import { usePackScenarios } from "@entities/pack-studio";
 import {
   OutcomeModelContext,
@@ -18,29 +18,7 @@ import { useSpace } from "../context/SpaceContext";
 import { useSpaceNav } from "../context/useSpaceNav";
 import { CheckChangeEnv } from "./ChangeEnv";
 import { useCheckEnv } from "./useCheckEnv";
-
-/**
- * Прежний режим «Сравнить» читает подписи из словаря старого экрана. Чтобы человек не видел там
- * внутренних слов, поверх него накладываются подписи `check.compare.words` (на копии словаря:
- * старый экран их не видит).
- */
-const WithPlainWords = ({ children }: { children: ReactNode }) => {
-  const { i18n } = useTranslation("packSpace");
-  const lng = i18n.language;
-  const forked = useMemo(() => {
-    const clone = i18n.cloneInstance({ forkResourceStore: true });
-    const words: unknown = i18n.getResource(
-      lng,
-      "packSpace",
-      "check.compare.words",
-    );
-    if (words !== null && typeof words === "object") {
-      clone.addResourceBundle(lng, "packOutcome", words, true, true);
-    }
-    return clone;
-  }, [i18n, lng]);
-  return <I18nextProvider i18n={forked}>{children}</I18nextProvider>;
-};
+import { WordsOverlay } from "./WordsOverlay";
 
 /**
  * Сравнение двух ситуаций (или «основная версия против моих правок») без вкладки: открывается по
@@ -112,11 +90,11 @@ export const ComparePart = () => {
     <div className="sp-ck-stack">
       <div>{back}</div>
       <OutcomeModelContext.Provider value={model}>
-        <WithPlainWords>
+        <WordsOverlay path="check.compare.words">
           <CheckChangeEnv env={env}>
             <CompareMode />
           </CheckChangeEnv>
-        </WithPlainWords>
+        </WordsOverlay>
       </OutcomeModelContext.Provider>
     </div>
   );
