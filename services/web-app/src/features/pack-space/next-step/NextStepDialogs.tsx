@@ -26,6 +26,7 @@ const NextStepDialogs = ({
   ) : git ? (
     <StartOverDialog
       git={git}
+      variant="next"
       isOpen
       onClose={onClose}
       onDone={() => {

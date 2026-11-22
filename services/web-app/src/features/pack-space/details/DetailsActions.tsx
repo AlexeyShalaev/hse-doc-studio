@@ -72,13 +72,11 @@ export const DetailsActions = ({
     <div className="sp-details-actions" data-testid="sp-details-actions">
       {released ? (
         <>
-          <p className="sp-details-muted" data-testid="sp-released-note">
-            {t("details.released")}
-          </p>
           <div className="sp-details-row">
+            {/* Главная кнопка «Править копию» уже в полосе пространства (P1): здесь вторичная. */}
             <button
               type="button"
-              className="btn primary"
+              className="btn"
               disabled={copy.pending}
               data-testid="sp-make-copy"
               onClick={copy.run}

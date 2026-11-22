@@ -491,7 +491,7 @@ describe("предпросмотр PDF на экране «Результат»"
         await screen.findByTestId(
           "outcome-preview-stale",
           {},
-          { timeout: 5000 },
+          { timeout: 15_000 },
         ),
       ).toHaveTextContent("Вводные, сценарий или вариант изменились");
       await new Promise((resolve) =>

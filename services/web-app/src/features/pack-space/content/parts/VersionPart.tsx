@@ -40,8 +40,11 @@ export const VersionPart = ({
         <p>{t(`content.parts.${part}.lead`)}</p>
         {readOnly && (
           <span className="sp-ct-part-lock" data-testid="ct-part-lock">
-            <Lock size="0.75rem" aria-hidden="true" />
-            {t("content.parts.readOnly")}
+            <Lock
+              size="0.75rem"
+              aria-label={t("content.parts.readOnly")}
+              role="img"
+            />
             <Button
               size="xs"
               variant="secondary"

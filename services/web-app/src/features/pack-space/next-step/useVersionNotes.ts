@@ -27,6 +27,13 @@ export type VersionNotes = {
   /** Заполнить из отчёта классификатора (кнопка «Подсказать по изменениям»). */
   suggest: () => void;
   canSuggest: boolean;
+  /**
+   * Заметки пусты, а подсказка по изменениям есть и годится как есть: при отправке Студия
+   * подставит её сама, и отдельный шаг «Подсказать» не нужен.
+   */
+  canAutoFill: boolean;
+  /** Записать подсказку в версию (шаг отправки, когда заметки пусты). */
+  fillSuggested: () => Promise<void>;
   /** Показывать поля «что перестанет работать» и «почему такой номер». */
   breaking: boolean;
   classNote: boolean;
@@ -78,7 +85,25 @@ export const useVersionNotes = (
   const breaking = state !== null && showBreaking(state);
   const classNote = state !== null && showClassNote(state);
 
+  const suggested = state ? notesSuggested(state) : null;
+  const canAutoFill =
+    state !== null &&
+    suggested !== null &&
+    problem === "empty" &&
+    hasSuggestion(state) &&
+    notesProblem(suggested) === null;
+
   const saveAsync = save.mutateAsync;
+  const fillSuggested = async (): Promise<void> => {
+    if (!state || !suggested || !canAutoFill) return;
+    setDraft(suggested);
+    await saveAsync({
+      ref: state.version,
+      body: notesRequest(suggested, { breaking, note: classNote }),
+    });
+    setWritten(suggested);
+    notifyPackFilesSaved(workspaceId);
+  };
   const flush = async (): Promise<void> => {
     if (!state || problem !== null || !pending) return;
     await saveAsync({
@@ -112,6 +137,8 @@ export const useVersionNotes = (
       setDraft((prev) => ({ ...prev, ru, en, breakingRu, breakingEn }));
     },
     canSuggest: state !== null && hasSuggestion(state),
+    canAutoFill,
+    fillSuggested,
     breaking,
     classNote,
     problem,
