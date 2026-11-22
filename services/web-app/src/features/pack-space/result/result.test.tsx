@@ -90,7 +90,11 @@ const shown = (el: Element): boolean => {
 
 const controls = (root: ParentNode = document.body): Element[] =>
   [...root.querySelectorAll(CONTROLS)].filter(
-    (el) => shown(el) && !el.hasAttribute("disabled"),
+    // «Пропустить к содержимому» уходит за край экрана и видна только в фокусе: не на экране.
+    (el) =>
+      shown(el) &&
+      !el.hasAttribute("disabled") &&
+      el.getAttribute("data-testid") !== "sp-skip",
   );
 
 describe("центр «Результата»", () => {

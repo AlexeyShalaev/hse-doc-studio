@@ -8,7 +8,7 @@ import type {
   PackSubmissionProfile,
 } from "@entities/pack-studio";
 import { pickLocalized } from "@shared/lib";
-import { Button, Input } from "@shared/ui";
+import { Button, Input, TechDetails } from "@shared/ui";
 import { LANGS, hintIssue, profileFindings } from "../lib/submission";
 import type { Steps } from "../lib/routeSteps";
 import {
@@ -38,7 +38,7 @@ const headOf = (profile: PackSubmissionProfile): Head => ({
 const filled = (value: Record<string, string>) =>
   LANGS.some((lang) => (value[lang] ?? "").trim() !== "");
 
-/** Шапка профиля: id, название, описание и подсказка срока (5.5, 5.8); запись по кнопке. */
+/** Шапка профиля: название, описание и подсказка срока, короткое имя под «Техническими подробностями» (5.5, 5.8); запись по кнопке. */
 const HeadEditor = ({
   ctx,
   profile,
@@ -80,17 +80,6 @@ const HeadEditor = ({
       className="psf-block"
       data-testid={`head-${String(profile.index)}`}
     >
-      <Input
-        label={t("submission.head.id")}
-        hint={t("submission.head.idHint")}
-        value={draft.id}
-        isMono
-        disabled={ctx.disabled}
-        onChange={(e) => {
-          setDraft({ ...draft, id: e.target.value });
-        }}
-        data-testid={`head-${String(profile.index)}-id`}
-      />
       <LocalizedFields
         label={t("submission.head.name")}
         value={draft.name}
@@ -121,6 +110,19 @@ const HeadEditor = ({
         testId={`head-${String(profile.index)}-hint`}
       />
       <p className="hint">{t("submission.head.hintHint")}</p>
+      <TechDetails testId={`head-${String(profile.index)}-tech`}>
+        <Input
+          label={t("submission.head.tech.id")}
+          hint={t("submission.head.tech.idHint")}
+          value={draft.id}
+          isMono
+          disabled={ctx.disabled}
+          onChange={(e) => {
+            setDraft({ ...draft, id: e.target.value });
+          }}
+          data-testid={`head-${String(profile.index)}-id`}
+        />
+      </TechDetails>
       {!ctx.disabled && (
         <div className="psf-actions">
           <Button
@@ -203,7 +205,6 @@ export const ProfileCard = ({
           <span className="psf-profile-name">
             {name !== "" ? name : t("submission.unnamed")}
           </span>
-          <code className="mono psf-chip-id">{profile.id ?? "?"}</code>
           {(profile.error !== null || errors > 0) && (
             <span className="ps-mark ps-mark-warn">
               {t("submission.problems", {

@@ -3,6 +3,7 @@ import { Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Badge, Button } from "@shared/ui";
 import { LANG_CODE, isBundle, versionLangs } from "../../lib/documents";
+import { langName } from "../../lib/langName";
 import { asRecord, has, pickLocalized, setOp } from "../../lib/raw";
 import { useModelEditor } from "../../model/modelEditor";
 import { FormBlock, OrderButtons } from "../kit";
@@ -18,7 +19,7 @@ const useLang = () => {
  * с «Создать перевод» (5.3; T12).
  */
 export const LanguagesSection = () => {
-  const { t } = useTranslation("packForms");
+  const { t, i18n } = useTranslation("packForms");
   const { model, edit, readOnly, busy } = useModelEditor();
   const lang = useLang();
   const data = asRecord(model.manifest.data);
@@ -42,7 +43,10 @@ export const LanguagesSection = () => {
           {langs.map((code, i) => (
             <li key={code} className="pf-item" data-testid={`pf-lang-${code}`}>
               <div className="pf-item-head">
-                <span className="mono pf-id">{code}</span>
+                <span className="pf-item-title">
+                  {langName(code, i18n.language)}
+                </span>
+                <span className="pf-item-sub mono">{code}</span>
                 <span className="pf-item-sub">
                   {i === 0 && (
                     <Badge variant="info">{t("languages.default")}</Badge>
@@ -52,7 +56,7 @@ export const LanguagesSection = () => {
                   <OrderButtons
                     index={i}
                     count={langs.length}
-                    label={code}
+                    label={langName(code, i18n.language)}
                     disabled={busy}
                     onMove={(to) => {
                       const next = [...langs];
@@ -111,9 +115,8 @@ export const LanguagesSection = () => {
         {model.documents.filter(isBundle).map((doc) => (
           <section key={doc.id} className="pf-item">
             <div className="pf-item-head">
-              <span className="mono pf-id">{doc.id}</span>
-              <span className="pf-item-label truncate">
-                {pickLocalized(asRecord(doc.data).name, lang, "")}
+              <span className="pf-item-title">
+                {pickLocalized(asRecord(doc.data).name, lang, doc.id)}
               </span>
             </div>
             <DocLanguages doc={doc} langs={langs} />

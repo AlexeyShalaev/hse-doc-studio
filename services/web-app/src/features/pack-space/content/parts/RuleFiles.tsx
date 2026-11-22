@@ -1,6 +1,11 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
-import { usePackTree } from "@entities/pack-studio";
+import {
+  usePackChecksForm,
+  usePackTree,
+  versionRefOf,
+} from "@entities/pack-studio";
+import { pickLocalized } from "@shared/lib/i18n/pickLocalized";
 import { useContentNav } from "../useContentNav";
 
 // Файлы правил версии (`checks/*.yaml`): у каждого своя форма, а в навигации «Содержимого» им
@@ -12,9 +17,20 @@ export const RuleFiles = ({
   workspaceId: string;
   versionDir: string;
 }) => {
-  const { t } = useTranslation("packSpace");
+  const { t, i18n } = useTranslation("packSpace");
   const nav = useContentNav();
   const tree = usePackTree(workspaceId);
+  // Файл называется по группе правил («ГОСТ 19.201-78»); имя файла остаётся запасным.
+  const checks = usePackChecksForm(
+    workspaceId,
+    versionRefOf(`${versionDir}/version.yaml`),
+  );
+  const titles = new Map(
+    (checks.data?.files ?? []).map((file) => [
+      file.name,
+      pickLocalized(file.header.label, i18n.language, ""),
+    ]),
+  );
   const prefix = `${versionDir}/checks/`;
   const files = (tree.data?.files ?? []).filter(
     (file) =>
@@ -39,7 +55,12 @@ export const RuleFiles = ({
                 onClick={nav.guardClick}
                 data-testid={`ct-rule-file-${name}`}
               >
-                <span className="mono">{name}</span>
+                <span title={name}>
+                  {[
+                    titles.get(name),
+                    titles.get(name.replace(/\.ya?ml$/, "")),
+                  ].find(Boolean) ?? name}
+                </span>
                 <span className="sp-ct-part-open">
                   {t("content.parts.rules.open")}
                 </span>

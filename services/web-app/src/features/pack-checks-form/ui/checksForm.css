@@ -130,3 +130,23 @@
   min-width: 0;
   font-size: 0.75rem;
 }
+
+/* Технические подробности группы правил: имя файла и идентификаторы правил. */
+.pcf-tech-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 0.25rem 0.75rem;
+  margin: 0;
+  font-size: 0.75rem;
+}
+.pcf-tech-row {
+  display: contents;
+}
+.pcf-tech-list dt {
+  color: var(--fg-1);
+}
+.pcf-tech-list dd {
+  margin: 0;
+  color: var(--fg-2);
+  overflow-wrap: anywhere;
+}

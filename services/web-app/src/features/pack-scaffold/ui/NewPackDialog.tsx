@@ -9,7 +9,8 @@ import {
   type ScaffoldKind,
 } from "@entities/pack-studio";
 import { toast } from "@shared/lib";
-import { Button, Input, Modal, Select, Spinner } from "@shared/ui";
+import { slugify, uniqueSlug } from "@shared/lib/slug";
+import { Button, Input, Modal, Select, Spinner, TechDetails } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import {
   defaultChoice,
@@ -35,43 +36,12 @@ export type NewPackDialogProps = {
 
 const EMPTY: LocalizedDraft = { ru: "", en: "" };
 
-type NamePairProps = {
-  value: LocalizedDraft;
-  onChange: (value: LocalizedDraft) => void;
-  testId: string;
-};
-
-const NamePair = ({ value, onChange, testId }: NamePairProps) => {
-  const { t } = useTranslation("packStudio");
-  return (
-    <div className="ps-scaffold-pair">
-      <Input
-        label={t("scaffold.nameRu")}
-        value={value.ru}
-        onChange={(e) => {
-          onChange({ ...value, ru: e.target.value });
-        }}
-        data-testid={`${testId}-ru`}
-      />
-      <Input
-        label={t("scaffold.nameEn")}
-        hint={t("scaffold.nameHint")}
-        value={value.en}
-        onChange={(e) => {
-          onChange({ ...value, en: e.target.value });
-        }}
-        data-testid={`${testId}-en`}
-      />
-    </div>
-  );
-};
-
 /**
- * «Новый пак» и «Новый шаблон» (template-studio.md, раздел 8): id, имена ru и
- * en, у пака сопровождающий, лицензия и адрес исходников; заготовка
- * «Минимальный» или копия выбранной версии пространства или каталога Студии
- * с новыми id. После создания открывается исходник первого документа: там
- * сразу видны проверки и вкладка предпросмотра.
+ * «Новый пак» и «Новый шаблон» (template-studio.md, раздел 8; pack-studio-ux.md, 5.10): сначала
+ * то, без чего не обойтись, названия по-русски и заготовка («Минимальный» или копия выбранной
+ * версии пространства или каталога Студии), остальное под «Дополнительно»: названия по-английски,
+ * короткие имена (строятся из названий сами), сопровождающий, лицензия, адрес репозитория и номер
+ * первой версии. После создания открывается первая версия.
  */
 export const NewPackDialog = ({
   workspaceId,
@@ -88,7 +58,7 @@ export const NewPackDialog = ({
   const createTemplate = useCreatePackTemplate(workspaceId);
   const mutation = forPack ? createPack : createTemplate;
 
-  const [packId, setPackId] = useState("");
+  const [packIdTyped, setPackIdTyped] = useState<string | null>(null);
   const [packName, setPackName] = useState<LocalizedDraft>(EMPTY);
   const [maintainer, setMaintainer] = useState<{
     name: string;
@@ -96,7 +66,7 @@ export const NewPackDialog = ({
   } | null>(null);
   const [license, setLicense] = useState<string | null>(null);
   const [sourceUrl, setSourceUrl] = useState("");
-  const [templateId, setTemplateId] = useState("");
+  const [templateIdTyped, setTemplateIdTyped] = useState<string | null>(null);
   const [templateName, setTemplateName] = useState<LocalizedDraft>(EMPTY);
   const [kind, setKind] = useState<ScaffoldKind>("minimal");
   const [sourceKey, setSourceKey] = useState<string | null>(null);
@@ -113,6 +83,17 @@ export const NewPackDialog = ({
   };
   const chosenLicense = license ?? data?.license ?? "Apache-2.0";
   const chosenVersion = version ?? data?.version ?? "";
+  // Короткие имена (папки на диске) строятся из названий; свои вводятся под «Дополнительно».
+  const packId =
+    packIdTyped ??
+    uniqueSlug(
+      slugify(packName.ru.trim() || packName.en.trim(), "-"),
+      data?.taken_packs ?? [],
+      "-",
+    );
+  const templateId =
+    templateIdTyped ??
+    slugify(templateName.ru.trim() || templateName.en.trim(), "_");
 
   const packIdError =
     !forPack || packId === ""
@@ -126,6 +107,12 @@ export const NewPackDialog = ({
     templateId !== "" && !isTemplateId(templateId)
       ? t("scaffold.idInvalid")
       : undefined;
+  // Названия есть, а короткого имени из них не вышло (например, только иероглифы): покажем поле.
+  const idMissing =
+    (hasName(templateName) && templateId === "") ||
+    (forPack && hasName(packName) && packId === "") ||
+    templateIdError !== undefined ||
+    packIdError !== undefined;
   const ready =
     data !== undefined &&
     isTemplateId(templateId) &&
@@ -137,12 +124,12 @@ export const NewPackDialog = ({
   const reset = () => {
     createPack.reset();
     createTemplate.reset();
-    setPackId("");
+    setPackIdTyped(null);
     setPackName(EMPTY);
     setMaintainer(null);
     setLicense(null);
     setSourceUrl("");
-    setTemplateId("");
+    setTemplateIdTyped(null);
     setTemplateName(EMPTY);
     setKind("minimal");
     setSourceKey(null);
@@ -163,8 +150,16 @@ export const NewPackDialog = ({
   const done = (created: PackScaffoldCreated) => {
     toast.success(
       forPack
-        ? t("scaffold.donePack", { pack: created.version.pack })
-        : t("scaffold.doneTemplate", { template: created.version.template }),
+        ? t("scaffold.donePack", {
+            pack:
+              packName.ru.trim() || packName.en.trim() || created.version.pack,
+          })
+        : t("scaffold.doneTemplate", {
+            template:
+              templateName.ru.trim() ||
+              templateName.en.trim() ||
+              created.version.template,
+          }),
     );
     reset();
     onCreated(created);
@@ -255,100 +250,28 @@ export const NewPackDialog = ({
         <Notice tone="err" role="alert" text={packErrorText(options.error)} />
       ) : (
         <div className="flex flex-col" style={{ gap: "0.75rem" }}>
-          {forPack && (
-            <section className="ps-scaffold-section">
-              <h3 className="ps-scaffold-title">{t("scaffold.packSection")}</h3>
-              <Input
-                label={t("scaffold.packId")}
-                hint={t("scaffold.packIdHint")}
-                {...(packIdError ? { error: packIdError } : {})}
-                value={packId}
-                onChange={(e) => {
-                  setPackId(e.target.value.trim());
-                }}
-                isMono
-                autoFocus
-                data-testid="scaffold-pack-id"
-              />
-              <NamePair
-                value={packName}
-                onChange={setPackName}
-                testId="scaffold-pack-name"
-              />
-              <div className="ps-scaffold-pair">
-                <Input
-                  label={t("scaffold.maintainerName")}
-                  value={owner.name}
-                  onChange={(e) => {
-                    setMaintainer({ ...owner, name: e.target.value });
-                  }}
-                />
-                <Input
-                  label={t("scaffold.maintainerEmail")}
-                  type="email"
-                  value={owner.email}
-                  onChange={(e) => {
-                    setMaintainer({ ...owner, email: e.target.value });
-                  }}
-                />
-              </div>
-              <div className="ps-scaffold-pair">
-                <Input
-                  label={t("scaffold.license")}
-                  hint={t("scaffold.licenseHint")}
-                  value={chosenLicense}
-                  onChange={(e) => {
-                    setLicense(e.target.value);
-                  }}
-                  isMono
-                />
-                <Input
-                  label={t("scaffold.sourceUrl")}
-                  hint={t("scaffold.sourceUrlHint")}
-                  value={sourceUrl}
-                  onChange={(e) => {
-                    setSourceUrl(e.target.value);
-                  }}
-                  placeholder="https://"
-                  isMono
-                />
-              </div>
-            </section>
-          )}
           <section className="ps-scaffold-section">
             {forPack && (
-              <h3 className="ps-scaffold-title">
-                {t("scaffold.templateSection")}
-              </h3>
+              <Input
+                label={t("scaffold.packName")}
+                hint={t("scaffold.packNameHint")}
+                value={packName.ru}
+                onChange={(e) => {
+                  setPackName({ ...packName, ru: e.target.value });
+                }}
+                autoFocus
+                data-testid="scaffold-pack-name-ru"
+              />
             )}
-            <div className="ps-scaffold-pair">
-              <Input
-                label={t("scaffold.templateId")}
-                hint={t("scaffold.templateIdHint")}
-                {...(templateIdError ? { error: templateIdError } : {})}
-                value={templateId}
-                onChange={(e) => {
-                  setTemplateId(e.target.value.trim());
-                }}
-                isMono
-                autoFocus={!forPack}
-                data-testid="scaffold-template-id"
-              />
-              <Input
-                label={t("scaffold.version")}
-                hint={t("scaffold.versionHint")}
-                value={chosenVersion}
-                onChange={(e) => {
-                  setVersion(e.target.value.trim());
-                }}
-                isMono
-                data-testid="scaffold-version"
-              />
-            </div>
-            <NamePair
-              value={templateName}
-              onChange={setTemplateName}
-              testId="scaffold-template-name"
+            <Input
+              label={t("scaffold.templateName")}
+              hint={t("scaffold.templateNameHint")}
+              value={templateName.ru}
+              onChange={(e) => {
+                setTemplateName({ ...templateName, ru: e.target.value });
+              }}
+              autoFocus={!forPack}
+              data-testid="scaffold-template-name-ru"
             />
           </section>
           <section className="ps-scaffold-section">
@@ -391,6 +314,116 @@ export const NewPackDialog = ({
                 </div>
               ))}
           </section>
+          <TechDetails
+            title={t("scaffold.more")}
+            open={idMissing ? true : undefined}
+            testId="scaffold-more"
+          >
+            {forPack && (
+              <section className="ps-scaffold-section">
+                <h3 className="ps-scaffold-title">
+                  {t("scaffold.packSection")}
+                </h3>
+                <Input
+                  label={t("scaffold.nameEn")}
+                  hint={t("scaffold.nameHint")}
+                  value={packName.en}
+                  onChange={(e) => {
+                    setPackName({ ...packName, en: e.target.value });
+                  }}
+                  data-testid="scaffold-pack-name-en"
+                />
+                <Input
+                  label={t("scaffold.packId")}
+                  hint={t("scaffold.packIdHint")}
+                  {...(packIdError ? { error: packIdError } : {})}
+                  value={packId}
+                  onChange={(e) => {
+                    setPackIdTyped(e.target.value.trim());
+                  }}
+                  isMono
+                  data-testid="scaffold-pack-id"
+                />
+                <div className="ps-scaffold-pair">
+                  <Input
+                    label={t("scaffold.maintainerName")}
+                    value={owner.name}
+                    onChange={(e) => {
+                      setMaintainer({ ...owner, name: e.target.value });
+                    }}
+                  />
+                  <Input
+                    label={t("scaffold.maintainerEmail")}
+                    type="email"
+                    value={owner.email}
+                    onChange={(e) => {
+                      setMaintainer({ ...owner, email: e.target.value });
+                    }}
+                  />
+                </div>
+                <div className="ps-scaffold-pair">
+                  <Input
+                    label={t("scaffold.license")}
+                    hint={t("scaffold.licenseHint")}
+                    value={chosenLicense}
+                    onChange={(e) => {
+                      setLicense(e.target.value);
+                    }}
+                    isMono
+                  />
+                  <Input
+                    label={t("scaffold.sourceUrl")}
+                    hint={t("scaffold.sourceUrlHint")}
+                    value={sourceUrl}
+                    onChange={(e) => {
+                      setSourceUrl(e.target.value);
+                    }}
+                    placeholder="https://"
+                    isMono
+                  />
+                </div>
+              </section>
+            )}
+            <section className="ps-scaffold-section">
+              {forPack && (
+                <h3 className="ps-scaffold-title">
+                  {t("scaffold.templateSection")}
+                </h3>
+              )}
+              <Input
+                label={t("scaffold.nameEn")}
+                hint={t("scaffold.nameHint")}
+                value={templateName.en}
+                onChange={(e) => {
+                  setTemplateName({ ...templateName, en: e.target.value });
+                }}
+                data-testid="scaffold-template-name-en"
+              />
+              <div className="ps-scaffold-pair">
+                <Input
+                  label={t("scaffold.templateId")}
+                  hint={t("scaffold.templateIdHint")}
+                  {...(templateIdError ? { error: templateIdError } : {})}
+                  value={templateId}
+                  onChange={(e) => {
+                    setTemplateIdTyped(e.target.value.trim());
+                  }}
+                  isMono
+                  data-testid="scaffold-template-id"
+                />
+                <Input
+                  label={t("scaffold.version")}
+                  hint={t("scaffold.versionHint")}
+                  value={chosenVersion}
+                  onChange={(e) => {
+                    setVersion(e.target.value.trim());
+                  }}
+                  isMono
+                  data-testid="scaffold-version"
+                />
+              </div>
+            </section>
+          </TechDetails>
           {mutation.isError && (
             <Notice
               tone="err"

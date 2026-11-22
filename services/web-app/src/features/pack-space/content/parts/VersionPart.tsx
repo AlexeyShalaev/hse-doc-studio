@@ -12,7 +12,7 @@ import "./space-content-parts.css";
 // Раздел версии «Содержимого» (pack-studio-ux.md, 5.5, срез S8d): одно предложение о том, что здесь
 // правят, и форма `pack-forms` ровно на этот раздел, без полосы вкладок прежней формы. «Подписи и
 // места» делает S8c, «Все файлы» это `FilesPart`.
-const SECTION: Partial<Record<ContentPart, VersionSection>> = {
+export const SECTION: Partial<Record<ContentPart, VersionSection>> = {
   documents: "documents",
   fields: "fields",
   forms: "forms",

@@ -158,6 +158,12 @@
   color: var(--fg-0);
   overflow-wrap: anywhere;
 }
+.pf-item-title {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--fg-0);
+  overflow-wrap: anywhere;
+}
 .pf-item-label {
   flex: 1;
   min-width: 6rem;

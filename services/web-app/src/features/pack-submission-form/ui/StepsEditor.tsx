@@ -122,8 +122,7 @@ export const StepsEditor = ({
                     setDrag({ kind: "slot", slot });
                   }}
                 >
-                  <span>{slotLabel(slot)}</span>
-                  <code className="mono psf-chip-id">{slot}</code>
+                  <span title={slot}>{slotLabel(slot)}</span>
                   {index > 0 && (
                     <Button
                       size="xs"

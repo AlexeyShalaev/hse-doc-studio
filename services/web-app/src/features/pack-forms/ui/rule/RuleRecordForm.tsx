@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { langName } from "../../lib/langName";
 import { asRecord, asString, asStrings } from "../../lib/raw";
 import {
   WHEN_CHOICES,
@@ -55,7 +56,7 @@ export const RuleRecordForm = ({
   onChange,
   testId,
 }: RuleRecordFormProps) => {
-  const { t } = useTranslation("packForms");
+  const { t, i18n } = useTranslation("packForms");
   const set = (next: unknown): void => {
     onChange({ type: "set", value: next });
   };
@@ -79,7 +80,7 @@ export const RuleRecordForm = ({
                 ? t(`kinds.${v}`, { defaultValue: v })
                 : shape.list === "staffing"
                   ? t(`doc.staffingValues.${v}`, { defaultValue: v })
-                  : v,
+                  : langName(v, i18n.language),
           }))}
           value={selectedOf(value, all)}
           disabled={disabled}
@@ -204,7 +205,13 @@ export const RuleRecordForm = ({
         <ChipToggles
           label={t(`rule.checks.${shape.list}`)}
           hint={t("rule.checks.hint")}
-          options={options.map((v) => ({ value: v, label: v }))}
+          options={options.map((v) => ({
+            value: v,
+            label:
+              shape.list === "categories"
+                ? t(`rule.checks.category.${v}`, { defaultValue: v })
+                : v,
+          }))}
           value={chosen}
           disabled={disabled}
           testId="pf-rule-checks"

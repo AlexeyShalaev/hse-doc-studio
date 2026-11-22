@@ -1,7 +1,8 @@
 import { useRef, useState } from "react";
 import { Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { Button } from "@shared/ui";
+import { usePackChecksForm } from "@entities/pack-studio";
+import { Button, TechDetails } from "@shared/ui";
 import {
   ENGINES,
   KNOWN_DOC_GROUPS,
@@ -13,12 +14,14 @@ import {
 } from "../../lib/documents";
 import { KINDS } from "../../lib/fields";
 import { useRecordFocus } from "../../lib/focus";
+import { langName } from "../../lib/langName";
 import {
   asArray,
   asRecord,
   asString,
   asStrings,
   compactLocalized,
+  pickLocalized,
   deleteOp,
   insertOp,
   moveOp,
@@ -97,7 +100,7 @@ const VariantCard = ({
   sources: string[];
   write: Write;
 }) => {
-  const { t } = useTranslation("packForms");
+  const { t, i18n } = useTranslation("packForms");
   const { readOnly } = useModelEditor();
   const path: YamlPath = ["variants", index];
   const variantLangs = asStrings(variant.supported_langs);
@@ -113,45 +116,60 @@ const VariantCard = ({
             write([...path, "label"], compactLocalized(next), variant);
           }}
         />
-        <div className="pf-grid">
-          <PathInput
-            label={t("doc.sourceFile")}
-            value={asString(variant.source_file)}
-            choices={sources}
-            disabled={readOnly}
-            testId={`pf-variant-source-${String(index)}`}
-            onCommit={(next) => {
-              write([...path, "source_file"], next, variant);
-            }}
-          />
-          <PathInput
-            label={t("doc.outputFile")}
-            value={asString(variant.output_file)}
-            choices={[]}
-            disabled={readOnly}
-            testId={`pf-variant-output-${String(index)}`}
-            onCommit={(next) => {
-              write([...path, "output_file"], next, variant);
-            }}
-          />
-          <FormRow label={t("doc.engine")} hint={t("doc.engineHint")}>
-            {(id) => (
-              <SelectInput
-                id={id}
-                ariaLabel={t("doc.engine")}
-                value={asString(variant.engine)}
-                disabled={readOnly}
-                options={[
-                  { value: "", label: t("doc.engineDefault") },
-                  ...ENGINES.map((e) => ({ value: e, label: e })),
-                ]}
-                onChange={(next) => {
-                  write([...path, "engine"], next, variant);
-                }}
-              />
-            )}
-          </FormRow>
-        </div>
+        <TechDetails testId={`pf-variant-tech-${String(index)}`}>
+          <div className="pf-grid">
+            <PathInput
+              label={t("doc.tech.sourceFile")}
+              value={asString(variant.source_file)}
+              choices={sources}
+              disabled={readOnly}
+              testId={`pf-variant-source-${String(index)}`}
+              onCommit={(next) => {
+                write([...path, "source_file"], next, variant);
+              }}
+            />
+            <PathInput
+              label={t("doc.tech.outputFile")}
+              value={asString(variant.output_file)}
+              choices={[]}
+              disabled={readOnly}
+              testId={`pf-variant-output-${String(index)}`}
+              onCommit={(next) => {
+                write([...path, "output_file"], next, variant);
+              }}
+            />
+            <FormRow
+              label={t("doc.tech.engine")}
+              hint={t("doc.tech.engineHint")}
+            >
+              {(id) => (
+                <SelectInput
+                  id={id}
+                  ariaLabel={t("doc.tech.engine")}
+                  value={asString(variant.engine)}
+                  disabled={readOnly}
+                  options={[
+                    { value: "", label: t("doc.tech.engineDefault") },
+                    ...ENGINES.map((e) => ({ value: e, label: e })),
+                  ]}
+                  onChange={(next) => {
+                    write([...path, "engine"], next, variant);
+                  }}
+                />
+              )}
+            </FormRow>
+            <FormRow label={t("doc.tech.variantId")}>
+              {(id) => (
+                <input
+                  id={id}
+                  className="input mono"
+                  readOnly
+                  value={asString(variant.id)}
+                />
+              )}
+            </FormRow>
+          </div>
+        </TechDetails>
         <LocalizedInput
           label={t("doc.outputName")}
           value={variant.output_name}
@@ -164,7 +182,10 @@ const VariantCard = ({
           label={t("doc.langs")}
           hint={t("doc.variantLangsHint")}
           at={`/variants/${String(index)}/supported_langs`}
-          options={langs.map((l) => ({ value: l, label: l }))}
+          options={langs.map((l) => ({
+            value: l,
+            label: langName(l, i18n.language),
+          }))}
           value={variantLangs}
           disabled={readOnly}
           onChange={(next) => {
@@ -187,10 +208,20 @@ export const DocForm = ({
   docId: string;
   at?: string | null | undefined;
 }) => {
-  const { t } = useTranslation("packForms");
+  const { t, i18n } = useTranslation("packForms");
   const root = useRef<HTMLDivElement>(null);
   useRecordFocus(root, at, docId);
-  const { model, edit, readOnly, busy } = useModelEditor();
+  const { model, edit, readOnly, busy, workspaceId, versionRef } =
+    useModelEditor();
+  // Файлы правил называются по группе («ГОСТ 19.201-78»), а не по имени файла: имя остаётся запасным.
+  const checksForm = usePackChecksForm(workspaceId, versionRef);
+  const checkNames = new Map<string, string>();
+  for (const file of checksForm.data?.files ?? []) {
+    const label = pickLocalized(file.header.label, i18n.language, "");
+    if (!label) continue;
+    checkNames.set(file.name, label);
+    checkNames.set(file.name.replace(/\.ya?ml$/, ""), label);
+  }
   const [addingVariant, setAddingVariant] = useState(false);
   const doc = model.documents.find((d) => d.id === docId);
   if (!doc?.manifest) {
@@ -215,7 +246,7 @@ export const DocForm = ({
 
   return (
     <div className="pf-section" data-testid="pf-doc-form" ref={root}>
-      <FormBlock title={t("doc.title", { id: doc.id })} lead={t("doc.lead")}>
+      <FormBlock title={t("doc.title")} lead={t("doc.lead")}>
         <LocalizedInput
           label={t("doc.name")}
           value={data.name}
@@ -245,26 +276,6 @@ export const DocForm = ({
           />
         </div>
         <div className="pf-grid">
-          <PathInput
-            label={t("doc.sourceFile")}
-            value={asString(data.source_file)}
-            choices={sources}
-            disabled={readOnly}
-            testId="pf-doc-source-file"
-            onCommit={(next) => {
-              write(["source_file"], next, data);
-            }}
-          />
-          <PathInput
-            label={t("doc.outputFile")}
-            value={asString(data.output_file)}
-            choices={[]}
-            disabled={readOnly}
-            testId="pf-doc-output-file"
-            onCommit={(next) => {
-              write(["output_file"], next, data);
-            }}
-          />
           <FormRow label={t("doc.gostRef")} hint={t("doc.gostRefHint")}>
             {(id) => (
               <SelectInput
@@ -275,7 +286,10 @@ export const DocForm = ({
                 testId="pf-doc-gost"
                 options={[
                   { value: "", label: t("doc.noGost") },
-                  ...model.checks.map((c) => ({ value: c, label: c })),
+                  ...model.checks.map((c) => ({
+                    value: c,
+                    label: checkNames.get(c) ?? c,
+                  })),
                 ]}
                 onChange={(next) => {
                   write(["gost_ref"], next, data);
@@ -311,7 +325,7 @@ export const DocForm = ({
                   { value: "", label: t("documents.noGroup") },
                   ...KNOWN_DOC_GROUPS.map((g) => ({
                     value: g,
-                    label: `${t(docGroupLabelKey(g))} (${g})`,
+                    label: t(docGroupLabelKey(g)),
                   })),
                 ]}
                 onChange={(next) => {
@@ -334,7 +348,10 @@ export const DocForm = ({
         <ChipToggles
           label={t("doc.langs")}
           hint={t("doc.langsHint")}
-          options={langs.map((l) => ({ value: l, label: l }))}
+          options={langs.map((l) => ({
+            value: l,
+            label: langName(l, i18n.language),
+          }))}
           value={asStrings(data.supported_langs)}
           disabled={readOnly}
           testId="pf-doc-langs"
@@ -376,6 +393,43 @@ export const DocForm = ({
             }}
           />
         </div>
+        <TechDetails testId="pf-doc-tech">
+          <div className="pf-grid">
+            <PathInput
+              label={t("doc.tech.sourceFile")}
+              value={asString(data.source_file)}
+              choices={sources}
+              disabled={readOnly}
+              testId="pf-doc-source-file"
+              onCommit={(next) => {
+                write(["source_file"], next, data);
+              }}
+            />
+            <PathInput
+              label={t("doc.tech.outputFile")}
+              value={asString(data.output_file)}
+              choices={[]}
+              disabled={readOnly}
+              testId="pf-doc-output-file"
+              onCommit={(next) => {
+                write(["output_file"], next, data);
+              }}
+            />
+            <FormRow
+              label={t("doc.tech.folder")}
+              hint={t("doc.tech.folderHint")}
+            >
+              {(id) => (
+                <input
+                  id={id}
+                  className="input mono"
+                  readOnly
+                  value={`files/${doc.id}/`}
+                />
+              )}
+            </FormRow>
+          </div>
+        </TechDetails>
       </FormBlock>
       <FormBlock
         title={t("languages.filesTitle")}
@@ -416,13 +470,15 @@ export const DocForm = ({
                 data-pf-at={`/variants/${String(i)}`}
               >
                 <div className="pf-item-head">
-                  <span className="mono pf-id">{id}</span>
+                  <span className="pf-item-title">
+                    {pickLocalized(variant.label, i18n.language, id)}
+                  </span>
                   <span className="pf-item-sub" />
                   {!readOnly && (
                     <OrderButtons
                       index={i}
                       count={variants.length}
-                      label={id}
+                      label={pickLocalized(variant.label, i18n.language, id)}
                       disabled={busy}
                       onMove={(to) => {
                         void edit(file, [moveOp(["variants"], i, to)]);

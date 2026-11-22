@@ -19,7 +19,10 @@
     "syncCheck": "Check the repository for updates",
     "syncConflicts": "Open sync conflicts",
     "connectRemote": "Connect a repository",
-    "cloneProject": "Clone a project from git"
+    "cloneProject": "Clone a project from git",
+    "spaceWhere": "Go to: pack, template, version",
+    "spaceSubmit": "Send for review",
+    "placeholderPackStudio": "Command…"
   },
   "compileStatus": {
     "noBuilds": "No builds",

@@ -75,7 +75,7 @@ describe("«Новый пак» и «Новый шаблон»", () => {
     await userEvent.type(packId, "hse-cs-sse");
     expect(
       screen.getByText(
-        "Такой id уже занят в рабочем пространстве или в каталоге Студии.",
+        "Такое короткое имя уже занято в пространстве или в каталоге Студии.",
       ),
     ).toBeInTheDocument();
     expect(screen.getByTestId("scaffold-submit")).toBeDisabled();
@@ -103,6 +103,50 @@ describe("«Новый пак» и «Новый шаблон»", () => {
       scaffold: { kind: "minimal" },
       version: "2026.1",
     });
+  });
+
+  it("достаточно названий: короткие имена строятся сами, остальное под «Дополнительно»", async () => {
+    const create = vi
+      .spyOn(packStudioApi, "createPack")
+      .mockResolvedValue(CREATED);
+    mount({ kind: "pack" });
+
+    await userEvent.type(
+      await screen.findByTestId("scaffold-pack-name-ru"),
+      "Системная инженерия",
+    );
+    await userEvent.type(
+      screen.getByTestId("scaffold-template-name-ru"),
+      "Курсовая работа",
+    );
+    // Первым стоит то, без чего не обойтись; остальное свёрнуто.
+    const more = screen.getByTestId("scaffold-more");
+    expect(more.tagName).toBe("DETAILS");
+    expect(more).not.toHaveAttribute("open");
+    expect(more).toHaveTextContent("Дополнительно");
+    expect(screen.getByTestId("scaffold-pack-id")).toHaveValue(
+      "sistemnaya-inzheneriya",
+    );
+    expect(screen.getByTestId("scaffold-template-id")).toHaveValue(
+      "kursovaya_rabota",
+    );
+    await userEvent.click(screen.getByTestId("scaffold-submit"));
+    await waitFor(() => {
+      expect(create).toHaveBeenCalled();
+    });
+    expect(create.mock.calls[0]?.[1]).toMatchObject({
+      id: "sistemnaya-inzheneriya",
+      template: { id: "kursovaya_rabota" },
+    });
+  });
+
+  it("в окне нет жаргона первого экрана: «Id», «SPDX», «манифест», «beta»", async () => {
+    mount({ kind: "pack" });
+    const dialog = await screen.findByRole("dialog");
+    const text = dialog.textContent ?? "";
+    for (const word of ["Id ", "SPDX", "манифест", "beta", "реестр выпусков"]) {
+      expect(text).not.toContain(word);
+    }
   });
 
   it("новый шаблон копией: версия по умолчанию первого источника, отказ сервера виден", async () => {

@@ -3,8 +3,9 @@ import { SpaceProvider } from "../context/SpaceContext";
 import { GALLERY_TREE, GALLERY_WORKSPACE } from "../galleryKit";
 import { SpaceScreen } from "../shell/SpaceScreen";
 import { defineSpaceSlots } from "../shell/spaceSlots";
-import { EDITED, TREE, WS, seedNav } from "./fixtures";
+import { EDITED, TREE, seedNav } from "./fixtures";
 import { NoPlace } from "./NoPlace";
+import { SpaceNotFound } from "./SpaceNotFound";
 import { WhereBody } from "./WhereSheet";
 import { slots as navSlots } from "./slots";
 import { useWhere } from "./useWhere";
@@ -159,11 +160,26 @@ export const galleryEntries: GalleryEntry[] = [
   {
     id: "sp_nav_empty",
     title: "В пространстве нет паков",
-    note: "Причина и один следующий шаг: «Создать пак».",
+    note: "Шапка пространства (назад, название, меню «…») на месте; причина и один следующий шаг: «Создать пак».",
     frame: "plain",
     width: 720,
     render: () => (
-      <NoPlace workspaceId={WS} tree={{ ...GALLERY_TREE, packs: [] }} />
+      <NoPlace
+        workspace={GALLERY_WORKSPACE}
+        tree={{ ...GALLERY_TREE, packs: [] }}
+      />
+    ),
+  },
+  {
+    id: "sp_nav_not_found",
+    title: "Пространство не найдено",
+    note: "Ссылка на несуществующее пространство: понятный экран и ссылка в список вместо «Request failed with status code 422».",
+    frame: "plain",
+    width: 720,
+    render: () => (
+      <div className="ui-console" style={{ padding: "1.5rem" }}>
+        <SpaceNotFound />
+      </div>
     ),
   },
 ];

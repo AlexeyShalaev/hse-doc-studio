@@ -275,9 +275,13 @@ describe("«Подробности»", () => {
     };
 
     it("мини-форма подписана фразой, чипы пишут в черновик, видна разница", async () => {
+      const errors = vi.spyOn(console, "error");
       mount(`${VKR}/result?${DOC}`);
       const form = await openForm();
       expect(form).toHaveTextContent("Документ нужен, когда вид работы:");
+      // Отмечено всё: ограничения нет.
+      const kindsList = within(form).getAllByTestId("sp-cond-list")[0];
+      expect(kindsList).toHaveTextContent("Отмечено всё: ограничения нет.");
       const chip = await within(form).findByRole("checkbox", {
         name: "Проектная",
       });
@@ -286,12 +290,25 @@ describe("«Подробности»", () => {
       await waitFor(() => {
         expect(kinds("technical_specification")).toEqual(["research"]);
       });
+      // Из двух значений отмечено одно: подсказка говорит, что ограничение есть.
+      await waitFor(() => {
+        expect(kindsList).toHaveTextContent(
+          "Ограничение действует: подходит только отмеченное.",
+        );
+      });
+      expect(kindsList).not.toHaveTextContent("ограничения нет");
       const delta = await screen.findByTestId("sp-edit-delta");
       expect(delta).toHaveTextContent("Результат изменился");
       expect(
         within(delta).getAllByTestId("sp-edit-delta-item")[0],
       ).toHaveAttribute("data-symbol", "-");
       expect(delta).toHaveTextContent("Исчезло");
+      // Запись ленты идёт из эффекта: React не жалуется на обновление во время отрисовки.
+      const complaints = errors.mock.calls.filter((call) =>
+        String(call[0]).includes("Cannot update a component"),
+      );
+      expect(complaints).toEqual([]);
+      errors.mockRestore();
     });
 
     it("«Готово» закрывает форму, правки остаются", async () => {

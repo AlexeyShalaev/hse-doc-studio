@@ -25,6 +25,7 @@ import {
   type YamlPath,
 } from "../../lib/raw";
 import { useModelEditor } from "../../model/modelEditor";
+import { slugify, uniqueSlug } from "@shared/lib/slug";
 import { NewItemDialog } from "../NewItemDialog";
 import {
   CheckInput,
@@ -141,12 +142,15 @@ const PairsEditor = ({
   testId: string;
 }) => {
   const { t } = useTranslation("packForms");
+  const lang = useLang();
   const [draft, setDraft] = useState("");
   const ids = items.map((i) => asString(i.id));
   const add = () => {
-    const id = draft.trim();
-    if (!id || ids.includes(id)) return;
-    onChange([...items, { id, label: { ru: id } }]);
+    // Человек пишет подпись варианта, короткое имя для файла строится из неё само.
+    const text = draft.trim();
+    if (!text) return;
+    const id = uniqueSlug(slugify(text) || "option", ids);
+    onChange([...items, { id, label: { ru: text } }]);
     setDraft("");
   };
   return (
@@ -157,9 +161,10 @@ const PairsEditor = ({
           const id = asString(item.id);
           return (
             <li key={`${id}-${String(i)}`} className="pf-pair">
-              <span className="mono pf-id">{id}</span>
               <LocalizedInput
-                label={t("forms.pairLabel", { id })}
+                label={t("forms.pairLabel", {
+                  name: pickLocalized(item.label, lang, id),
+                })}
                 value={item.label}
                 disabled={disabled}
                 required
@@ -489,7 +494,9 @@ const SectionEditor = ({
       data-pf-at={`/${path.join("/")}`}
     >
       <div className="pf-item-head">
-        <span className="mono pf-id">{sectionId}</span>
+        <span className="pf-item-title" title={sectionId}>
+          {pickLocalized(section.title, lang, sectionId)}
+        </span>
         <span className="pf-item-sub">
           {t("forms.fieldsCount", { count: fields.length })}
         </span>
@@ -497,7 +504,7 @@ const SectionEditor = ({
           <OrderButtons
             index={index}
             count={count}
-            label={sectionId}
+            label={pickLocalized(section.title, lang, sectionId)}
             disabled={busy}
             onMove={(to) => {
               void edit(MANIFEST, [moveOp(sectionsPath, index, to)]);
@@ -544,9 +551,8 @@ const SectionEditor = ({
                   ) : (
                     <ChevronRight size="0.75rem" />
                   )}
-                  <span className="mono pf-id">{id}</span>
-                  <span className="pf-item-label truncate">
-                    {pickLocalized(field.label, lang, "")}
+                  <span className="pf-item-title truncate" title={id}>
+                    {pickLocalized(field.label, lang, id)}
                   </span>
                   <Badge variant="subtle">
                     {t(`forms.types.${asString(field.type) || "text"}`, {
@@ -558,7 +564,7 @@ const SectionEditor = ({
                   <OrderButtons
                     index={i}
                     count={fields.length}
-                    label={id}
+                    label={pickLocalized(field.label, lang, id)}
                     disabled={busy}
                     onMove={(to) => {
                       void edit(MANIFEST, [moveOp([...path, "fields"], i, to)]);
@@ -879,9 +885,8 @@ export const FormsSection = () => {
                     ) : (
                       <ChevronRight size="0.75rem" />
                     )}
-                    <span className="mono pf-id">{id}</span>
-                    <span className="pf-item-label truncate">
-                      {pickLocalized(form.title, lang, "")}
+                    <span className="pf-item-title truncate" title={id}>
+                      {pickLocalized(form.title, lang, id)}
                     </span>
                     {form.required_for_pack === true && (
                       <Badge variant="info">{t("forms.inPack")}</Badge>
@@ -891,7 +896,7 @@ export const FormsSection = () => {
                     <OrderButtons
                       index={i}
                       count={forms.length}
-                      label={id}
+                      label={pickLocalized(form.title, lang, id)}
                       disabled={busy}
                       onMove={(to) => {
                         void edit(MANIFEST, [moveOp(["forms"], i, to)]);

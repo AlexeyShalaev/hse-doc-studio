@@ -9,8 +9,14 @@ import {
   type PackTree,
   type PackWorkspace,
 } from "@entities/pack-studio";
+import { SpaceNotFound } from "@features/pack-space";
+import { ApiError } from "@shared/api";
 import { ErrorState, Spinner } from "@shared/ui";
 import { NotReady } from "../NotReady";
+
+/** Сервер не знает такого пространства (нет записи или адрес не похож на идентификатор). */
+const isMissing = (error: unknown): boolean =>
+  error instanceof ApiError && (error.status === 404 || error.status === 422);
 
 /**
  * Пространство и его дерево для маршрутов нового интерфейса: ожидание, ошибка и «не готово»
@@ -31,6 +37,13 @@ export const WithSpaceData = ({
     return (
       <div className="ps-page flex justify-center" data-testid="space-loading">
         <Spinner size="lg" />
+      </div>
+    );
+  }
+  if (workspace.isError && isMissing(workspace.error)) {
+    return (
+      <div className="ps-page">
+        <SpaceNotFound />
       </div>
     );
   }

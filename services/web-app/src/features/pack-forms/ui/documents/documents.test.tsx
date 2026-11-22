@@ -78,7 +78,9 @@ describe("формы версии: документы, языки, doc.yaml", ()
     const { onOpenFile } = renderPane(data, `${DIR}/version.yaml`);
 
     fireEvent.click(screen.getByTestId("pf-tab-documents"));
-    fireEvent.click(screen.getByRole("button", { name: "Ниже: report" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Ниже: Отчёт о курсовом проекте" }),
+    );
     await vi.waitFor(() => {
       expect(patch).toHaveBeenCalledTimes(1);
     });
@@ -151,7 +153,9 @@ describe("формы версии: документы, языки, doc.yaml", ()
     renderPane(data, `${DIR}/version.yaml`);
 
     fireEvent.click(screen.getByTestId("pf-tab-documents"));
-    fireEvent.click(screen.getByRole("button", { name: "Удалить: report" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Удалить: Отчёт о курсовом проекте" }),
+    );
 
     expect(screen.getByTestId("pf-doc-references")).toHaveTextContent(
       "signatures.slots[author].applies_to",
@@ -209,7 +213,9 @@ describe("формы версии: документы, языки, doc.yaml", ()
         data.manifest.etag,
       );
     });
-    expect(screen.getByRole("button", { name: "Удалить: en" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Удалить: Английский" }),
+    ).toBeDisabled();
   });
 
   it("форма doc.yaml: проверки из версии, обязательность, новый вариант", async () => {

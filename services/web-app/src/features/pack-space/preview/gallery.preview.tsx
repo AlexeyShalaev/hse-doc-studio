@@ -144,6 +144,7 @@ export const galleryEntries: GalleryEntry[] = [
   {
     id: "sp_preview_no_document",
     title: "Предпросмотр PDF: у раздела формы страницы нет",
+    note: "Правая колонка у раздела формы не рисуется совсем: форма получает всю ширину, заглушки «Выберите документ» нет.",
     frame: "screen",
     width: 1280,
     seed: (client) => {

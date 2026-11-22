@@ -15,6 +15,7 @@ import {
   usePackWorkspaces,
   useRefreshPackWorkspace,
   workspaceErrorText,
+  type PackWorkspace,
 } from "@entities/pack-studio";
 import { useBootstrap } from "@entities/session";
 import {
@@ -41,8 +42,22 @@ const MAX_OTHERS = 6;
  * переключить на другое, подключить к каталогу Студии, удалить). Всё про само пространство.
  */
 export const SpaceBar = () => {
-  const { t } = useTranslation("packSpace");
   const { workspace, location } = useSpace();
+  return <WorkspaceBar workspace={workspace} navigate={location.navigate} />;
+};
+
+/**
+ * Та же полоса без контекста версии: нужна и пространству без паков (там версии нет, а выход из
+ * пространства и его меню нужны так же).
+ */
+export const WorkspaceBar = ({
+  workspace,
+  navigate,
+}: {
+  workspace: PackWorkspace;
+  navigate: (to: string, options?: { replace?: boolean }) => void;
+}) => {
+  const { t } = useTranslation("packSpace");
   const refresh = useRefreshPackWorkspace();
   const remove = useDeletePackWorkspace();
   const all = usePackWorkspaces();
@@ -75,9 +90,7 @@ export const SpaceBar = () => {
       icon: <FolderOpen size="0.875rem" aria-hidden="true" />,
       testId: `sp-ws-switch-${item.id}`,
       onSelect: () => {
-        location.navigate(
-          `${PACK_STUDIO_PATH}/w/${encodeURIComponent(item.id)}`,
-        );
+        navigate(`${PACK_STUDIO_PATH}/w/${encodeURIComponent(item.id)}`);
       },
     })),
     ...(!git && isLocal
@@ -162,7 +175,7 @@ export const SpaceBar = () => {
               onClick={() => {
                 remove.mutate(workspace.id, {
                   onSuccess: () => {
-                    location.navigate(PACK_STUDIO_PATH, { replace: true });
+                    navigate(PACK_STUDIO_PATH, { replace: true });
                   },
                 });
               }}

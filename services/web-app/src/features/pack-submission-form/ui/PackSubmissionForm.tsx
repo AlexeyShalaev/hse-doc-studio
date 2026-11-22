@@ -23,7 +23,15 @@ import {
 } from "@features/pack-preview";
 import { ApiError } from "@shared/api";
 import { pickLocalized } from "@shared/lib";
-import { Button, ErrorState, Input, Select, Spinner } from "@shared/ui";
+import { slugify, uniqueSlug } from "@shared/lib/slug";
+import {
+  Button,
+  ErrorState,
+  Input,
+  Select,
+  Spinner,
+  TechDetails,
+} from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import { RouteOrderCard } from "./RouteOrderCard";
 import { ProfileCard } from "./ProfileCard";
@@ -103,7 +111,7 @@ const CombinationBar = ({
   );
 };
 
-/** «Новая точка»: id и название; пунктов у неё пока нет. */
+/** «Новая точка»: название (короткое имя строится из него и правится под «Дополнительно»); пунктов у неё пока нет. */
 const NewProfile = ({
   disabled,
   taken,
@@ -115,8 +123,14 @@ const NewProfile = ({
 }) => {
   const { t } = useTranslation("packStudio");
   const [open, setOpen] = useState(false);
-  const [id, setId] = useState("");
+  const [typed, setTyped] = useState<string | null>(null);
   const [name, setName] = useState<Record<string, string>>({});
+  const generated = uniqueSlug(
+    slugify(name.ru?.trim() || name.en?.trim() || "", "-"),
+    taken,
+    "-",
+  );
+  const id = typed ?? generated;
   const clash = taken.includes(id.trim());
   if (!open) {
     return (
@@ -136,24 +150,28 @@ const NewProfile = ({
   }
   return (
     <div className="psf-block psf-new" data-testid="profile-new-form">
-      <Input
-        label={t("submission.head.id")}
-        hint={
-          clash ? t("submission.profile.idTaken") : t("submission.head.idHint")
-        }
-        value={id}
-        isMono
-        onChange={(e) => {
-          setId(e.target.value);
-        }}
-        data-testid="profile-new-id"
-      />
       <LocalizedFields
         label={t("submission.head.name")}
         value={name}
         onChange={setName}
         testId="profile-new-name"
       />
+      <TechDetails title={t("common:more")} testId="profile-new-more">
+        <Input
+          label={t("submission.head.tech.id")}
+          hint={
+            clash
+              ? t("submission.profile.idTaken")
+              : t("submission.head.tech.idHint")
+          }
+          value={id}
+          isMono
+          onChange={(e) => {
+            setTyped(e.target.value);
+          }}
+          data-testid="profile-new-id"
+        />
+      </TechDetails>
       <div className="psf-actions">
         <Button
           size="xs"
@@ -170,7 +188,7 @@ const NewProfile = ({
           onClick={() => {
             onAdd(id.trim(), name);
             setOpen(false);
-            setId("");
+            setTyped(null);
             setName({});
           }}
           data-testid="profile-new-save"

@@ -13,5 +13,11 @@
   "entry": {
     "noVersionsTitle": "This workspace has no template versions yet",
     "noVersionsLead": "The first template will open here once it appears."
+  },
+  "skip": "Skip to content",
+  "notFound": {
+    "title": "Space not found",
+    "lead": "It may have been removed, or the link is wrong. Open the list and pick a space again.",
+    "action": "To the list of spaces"
   }
 }

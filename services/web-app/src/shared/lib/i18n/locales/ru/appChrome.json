@@ -19,7 +19,10 @@
     "syncCheck": "Проверить обновления репозитория",
     "syncConflicts": "Открыть конфликты синхронизации",
     "connectRemote": "Подключить репозиторий",
-    "cloneProject": "Клонировать проект из git"
+    "cloneProject": "Клонировать проект из git",
+    "spaceWhere": "Перейти к: пак, шаблон, версия",
+    "spaceSubmit": "Отправить на рассмотрение",
+    "placeholderPackStudio": "Команда…"
   },
   "compileStatus": {
     "noBuilds": "Нет сборок",

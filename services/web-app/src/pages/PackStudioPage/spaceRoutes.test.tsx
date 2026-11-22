@@ -2,7 +2,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "@shared/api";
 import {
+  packStudioApi,
   packStudioKeys,
   resetPackStudioUx,
   type PackTree,
@@ -220,6 +222,33 @@ describe("маршруты Студии шаблонов: флаг ?ux=2", () =>
       });
       expect(await screen.findByTestId("ws-cloning")).toBeInTheDocument();
       expect(screen.queryByTestId("sp-shell")).toBeNull();
+    });
+
+    it("нет такого пространства: понятный экран со ссылкой в список", async () => {
+      const spy = vi
+        .spyOn(packStudioApi, "workspace")
+        .mockRejectedValue(
+          new ApiError("Request failed with status code 422", "x", 422),
+        );
+      const client = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+      render(
+        <QueryClientProvider client={client}>
+          <MemoryRouter initialEntries={["/pack-studio/w/nope?ux=2"]}>
+            <Routes>
+              <Route path="/pack-studio/*" element={<PackStudioApp />} />
+            </Routes>
+          </MemoryRouter>
+        </QueryClientProvider>,
+      );
+      const missing = await screen.findByTestId("space-not-found");
+      expect(missing).toHaveTextContent("Пространство не найдено");
+      expect(missing).not.toHaveTextContent("Request failed");
+      expect(
+        screen.getByRole("link", { name: "К списку пространств" }),
+      ).toHaveAttribute("href", "/pack-studio");
+      spy.mockRestore();
     });
 
     it("в пространстве нет версий: объяснение и возврат к списку", async () => {

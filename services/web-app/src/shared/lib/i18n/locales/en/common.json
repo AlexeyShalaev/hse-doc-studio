@@ -3,5 +3,7 @@
   "actions": {
     "openSettings": "Open settings",
     "reset": "Reset"
-  }
+  },
+  "techDetails": "Technical details",
+  "more": "More options"
 }
