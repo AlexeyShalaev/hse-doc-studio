@@ -8,12 +8,14 @@ name: E2E server-lite
 # только когда меняются код сервера, стенд или сами тесты.
 #
 # Сценарии делят одну базу стенда и идут в один воркер, поэтому параллельность здесь только между джобами:
-# шесть шардов, у каждого свой стенд. Телефонный проект (~16 минут) делится по файлам по замеренной длительности;
+# семь шардов, у каждого свой стенд. Телефонный проект (~16 минут) делится по файлам по замеренной длительности;
 # файл, не закреплённый ни за одним шардом, уходит в phone-main, так что новый сценарий не потеряется. Каждый шард несёт
 # накладные расходы на стенд (~1,5 минуты) и приёмку M1 (~1,5 минуты), которую телефонные сценарии берут за основу, поэтому
-# шардов шесть, а не больше: каждый укладывается в ~9 минут. Отчёты шардов сводит джоб report: один HTML-отчёт e2e-report
+# шардов семь, а не больше: каждый укладывается в ~8 минут. Студия шаблонов идёт после text-scale.spec.ts: тот сбрасывает
+# размер текста аккаунта админа в явные 100%, и перетаскивание рамки в pack-studio.spec.ts от этого зависит (без сброса
+# тест падает: тянуть рамку в диалоге «Во весь экран» не получается), поэтому они в одном шарде в прежнем порядке. Отчёты шардов сводит джоб report: один HTML-отчёт e2e-report
 # и общий артефакт e2e-screenshots.
-# Телефонные шарды на PR идут, только если тронуты фронтенд, e2e или стенд (джоб plan); на push в master идут всегда.
+# Четыре телефонных шарда на PR идут, только если тронуты фронтенд, e2e или стенд (джоб plan); на push в master идут всегда.
 # Маршрут подписания (signing-route, signing-snapshot, signing-dates, signing-deadlines и signing-presets.spec.ts, ~5 мин)
 # идёт отдельным шардом: ему нужен общий раннер с поддельным TeX, а M1 проверяет стенд без раннеров.
 
@@ -42,8 +44,9 @@ env:
   # Телефонные файлы, закреплённые за шардами; остальные идут в phone-main. Длительности по прогону CI:
   # mobile-admin ~4,5 мин, mobile ~3,6, mobile-rare ~3,2, sidebar-overflow ~2,5, text-scale и stale-build по ~1,1.
   PHONE_ADMIN: "/mobile-admin.spec.ts"
-  PHONE_RARE: "/mobile-rare.spec.ts /text-scale.spec.ts"
+  PHONE_RARE: "/mobile-rare.spec.ts /stale-build.spec.ts"
   PHONE_OVERFLOW: "/sidebar-overflow.spec.ts"
+  PHONE_SCALE: "/text-scale.spec.ts"
 
 jobs:
   # Состав шардов. Телефонные шарды (~16 минут сценариев из ~24) нужны, когда менялся интерфейс (services/web-app),
@@ -73,17 +76,19 @@ jobs:
         env:
           PHONE: ${{ github.event_name != 'pull_request' || steps.filter.outputs.phone == 'true' }}
         run: |
-          # phone: какие телефонные файлы шарда (admin, main = всё не закреплённое, rare, overflow, none);
-          # m1: приёмка M1 перед сценариями (телефонные берут её результат за основу); desktop: десктопные сценарии
-          # на моках; signing: маршрут подписания на общем раннере с поддельным TeX; pdf: комментарии из превью PDF.
+          # phone: какие телефонные файлы идут в шарде (admin, main = всё не закреплённое, rare, overflow, scale, none);
+          # m1: приёмка M1 перед сценариями (телефонные берут её результат за основу); desktop: лендинг, серверы моделей,
+          # passkeys, команды раннера; studio: Студия шаблонов на моках; signing: маршрут подписания на общем раннере
+          # с поддельным TeX; pdf: комментарии из превью PDF (тоже на раннере).
           base='[
-            {"shard":"desktop","phone":"none","m1":true,"desktop":true,"signing":false,"pdf":false},
-            {"shard":"signing","phone":"none","m1":false,"desktop":false,"signing":true,"pdf":false}]'
+            {"shard":"desktop","phone":"none","m1":true,"desktop":true,"studio":false,"signing":false,"pdf":false},
+            {"shard":"studio","phone":"scale","m1":true,"desktop":false,"studio":true,"signing":false,"pdf":false},
+            {"shard":"signing","phone":"none","m1":false,"desktop":false,"studio":false,"signing":true,"pdf":false}]'
           phone='[
-            {"shard":"phone-admin","phone":"admin","m1":true,"desktop":false,"signing":false,"pdf":false},
-            {"shard":"phone-main","phone":"main","m1":true,"desktop":false,"signing":false,"pdf":false},
-            {"shard":"phone-rare","phone":"rare","m1":true,"desktop":false,"signing":false,"pdf":false},
-            {"shard":"phone-overflow","phone":"overflow","m1":true,"desktop":false,"signing":false,"pdf":true}]'
+            {"shard":"phone-admin","phone":"admin","m1":true,"desktop":false,"studio":false,"signing":false,"pdf":false},
+            {"shard":"phone-main","phone":"main","m1":true,"desktop":false,"studio":false,"signing":false,"pdf":false},
+            {"shard":"phone-rare","phone":"rare","m1":true,"desktop":false,"studio":false,"signing":false,"pdf":false},
+            {"shard":"phone-overflow","phone":"overflow","m1":true,"desktop":false,"studio":false,"signing":false,"pdf":true}]'
           if [ "$PHONE" = true ]; then
             matrix="$(jq -c -n --argjson a "$base" --argjson b "$phone" '{include: ($a + $b)}')"
           else
@@ -189,10 +194,11 @@ jobs:
             admin) files="$PHONE_ADMIN" ;;
             rare) files="$PHONE_RARE" ;;
             overflow) files="$PHONE_OVERFLOW" ;;
+            scale) files="$PHONE_SCALE" ;;
             main)
               files=""
               for f in $(pnpm exec playwright test --project=mobile --list --reporter=json | jq -r '[.suites[].file] | unique | .[]'); do
-                case " $PHONE_ADMIN $PHONE_RARE $PHONE_OVERFLOW " in *" /$f "*) ;; *) files="$files /$f" ;; esac
+                case " $PHONE_ADMIN $PHONE_RARE $PHONE_OVERFLOW $PHONE_SCALE " in *" /$f "*) ;; *) files="$files /$f" ;; esac
               done
               ;;
           esac
@@ -214,7 +220,7 @@ jobs:
         run: make e2e-model-servers
 
       - name: Template Studio (admin switch, mocked workspaces)
-        if: matrix.desktop
+        if: matrix.studio
         env:
           PLAYWRIGHT_BLOB_OUTPUT_DIR: ${{ env.BLOB_DIR }}/pack-studio
         run: make e2e-pack-studio
