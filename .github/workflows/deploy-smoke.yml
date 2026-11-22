@@ -267,9 +267,9 @@ jobs:
       matrix:
         include:
           - group: full
-            projects: full
+            projects: full presence
           - group: misc
-            projects: acknowledge backups updates onboarding presence storage-cleanup
+            projects: acknowledge backups updates onboarding storage-cleanup
           - group: mail
             projects: mail-log signing-optional
     steps:
