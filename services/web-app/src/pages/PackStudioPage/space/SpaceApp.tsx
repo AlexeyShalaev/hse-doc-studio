@@ -47,7 +47,7 @@ const WithSpaceLocale = ({ children }: { children: React.ReactNode }) => {
 };
 
 /**
- * Маршруты пространства нового интерфейса (`?ux=2`), всё под `/pack-studio/w/:workspaceId/`.
+ * Маршруты пространства, всё под `/pack-studio/w/:workspaceId/`.
  * Таблица адресов: docs/design/pack-studio-ux.md, раздел 4.2. Свой чанк и свой словарь.
  */
 export const SpaceApp = () => (

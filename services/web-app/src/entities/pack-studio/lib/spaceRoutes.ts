@@ -4,8 +4,8 @@ import { PACK_STUDIO_PATH } from "./routes";
 
 // Адреса нового интерфейса Студии шаблонов (docs/design/pack-studio-ux.md, раздел 4.2):
 //   /pack-studio/w/:ws/t/:pack/:template/:version/(result|content|check)?<query>
-// Здесь же таблица перенаправлений со старых адресов. Старые `packOutcomePath`, `packFilesPath`
-// и `packRulePath` (routes.ts) остаются для старого интерфейса; срезы нового их не вызывают.
+// Здесь же таблица перенаправлений со старых адресов прежнего вида: ссылки и закладки на него
+// (`packOutcomePath`, `packFilesPath`, `packRulePath`, `packNewVersionPath`) работают всегда.
 
 export const SPACE_TABS = ["result", "content", "check"] as const;
 export type SpaceTab = (typeof SPACE_TABS)[number];
@@ -55,10 +55,18 @@ export type SpaceTarget = {
 };
 
 // Старый параметр -> новый. Переименованное переезжает, снятое с экрана (источник данных,
-// режим «Как студент», вкладка телефона) отбрасывается, остальное (`i.*`, `p.*`, `left`, `right`,
+// режим «Как студент», вкладка телефона, флаг `ux` из 0.38.0) отбрасывается, остальное (`i.*`, `p.*`, `left`, `right`,
 // `against`, `example`, `at`, `from`, `pane`) едет как есть.
 const RENAMED: Record<string, string> = { selected: "sel", scenario: "case" };
-const DROPPED = new Set(["state", "mode", "tab", "view", "file", "newVersion"]);
+const DROPPED = new Set([
+  "state",
+  "mode",
+  "tab",
+  "view",
+  "file",
+  "newVersion",
+  "ux",
+]);
 // Прежний режим центра -> часть вкладки «Проверка».
 const VIEW_TO_CHECK: Record<string, [string, string]> = {
   matrix: ["part", "cases"],

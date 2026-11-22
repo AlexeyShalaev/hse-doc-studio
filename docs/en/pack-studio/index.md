@@ -12,9 +12,6 @@ tags:
 
 How a pack (a set of templates for a programme), its versions and numbers work: [Packs and templates](../reference/pack.md).
 
-!!! note "The new look of the Studio"
-    What follows describes the new look of Template Studio: three tabs, the "Changes" panel and one main button. It opens at `/pack-studio?ux=2`. The previous look (five tabs and a git panel) stays at `?ux=1` until it is removed.
-
 ## How to open it
 
 | Where | How to turn it on |

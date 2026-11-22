@@ -429,6 +429,37 @@ describe("панель «Изменения»", () => {
     expect(dialog.textContent).not.toMatch(/main|без ветки|Начать заново/);
   });
 
+  it("меню «Ещё» панели: сохранить точку, ветка, доступ; построчное сравнение с основной веткой", async () => {
+    vi.spyOn(packStudioApi, "diff").mockResolvedValue({
+      diff: "diff --git a/x b/x\n--- a/x\n+++ b/x\n@@ -1 +1 @@\n-old\n+new\n",
+      truncated: false,
+    });
+    mount();
+    const root = await panel();
+    const open = async (item: string) => {
+      await userEvent.click(await within(root).findByTestId("sp-ch-menu"));
+      await userEvent.click(await screen.findByTestId(item));
+      return screen.findByRole("dialog", undefined, { timeout: 15000 });
+    };
+    expect(await open("sp-ch-menu-save")).toHaveTextContent("Сохранить");
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    expect(await open("sp-ch-menu-branch")).toHaveTextContent("Ветка");
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    await open("sp-ch-menu-access");
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    await userEvent.click(within(root).getByTestId("sp-ch-diff"));
+    expect(await screen.findByTestId("git-diff")).toHaveTextContent("+new");
+  });
+
   it("выпущенная версия без изменений: подсказка про копию", async () => {
     mount({
       git: gitOf({ changed: [], uncommitted: [], dirty: false }),
@@ -439,6 +470,58 @@ describe("панель «Изменения»", () => {
       await within(root).findByText(/правки пойдут в копию версии 2026\.1\.2/),
     ).toBeVisible();
     expect(root).toHaveTextContent("Править копию");
+  });
+
+  it("выпущенную версию правили мимо Студии: «Перенести правки» в копию и переход к ней", async () => {
+    const released = "hse-cs-sse/templates/coursework/versions/2026.1.2";
+    const edited: PackFileChange[] = [
+      { path: `${released}/version.yaml`, status: "modified" },
+    ];
+    const { spies } = mount({
+      git: gitOf({ changed: edited, uncommitted: edited }),
+      url: `${SPACE_BASE}/2026.1.2/result?changes=1`,
+    });
+    spies.state.mockResolvedValue(
+      versionStateOf({
+        version: {
+          pack: "hse-cs-sse",
+          template: "coursework",
+          version: "2026.1.2",
+          path: released,
+        },
+        released: true,
+        modified: true,
+        move_to: "2026.1.3",
+      }),
+    );
+    const move = vi.spyOn(packStudioApi, "moveVersionEdits").mockResolvedValue({
+      version: {
+        pack: "hse-cs-sse",
+        template: "coursework",
+        version: "2026.1.3",
+        path: V,
+      },
+      previous: "2026.1.2",
+      unreleased: false,
+      restored: true,
+    });
+    const root = await panel();
+    const notice = await within(root).findByTestId("sp-ch-move");
+    expect(notice).toHaveTextContent(
+      "Выпущенную версию 2026.1.2 правили мимо Студии",
+    );
+    expect(notice).toHaveTextContent("вернутся к основной ветке");
+    await userEvent.click(within(notice).getByTestId("sp-ch-move-submit"));
+    await waitFor(() => {
+      expect(move).toHaveBeenCalledWith(
+        GALLERY_WORKSPACE.id,
+        expect.objectContaining({ version: "2026.1.2" }),
+        "2026.1.3",
+      );
+    });
+    await waitFor(() => {
+      expect(location()).toContain("/2026.1.3/result");
+    });
   });
 
   it("Esc закрывает панель и возвращает фокус на кнопку", async () => {

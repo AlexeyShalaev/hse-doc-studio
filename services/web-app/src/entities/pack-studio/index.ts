@@ -205,7 +205,7 @@ export {
   safeOutcomeBack,
 } from "./lib/routes";
 export type { RulePane } from "./lib/routes";
-// Новый интерфейс (docs/design/pack-studio-ux.md): адреса, перенаправления, флаг `?ux=2`.
+// Адреса Студии шаблонов (docs/design/pack-studio-ux.md, 4.2) и перенаправления со старых.
 export {
   SPACE_QUERY,
   SPACE_TABS,
@@ -214,10 +214,4 @@ export {
   spacePath,
 } from "./lib/spaceRoutes";
 export type { SpaceTab, SpaceTarget } from "./lib/spaceRoutes";
-export {
-  PACK_STUDIO_UX_DEFAULT,
-  PACK_STUDIO_UX_KEY,
-  resetPackStudioUx,
-  usePackStudioUx,
-} from "./lib/usePackStudioUx";
-export type { PackStudioUx } from "./lib/usePackStudioUx";
+export { forgetLegacyUxFlag, withoutUxParam } from "./lib/legacyUx";

@@ -1,20 +1,20 @@
 import { readFileSync } from "node:fs";
 import { expect, test, type Page, type Route } from "@playwright/test";
 import { LANGS, shot, type Lang } from "./helpers";
-import { expectNoHorizontalScroll, expectTouchTarget, loginOnPhone, overflowing } from "./phoneHelpers";
+import { expectNoHorizontalScroll, loginOnPhone } from "./phoneHelpers";
 
 /**
- * Студия шаблонов (срезы T6, T7, T8) на стенде server-lite: админ включает раздел настоящим API (у админа установки
- * доступ к Студии есть всегда), видит «Подключённые репозитории», открывает Студию шаблонов кнопкой в заголовке;
- * рабочие пространства, дерево, файлы, проверки, git и предпросмотр подменены (клон git и раннер на стенде не нужны).
- * Сценарий: новое пространство над git, клон, дерево с замком у выпущенной версии, файл с находками в «Проблемах»,
- * переход к файлу другой находки, сохранение с If-Match; панель git показывает правку, «Предложить изменения» сперва
- * упирается в проверку пака (находки в «Проблемах»), затем открывает PR со статусом CI; предпросмотр собирает
- * документ, неудача с журналом. Мастер «Новая версия» (T10): живой класс черновика с причинами, заметки из отчёта,
- * выпуск в рабочей ветке, «Новая версия» у шаблона в дереве. На телефоне дерево в шторке, панели git и версии и
- * ничего не торчит за край. Пространство открывается на экране «Результат» (срез F1): версия по умолчанию, смена версии,
- * режим и выбор в адресе, выдвижная панель «Файлы», телефон; сервер результата подменён эталонами контракта.
- * В конце раздел выключается обратно. Скриншоты: screenshots/<язык>/ps-*.png.
+ * Студия шаблонов на стенде server-lite (docs/design/pack-studio-ux.md, S14): админ включает раздел настоящим API
+ * (у админа установки доступ к Студии есть всегда), открывает Студию кнопкой в заголовке и подключает пространство
+ * над git; пространства, дерево, файлы, проверки, git, вычислитель результата и предпросмотр подменены (клон git и
+ * раннер на стенде не нужны), ответы вычислителя это эталоны контракта (contracts/pack-studio/fixtures).
+ * Сценарии: пространство открывается на «Результате» версии по умолчанию; «Все файлы» и правка файла с
+ * автосохранением и If-Match; главная кнопка и панель «Изменения»: заметки, выпуск, отправка упирается в проверку
+ * пака, затем открывает запрос со статусом проверок. «Результат»: смена версии, условия студента в адресе, готовые
+ * случаи, «Подробности» (почему так, правило в «Содержимом»), «Проверка», предпросмотр PDF с журналом сбоя.
+ * «Править копию» у выпущенной версии без окна. Места подписей на собранном PDF. Телефон: нижние вкладки, шторка
+ * подробностей, «Содержимое» и «Изменения» без горизонтальной прокрутки. В конце раздел выключается обратно.
+ * Скриншоты: screenshots/<язык>/ps-*.png.
  */
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL ?? "admin@example.org";
 const adminPassword = (): string => {
@@ -199,7 +199,19 @@ const file = (path: string, size: number, readOnly: string | null = null) => ({
   read_only: readOnly,
 });
 
-const TREE = {
+/** Файлы документов версии из эталона модели (`PackVersionModel/editable`): отчёт и презентация. */
+const DOC_FILES = ["report/preamble.tex", "report/report.ru.tex", "report/report.en.tex", "report/doc.yaml"];
+
+const versionEntry = (version: string) => ({
+  version,
+  path: `${TPL}/versions/${version}`,
+  status: version === "2026.1.5" ? "stable" : "beta",
+  released: version === "2026.1.5",
+  modified: false,
+});
+
+/** Дерево пространства: выпущенная 2026.1.5, черновик 2026.1.6 и копии, которые создала Студия. */
+const treeOf = (copies: readonly string[]) => ({
   workspace_id: WS,
   base_sha: "4f2a9c0d8e7b6a5f4e3d2c1b0a9f8e7d6c5b4a39",
   packs: [
@@ -213,10 +225,7 @@ const TREE = {
           path: TPL,
           name: { ru: "Курсовой проект", en: "Course project" },
           default_version: "2026.1.5",
-          versions: [
-            { version: "2026.1.5", path: RELEASED, status: "stable", released: true, modified: false },
-            { version: "2026.1.6", path: DRAFT, status: "beta", released: false, modified: false },
-          ],
+          versions: ["2026.1.5", "2026.1.6", ...copies].map(versionEntry),
         },
       ],
     },
@@ -225,42 +234,46 @@ const TREE = {
     file("hse-cs-sse/pack.yaml", 412),
     file(`${TPL}/releases.yaml`, 980, "releases_read_only"),
     file(`${RELEASED}/version.yaml`, 30512, "version_released"),
+    ...DOC_FILES.map((path) => file(`${RELEASED}/files/${path}`, 900, "version_released")),
     file(MANIFEST, 120),
     file(META, 200),
+    ...DOC_FILES.map((path) => file(`${DRAFT}/files/${path}`, 900)),
   ],
   truncated: false,
-};
+});
 
-const LINT = {
-  scope: "version",
-  target: DRAFT,
-  released: false,
-  errors: 2,
-  warnings: 0,
-  findings: [
-    {
-      severity: "error",
-      check: "schema",
-      message: "/status: 'draft' is not one of ['stable', 'beta', 'deprecated']",
-      path: MANIFEST,
-      line: 2,
-      pointer: "/status",
-    },
-    {
-      severity: "error",
-      check: "lint",
-      message: "common/meta.tex.j2:2: Jinja TemplateSyntaxError (unexpected end of template)",
-      path: META,
-      line: 2,
-      pointer: null,
-    },
-  ],
+/** Проверка пака: пока файл не поправлен, в нём синтаксическая ошибка шаблона. */
+const lintOf = (fixed: boolean) => {
+  const findings = fixed
+    ? []
+    : [
+        {
+          severity: "error",
+          check: "lint",
+          message: "common/meta.tex.j2:2: Jinja TemplateSyntaxError (unexpected end of template)",
+          path: META,
+          line: 2,
+          pointer: null,
+        },
+      ];
+  return { scope: "version", target: DRAFT, released: false, errors: findings.length, warnings: 0, findings };
 };
 
 /** Эталоны контракта вычислителя результата (contracts/pack-studio/fixtures): ответы подмены. */
 const FIXTURES = new URL("../../contracts/pack-studio/fixtures/", import.meta.url);
+const fixtureText = (dir: string, name: string): string => readFileSync(new URL(`${dir}/${name}.json`, FIXTURES), "utf8");
 const fixture = (dir: string, name: string): Record<string, unknown> =>
-  JSON.parse(readFileSync(new URL(`${dir}/${name}.json`, FIXTURES), "utf8")) as Record<string, unknown>;
+  JSON.parse(fixtureText(dir, name)) as Record<string, unknown>;
+
+/** Модель версии (документы, манифест) из эталона `editable` (версия 2026.1.7) под нужную версию. */
+const modelOf = (version: string): unknown => ({
+  ...(JSON.parse(fixtureText("PackVersionModel", "editable").replaceAll("2026.1.7", version)) as Record<
+    string,
+    unknown
+  >),
+  workspace_id: WS,
+  read_only: version === "2026.1.5" ? "version_released" : null,
+});
 
 type Fake = {
   outcomes: { version: string; body: unknown }[];
@@ -274,15 +287,30 @@ type Fake = {
   created: unknown[];
 };
 
+const OUTCOME = /^\/[^/]+\/versions\/hse-cs-sse\/coursework\/([^/]+)\/outcome(\/[a-z]+)?$/;
+const VERSION_STEP = /^\/[^/]+\/versions\/hse-cs-sse\/coursework\/([^/]+)\/(state|notes|release|model)$/;
+const PREVIEW = /^\/[^/]+\/versions\/hse-cs-sse\/coursework\/[^/]+\/preview$/;
+
 /** Подмена /api/v1/pack-studio/workspaces*: клон идёт два опроса, файлы с ETag, запись с If-Match. */
 const mockWorkspaces = async (page: Page): Promise<Fake> => {
-  const fake: Fake = { outcomes: [], explains: [], calls: [], writes: [], proposals: [], previews: [], notes: [], releases: [], created: [] };
+  const fake: Fake = {
+    outcomes: [],
+    explains: [],
+    calls: [],
+    writes: [],
+    proposals: [],
+    previews: [],
+    notes: [],
+    releases: [],
+    created: [],
+  };
   let created = false;
   let notes = NO_NOTES;
   let polls = 0;
   let proposed = false;
+  const copies: string[] = [];
   const files: Record<string, { content: string; etag: string }> = {
-    [MANIFEST]: { content: 'id: "2026.1.6"\nstatus: draft\n', etag: '"m1"' },
+    [MANIFEST]: { content: 'id: "2026.1.6"\nstatus: beta\n', etag: '"m1"' },
     [META]: { content: "\\newcommand{\\hseYear}{{{ project.meta.year\n", etag: '"j1"' },
   };
   const json = (route: Route, body: unknown, status = 200) =>
@@ -345,18 +373,20 @@ const mockWorkspaces = async (page: Page): Promise<Fake> => {
         available: true,
         reason: null,
         web_url: `https://github.com/e2e/packs/commit/${PUSHED}/checks`,
+        pr_state: "open",
       });
     }
-    // Экран «Результат» (F1): сервера результата пока нет, отвечают эталоны контракта.
-    const outcome = /^\/[^/]+\/versions\/hse-cs-sse\/coursework\/([^/]+)\/outcome(\/inputs|\/explain|\/impact)?$/.exec(rest);
+    // Вычислитель результата: эталоны контракта на любую версию шаблона.
+    const outcome = OUTCOME.exec(rest);
     if (outcome) {
-      const [, version = "", inputs] = outcome;
-      if (inputs === "/impact") {
-        // «До и после» (F10): эталон контракта, в одном сценарии из трёх результат изменится.
+      const [, version = "", tail = ""] = outcome;
+      const identity = { workspace_id: WS, pack: "hse-cs-sse", template: "coursework", version };
+      if (tail === "/impact") {
+        // «Что изменится у студентов»: в одном случае из трёх результат изменится, нужна отметка «я знаю».
         return json(route, { ...fixture("PackOutcomeImpact", "coursework"), workspace_id: WS, version });
       }
-      if (inputs === "/explain") {
-        // «Почему?» (F6): эталон объяснения, правила манифеста указывают на version.yaml открытой версии.
+      if (tail === "/explain") {
+        // «Почему так»: правила манифеста указывают на version.yaml открытой версии.
         fake.explains.push(req.postDataJSON());
         const explain = fixture("PackOutcomeExplain", "operator_manual") as { chain: { rule: { file: string | null } }[] };
         return json(route, {
@@ -367,32 +397,37 @@ const mockWorkspaces = async (page: Page): Promise<Fake> => {
           })),
         });
       }
-      const identity = { workspace_id: WS, pack: "hse-cs-sse", template: "coursework", version };
-      if (inputs === "/inputs") return json(route, { ...fixture("PackOutcomeInputs", "vkr"), ...identity, template: "coursework" });
+      if (tail === "/inputs") return json(route, { ...fixture("PackOutcomeInputs", "vkr"), ...identity });
+      if (tail === "/compare") return json(route, { ...fixture("PackOutcomeCompare", "two_scenarios"), ...identity });
+      if (tail === "/matrix") return json(route, { ...fixture("PackOutcomeMatrix", "coursework"), ...identity });
+      if (tail === "/atlas") return json(route, { ...fixture("PackOutcomeAtlas", "coursework"), ...identity });
+      if (tail === "/lint") return json(route, { ...fixture("PackOutcomeLint", "coursework"), ...identity });
+      if (tail !== "") return json(route, { detail: "not found", code: "file_not_found" }, 404);
       fake.outcomes.push({ version, body: req.postDataJSON() });
       return json(route, { ...fixture("PackOutcome", "coursework_company_cosupervisor"), ...identity });
     }
     if (rest === `/${WS}/templates/hse-cs-sse/coursework/scenarios`) {
       return json(route, { ...fixture("PackScenarioList", "coursework"), workspace_id: WS });
     }
-    // Прогон сценариев (F8): два совпали, один изменился, один файл не разобран.
+    // Прогон готовых случаев: два совпали, один изменился, один файл не разобран.
     if (rest === `/${WS}/templates/hse-cs-sse/coursework/scenarios/run`) {
       return json(route, { ...fixture("PackScenarioRun", "coursework_after_edit"), workspace_id: WS });
     }
-    if (rest === `/${WS}/versions/hse-cs-sse/coursework/2026.1.6/preview`) {
+    if (PREVIEW.test(rest)) {
       if (req.method() === "GET") return json(route, PREVIEW_OPTIONS);
       fake.previews.push(req.postDataJSON());
       return json(route, { builds: [PREVIEW_FAILED] }, 202);
     }
-    // Мастер «Новая версия» (T10).
-    const state = /^\/[^/]+\/versions\/hse-cs-sse\/coursework\/([^/]+)\/(state|notes|release)$/.exec(rest);
-    if (state) {
-      const [, version = "", step] = state;
-      if (step === "notes") {
+    // Отчёт версии, заметки, выпуск, модель версии («Содержимое»).
+    const step = VERSION_STEP.exec(rest);
+    if (step) {
+      const [, version = "", kind] = step;
+      if (kind === "model") return json(route, modelOf(version));
+      if (kind === "notes") {
         fake.notes.push(req.postDataJSON());
         notes = (req.postDataJSON() as { changes: typeof NO_NOTES }).changes;
       }
-      if (step === "release") {
+      if (kind === "release") {
         fake.releases.push(req.postDataJSON());
         return json(route, {
           version: ref(version),
@@ -407,15 +442,12 @@ const mockWorkspaces = async (page: Page): Promise<Fake> => {
       }
       return json(route, versionState(version, version === "2026.1.6" ? notes : NO_NOTES, fake.releases.length > 0));
     }
+    // «Править копию»: следующий номер от выпущенной версии, копия появляется в дереве.
     if (rest === `/${WS}/templates/hse-cs-sse/coursework/versions`) {
       if (req.method() === "GET") return json(route, VERSION_OPTIONS);
       fake.created.push(req.postDataJSON());
-      files[`${TPL}/versions/2026.2.0/version.yaml`] = { content: 'id: "2026.2.0"\nstatus: beta\n', etag: '"n1"' };
-      return json(
-        route,
-        { version: ref("2026.2.0"), base: "2026.1.5", update_class: "minor", warnings: [] },
-        201,
-      );
+      copies.push("2026.1.7");
+      return json(route, { version: ref("2026.1.7"), base: "2026.1.5", update_class: "patch", warnings: [] }, 201);
     }
     if (rest === `/${WS}/previews/b1`) return json(route, PREVIEW_FAILED);
     if (rest === `/${WS}/previews/b1/log`) {
@@ -425,8 +457,8 @@ const mockWorkspaces = async (page: Page): Promise<Fake> => {
         body: "! Undefined control sequence.\nl.12 \\hseOops",
       });
     }
-    if (rest === `/${WS}/tree`) return json(route, TREE);
-    if (rest === `/${WS}/lint`) return json(route, LINT);
+    if (rest === `/${WS}/tree`) return json(route, treeOf(copies));
+    if (rest === `/${WS}/lint`) return json(route, lintOf(fake.writes.length > 0));
     if (rest === `/${WS}/hints`) {
       return json(route, {
         version: DRAFT,
@@ -434,9 +466,10 @@ const mockWorkspaces = async (page: Page): Promise<Fake> => {
         macros: [{ name: "hseYear", keys: ["year"], source: META }],
       });
     }
-    const filePath = decodeURIComponent(rest.replace(`/${WS}/files/`, ""));
-    const stored = files[filePath];
-    if (rest.startsWith(`/${WS}/files/`) && stored) {
+    if (rest.startsWith(`/${WS}/files/`)) {
+      const filePath = decodeURIComponent(rest.replace(`/${WS}/files/`, ""));
+      // Остальные файлы дерева читаются как короткий текст.
+      const stored = (files[filePath] ??= { content: `% ${filePath}\n`, etag: '"f1"' });
       if (req.method() === "GET") {
         return route.fulfill({
           status: 200,
@@ -533,7 +566,7 @@ const mockPlaces = async (page: Page): Promise<{ patches: { body: unknown; ifMat
   const json = (route: Route, body: unknown, status = 200) =>
     route.fulfill({ status, contentType: "application/json", body: JSON.stringify(body) });
   let current = signatures('"s1"', null);
-  await page.route("**/api/v1/pack-studio/workspaces/*/versions/hse-cs-sse/coursework/2026.1.6/preview", (route) =>
+  await page.route("**/api/v1/pack-studio/workspaces/*/versions/hse-cs-sse/coursework/*/preview", (route) =>
     route.request().method() === "GET" ? json(route, PREVIEW_OPTIONS) : json(route, { builds: [PREVIEW_DONE] }),
   );
   await page.route("**/api/v1/pack-studio/workspaces/*/previews/b2", (route) => json(route, PREVIEW_DONE));
@@ -550,17 +583,14 @@ const mockPlaces = async (page: Page): Promise<{ patches: { body: unknown; ifMat
   return record;
 };
 
-/** Дерево раскрывает только паки: открыть путь до черновой версии (шаблон, версии, сама версия). */
+/** Дерево «Все файлы» раскрывает только паки: открыть путь до черновой версии (шаблон, версии, сама версия). */
 const expandToDraft = async (page: Page): Promise<void> => {
   for (const dir of ["hse-cs-sse/templates", TPL, `${TPL}/versions`, DRAFT]) {
     await page.getByTestId(`tree-dir-${dir}`).click();
   }
 };
 
-/** Пространство открывается на экране «Результат»: в режим «Файлы» ведёт ссылка в шапке пространства. */
-const openFilesMode = async (page: Page): Promise<void> => {
-  await page.getByTestId("ws-files-link").click();
-};
+const SPACE = `/pack-studio/w/${WS}/t/hse-cs-sse/coursework`;
 
 const login = async (page: Page): Promise<void> => loginOnPhone(page, ADMIN_EMAIL, adminPassword());
 
@@ -578,6 +608,22 @@ const setSection = async (page: Page, enabled: boolean): Promise<void> => {
   expect(status).toBe(200);
 };
 
+/** Подключить пространство над git со списка: после клона Студия сама открывает его «Результат». */
+const connectGit = async (page: Page): Promise<void> => {
+  await page.getByTestId("ws-connect-git").click();
+  await page.getByTestId("ws-create-url").fill("https://github.com/e2e/packs");
+  await page.getByTestId("ws-create-submit").click();
+  await expect(page.getByTestId("sp-shell")).toBeVisible({ timeout: 15_000 });
+};
+
+/** Сразу в версию: пространство уже подключено, клон готов со второго опроса. */
+const openSpace = async (page: Page, path: string): Promise<void> => {
+  await page.goto("/pack-studio");
+  await connectGit(page);
+  await page.goto(`${SPACE}/${path}`);
+  await expect(page.getByTestId("sp-shell")).toBeVisible({ timeout: 15_000 });
+};
+
 for (const lang of LANGS) {
   const L = lang as Lang;
   const text = (ru: string, en: string): RegExp => new RegExp(lang === "ru" ? ru : en, "i");
@@ -589,7 +635,7 @@ for (const lang of LANGS) {
       await setSection(page, false);
     });
 
-    test("админ включает раздел; пространство над git, дерево, «Проблемы», сохранение с If-Match", async ({
+    test("админ включает раздел; пространство над git; правка файла с автосохранением; отправка на рассмотрение", async ({
       page,
     }) => {
       const fake = await mockWorkspaces(page);
@@ -609,150 +655,205 @@ for (const lang of LANGS) {
       await expect(page).toHaveURL(/\/pack-studio$/);
       await expect(page.getByTestId("ws-empty")).toBeVisible();
 
+      // Подключение: клон идёт, затем пространство открывается на «Результате» версии по умолчанию.
       await page.getByTestId("ws-connect-git").click();
       await page.getByTestId("ws-create-url").fill("https://github.com/e2e/packs");
       await page.getByTestId("ws-create-submit").click();
-      await expect(page.getByTestId("ws-cloning")).toBeVisible();
-      await openFilesMode(page);
-      await expect(page.getByTestId("pack-tree")).toBeVisible({ timeout: 15_000 });
-      await expandToDraft(page);
-      await expect(page.getByTestId("tree-released-2026.1.5")).toBeVisible();
+      await expect(page).toHaveURL(/\/t\/hse-cs-sse\/coursework\/2026\.1\.5\/result/, { timeout: 15_000 });
+      await expect(page.getByTestId("sp-ws-name")).toContainText("e2e/packs");
+      await expect(page.getByTestId("sp-crumb-version")).toContainText("2026.1.5");
+      await expect(page.getByTestId("sp-crumb-version").getByTestId("sp-state-released")).toBeVisible();
+      await expect(page.getByTestId("sp-documents")).toBeVisible();
       await shot(page, L, "ps-10-workspace");
 
-      await page.getByTestId(`tree-file-${MANIFEST}`).click();
-      const panel = page.getByTestId("problems-panel");
-      await expect(panel).toContainText("/status");
-      await expect(page.getByTestId("ps-crumbs")).toContainText("2026.1.6");
-      await shot(page, L, "ps-20-problems");
-
-      await panel.getByText("common/meta.tex.j2:2", { exact: false }).click();
+      // Черновик: «Содержимое», «Все файлы», дерево, файл с ошибкой шаблона.
+      await page.getByTestId("sp-crumb-version").click();
+      await page.getByTestId("sp-crumb-version-item-2026.1.6").click();
+      await expect(page).toHaveURL(/\/2026\.1\.6\/result/);
+      await page.getByTestId("sp-tab-content").click();
+      await expect(page).toHaveURL(/\/2026\.1\.6\/content/);
+      await page.getByTestId("ct-part-files").click();
+      await expect(page.getByTestId("ct-files")).toBeVisible();
+      await expandToDraft(page);
+      await expect(page.getByTestId(`tree-file-${META}`)).toBeVisible();
+      await page.getByTestId(`tree-file-${META}`).click();
       await expect(page).toHaveURL(/meta\.tex\.j2/);
       const editor = page.getByTestId("pack-code-editor").locator(".cm-content");
       await expect(editor).toContainText("hseYear");
+      await shot(page, L, "ps-20-file");
+
+      // Автосохранение: запись через полторы секунды тишины, с If-Match прочитанной версии файла.
       await editor.click();
       await page.keyboard.press("ControlOrMeta+End");
       await page.keyboard.type("}\n");
-      await expect(page.getByTestId("editor-status")).toContainText(
-        text("несохранённые", "Unsaved"),
-      );
-      await page.getByTestId("editor-save").click();
-      // Точный текст: «Unsaved changes» тоже содержит «saved».
-      await expect(page.getByTestId("editor-status")).toHaveText(lang === "ru" ? "Сохранено" : "Saved");
+      await expect(page.getByTestId("ct-text-state")).toHaveText(text("записано", "saved"), { timeout: 10_000 });
       expect(fake.writes).toHaveLength(1);
       expect(fake.writes[0]?.path).toBe(META);
       expect(fake.writes[0]?.ifMatch).toBe('"j1"');
       await shot(page, L, "ps-30-saved");
 
-      // Панель git: правка после версии, ветки ещё нет.
-      await expect(page.getByTestId("git-bar")).toBeVisible();
-      await expect(page.getByTestId("git-dirty")).toHaveAttribute("data-dirty", "true");
-      await expect(page.getByTestId("git-branch")).toContainText("master");
+      // Число правок на кнопке «Изменения», главная кнопка ведёт к заметкам: их подскажет Студия.
+      await expect(page.getByTestId("sp-changes-count")).toHaveText("1", { timeout: 15_000 });
+      await expect(page.getByTestId("sp-next-step")).toContainText(text("Описать изменения", "Describe"));
+      await page.getByTestId("sp-next-step").click();
+      await expect(page).toHaveURL(/changes=1/);
+      const panel = page.getByTestId("sp-changes-panel");
+      await expect(panel).toBeVisible();
+      await expect(panel.getByTestId("sp-ch-what")).toContainText("meta");
 
-      // «Предложить изменения»: проверка пака не прошла, находка в «Проблемах» с переходом к файлу и строке.
-      await page.getByTestId("propose-changes").click();
-      // «Что изменится в результате» (F10): в одном сценарии из трёх результат изменится, нужна отметка «я знаю».
-      await expect(page.getByTestId("impact-headline")).toContainText(text("1 из 3", "1 of 3"));
-      await expect(page.getByTestId("git-propose-submit")).toBeDisabled();
-      await page.getByTestId("git-propose-ack-input").check();
-      await shot(page, L, "ps-49-impact");
-      await page.getByTestId("git-propose-submit").click();
-      const gate = page.getByTestId("problems-gate");
-      await expect(gate).toContainText("TemplateSyntaxError");
+      // «Что изменится у студентов»: в одном случае из трёх результат изменится, нужна отметка «я знаю».
+      const primary = panel.getByTestId("sp-sb-primary");
+      await expect(primary).toHaveAttribute("data-blocker", "ack", { timeout: 15_000 });
+      await panel.getByTestId("sp-sb-ack-input").check();
+      await expect(primary).toBeEnabled();
+      await shot(page, L, "ps-49-submit");
+
+      // Отправка: заметки из подсказки, выпуск, запрос; проверка пака на сервере не прошла.
+      await primary.click();
+      await expect(panel.getByTestId("sp-sb-failure")).toBeVisible({ timeout: 15_000 });
+      expect(fake.notes[0]).toMatchObject({ changes: DRAFT_NOTES });
+      expect(fake.releases).toHaveLength(1);
+      expect(fake.proposals).toHaveLength(1);
       await shot(page, L, "ps-50-gate");
 
-      // Повтор: PR открыт, статус проверок идёт.
-      await page.getByTestId("propose-changes").click();
-      await page.getByTestId("git-propose-ack-input").check();
-      await page.getByTestId("git-propose-submit").click();
-      await expect(page.getByTestId("git-propose-done")).toContainText("#7");
-      await expect(page.getByTestId("git-propose-pr-link")).toHaveAttribute("href", PR_URL);
-      await shot(page, L, "ps-55-proposed");
-      await page.keyboard.press("Escape");
-      await expect(page.getByTestId("git-pr-link")).toHaveAttribute("href", PR_URL);
-      await expect(page.getByTestId("git-ci")).toHaveAttribute("data-state", "pending");
+      // Повтор начинает с упавшего шага: запрос открыт, проверки на хостинге идут.
+      await expect(primary).toHaveText(text("Повторить", "Retry"));
+      await primary.click();
+      await expect(panel.getByTestId("sp-ch-open")).toContainText("#7", { timeout: 15_000 });
       expect(fake.proposals).toHaveLength(2);
-
-      // Предпросмотр: сборка документа на автонаборе, неудача по коду и журнал.
-      await page.getByTestId("side-tab-preview").click();
-      await page.getByTestId("preview-build").click();
-      await expect(page.getByTestId("preview-failed")).toContainText("LaTeX");
-      expect(fake.previews[0]).toMatchObject({ documents: ["report"], example: "auto:normal" });
-      await page.getByTestId("preview-failed-log").click();
-      await expect(page.getByTestId("preview-log")).toContainText("Undefined control sequence");
-      await shot(page, L, "ps-60-preview");
+      expect(fake.notes).toHaveLength(1);
+      expect(fake.releases).toHaveLength(1);
+      await expect(page.getByTestId("sp-next-step")).toContainText("#7");
+      await shot(page, L, "ps-55-proposed");
     });
 
-    test("мастер «Новая версия»: живой класс, заметки из отчёта, выпуск в ветке, новая версия у шаблона", async ({
+    test("«Результат»: смена версии, условия студента в адресе, «Подробности», «Проверка», предпросмотр PDF", async ({
       page,
     }) => {
       const fake = await mockWorkspaces(page);
       await login(page);
       await setSection(page, true);
       await page.goto("/pack-studio");
-      await page.getByTestId("ws-connect-git").click();
-      await page.getByTestId("ws-create-url").fill("https://github.com/e2e/packs");
-      await page.getByTestId("ws-create-submit").click();
-      await openFilesMode(page);
-      await expect(page.getByTestId("pack-tree")).toBeVisible({ timeout: 15_000 });
-      await expandToDraft(page);
-      await page.getByTestId(`tree-file-${MANIFEST}`).click();
+      await connectGit(page);
 
-      // Полоса версии: класс по классификатору, причины ведут в файл.
-      const bar = page.getByTestId("version-bar");
-      await expect(page.getByTestId("version-class")).toContainText(text("файлы шаблона", "template files"));
-      await expect(page.getByTestId("version-number")).toContainText("2026.1.6");
-      await page.getByTestId("version-class").click();
-      await expect(page.getByTestId("version-reasons")).toContainText("meta.tex.j2");
-      await shot(page, L, "ps-70-version");
+      // По умолчанию открывается «Результат» версии по умолчанию шаблона (2026.1.5, выпущена).
+      await expect(page).toHaveURL(/\/2026\.1\.5\/result/);
+      await expect(page.getByTestId("sp-doc-project_proposal")).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByTestId("sp-crumb-version").getByTestId("sp-state-released")).toBeVisible();
+      await shot(page, L, "ps-80-outcome");
 
-      // Заметки: черновик из отчёта, пары ru и en.
-      await bar.getByTestId("version-notes-open").click();
-      await page.getByTestId("version-notes-fill").click();
-      await expect(page.getByTestId("version-notes-ru")).toHaveValue(DRAFT_NOTES.ru[0] ?? "");
-      await shot(page, L, "ps-72-notes");
-      await page.getByTestId("version-notes-save").click();
-      await expect(page.getByTestId("version-notes-save")).toBeHidden();
-      expect(fake.notes[0]).toMatchObject({ changes: DRAFT_NOTES });
+      // Флаг `?ux=` из 0.38.0 ничего не значит: адрес без него, экран тот же.
+      await page.goto(`${SPACE}/2026.1.5/result?ux=1`);
+      await expect(page.getByTestId("sp-doc-project_proposal")).toBeVisible({ timeout: 15_000 });
+      await expect(page).not.toHaveURL(/ux=/);
 
-      // Выпуск: класс номера и версия по умолчанию, дальше это правки рабочей ветки.
-      await bar.getByTestId("version-release-open").click();
-      await shot(page, L, "ps-74-release");
-      await page.getByTestId("version-release-submit").click();
-      await expect(page.getByTestId("version-registered")).toBeVisible();
-      expect(fake.releases[0]).toEqual({ kind: "patch", set_default: true });
+      // Смена версии: адрес, запрос расчёта этой версии, у черновика нет замка.
+      await page.getByTestId("sp-crumb-version").click();
+      await page.getByTestId("sp-crumb-version-item-2026.1.6").click();
+      await expect(page).toHaveURL(/\/2026\.1\.6\/result/);
+      await expect(page.getByTestId("sp-crumb-version").getByTestId("sp-state-draft")).toBeVisible();
+      await expect.poll(() => fake.outcomes.some((call) => call.version === "2026.1.6")).toBe(true);
 
-      // «Новая версия» у шаблона в дереве: база последняя выпущенная, класс minor даёт 2026.2.0.
-      await page.getByTestId(`tree-new-version-${TPL}`).click();
-      await page.getByTestId("new-version-class-minor").click();
-      await expect(page.getByTestId("new-version-submit")).toContainText("2026.2.0");
-      await shot(page, L, "ps-76-new-version");
-      await page.getByTestId("new-version-submit").click();
-      await expect(page).toHaveURL(/2026\.2\.0%2Fversion\.yaml|2026\.2\.0\/version\.yaml/);
-      expect(fake.created[0]).toEqual({ base: "2026.1.5", update_class: "minor" });
+      // «Для какого студента»: условие за два клика, в адрес и в запрос расчёта; перезагрузка помнит.
+      await page.getByTestId("sp-sit-chip-staffing").click();
+      await page.getByTestId("sp-sit-value-staffing-team2").click();
+      await expect(page).toHaveURL(/i\.staffing=team2/);
+      await expect
+        .poll(() =>
+          fake.outcomes.some(
+            (call) => (call.body as { inputs?: Record<string, string> }).inputs?.staffing === "team2",
+          ),
+        )
+        .toBe(true);
+      await page.reload();
+      await expect(page.getByTestId("sp-sit-chip-staffing")).toHaveAttribute("data-changed", "true", {
+        timeout: 15_000,
+      });
+      await page.getByTestId("sp-sit-menu").click();
+      await page.getByTestId("sp-sit-menu-reset").click();
+      await expect(page).not.toHaveURL(/i\.staffing/);
+
+      // Готовые случаи: список случаев шаблона на полосе условий.
+      await page.getByTestId("sp-sit-cases").click();
+      await expect(page.getByTestId("sp-sit-case-university-supervisor")).toBeVisible();
+      await shot(page, L, "ps-85-outcome-cases");
+      await page.keyboard.press("Escape");
+
+      // «Подробности»: выбор документа в адресе, «Почему так» предложениями, правило в «Содержимом».
+      await page.getByTestId("sp-doc-project_proposal").getByRole("button").first().click();
+      await expect(page).toHaveURL(/sel=documents%3Aproject_proposal/);
+      await expect(page.getByTestId("sp-why")).toBeVisible();
+      await expect.poll(() => fake.explains.length).toBeGreaterThan(0);
+      await shot(page, L, "ps-82-outcome-why");
+      const tech = page.getByTestId("sp-tech");
+      await tech.locator("summary").click();
+      await tech.getByTestId("sp-tech-open").first().click();
+      await expect(page).toHaveURL(/\/2026\.1\.6\/content/);
+      await expect(page.getByTestId("ct-main")).toBeVisible();
+      await page.goBack();
+      await expect(page).toHaveURL(/\/2026\.1\.6\/result/);
+      await expect(page).toHaveURL(/sel=documents%3Aproject_proposal/);
+
+      // «Проверка», «Типовые случаи» из оглавления результата: таблица и окно случая.
+      await page.getByTestId("sp-toc-cases").click();
+      await expect(page).toHaveURL(/\/check\?.*part=cases/);
+      await expect(page.getByTestId("case-open-row").first()).toBeVisible({ timeout: 15_000 });
+      await page.getByTestId("case-open-row").first().click();
+      await expect(page.getByTestId("case-dialog")).toBeVisible();
+      await shot(page, L, "ps-86-check-case");
+      await page.keyboard.press("Escape");
+      await expect(page.getByTestId("case-dialog")).toBeHidden();
+
+      // Предпросмотр PDF в «Подробностях» документа: собирается сам, сбой словами и журнал сборки.
+      await page.getByTestId("sp-tab-result").click();
+      await expect(page).toHaveURL(/\/2026\.1\.6\/result/);
+      await page.getByTestId("sp-doc-report-pdf").click();
+      await expect(page).toHaveURL(/preview=1/);
+      await expect.poll(() => fake.previews.length).toBeGreaterThan(0);
+      expect(fake.previews[0]).toMatchObject({ documents: ["report"] });
+      await expect(page.getByTestId("sp-pv-failed")).toBeVisible({ timeout: 15_000 });
+      await page.getByTestId("sp-pv-open-log").click();
+      await expect(page.getByTestId("preview-log")).toContainText("Undefined control sequence");
+      await shot(page, L, "ps-87-outcome-preview");
     });
 
-    test("места подписей на собранном PDF: рамка по умолчанию становится местом документа", async ({ page }) => {
+    test("«Править копию» у выпущенной версии: черновик со следующим номером без окна, тот же экран", async ({
+      page,
+    }) => {
+      const fake = await mockWorkspaces(page);
+      await login(page);
+      await setSection(page, true);
+      await page.goto("/pack-studio");
+      await connectGit(page);
+      await expect(page).toHaveURL(/\/2026\.1\.5\/result/);
+
+      const next = page.getByTestId("sp-next-step");
+      await expect(next).toContainText(text("Править копию", "Edit a copy"), { timeout: 15_000 });
+      await shot(page, L, "ps-70-copy");
+      await next.click();
+      await expect(page).toHaveURL(/\/2026\.1\.7\/result/, { timeout: 15_000 });
+      expect(fake.created[0]).toEqual({ base: "2026.1.5", update_class: "patch" });
+      await expect(page.getByTestId("sp-crumb-version")).toContainText("2026.1.7");
+      await expect(page.getByTestId("sp-crumb-version").getByTestId("sp-state-draft")).toBeVisible();
+      await shot(page, L, "ps-76-copy-done");
+    });
+
+    test("места подписей на собранном PDF: общее место становится местом документа", async ({ page }) => {
       await mockWorkspaces(page);
       const places = await mockPlaces(page);
       await login(page);
       await setSection(page, true);
-      await page.goto("/pack-studio");
-      await page.getByTestId("ws-connect-git").click();
-      await page.getByTestId("ws-create-url").fill("https://github.com/e2e/packs");
-      await page.getByTestId("ws-create-submit").click();
-      await openFilesMode(page);
-      await expect(page.getByTestId("pack-tree")).toBeVisible({ timeout: 15_000 });
-      await expandToDraft(page);
-      await page.getByTestId(`tree-file-${MANIFEST}`).click();
+      await openSpace(page, "2026.1.6/content?doc=report");
 
-      await page.getByTestId("side-tab-preview").click();
-      await page.getByTestId("preview-build").click();
-      await page.getByTestId("preview-mode-places").click();
-      await expect(page.getByTestId("places-kind-supervisor")).toContainText(text("по умолчанию", "Default place"));
-      // Во весь экран: страница и каталог слотов рядом, рамку удобно тянуть.
-      await page.getByTestId("places-wide").click();
-      const dialog = page.getByRole("dialog");
-      const frame = dialog.locator(`[title="${lang === "ru" ? "Научный руководитель (по умолчанию)" : "Supervisor (default)"}"]`);
+      // Сегмент «Подписи»: PDF документа собирается сам по условиям студента с экрана.
+      await page.getByTestId("ct-seg-signatures").click();
+      await expect(page).toHaveURL(/seg=signatures/);
+      await expect(page.getByTestId("places-supervisor")).toHaveAttribute("data-status", "shared", {
+        timeout: 15_000,
+      });
+      const frame = page.locator(
+        `[title="${lang === "ru" ? "Научный руководитель (общее место)" : "Supervisor (shared place)"}"]`,
+      );
       await expect(frame).toBeVisible({ timeout: 15_000 });
       await shot(page, L, "ps-70-places");
       const box = await frame.boundingBox();
@@ -768,259 +869,53 @@ for (const lang of LANGS) {
         build_id: "b2",
         ops: [{ op: "set_place", slot: "supervisor", doc: "report" }],
       });
-      await expect(dialog.getByTestId("places-kind-supervisor")).toContainText(text("Своё место", "Own place"));
+      await expect(page.getByTestId("places-supervisor")).toHaveAttribute("data-status", "own");
       await shot(page, L, "ps-75-places-moved");
-    });
-
-    test("экран «Результат»: версия по умолчанию, смена версии, состояние в адресе, панель «Файлы»", async ({
-      page,
-    }) => {
-      const fake = await mockWorkspaces(page);
-      await login(page);
-      await setSection(page, true);
-      await page.goto("/pack-studio");
-      await page.getByTestId("ws-connect-git").click();
-      await page.getByTestId("ws-create-url").fill("https://github.com/e2e/packs");
-      await page.getByTestId("ws-create-submit").click();
-
-      // По умолчанию открывается «Результат» версии по умолчанию шаблона (2026.1.5, выпущена).
-      await expect(page).toHaveURL(/\/result\/hse-cs-sse\/coursework\/2026\.1\.5/, { timeout: 15_000 });
-      await expect(page.getByTestId("outcome-summary")).toContainText(text("4 документа", "4 documents"));
-      await expect(page.getByTestId("outcome-released-mark")).toBeVisible();
-      await expect(page.getByTestId("outcome-count-documents")).toContainText("4");
-      await shot(page, L, "ps-80-outcome");
-
-      // Смена версии: адрес, запрос расчёта этой версии, замок исчезает у черновика.
-      await page.locator("#po-version").click();
-      await page.getByRole("option", { name: /2026\.1\.6/ }).click();
-      await expect(page).toHaveURL(/\/result\/hse-cs-sse\/coursework\/2026\.1\.6/);
-      await expect(page.getByTestId("outcome-released-mark")).toBeHidden();
-      await expect.poll(() => fake.outcomes.some((call) => call.version === "2026.1.6")).toBe(true);
-
-      // Панель «Вводные» (F2): выбор виден сразу, в адрес и в запрос расчёта попадает по паузе,
-      // «Сбросить всё» возвращает умолчания.
-      await page.getByTestId("outcome-control-staffing-team2").click();
-      await expect(page.getByTestId("outcome-control-staffing-team2")).toHaveAttribute("aria-checked", "true");
-      await expect(page).toHaveURL(/i\.staffing=team2/);
-      await expect
-        .poll(() =>
-          fake.outcomes.some(
-            (call) => (call.body as { inputs?: Record<string, string> }).inputs?.staffing === "team2",
-          ),
-        )
-        .toBe(true);
-      await page.reload();
-      await expect(page.getByTestId("outcome-control-staffing-team2")).toHaveAttribute("aria-checked", "true");
-      await page.getByTestId("outcome-inputs-reset").click();
-      await expect(page).not.toHaveURL(/i\.staffing/);
-      await expect(page.getByTestId("outcome-control-staffing-solo")).toHaveAttribute("aria-checked", "true");
-
-      // Правая панель «Правила и причины» (F6): выбор документа открывает цепочку правил, «Что если»
-      // применяет одну вводную, «Открыть правило» ведёт в «Файлы», «Назад к результату» возвращает.
-      await page.getByTestId("outcome-doc-project_proposal").getByRole("button").first().click();
-      await expect(page).toHaveURL(/selected=documents%3Aproject_proposal/);
-      const chain = page.getByTestId("outcome-chain");
-      await expect(chain).toBeVisible();
-      await expect(chain.getByRole("listitem")).toHaveCount(4);
-      await expect(chain).toContainText(text("Не выполнено", "Not held"));
-      await expect(chain).toContainText(text("в движке", "in the engine"));
-      await expect.poll(() => fake.explains.length).toBeGreaterThan(0);
-      await shot(page, L, "ps-82-outcome-why");
-      await page.getByTestId("outcome-whatif-kind-research").click();
-      await expect(page).toHaveURL(/i\.kind=research/);
-      await expect(page.getByTestId("outcome-whatif-applied")).toBeVisible();
-      await page.getByTestId("outcome-chain-t22-open").click();
-      await expect(page).toHaveURL(/[?&]at=%2Fsupported_kinds/);
-      await expect(page).toHaveURL(/pane=form/);
-      await expect(page.getByTestId("ws-back-to-result")).toBeVisible({ timeout: 15_000 });
-      await page.getByTestId("ws-back-to-result").click();
-      await expect(page).toHaveURL(/\/result\/hse-cs-sse\/coursework\/2026\.1\.6/);
-      await expect(page).toHaveURL(/selected=documents%3Aproject_proposal/);
-      await expect(page).toHaveURL(/i\.kind=research/);
-      await expect(page.getByTestId("outcome-chain")).toBeVisible();
-      await page.getByTestId("outcome-selected-clear").click();
-      await page.getByTestId("outcome-inputs-reset").click();
-
-      // Сценарии (F8): список со статусом прогона у каждого и итогом, окно «Сохранить как сценарий».
-      await page.getByTestId("scenario-trigger").click();
-      await expect(page.getByTestId("scenario-summary")).toContainText(
-        text("2 совпало, 1 изменилось", "2 passed, 1 changed"),
-      );
-      await expect(page.getByTestId("scenario-option-university-supervisor")).toContainText(
-        text("Изменилось", "Changed"),
-      );
-      await expect(page.getByTestId("scenario-option-draft")).toContainText(text("Файл не читается", "File unreadable"));
-      await shot(page, L, "ps-85-outcome-scenarios");
-      await page.keyboard.press("Escape");
-      await expect(page.getByTestId("scenario-list")).toBeHidden();
-      await page.getByTestId("scenario-save-as").click();
-      await expect(page.getByTestId("scenario-save-dialog")).toBeVisible();
-      await expect(page.getByTestId("scenario-group-document_state")).toBeAttached();
-      await shot(page, L, "ps-86-outcome-scenario-save");
-      await page.keyboard.press("Escape");
-      await expect(page.getByTestId("scenario-save-dialog")).toBeHidden();
-
-      // Предпросмотр PDF (F12): кнопка у документа открывает панель рядом с результатом и собирает его
-      // с текущими вводными; неудача показана кодом и журналом, закрытие возвращает результат.
-      await page.getByTestId("outcome-doc-report-preview").click();
-      await expect(page.getByTestId("outcome-preview-drawer")).toBeVisible();
-      await expect.poll(() => fake.previews.length).toBe(1);
-      expect(fake.previews[0]).toMatchObject({
-        documents: ["report"],
-        example: "auto:normal",
-        // Вводные результата из эталона: научрук из компании.
-        combination: { lang: "ru", supervisor: "company" },
-      });
-      await expect(page.getByTestId("preview-failed")).toContainText("LaTeX");
-      await expect(page.getByTestId("outcome-preview-auto")).toHaveAttribute("aria-checked", "false");
-      await shot(page, L, "ps-87-outcome-preview");
-      await page.getByTestId("outcome-preview-close").click();
-      await expect(page.getByTestId("outcome-preview-drawer")).toBeHidden();
-      await expect(page.getByTestId("outcome-documents")).toBeVisible();
-
-      // Режим «Как студент» живёт в адресе: перезагрузка возвращает тот же экран.
-      await page.getByTestId("outcome-mode-student").click();
-      await expect(page).toHaveURL(/mode=student/);
-      await expect(page.getByTestId("outcome-rules-panel")).toBeHidden();
-      await page.reload();
-      await expect(page.getByTestId("outcome-mode-student")).toHaveAttribute("aria-pressed", "true");
-      // Срез F13: три упрощённых блока без служебных меток, Alt временно показывает вид автора.
-      await expect(page.getByTestId("outcome-student")).toBeVisible();
-      await expect(page.getByTestId("outcome-student-documents")).toContainText(
-        text("Студент получит 4 документа", "The student gets 4 documents"),
-      );
-      await expect(page.getByTestId("outcome-student-route")).toBeVisible();
-      await expect(page.getByTestId("outcome-section-documents")).toBeHidden();
-      await shot(page, L, "ps-87-outcome-student");
-      await page.keyboard.down("Alt");
-      await expect(page.getByTestId("outcome-section-documents")).toBeVisible();
-      await expect(page).toHaveURL(/mode=student/);
-      await page.keyboard.up("Alt");
-      await expect(page.getByTestId("outcome-student")).toBeVisible();
-
-      // Панель «Файлы» с прежним деревом, затем режим «Файлы» целиком.
-      await page.getByTestId("outcome-files-open").click();
-      await expect(page.getByTestId("outcome-files-drawer")).toBeVisible();
-      await expect(page.getByTestId("pack-tree")).toBeVisible();
-      await page.keyboard.press("Escape");
-      await expect(page.getByTestId("outcome-files-drawer")).toBeHidden();
-      await page.getByTestId("outcome-files-mode").click();
-      await expect(page.getByTestId("pack-tree")).toBeVisible();
     });
 
     test.describe("телефон 360", () => {
       test.use({ viewport: { width: 360, height: 740 }, hasTouch: true, isMobile: true });
 
-      test("дерево в шторке, редактор и «Проблемы» без горизонтальной прокрутки", async ({ page }) => {
+      test("нижние вкладки, шторка «Подробностей», «Содержимое» и «Изменения» без горизонтальной прокрутки", async ({
+        page,
+      }) => {
         await mockWorkspaces(page);
         await login(page);
         await setSection(page, true);
-        // Пространство уже есть: первый опрос «клонируется», дальше готово.
-        await page.goto("/pack-studio");
-        await page.getByTestId("ws-connect-git").click();
-        await page.getByTestId("ws-create-url").fill("https://github.com/e2e/packs");
-        await page.getByTestId("ws-create-submit").click();
-        await openFilesMode(page);
-        await expect(page.getByTestId("ws-tree-open")).toBeVisible({ timeout: 15_000 });
-        await expectNoHorizontalScroll(page);
-        await page.getByTestId("ws-tree-open").click();
-        await expandToDraft(page);
-        await page.getByTestId(`tree-file-${MANIFEST}`).click();
-        await expect(page.getByTestId("problems-panel")).toContainText("/status");
-        await expect(page.getByTestId("git-bar")).toBeVisible();
-        await expect(page.getByTestId("version-bar")).toBeVisible();
-        await expectNoHorizontalScroll(page);
-        await shot(page, L, "ps-40-phone");
-      });
+        await openSpace(page, "2026.1.6/result");
 
-      test("экран «Результат»: результат колонкой, вводные листом, без горизонтальной прокрутки", async ({ page }) => {
-        await mockWorkspaces(page);
-        await login(page);
-        await setSection(page, true);
-        await page.goto("/pack-studio");
-        await page.getByTestId("ws-connect-git").click();
-        await page.getByTestId("ws-create-url").fill("https://github.com/e2e/packs");
-        await page.getByTestId("ws-create-submit").click();
-        await expect(page.getByTestId("outcome-summary")).toContainText(text("4 документа", "4 documents"), {
-          timeout: 15_000,
-        });
-        await expect(page.getByTestId("outcome-inputs-panel")).toHaveCount(0);
-        await expectNoHorizontalScroll(page);
-        await page.getByTestId("outcome-tab-inputs").click();
-        await expect(page.getByRole("dialog").getByTestId("outcome-inputs")).toBeVisible();
+        await expect(page.getByTestId("sp-phone-tabs")).toBeVisible();
+        await expect(page.getByTestId("sp-doc-project_proposal")).toBeVisible({ timeout: 15_000 });
         await expectNoHorizontalScroll(page);
         await shot(page, L, "ps-81-outcome-phone");
-        // Выбор сценария на телефоне: лист со статусами, без горизонтальной прокрутки.
-        await page.keyboard.press("Escape");
-        await expect(page.getByRole("dialog")).toBeHidden();
-        await page.getByTestId("scenario-trigger").click();
-        await expect(page.getByTestId("scenario-list")).toBeVisible();
-        await expect(page.getByTestId("scenario-summary")).toContainText(
-          text("2 совпало, 1 изменилось", "2 passed, 1 changed"),
-        );
-        await expectNoHorizontalScroll(page);
-        await shot(page, L, "ps-84-outcome-scenarios-phone");
-      });
 
-      test("экран «Результат»: две строки сверху, лист «Параметры», вкладки и «Назад», режимы", async ({ page }) => {
-        await mockWorkspaces(page);
-        await login(page);
-        await setSection(page, true);
-        await page.goto("/pack-studio");
-        await page.getByTestId("ws-connect-git").click();
-        await page.getByTestId("ws-create-url").fill("https://github.com/e2e/packs");
-        await page.getByTestId("ws-create-submit").click();
-        await expect(page.getByTestId("outcome-summary")).toContainText(text("4 документа", "4 documents"), {
-          timeout: 15_000,
-        });
-
-        // Верхняя панель в две строки (плюс строка статуса, пока идёт пересчёт): раньше она занимала почти весь экран.
-        const bar = page.getByTestId("outcome-phone-bar");
-        await expect(bar).toBeVisible();
-        expect((await bar.boundingBox())?.height ?? 999).toBeLessThan(190);
-        await expect(page.getByTestId("outcome-mode-author")).toBeHidden();
-        await expectTouchTarget(page, page.getByTestId("outcome-options-open"), "кнопка «Параметры»");
-        for (const tab of ["inputs", "result", "rules"]) {
-          await expectTouchTarget(page, page.getByTestId(`outcome-tab-${tab}`), `вкладка ${tab}`);
-        }
-
-        // Лист «Параметры»: до 90 % высоты, режим и «Результат из» внутри, Esc закрывает.
-        await page.getByTestId("outcome-options-open").click();
-        const sheet = page.getByRole("dialog");
-        await expect(sheet.getByTestId("outcome-mode-student")).toBeVisible();
-        const sheetBox = await sheet.boundingBox();
-        const viewport = page.viewportSize();
-        expect(sheetBox?.height ?? 9999).toBeLessThanOrEqual((viewport?.height ?? 0) * 0.9 + 1);
-        await expectNoHorizontalScroll(page);
-        await shot(page, L, "ps-88-outcome-phone-options");
-        await page.keyboard.press("Escape");
-        await expect(sheet).toBeHidden();
-
-        // «Почему?» это страница: выбор документа открывает её, «Назад» браузера возвращает результат.
-        await page.getByTestId("outcome-doc-project_proposal").getByRole("button").first().click();
-        await expect(page).toHaveURL(/tab=rules/);
-        await expect(page.getByTestId("outcome-rules-page")).toBeVisible();
-        await expect(page.getByTestId("outcome-tab-rules")).toHaveAttribute("aria-current", "page");
+        // Выбор документа открывает шторку «Подробностей», касание затемнения её закрывает.
+        await page.getByTestId("sp-doc-project_proposal").getByRole("button").first().click();
+        await expect(page.getByTestId("sp-side")).toHaveAttribute("data-open", "true");
+        await expect(page.getByTestId("sp-why")).toBeVisible();
         await expectNoHorizontalScroll(page);
         await shot(page, L, "ps-89-outcome-phone-why");
-        await page.goBack();
-        await expect(page.getByTestId("outcome-center")).toBeVisible();
-        await expect(page).not.toHaveURL(/tab=rules/);
+        await page.getByTestId("sp-scrim").click({ position: { x: 10, y: 10 } });
+        await expect(page.getByTestId("sp-scrim")).toBeHidden();
 
-        // Лист «Вводные» закрывается «Назад» и вкладка остаётся прежней.
-        await page.getByTestId("outcome-tab-inputs").click();
-        await expect(sheet.getByTestId("outcome-inputs")).toBeVisible();
-        await page.goBack();
-        await expect(sheet).toBeHidden();
-        await expect(page.getByTestId("outcome-center")).toBeVisible();
+        // «Содержимое» на телефоне: список «Что редактируем» страницей.
+        await page.getByTestId("sp-bottom-content").click();
+        await expect(page).toHaveURL(/\/2026\.1\.6\/content/);
+        await expect(page.getByTestId("ct-list")).toBeVisible();
+        await expectNoHorizontalScroll(page);
+        await shot(page, L, "ps-40-phone-content");
 
-        // Режимы центра на 360 px: без горизонтальной прокрутки.
-        for (const view of ["matrix", "atlas", "compare", "lint"]) {
-          await page.getByTestId(`outcome-view-${view}`).click();
-          await expect(page.getByTestId(`outcome-view-panel-${view}`)).toBeVisible();
-          await expect.poll(() => overflowing(page)).toEqual([]);
-          await expectNoHorizontalScroll(page);
-        }
+        // «Изменения» страницей, нижние вкладки на месте.
+        await page.getByTestId("sp-bottom-changes").click();
+        await expect(page).toHaveURL(/changes=1/);
+        await expect(page.getByTestId("sp-changes-page")).toBeVisible();
+        await expectNoHorizontalScroll(page);
+
+        // «Проверка» на 360 px.
+        await page.getByTestId("sp-bottom-check").click();
+        await expect(page).toHaveURL(/\/2026\.1\.6\/check/);
+        await expectNoHorizontalScroll(page);
+        await shot(page, L, "ps-84-check-phone");
       });
     });
   });

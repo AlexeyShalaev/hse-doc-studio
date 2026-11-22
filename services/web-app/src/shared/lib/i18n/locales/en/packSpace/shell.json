@@ -8,7 +8,7 @@
     "changes": "Changes"
   },
   "close": "Close",
-  "soon": "Coming soon: this part of the new Studio view is still in progress.",
+  "soon": "Coming soon: this part of the Studio is still in progress.",
   "slotFailed": "This part of the screen failed to load. Reload the page.",
   "entry": {
     "noVersionsTitle": "This workspace has no template versions yet",

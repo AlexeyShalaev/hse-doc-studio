@@ -322,5 +322,16 @@
     "move": {
       "done": "Edits moved to version {{version}}"
     }
+  },
+  "moveEdits": {
+    "title": "Released version {{version}} was edited outside the Studio",
+    "lead": "Its files in the folder no longer match the release. Move the edits to a new version {{version}}: from then on they are an ordinary copy. Return the released version files in the folder to the release yourself (for example, git checkout).",
+    "leadGit": "Its files no longer match the release. Move the edits to a new version {{version}}: the released version files return to the main branch, and the edits become an ordinary copy.",
+    "leadAny": "Its files in the folder no longer match the release. Move the edits to a new version: from then on they are an ordinary copy. Return the released version files in the folder to the release yourself (for example, git checkout).",
+    "leadGitAny": "Its files no longer match the release. Move the edits to a new version: the released version files return to the main branch, and the edits become an ordinary copy.",
+    "button": "Move the edits to {{version}}",
+    "buttonAny": "Move the edits to a new version",
+    "done": "Edits moved to version {{version}}",
+    "notRestored": "The released version files in the folder still have the edits: return them to the release yourself."
   }
 }
