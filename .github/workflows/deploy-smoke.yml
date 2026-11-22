@@ -254,10 +254,10 @@ jobs:
   # ── Tier 1b — полный серверный набор (deploy/server) проходит приёмочный смоук Playwright ──
   # Мастер, регистрация, изоляция, сборка и PDF через раннер и MinIO, очередь 15 против 1, потеря раннера,
   # рестарт api, лимит квоты. Образ собирается с extra server: без него режим server не стартует.
-  # Проекты Playwright делятся на три группы, у каждой свой стенд и свой джоб (по ~6 минут сценариев вместо 17 подряд).
+  # Проекты Playwright делятся на четыре группы, у каждой свой стенд и свой джоб (по 2-6 минут сценариев вместо 17 подряд).
   # Сценарии не зависят друг от друга: каждый заводит администратора сам (ensureAdmin: мастер на свежем стенде или вход),
   # а порядок внутри группы сохранён там, где он важен: acknowledge до backups (на стенде ещё нет бэкапов), backups
-  # перезапускает api и подменяет данные, storage-cleanup последним (чистит образы и кэш раннера).
+  # перезапускает api и подменяет данные, storage-cleanup отдельной группой (чистит образы и кэш раннера общего стенда, другим сценариям он мешал бы).
   server-stack-smoke:
     name: Server stack smoke (Playwright, ${{ matrix.group }})
     runs-on: ubuntu-latest
@@ -267,11 +267,13 @@ jobs:
       matrix:
         include:
           - group: full
-            projects: full presence
+            projects: full
           - group: misc
-            projects: acknowledge backups updates onboarding storage-cleanup
+            projects: acknowledge backups updates onboarding presence
           - group: mail
             projects: mail-log signing-optional
+          - group: storage
+            projects: storage-cleanup
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
