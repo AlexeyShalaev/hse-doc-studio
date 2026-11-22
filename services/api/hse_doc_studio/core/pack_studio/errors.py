@@ -107,11 +107,11 @@ _C = PackStudioErrorCode
 
 # Код -> (HTTP-статус, сообщение ru, сообщение en).
 _TABLE: dict[PackStudioErrorCode, tuple[int, str, str]] = {
-    _C.pack_studio_disabled: (404, "Студия шаблонов выключена.", "The Pack Studio is turned off."),
+    _C.pack_studio_disabled: (404, "Студия шаблонов выключена.", "Template Studio is turned off."),
     _C.pack_studio_forbidden: (
         403,
-        "Нет права «Автор шаблонов». Его выдаёт администратор установки.",
-        "You do not have the Pack author right. The instance administrator grants it.",
+        "Нет доступа к Студии шаблонов. Его выдаёт администратор установки.",
+        "You do not have access to Template Studio. The instance administrator grants it.",
     ),
     _C.pack_scope_required: (
         403,
@@ -270,15 +270,15 @@ _TABLE: dict[PackStudioErrorCode, tuple[int, str, str]] = {
     ),
     _C.service_access_missing: (
         404,
-        "Для этого репозитория нет служебного доступа. Его задаёт администратор установки.",
-        "This repository has no service access. The instance administrator sets it up.",
+        "Этот репозиторий не подключён. Подключает администратор установки.",
+        "This repository is not connected. The instance administrator connects it.",
     ),
     _C.service_access_exists: (
         409,
-        "Для этого репозитория служебный доступ уже задан.",
-        "This repository already has a service access.",
+        "Этот репозиторий уже подключён.",
+        "This repository is already connected.",
     ),
-    _C.service_access_not_found: (404, "Служебный доступ не найден.", "Service access not found."),
+    _C.service_access_not_found: (404, "Подключённый репозиторий не найден.", "Connected repository not found."),
     _C.version_not_found: (404, "Шаблон или версия не найдены.", "Template or version not found."),
     _C.version_taken: (
         409,
@@ -307,8 +307,8 @@ _TABLE: dict[PackStudioErrorCode, tuple[int, str, str]] = {
     ),
     _C.paths_outside_packs: (
         409,
-        "Ветка меняет файлы вне папки паков. В официальные паки и через служебный доступ можно предлагать только паки.",
-        "The branch changes files outside the packs folder. Official packs and service access take only packs.",
+        "Ветка меняет файлы вне папки с шаблонами. Отправлять можно только саму папку шаблонов.",
+        "The branch changes files outside the templates folder. Only that folder can be sent.",
     ),
     _C.place_invalid: (
         400,

@@ -3,7 +3,7 @@ import { Lock } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { VersionSection } from "@features/pack-forms";
 import { Button } from "@shared/ui";
-import { useSpaceNav } from "../../context/useSpaceNav";
+import { useCopyVersion } from "../../next-step/useCopyVersion";
 import type { ContentPart, ContentPartProps } from "../contract";
 import { FormPane } from "../FormPane";
 import { useContentNav } from "../useContentNav";
@@ -31,7 +31,7 @@ export const VersionPart = ({
 }: ContentPartProps & { children?: ReactNode }) => {
   const { t } = useTranslation("packSpace");
   const nav = useContentNav();
-  const space = useSpaceNav();
+  const copy = useCopyVersion({ toastOnError: true });
   const section = SECTION[part];
   if (!section) return null;
   return (
@@ -49,10 +49,8 @@ export const VersionPart = ({
               size="xs"
               variant="secondary"
               data-testid="ct-part-copy"
-              onClick={() => {
-                // Кнопку «Править копию» делает S4; параметр `copy` зарезервирован за ним (12.6).
-                space.go({ extra: { copy: "1" } });
-              }}
+              disabled={copy.pending}
+              onClick={() => void copy.run()}
             >
               {t("content.parts.copy")}
             </Button>

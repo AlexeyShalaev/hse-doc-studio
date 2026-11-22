@@ -257,7 +257,7 @@
     "ahead": "ahead",
     "behind": "behind",
     "aheadBehind": "{{ahead}} commits ahead of {{base}}, {{behind}} behind",
-    "serviceAccess": "Service access",
+    "serviceAccess": "Connected repository",
     "openCompare": "Open PR in the browser",
     "menu": "Branch actions",
     "dismiss": "Hide",
@@ -388,7 +388,7 @@
         "mr": "Branch {{branch}} goes to the hosting, and a merge request (MR) into {{base}} opens."
       },
       "autoBranch": "(the Studio creates it)",
-      "service": "The push uses the instance service access, commits are signed by you.",
+      "service": "The push uses the connected repository access, commits are signed by you.",
       "viaFork": "Via fork {{url}}",
       "files_one": "{{count}} file differs from the base branch",
       "files_other": "{{count}} files differ from the base branch",
@@ -443,8 +443,8 @@
     "access": {
       "title": "Repository access",
       "close": "Close",
-      "serviceTitle": "Instance service access is in use",
-      "serviceLead": "Branches are pushed with the token the administrator set up for this repository. Commits are signed by you, forks are not available.",
+      "serviceTitle": "The connected repository access is in use",
+      "serviceLead": "Changes are sent with the access the administrator set up for this repository under “Connected repositories”. Commits are signed by you, forks are not available.",
       "noneLead": "The workspace has no token: a public repository can be read, but a branch cannot be pushed and no pull request can be opened. Create a new workspace with this repository and paste the token right in the creation window.",
       "missing": "The workspace access was removed from Git access. Create the workspace again and paste the token right in the creation window.",
       "replace": "Replace token",

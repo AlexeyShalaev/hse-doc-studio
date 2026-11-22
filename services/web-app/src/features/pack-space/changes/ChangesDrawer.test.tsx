@@ -436,7 +436,7 @@ describe("панель «Изменения»", () => {
     });
     const root = await panel();
     expect(
-      await within(root).findByText(/выпущена и не меняется/),
+      await within(root).findByText(/правки пойдут в копию версии 2026\.1\.2/),
     ).toBeVisible();
     expect(root).toHaveTextContent("Править копию");
   });

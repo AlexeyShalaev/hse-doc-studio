@@ -59,7 +59,7 @@ If a project is opened in an older Studio than the one that saved it last (or th
 
 ## For pack authors: what a pack consists of { #pack-layout }
 
-A pack is a folder; in the Studio repository the packs live in `packs/`. The easiest way to edit a pack is [Template Studio](../pack-studio/index.md): an editor with checks, previews, signature places with the mouse, the new version wizard and merge requests.
+A pack is a folder; in the Studio repository the packs live in `packs/`. The easiest way to edit a pack is [Template Studio](../pack-studio/index.md): an editor with checks, previews, signature places with the mouse, a copy of a version and sending for review with a merge request.
 
 ```text
 <pack>/pack.yaml                                       id, ru and en names, description, maintainer, license, source
@@ -79,7 +79,7 @@ A pack is a folder; in the Studio repository the packs live in `packs/`. The eas
 - `releases.yaml` is written by a release (`pack freeze` or the "New version" wizard), nobody edits it by hand. The folder of a released version is immutable: `pack check` recounts the digest and fails on any edit.
 - How to write the manifests is described by the JSON schemas in [`contracts/pack`](https://github.com/AlexeyShalaev/hse-doc-studio/tree/master/contracts/pack). `pack check` and the Template Studio "Problems" check against them; an unknown key is an error, though the Studio catalog itself skips it.
 
-Where the Studio takes packs from: the packs built into the image of this Studio version and connected catalogs. On a server an administrator connects catalogs ([Pack catalogs](../deploy/pack-catalogs.md)); locally the "Connect to this Studio catalog" button in a Template Studio workspace connects a packs folder. From connected catalogs only released versions reach the project wizard.
+Where the Studio takes packs from: the packs built into the image of this Studio version and connected catalogs. On a server an administrator connects catalogs ([Pack catalogs](../deploy/pack-catalogs.md)); locally the "Connect to this Studio catalog" button in a Template Studio space connects a packs folder. From connected catalogs only released versions reach the project wizard.
 
 ## For pack authors: signing presets
 

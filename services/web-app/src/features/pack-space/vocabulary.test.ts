@@ -104,6 +104,17 @@ describe("словарь packSpace", () => {
     expect(hit("ru", "Базовая настройка")).not.toContain("base");
     expect(hit("ru", "Открыть PR")).toContain("pr");
     expect(hit("ru", "Проверка шаблона: 0 ошибок")).toEqual([]);
+    expect(hit("ru", "Рабочее пространство")).toContain("workspace");
+    expect(hit("ru", "Служебный доступ")).toContain("service-access");
+    expect(hit("ru", "Нужно право «Автор шаблонов»")).toContain("author-right");
+    expect(hit("ru", "Результат из: рабочее дерево")).toContain("result-from");
+    expect(hit("ru", "Результат изменился")).not.toContain("result-from");
+    expect(hit("ru", "Пересчитываю")).toContain("recalculating");
+    expect(hit("ru", "Папка паков")).toContain("packs-folder");
+    expect(hit("en", "Template author right")).toContain("author-right");
+    expect(hit("en", "Coverage by scenarios")).toEqual(
+      expect.arrayContaining(["coverage", "scenario"]),
+    );
     expect(hit("en", "Open the PR")).toContain("pr");
     expect(hit("en", "Atlas of inputs")).toEqual(
       expect.arrayContaining(["atlas", "inputs"]),

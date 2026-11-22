@@ -198,13 +198,63 @@
     },
     {
       "id": "service-access",
-      "pattern": "служебные доступы",
+      "pattern": "служебн(ый|ые|ого|ым|ых)\\s+доступ",
       "use": "Подключённые репозитории"
     },
     {
       "id": "author-right",
-      "pattern": "право «автор шаблонов»",
-      "use": "Кто может править шаблоны"
+      "pattern": "автор(ы|ов|ом)? шаблонов|выдать право",
+      "use": "Кто может править шаблоны, Выдать доступ"
+    },
+    {
+      "id": "workspace",
+      "pattern": "рабоч\\S{2,3}\\s+пространств",
+      "use": "Пространство"
+    },
+    {
+      "id": "packs-folder",
+      "pattern": "папк[аиуе] паков",
+      "use": "Папка с шаблонами"
+    },
+    {
+      "id": "packs-in-spaces",
+      "pattern": "паки шаблонов",
+      "use": "Шаблоны документов"
+    },
+    {
+      "id": "result-from",
+      "pattern": "результат из(?![a-zа-яё])",
+      "use": "убрано, всегда мои правки"
+    },
+    {
+      "id": "reset-all",
+      "pattern": "сбросить всё",
+      "use": "Сбросить условия"
+    },
+    {
+      "id": "student-mode",
+      "pattern": "как студент|режим.{0,3}автор",
+      "use": "центр всегда студенческий"
+    },
+    {
+      "id": "recalculating",
+      "pattern": "пересчитываю|пересчёт идёт",
+      "use": "Считаю, Считаю дольше обычного"
+    },
+    {
+      "id": "branch-tip",
+      "pattern": "вершин",
+      "use": "Правки пока только у вас"
+    },
+    {
+      "id": "item-not-chosen",
+      "pattern": "элемент не выбран",
+      "use": "Что здесь можно сделать"
+    },
+    {
+      "id": "data-set",
+      "pattern": "датасет",
+      "use": "Пример данных"
     }
   ],
   "en": [
@@ -327,6 +377,51 @@
       "id": "service-access",
       "pattern": "service access",
       "use": "Connected repositories"
+    },
+    {
+      "id": "author-right",
+      "pattern": "template author|pack author",
+      "use": "Who can edit templates"
+    },
+    {
+      "id": "dataset",
+      "pattern": "data ?set|test data|autoset",
+      "use": "Example data"
+    },
+    {
+      "id": "rerun",
+      "pattern": "re-?run",
+      "use": "Check again"
+    },
+    {
+      "id": "coverage",
+      "pattern": "coverage",
+      "use": "Which rules the ready cases check"
+    },
+    {
+      "id": "save-version",
+      "pattern": "save version",
+      "use": "Save a point"
+    },
+    {
+      "id": "metadata",
+      "pattern": "metadata",
+      "use": "Project data"
+    },
+    {
+      "id": "signing-route",
+      "pattern": "signing route",
+      "use": "Signatures (who signs and in which order)"
+    },
+    {
+      "id": "recalculating",
+      "pattern": "recalculating",
+      "use": "Calculating, Calculating longer than usual"
+    },
+    {
+      "id": "result-from",
+      "pattern": "result from(?![a-zа-яё])",
+      "use": "removed, always my edits"
     }
   ],
   "allowedIn": {

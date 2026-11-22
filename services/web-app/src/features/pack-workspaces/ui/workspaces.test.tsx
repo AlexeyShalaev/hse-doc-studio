@@ -602,7 +602,7 @@ describe("окно подключения", () => {
     );
     await userEvent.click(screen.getByTestId("ws-create-submit"));
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "В папке нет паков",
+      "В папке нет шаблонов",
     );
   });
 

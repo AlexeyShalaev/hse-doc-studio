@@ -1,11 +1,13 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   SPACE_QUERY,
+  packErrorText,
   packStudioKeys,
   useCreatePackVersion,
   type PackVersionCreated,
 } from "@entities/pack-studio";
+import { toast } from "@shared/lib";
 import { useSpace } from "../context/SpaceContext";
 import type { SpaceNavPatch } from "../context/nav";
 import { useSpaceNav } from "../context/useSpaceNav";
@@ -45,14 +47,21 @@ export const carryPlace = (
  * «небольшая правка» (следующий patch); если номер уже занят в основной ветке, берётся
  * свободный, который подсказал сервер (прежнее `takeSuggested`). `minor` и `major` выбираются
  * позже, в «Изменить номер».
+ *
+ * Это единственный способ сделать копию на экране: главная кнопка полосы, «Подробности»,
+ * «Содержимое» (текст, подписи, части версии, все файлы) зовут его же (S13). С `toastOnError`
+ * отказ показывается всплывающим сообщением (там, где у кнопки нет места под строку ошибки).
  */
-export const useCopyVersion = () => {
+export const useCopyVersion = ({
+  toastOnError = false,
+}: { toastOnError?: boolean } = {}) => {
   const { workspace, versionRef, version, location } = useSpace();
   const nav = useSpaceNav();
   const client = useQueryClient();
   const create = useCreatePackVersion(workspace.id);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const running = useRef(false);
   const { mutateAsync } = create;
 
   const make = (next?: string): Promise<PackVersionCreated> =>
@@ -65,6 +74,9 @@ export const useCopyVersion = () => {
     });
 
   const run = async (): Promise<boolean> => {
+    // Второе нажатие, пока копия создаётся, ничего не делает: иначе выйдут две копии.
+    if (running.current) return false;
+    running.current = true;
     setPending(true);
     setError(null);
     try {
@@ -95,8 +107,10 @@ export const useCopyVersion = () => {
       return true;
     } catch (failure) {
       setError(failure);
+      if (toastOnError) toast.error(packErrorText(failure));
       return false;
     } finally {
+      running.current = false;
       setPending(false);
     }
   };

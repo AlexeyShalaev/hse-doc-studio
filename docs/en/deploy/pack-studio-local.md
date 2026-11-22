@@ -27,7 +27,7 @@ echo "PACKS_DIR=$HOME/my-packs" > .env
 docker compose up -d
 ```
 
-Open <http://localhost:17260>. The Template Studio opens right away, and the packs folder is already in the list of workspaces.
+Open <http://localhost:17260>. The Template Studio opens right away, and the templates folder is already in the list of spaces.
 
 - Without `PACKS_DIR` the folder the command runs in is opened.
 - Data (repository clones, git access, preview builds) lives in `~/.hse-pack-studio`; set `DATA_DIR` for another folder.
@@ -50,11 +50,11 @@ Open <http://localhost:17260>. The Template Studio opens right away, and the pac
 
 ## What next
 
-1. **Packs folder.** Open the workspace, pick a version file (`version.yaml`) and press **Build** in the preview tab. The first build waits for the TeX image.
-2. **Your own packs repository.** **New workspace**, git tab: the repository address and the token. Paste the token right in the window (**New token…** item) or add it beforehand in **Settings, "Git access"**, **Add token** button. Edits go to a branch, and **Propose changes** opens a PR (GitHub) or an MR (GitLab).
-3. **Official packs.** The **Official packs** card, **Start** button: the packs of the Studio repository; changes go through your fork with your GitHub token. A classic token with the `public_repo` scope is needed: the link to create it and the field for it are right in the window. The rules are in "Contributing to the official packs" of [CONTRIBUTING.md](https://github.com/AlexeyShalaev/hse-doc-studio/blob/master/CONTRIBUTING.md#contributing-to-the-official-packs).
-4. **How a pack is built.** Files, versions and what counts as patch, minor and major: [Packs and templates](../reference/pack.md).
-5. **Working in Template Studio.** Editing, previews, signature places, a new version and merge requests: [Template Studio](../pack-studio/index.md).
+1. **Templates folder.** Open the space, on the **Content** tab pick a document and press **Build PDF** in the preview on the right. The first build waits for the TeX image.
+2. **Your own repository.** **Connect a space**: the repository address and the token. Paste the token right in the window (**New token…** item) or add it beforehand in **Settings, "Git access"**, **Add token** button. Edits go to a branch, and **Send for review** opens a merge request (a PR on GitHub, an MR on GitLab).
+3. **Official templates.** The **Official HSE templates** item, **Start** button: the templates of the Studio repository; changes go through your own copy of the repository (a fork) with your GitHub token. A classic token with the `public_repo` scope is needed: the link to create it and the field for it are right in the window. The rules are in "Contributing to the official packs" of [CONTRIBUTING.md](https://github.com/AlexeyShalaev/hse-doc-studio/blob/master/CONTRIBUTING.md#contributing-to-the-official-packs).
+4. **How a pack is built.** Files, versions and what counts as a small fix, new features and a new edition (patch, minor, major): [Packs and templates](../reference/pack.md).
+5. **Working in Template Studio.** The result, editing, PDF preview, signature places, a copy of a version and sending for review: [Template Studio](../pack-studio/index.md).
 
 ## Update and stop
 
@@ -65,4 +65,4 @@ docker compose down                           # stop, the data stays
 
 ## For Studio developers
 
-In a checkout of the repository, `make pack-studio` starts the same from sources: api and Vite at <http://localhost:3001/pack-studio>, a workspace over `packs/` of the checkout, data in `.pack-studio/`. The preview build needs a local Docker.
+In a checkout of the repository, `make pack-studio` starts the same from sources: api and Vite at <http://localhost:3001/pack-studio>, a space over `packs/` of the checkout, data in `.pack-studio/`. The preview build needs a local Docker.

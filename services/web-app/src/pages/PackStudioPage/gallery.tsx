@@ -599,7 +599,7 @@ export const getPackStudioGallery = (): GalleryGroup[] => [
       },
       {
         id: "ps_git_service",
-        title: "Служебный доступ, GitLab",
+        title: "Подключённый репозиторий, GitLab",
         frame: "page",
         width: 980,
         seed: (client) => {

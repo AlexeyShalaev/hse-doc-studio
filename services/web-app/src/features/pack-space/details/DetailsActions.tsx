@@ -5,7 +5,7 @@ import { packErrorText, type OutcomeElementRef } from "@entities/pack-studio";
 import { Spinner } from "@shared/ui";
 import type { SpaceNavPatch } from "../context/nav";
 import { useSpaceNav } from "../context/useSpaceNav";
-import { useMakeCopy } from "./useMakeCopy";
+import { useCopyVersion } from "../next-step/useCopyVersion";
 
 /** Куда ведёт «Текст документа» и его родня: часть «Содержимого», где живёт этот элемент. */
 export const contentPatch = (
@@ -66,7 +66,7 @@ export const DetailsActions = ({
 }: DetailsActionsProps) => {
   const { t } = useTranslation("packSpace");
   const nav = useSpaceNav();
-  const copy = useMakeCopy();
+  const copy = useCopyVersion();
   const open = contentPatch(element);
   return (
     <div className="sp-details-actions" data-testid="sp-details-actions">
@@ -79,7 +79,7 @@ export const DetailsActions = ({
               className="btn"
               disabled={copy.pending}
               data-testid="sp-make-copy"
-              onClick={copy.run}
+              onClick={() => void copy.run()}
             >
               {copy.pending ? (
                 <Spinner size="sm" />

@@ -61,7 +61,7 @@
     "lead": "Drag a signature frame to where it belongs on the page. Everything is saved automatically.",
     "hintFollow": "Signatures that follow the text move together with it.",
     "hintNoFollow": "This PDF has no signature lines, so the signatures sit at their fallback places: move them.",
-    "leadReadOnly": "Signature places are view-only.",
+    "leadReadOnly": "To move signature places, you need a copy of the version.",
     "copy": "Edit a copy",
     "building": "Building the document PDF…",
     "cancel": "Stop",

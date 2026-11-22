@@ -28,6 +28,7 @@ import { loadPackStudioNamespace } from "@shared/lib/i18n/packStudioNamespace";
 import { GALLERY_WORKSPACE } from "../../galleryKit";
 import { renderSpace, SPACE_BASE } from "../../spaceTestKit";
 import ContentMain from "../ContentMain";
+import { mockCopyCreated } from "../contentTestKit";
 import {
   CONTENT_TEXT,
   CONTENT_TEXT_PATH,
@@ -291,7 +292,7 @@ describe("сегмент «Текст»", () => {
     expect(code()).toHaveAttribute("data-reveal", "5");
   });
 
-  it("выпущенная версия: только чтение и «Править копию» по контракту каркаса", async () => {
+  it("выпущенная версия: только чтение и «Править копию» создаёт копию", async () => {
     const path = CONTENT_TEXT_PATH.replace("2026.1.3", "2026.1.2");
     await open((client) => {
       seedContentModel(client, RELEASED_MODEL);
@@ -304,8 +305,15 @@ describe("сегмент «Текст»", () => {
     expect(code().readOnly).toBe(true);
     expect(screen.getByTestId("ct-text-lock")).toBeInTheDocument();
     expect(screen.queryByTestId("ct-text-revert")).toBeNull();
+    const created = mockCopyCreated("2026.1.3");
     fireEvent.click(screen.getByTestId("ct-text-copy"));
-    expect(screen.getByTestId("location").textContent).toContain("copy=1");
+    await waitFor(() => {
+      expect(screen.getByTestId("location").textContent).toContain(
+        "/2026.1.3/",
+      );
+    });
+    expect(created).toHaveBeenCalledOnce();
+    expect(screen.getByTestId("location").textContent).not.toContain("copy=1");
     expect(write).not.toHaveBeenCalled();
   });
 });

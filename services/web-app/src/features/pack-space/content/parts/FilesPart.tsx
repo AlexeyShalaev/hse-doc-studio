@@ -5,6 +5,7 @@ import { PackTreePanel } from "@features/pack-tree";
 import type { NewPackTarget } from "@features/pack-scaffold";
 import { CreateDialog } from "../../nav/CreateDialog";
 import { useSpaceNav } from "../../context/useSpaceNav";
+import { useCopyVersion } from "../../next-step/useCopyVersion";
 import { useSpacePhone } from "../../shell/phoneContext";
 import type { ContentPartProps } from "../contract";
 import { useContentNav } from "../useContentNav";
@@ -24,6 +25,7 @@ const FilesPart = ({
   const { t } = useTranslation("packSpace");
   const nav = useContentNav();
   const space = useSpaceNav();
+  const copy = useCopyVersion({ toastOnError: true });
   const [create, setCreate] = useState<NewPackTarget | null>(null);
   // Телефон: дерево и файл две страницы, а не две колонки. Без файла дерево, с файлом файл
   // и «назад» к дереву (его рисует `ContentMain`).
@@ -72,9 +74,7 @@ const FilesPart = ({
                 path={file}
                 at={at}
                 readOnly={locked}
-                onCopy={() => {
-                  space.go({ extra: { copy: "1" } });
-                }}
+                onCopy={() => void copy.run()}
                 onOpenFile={nav.toFile}
               />
             ) : (
