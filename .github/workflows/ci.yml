@@ -181,14 +181,14 @@ jobs:
         run: uv run pytest -m unit --no-cov --shard=${{ matrix.shard }}/${{ matrix.of }} ${{ runner.os == 'Linux' && '-n logical --dist worksteal' || '' }}
 
   # Полный набор (unit + integration + pg на настоящем Postgres 16, включая миграции) — единственный источник
-  # числа покрытия. Последовательно это ~65 минут процессорного времени, поэтому набор делится на 10 шардов по файлам
+  # числа покрытия. Последовательно это ~50 минут процессорного времени, поэтому набор делится на 8 шардов по файлам
   # (--shard, плагин tests/fixtures/sharding.py, время файлов в tests/shard_durations.json), а внутри шарда тесты идут
   # в 4 процесса pytest-xdist по числу vCPU раннера (-n logical: -n auto считает физические ядра через psutil и на этом
   # раннере даёт только 2); worksteal: освободившийся процесс забирает хвост очереди у занятого. Тесты упираются в
   # процессор, а не в диск или сеть (8 процессов вместо 4 только замедляют и роняют тесты по таймауту), поэтому ускорение
   # даёт только число раннеров. Данные покрытия шардов сводит backend-coverage, порог проверяется там.
   backend-full:
-    name: Backend · Full suite (${{ matrix.shard }}/10)
+    name: Backend · Full suite (${{ matrix.shard }}/8)
     needs: changes
     if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
@@ -199,7 +199,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
     # Сервисы для pg и s3 тестов: без DSN pg-тесты пропускаются, но в CI они должны идти. Каждый процесс xdist
     # создаёт свою шаблонную базу и свою базу на тест (tests/fixtures/pg.py), общий сервер им не мешает.
     # Данные Postgres лежат в tmpfs (в памяти): тест создаёт и удаляет базу на каждый запуск, а DROP DATABASE
@@ -250,8 +250,8 @@ jobs:
             sudo chmod 755 "/usr/lib/postgresql/16/bin/$tool"
           done
           /usr/lib/postgresql/16/bin/pg_dump --version
-      - name: Pytest (shard ${{ matrix.shard }}/10)
-        run: uv run pytest -n logical --dist worksteal --shard=${{ matrix.shard }}/10 --durations=15
+      - name: Pytest (shard ${{ matrix.shard }}/8)
+        run: uv run pytest -n logical --dist worksteal --shard=${{ matrix.shard }}/8 --durations=15
       - name: Keep coverage data
         run: mkdir -p coverage-data && mv .coverage "coverage-data/.coverage.shard-${{ matrix.shard }}"
       - uses: actions/upload-artifact@v7
