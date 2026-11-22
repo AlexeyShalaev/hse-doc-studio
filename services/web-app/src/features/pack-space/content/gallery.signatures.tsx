@@ -1,14 +1,21 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { GalleryEntry } from "@shared/lib/stateGallery";
-import { GALLERY_REF, SpaceGalleryFrame } from "../galleryKit";
+import { packStudioKeys } from "@entities/pack-studio";
+import {
+  GALLERY_REF,
+  GALLERY_WORKSPACE,
+  SpaceGalleryFrame,
+} from "../galleryKit";
 import { SpaceScreen } from "../shell/SpaceScreen";
 import { RELEASED_MODEL, seedContentModel } from "./fixtures";
 import { slots } from "./slots";
 import {
+  SIGNATURES_BUILD_ID,
   SIGNATURES_DOC,
   SIGNATURES_PLAIN,
   SIGNATURES_RELEASED,
   seedSignatures,
+  signaturesBuild,
 } from "./signatures/fixtures";
 import { SAMPLE_PDF_URL } from "./signatures/samplePdf";
 
@@ -19,6 +26,24 @@ const RELEASED_REF = { ...GALLERY_REF, version: "2026.1.2" };
 const seedDraft = (client: QueryClient) => {
   seedContentModel(client);
   seedSignatures(client, { pdfUrl: SAMPLE_PDF_URL });
+};
+/** Сборка PDF упала: Docker не запущен. Сырой текст сервера уходит в «Технические подробности». */
+const seedFailed = (client: QueryClient) => {
+  seedContentModel(client);
+  seedSignatures(client, { pdfUrl: SAMPLE_PDF_URL });
+  client.setQueryData(
+    packStudioKeys.previewBuild(GALLERY_WORKSPACE.id, SIGNATURES_BUILD_ID),
+    {
+      ...signaturesBuild("failed"),
+      finished_at: "2026-11-14T09:30:03Z",
+      pages: null,
+      error: {
+        code: "docker_unavailable",
+        detail:
+          "Cannot connect to the Docker daemon at unix:///Users/user/.docker/run/docker.sock. Is the docker daemon running?",
+      },
+    },
+  );
 };
 const seedReleased = (client: QueryClient) => {
   seedContentModel(client, RELEASED_MODEL);
@@ -58,6 +83,15 @@ export const galleryEntries: GalleryEntry[] = [
     width: 1280,
     seed: seedDraft,
     render: () => frame(DOC),
+  },
+  {
+    id: "sp_content_signatures_failed",
+    title: "Содержимое, «Подписи»: PDF не собрался",
+    note: "Причина словами («Docker не запущен»), что делать и «Собрать ещё раз»; сырой текст сервера свёрнут в «Технические подробности».",
+    frame: "screen",
+    width: 1280,
+    seed: seedFailed,
+    render: () => frame(DOC, { height: "30rem" }),
   },
   {
     id: "sp_content_signatures_released",
