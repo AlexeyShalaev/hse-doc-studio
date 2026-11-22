@@ -1,6 +1,10 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
+import type { TFunction } from "i18next";
+import { i18n } from "@shared/lib";
+import { loadPackSpaceNamespace } from "@shared/lib/i18n/packSpaceNamespace";
+import { plainTexts } from "./plain/textsKit";
 import banned from "./vocabulary.banned.json";
 
 // Словарь нового интерфейса (docs/design/pack-studio-ux.md, раздел 6): в строках packSpace нет
@@ -207,4 +211,40 @@ describe("словарь форм «Содержимого»", () => {
       expect.arrayContaining(["sourceFile", "outputFile"]),
     );
   });
+});
+
+// Сообщения сервера (находки линтера результата, сбои сборки PDF, изменения «Сравнить») приходят
+// не из словаря, а из кода сервера на русском и с внутренними словами. Они проходят слой
+// формулировок (`plain/`); тест прогоняет формулировщик по фикстурам всех 22 правил, кодов
+// ошибок сборки и видов изменений и ищет в видимом тексте те же запрещённые слова, что у словаря,
+// и утечки идентификаторов (список `server`). Технические подробности не проверяются.
+
+const serverRules = banned.server as { ru: Rule[]; en: Rule[] };
+
+describe("серверные сообщения через слой формулировок", () => {
+  beforeAll(async () => {
+    await loadPackSpaceNamespace();
+  });
+
+  it.each(LANGS)(
+    "(%s) нет запрещённых слов и утечек идентификаторов",
+    async (lng) => {
+      await i18n.changeLanguage(lng);
+      const t: TFunction = i18n.getFixedT(lng, "packSpace");
+      const rules = [...(banned[lng] as Rule[]), ...serverRules[lng]];
+      const hits: string[] = [];
+      for (const named of [true, false]) {
+        for (const { key, text } of plainTexts(t, lng, named)) {
+          for (const rule of rules) {
+            if (new RegExp(rule.pattern, "iu").test(text)) {
+              hits.push(
+                `${named ? "с названиями" : "без названий"} ${key}: «${text}» (${rule.id}; вместо этого: ${rule.use})`,
+              );
+            }
+          }
+        }
+      }
+      expect([...new Set(hits)]).toEqual([]);
+    },
+  );
 });
