@@ -420,6 +420,9 @@ const forgetVersionFiles = (client: QueryClient, id: string) => {
   void client.invalidateQueries({
     queryKey: [...packStudioKeys.workspace(id), "versions"],
   });
+  // Модель версии читает и панель «Изменения» (записанные заметки): после записи манифеста она
+  // устарела, иначе главная кнопка просит «Описать изменения» после отправки.
+  void client.invalidateQueries({ queryKey: packStudioKeys.modelAll(id) });
   client.removeQueries({ queryKey: [...packStudioKeys.workspace(id), "file"] });
   client.removeQueries({ queryKey: [...packStudioKeys.workspace(id), "lint"] });
 };
