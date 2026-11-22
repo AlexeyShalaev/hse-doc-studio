@@ -23,6 +23,7 @@ services:
     restart: unless-stopped
 
   api:
+    image: ${SERVER_LITE_IMAGE:-hse-doc-studio-server-lite:local}
     build:
       context: ../../..
       dockerfile: deploy/all-in-one/Dockerfile
@@ -66,6 +67,7 @@ services:
   # Одноразовая заливка демо-данных: docker compose run --rm seed (через make server-lite-seed).
   seed:
     profiles: [seed]
+    image: ${SERVER_LITE_IMAGE:-hse-doc-studio-server-lite:local}
     build:
       context: ../../..
       dockerfile: deploy/all-in-one/Dockerfile
@@ -95,6 +97,7 @@ services:
   # сценариев, которые проверяют стенд без раннеров.
   runner:
     profiles: [runner]
+    image: ${SERVER_LITE_IMAGE:-hse-doc-studio-server-lite:local}
     build:
       context: ../../..
       dockerfile: deploy/all-in-one/Dockerfile
