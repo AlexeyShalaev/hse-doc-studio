@@ -1199,10 +1199,15 @@ def _parse_check_rule(data: dict[str, Any]) -> CheckRule | None:
 # ---------------------------------------------------------------------------
 
 
+# Манифесты паков разбираются при каждом старте приложения (сотни файлов): в чистом Python это секунды, libyaml в десять
+# раз быстрее. Остальные загрузчики Студии шаблонов берут его так же; без libyaml остаётся SafeLoader.
+_LOADER: Any = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+
+
 def _load_yaml(path: Path) -> dict[str, Any] | None:
     try:
         content = path.read_text(encoding="utf-8")
-        return yaml.safe_load(content)
+        return yaml.load(content, Loader=_LOADER)  # noqa: S506 — безопасный загрузчик (CSafeLoader или SafeLoader)
     except Exception as exc:
         logger.warning("yaml load error", path=str(path), exc=str(exc))
         return None
