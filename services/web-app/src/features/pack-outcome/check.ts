@@ -7,6 +7,8 @@ import "./modes/modes.css";
 export { CompareMode } from "./modes/CompareMode";
 export { ChangeList } from "./modes/ChangeList";
 export { ChangeEnvContext } from "./modes/changeEnv";
+export { ChangeWordsContext } from "./modes/changeWords";
+export type { ChangeWords } from "./modes/changeWords";
 export type { ChangeEnv } from "./modes/changeEnv";
 export { useLabeler } from "./ui/inputs/useLabeler";
 export type { Labeler } from "./ui/inputs/useLabeler";
@@ -37,9 +39,26 @@ export {
 } from "./lib/atlas";
 export type { AtlasFilter, AtlasRowView, OutcomeMini } from "./lib/atlas";
 export {
+  ASSERTION_KINDS,
+  SCENARIO_LANGS,
+  assertionKey,
+  badgeOf,
+  classifyFailure,
+  formOf,
   mergedInputs,
+  nameProblem,
+  requestOf,
   resultsById,
+  retryable,
   scenarioName,
+  suggestAssertions,
   tallyOf,
 } from "./lib/scenarios";
-export type { RunTally } from "./lib/scenarios";
+export type {
+  AssertionKind,
+  RunTally,
+  ScenarioBadge,
+  ScenarioFailure,
+  ScenarioForm,
+} from "./lib/scenarios";
+export { StudentView } from "./ui/student/StudentView";

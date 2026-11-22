@@ -560,5 +560,72 @@
         ]
       }
     ]
+  },
+  "server": {
+    "comment": "Тексты, которые приходят с сервера (находки линтера результата, сбои сборки PDF, изменения «Сравнить») и проходят через слой формулировок features/pack-space/plain. Тест vocabulary.test.ts прогоняет формулировщик по фикстурам всех правил, кодов и видов изменений и ищет в видимом тексте (заголовок, «Как исправить», подпись, значения) эти утечки: идентификаторы, имена файлов и поля манифеста, сырой текст Docker. Технические подробности не проверяются.",
+    "ru": [
+      {
+        "id": "snake-case",
+        "pattern": "(?<![a-z0-9])[a-z]+_[a-z0-9_]+",
+        "use": "название из пака или слово словаря"
+      },
+      {
+        "id": "slug",
+        "pattern": "(?<![\\p{L}\\d])[a-z]+-[a-z]+(?![\\p{L}])",
+        "use": "название из пака"
+      },
+      {
+        "id": "dot-path",
+        "pattern": "(?<![\\p{L}\\d])[a-z]+\\.[a-z]+",
+        "use": "название из пака"
+      },
+      {
+        "id": "file-name",
+        "pattern": "\\.(yaml|yml|j2|tex|json)(?![a-z])",
+        "use": "название документа"
+      },
+      {
+        "id": "manifest-keys",
+        "pattern": "visible_if|supported_|signing_|signatures\\.slots|required_at|skip_if|doc\\.yaml|\\blangs\\b|\\bhelp\\b|\\bwhen\\b|\\bnone\\b",
+        "use": "слова словаря"
+      },
+      {
+        "id": "docker-raw",
+        "pattern": "docker\\.sock|daemon|cannot connect",
+        "use": "«Docker не запущен»"
+      },
+      {
+        "id": "atlas-rows",
+        "pattern": "строк атласа|строк таблицы|rows",
+        "use": "сочетаний условий"
+      }
+    ],
+    "en": [
+      {
+        "id": "snake-case",
+        "pattern": "(?<![a-z0-9])[a-z]+_[a-z0-9_]+",
+        "use": "a pack name or a dictionary word"
+      },
+      {
+        "id": "dot-path",
+        "pattern": "(?<![\\p{L}\\d])[a-z]+\\.[a-z]+",
+        "use": "a pack name"
+      },
+      {
+        "id": "file-name",
+        "pattern": "\\.(yaml|yml|j2|tex|json)(?![a-z])",
+        "use": "a document name"
+      },
+      {
+        "id": "manifest-keys",
+        "pattern": "visible_if|supported_|signing_|signatures\\.slots|required_at|skip_if|doc\\.yaml",
+        "use": "dictionary words"
+      },
+      {
+        "id": "docker-raw",
+        "pattern": "docker\\.sock|daemon|cannot connect",
+        "use": "\"Docker is not running\""
+      }
+    ]
   }
 }

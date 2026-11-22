@@ -8,30 +8,27 @@ import { pickLocalized } from "@shared/lib";
 import { Button, EmptyState, ErrorState, Select, Spinner } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
 import { useSpace } from "../context/SpaceContext";
+import { failureInput } from "../plain/failure";
+import { PlainFailureNotice } from "../plain/PlainFailureNotice";
 import { Conditions } from "./Conditions";
 import { Findings } from "./Findings";
 import { PdfPage } from "./PdfPage";
 import { usePreviewBuild, type PreviewBuild } from "./usePreviewBuild";
 import "./space-preview.css";
 
-/** Почему сборка не удалась, словами: свой текст для известных кодов, затем общий словарь ошибок. */
-const useReason = () => {
-  const { t, i18n } = useTranslation("packSpace");
-  return (code: string): string => {
-    if (i18n.exists(`preview.error.${code}`, { ns: "packSpace" })) {
-      return t(`preview.error.${code}`);
-    }
-    if (i18n.exists(`errors:code.${code}`)) return t(`errors:code.${code}`);
-    return t("preview.error.generic", { code });
-  };
+/** Поле и значение, которые сервер не принял: только в технические подробности. */
+const fieldTech = (
+  error: unknown,
+  label: string,
+): { label: string; value: string }[] => {
+  const text =
+    error instanceof ApiError && error.code === "preview_invalid"
+      ? [error.data?.field, error.data?.value]
+          .filter((part): part is string => typeof part === "string")
+          .join(" = ")
+      : "";
+  return text === "" ? [] : [{ label, value: text }];
 };
-
-const fieldDetail = (error: unknown): string =>
-  error instanceof ApiError && error.code === "preview_invalid"
-    ? [error.data?.field, error.data?.value]
-        .filter((part): part is string => typeof part === "string")
-        .join(" = ")
-    : "";
 
 const Wait = ({ text, children }: { text: string; children?: ReactNode }) => (
   <div className="sp-pv-wait" role="status" data-testid="sp-pv-building">
@@ -49,7 +46,6 @@ type StateProps = {
 /** Одно состояние предпросмотра: страница, ожидание или понятное объяснение. */
 const PreviewState = ({ pv, onLog }: StateProps) => {
   const { t } = useTranslation("packSpace");
-  const reason = useReason();
   const { view } = pv;
   switch (view.kind) {
     case "loading":
@@ -144,31 +140,18 @@ const PreviewState = ({ pv, onLog }: StateProps) => {
           <PdfPage build={view.build} url={view.pdfUrl} onLog={onLog} />
         </div>
       );
-    case "failed": {
-      const code = view.build?.error?.code;
-      const detail =
-        view.error !== null
-          ? [packErrorText(view.error), fieldDetail(view.error)]
-              .filter(Boolean)
-              .join(" ")
-          : reason(code ?? "unknown");
+    case "failed":
       return (
         <div className="sp-pv-fail">
-          <Notice
-            tone="err"
-            role="alert"
-            text={
-              <span data-testid="sp-pv-failed">
-                <b>{t("preview.failed.title")}.</b> {detail}
-                {view.build ? (
-                  <>
-                    {" "}
-                    <span className="sp-pv-muted">
-                      {t("preview.errorHint")}
-                    </span>
-                  </>
-                ) : null}
-              </span>
+          <PlainFailureNotice
+            testId="sp-pv-failed"
+            lead={`${t("preview.failed.title")}.`}
+            input={failureInput(view.error, view.build?.error)}
+            techExtra={fieldTech(view.error, t("preview.fieldTech"))}
+            extra={
+              view.build ? (
+                <span className="sp-pv-muted">{t("preview.errorHint")}</span>
+              ) : null
             }
           />
           {view.build ? (
@@ -184,7 +167,6 @@ const PreviewState = ({ pv, onLog }: StateProps) => {
           ) : null}
         </div>
       );
-    }
     case "cancelled":
       return (
         <p className="sp-pv-muted" data-testid="sp-pv-cancelled">

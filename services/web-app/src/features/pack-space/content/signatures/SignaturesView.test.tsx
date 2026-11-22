@@ -298,6 +298,37 @@ describe("«Подписи» документа", () => {
     });
   });
 
+  it("сырой текст Docker не виден: заголовок и «что делать» словами, текст сервера в технических подробностях (V1)", async () => {
+    const raw =
+      "Cannot connect to the Docker daemon at unix:///Users/user/.docker/run/docker.sock. Is the docker daemon running?";
+    vi.spyOn(packStudioApi, "startPreview").mockRejectedValue(
+      new ApiError(raw, "docker_unavailable", 409),
+    );
+    renderSignatures(<ContentMain />, DOC, {
+      before: () => {
+        seedDocumentBuild(
+          WS,
+          { pack: "hse-cs-sse", template: "coursework", version: "2026.1.3" },
+          SIGNATURES_DOC,
+          null,
+        );
+      },
+    });
+
+    const failed = await screen.findByTestId("ct-sg-failed");
+    expect(failed).toHaveTextContent("Не удалось собрать PDF");
+    expect(failed).toHaveTextContent("Docker не запущен");
+    expect(failed).toHaveTextContent("Запустите Docker Desktop");
+    const clone = failed.cloneNode(true) as HTMLElement;
+    clone.querySelector("details")?.remove();
+    expect(clone.textContent).not.toMatch(/Cannot connect|daemon|docker\.sock/);
+    const tech = within(failed).getByText(
+      /Cannot connect to the Docker daemon/,
+    );
+    expect(tech.closest("details")).not.toBeNull();
+    expect(tech.closest("details")).not.toHaveAttribute("open");
+  });
+
   it("документа нет среди собираемых (презентация): PDF не будет, объяснение", async () => {
     renderSignatures(<ContentMain />, "doc=presentation&seg=signatures", {
       before: (client) => {

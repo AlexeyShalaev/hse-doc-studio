@@ -1,0 +1,317 @@
+{
+  "fallback": {
+    "role": "one of the participants",
+    "slot": "…",
+    "document": "…",
+    "point": "…",
+    "input": "…",
+    "metaField": "a project data field",
+    "form": "form",
+    "formField": "form field",
+    "check": "check",
+    "lang": "one of the languages"
+  },
+  "role": {
+    "author": "Author",
+    "authorN": "Author {{n}}",
+    "supervisor": "Supervisor",
+    "co_supervisor": "Consultant",
+    "academic_supervisor": "Academic supervisor"
+  },
+  "lang": {
+    "ru": "Russian",
+    "en": "English"
+  },
+  "element": {
+    "item": "{{point}}: {{document}}",
+    "route": "“{{point}}”",
+    "signature": "Signature “{{signature}}”, document “{{document}}”, {{point}}"
+  },
+  "tech": {
+    "rule": "Check number",
+    "file": "File",
+    "pointer": "Place in the file",
+    "message": "Server text",
+    "hint": "Server hint",
+    "code": "Reason code",
+    "kind": "Kind of change",
+    "id": "Internal name",
+    "before": "Was (as the server says)",
+    "after": "Now (as the server says)",
+    "summary": "Technical details"
+  },
+  "finding": {
+    "share": "This happens in {{n}} of {{total}} combinations of conditions.",
+    "unknown": {
+      "how": "See the details below, under “Technical details”."
+    },
+    "slot-never-routed": {
+      "title": "The “{{signature}}” signature never appears in any submission, whatever the conditions",
+      "how": "Add this signature to the document or to the signing order of a submission, or remove it from the version’s list of signatures."
+    },
+    "route-step-without-person": {
+      "title": "“{{point}}” has a signing step that waits for a person who is missing: {{people}}",
+      "how": "If the person is required, do not allow a project without them. If not, make the step depend on the person so it appears only when the person is there."
+    },
+    "route-gap": {
+      "title": "“{{point}}” needs signatures, but sometimes there is nobody to sign",
+      "how": "Add the author’s signature or the signature of a person who is present in such projects, or do not allow a project without a supervisor."
+    },
+    "visible-if-unknown-field": {
+      "title": "A form field is shown depending on a field that does not exist in the form",
+      "how": "Pick an existing field of the same form in the display condition, or remove the condition: otherwise the field never appears."
+    },
+    "visible-if-value-not-in-options": {
+      "title": "A form field waits for an answer that cannot be chosen",
+      "how": "Take the value from the options of the field the display depends on, or remove the condition: otherwise the field never appears."
+    },
+    "required-hidden": {
+      "meta": {
+        "title": "A required project data field is hidden under all conditions",
+        "how": "It cannot be filled in. Allow showing it for suitable kinds of work or make it optional."
+      },
+      "form": {
+        "title": "A required form or its fields are hidden under all conditions",
+        "how": "They cannot be filled in. Allow showing them for suitable kinds of work or make them optional."
+      },
+      "other": {
+        "title": "A required field is hidden under all conditions",
+        "how": "It cannot be filled in. Allow showing it for suitable kinds of work or make it optional."
+      }
+    },
+    "field-never-visible": {
+      "title": "A field is hidden under all conditions: the student will never see it",
+      "how": "Check for which kinds of work and answers the field is shown, or delete it."
+    },
+    "variant-lang-outside-langs": {
+      "langs": {
+        "title": "Document “{{document}}” is meant for languages the version does not have: {{langs}}",
+        "how": "Add these languages to the version together with the files, or remove them from the document."
+      },
+      "plain": {
+        "title": "Document “{{document}}” is meant for a language the version does not have",
+        "how": "Add the language to the version together with the files, or remove it from the document."
+      }
+    },
+    "skip-if-nda-without-nda": {
+      "title": "Document “{{document}}” in “{{point}}” is skipped under an NDA, but the version has no NDA",
+      "how": "Add an NDA to the version or remove the skip condition."
+    },
+    "when-unknown-person": {
+      "person": {
+        "title": "A signature condition names a person who is not among the roles",
+        "how": "Pick a role from the list: supervisor, consultant or academic supervisor."
+      },
+      "slot": {
+        "title": "A condition refers to a signature that is not in the version’s list of signatures",
+        "how": "Add such a signature to the version or fix its name."
+      },
+      "document": {
+        "title": "A condition refers to a document that is not in the version",
+        "how": "Add the document to the version or fix its name."
+      }
+    },
+    "when-never-held": {
+      "title": "The “{{signature}}” signature of document “{{document}}” in “{{point}}” never appears",
+      "how": "Check which person the condition speaks about and whether such a person exists in projects. Or this document is never in the kit for this submission."
+    },
+    "when-always-held": {
+      "title": "The condition of the “{{signature}}” signature of document “{{document}}” in “{{point}}” always holds",
+      "how": "The condition is redundant: remove it if everyone needs the signature, or narrow it."
+    },
+    "slot-when-overlap": {
+      "title": "The “{{signature}}” signature of document “{{document}}” in “{{point}}” has two conditions that can hold together",
+      "how": "Make the conditions mutually exclusive (for example, different supervisor roles) or keep one: otherwise the signature gets two signers."
+    },
+    "document-never-active": {
+      "title": "Document “{{document}}” never gets into the kit, whatever the conditions",
+      "how": "Check which kinds of work and staffings it is assigned to: they may not overlap. Or delete the document."
+    },
+    "item-never-active": {
+      "title": "Document “{{document}}” is never submitted in “{{point}}”, although it can be in the kit",
+      "how": "Check the kinds of work and the NDA skip of this item: together with the document’s conditions they leave no case."
+    },
+    "point-empty": {
+      "all": {
+        "title": "“{{point}}” is empty under all conditions: nothing to submit",
+        "how": "Check for which kinds of work the documents of this submission are assigned."
+      },
+      "some": {
+        "title": "“{{point}}” is empty in {{n}} of {{total}} combinations of conditions: nothing to submit",
+        "how": "This is fine if the submission is not needed for every kind of work. Otherwise check for which kinds of work its documents are assigned."
+      }
+    },
+    "translation-missing": {
+      "name": {
+        "title": "A name has no translation: {{langs}}",
+        "how": "Add the translation or remove the language from the version."
+      },
+      "hint": {
+        "title": "A hint has no translation: {{langs}}",
+        "how": "Add the translation or remove the language from the version."
+      }
+    },
+    "builtin-gate-mismatch": {
+      "manualsField": {
+        "title": "The manuals documents exist, but the project has no field to choose manuals",
+        "how": "Add a manuals choice field to the project data or remove these documents."
+      },
+      "manualsOptions": {
+        "title": "The manuals options do not match the words Studio uses to include documents",
+        "how": "Name the options so that the name of the manual appears in them."
+      },
+      "ndaDocument": {
+        "title": "The NDA document exists, but the project has no NDA switch",
+        "how": "Add an NDA switch to the project data or remove the document."
+      },
+      "ndaField": {
+        "title": "The NDA switch exists, but there is no NDA document",
+        "how": "Add the NDA document or remove the switch."
+      }
+    },
+    "dimension-no-effect": {
+      "title": "The condition “{{condition}}” changes nothing",
+      "how": "That is fine if the field is only printed in documents. Otherwise check the conditions that should take it into account."
+    },
+    "jinja-fail-open": {
+      "title": "The template text of document “{{document}}” cannot be filled in with data",
+      "how": "Fix the expression in the template or guard the value against empty data. While the error stays, the raw template text ends up in the PDF."
+    },
+    "jinja-unknown-meta-key": {
+      "title": "The template of document “{{document}}” reads a project field that does not exist",
+      "how": "Add the field to the project data or fix its name in the template: for now the value is always empty."
+    },
+    "atlas-skipped": {
+      "numbers": {
+        "title": "The template is too large for a full check: {{rows}} combinations of conditions, limit {{limit}}",
+        "how": "Fix the values of some conditions in “What affects what”: the check will fit into the limit."
+      },
+      "plain": {
+        "title": "The template is too large for a full check",
+        "how": "Fix the values of some conditions in “What affects what”: the check will fit into the limit."
+      }
+    }
+  },
+  "failure": {
+    "docker": {
+      "title": "Docker is not running",
+      "how": "Start Docker Desktop, wait until it is up and build again."
+    },
+    "image": {
+      "title": "The image for building PDFs is not installed",
+      "how": "Open Studio settings, the builds section, install the image and build again."
+    },
+    "environment": {
+      "title": "The computer that builds PDFs is not ready",
+      "how": "Restart Docker Desktop and build again. If that does not help, pass the technical details to the administrator."
+    },
+    "nobuilder": {
+      "title": "There is nobody to build the PDF right now",
+      "how": "Wait a minute and build again. If it keeps happening, tell the administrator: no build executor is available."
+    },
+    "lost": {
+      "title": "The build was interrupted for technical reasons",
+      "how": "Build again. If that does not help, pass the technical details to the administrator."
+    },
+    "memory": {
+      "title": "The build ran out of memory",
+      "how": "Make the pictures in the document smaller and build again."
+    },
+    "space": {
+      "title": "The build ran out of disk space",
+      "how": "Remove large files from the project and build again."
+    },
+    "slow": {
+      "title": "The build took too long",
+      "how": "Build again. If it repeats, check the document for very large pictures or endless repeats."
+    },
+    "quota": {
+      "title": "The maximum number of builds is running",
+      "how": "Wait for one of them to finish and build again."
+    },
+    "text": {
+      "title": "The document did not build: there is an error in the text",
+      "how": "Open the build log: the first line with “!” or with a line number shows the place. Fix the text and build again."
+    },
+    "render": {
+      "title": "The template could not be filled in with data",
+      "how": "Check the template texts for errors: the build may have failed or run too long."
+    },
+    "nopdf": {
+      "title": "The build finished, but no PDF appeared",
+      "how": "Check that the document produces a PDF and that the start of the document is not commented out."
+    },
+    "font": {
+      "title": "The computer that builds PDFs lacks a required font",
+      "how": "Install the fonts (Times New Roman, Arial, Consolas) in Studio settings or replace the font in the document with a free one."
+    },
+    "stopped": {
+      "title": "The build was stopped",
+      "how": "Build again."
+    },
+    "result": {
+      "title": "The build result could not be accepted",
+      "how": "Build again. If it repeats, pass the technical details to the administrator."
+    },
+    "network": {
+      "title": "No connection to the server",
+      "how": "Check your network and build again."
+    },
+    "unknown": {
+      "title": "The PDF did not build",
+      "how": "Build again. If that does not help, pass the technical details to the administrator."
+    }
+  },
+  "change": {
+    "label": {
+      "document": "Document “{{name}}”",
+      "variant": "Variant of document “{{name}}”",
+      "metaField": "Project data field: {{name}}",
+      "form": "Form",
+      "formField": "Form field",
+      "participant": "Participant: {{name}}",
+      "point": "Submission point “{{name}}”",
+      "item": "“{{point}}”: document “{{document}}”",
+      "extra": "“{{point}}”: extra file",
+      "step": "“{{point}}”: signing step {{n}}",
+      "pair": "“{{point}}”: signature “{{signature}}” of document “{{document}}”",
+      "skipped": "“{{point}}”: signature “{{signature}}” of document “{{document}}” is not needed, condition not met",
+      "mayAdd": "“{{point}}”: signatures the author can switch on",
+      "check": "Text check"
+    },
+    "yes": "yes",
+    "no": "no",
+    "visible": "shown",
+    "hidden": "hidden",
+    "optional": "optional",
+    "docState": {
+      "active": "in the kit",
+      "inactive": "not needed",
+      "absent": "not in the version"
+    },
+    "docOwners": "{{state}}, for: {{who}}",
+    "metaValue": "{{shown}}, required: {{required}}",
+    "requiredAt": {
+      "create": "when the project is created",
+      "finalize": "before submission",
+      "never": "never"
+    },
+    "formValue": "applies: {{applies}}, own for each author: {{perAuthor}}",
+    "fieldValue": "{{shown}}, required: {{required}}",
+    "item": {
+      "active": "submitted",
+      "off": "not submitted"
+    },
+    "reason": {
+      "nda": "because of an NDA",
+      "kind": "not for this kind of work",
+      "absent": "no such document",
+      "inactive": "document not needed"
+    },
+    "signedBy": "signed by: {{who}}",
+    "check": {
+      "enabled": "on",
+      "off": "off"
+    }
+  }
+}

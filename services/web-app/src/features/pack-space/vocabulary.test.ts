@@ -1,6 +1,10 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
+import type { TFunction } from "i18next";
+import { i18n } from "@shared/lib";
+import { loadPackSpaceNamespace } from "@shared/lib/i18n/packSpaceNamespace";
+import { plainTexts } from "./plain/textsKit";
 import banned from "./vocabulary.banned.json";
 
 // Словарь нового интерфейса (docs/design/pack-studio-ux.md, раздел 6): в строках packSpace нет
@@ -34,11 +38,16 @@ const allowed = (area: string): Set<string> =>
 describe("словарь packSpace", () => {
   it("ru и en: те же области и те же ключи", () => {
     expect(areasOf("en")).toEqual(areasOf("ru"));
+    // Формы числа (`_one`, `_few`...) у языков разные: сравниваем ключи без них.
+    const keys = (lng: string, area: string): string[] => [
+      ...new Set(
+        leaves(read(lng, area)).map(([key]) =>
+          key.replace(/_(zero|one|two|few|many|other)$/, ""),
+        ),
+      ),
+    ];
     for (const area of areasOf("ru")) {
-      expect(
-        leaves(read("en", area)).map(([key]) => key),
-        area,
-      ).toEqual(leaves(read("ru", area)).map(([key]) => key));
+      expect(keys("en", area), area).toEqual(keys("ru", area));
     }
   });
 
@@ -218,4 +227,40 @@ describe("словарь форм «Содержимого»", () => {
       expect.arrayContaining(["sourceFile", "outputFile"]),
     );
   });
+});
+
+// Сообщения сервера (находки линтера результата, сбои сборки PDF, изменения «Сравнить») приходят
+// не из словаря, а из кода сервера на русском и с внутренними словами. Они проходят слой
+// формулировок (`plain/`); тест прогоняет формулировщик по фикстурам всех 22 правил, кодов
+// ошибок сборки и видов изменений и ищет в видимом тексте те же запрещённые слова, что у словаря,
+// и утечки идентификаторов (список `server`). Технические подробности не проверяются.
+
+const serverRules = banned.server as { ru: Rule[]; en: Rule[] };
+
+describe("серверные сообщения через слой формулировок", () => {
+  beforeAll(async () => {
+    await loadPackSpaceNamespace();
+  });
+
+  it.each(LANGS)(
+    "(%s) нет запрещённых слов и утечек идентификаторов",
+    async (lng) => {
+      await i18n.changeLanguage(lng);
+      const t: TFunction = i18n.getFixedT(lng, "packSpace");
+      const rules = [...(banned[lng] as Rule[]), ...serverRules[lng]];
+      const hits: string[] = [];
+      for (const named of [true, false]) {
+        for (const { key, text } of plainTexts(t, lng, named)) {
+          for (const rule of rules) {
+            if (new RegExp(rule.pattern, "iu").test(text)) {
+              hits.push(
+                `${named ? "с названиями" : "без названий"} ${key}: «${text}» (${rule.id}; вместо этого: ${rule.use})`,
+              );
+            }
+          }
+        }
+      }
+      expect([...new Set(hits)]).toEqual([]);
+    },
+  );
 });

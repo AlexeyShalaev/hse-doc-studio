@@ -11,6 +11,7 @@ import {
 } from "@entities/pack-studio";
 import {
   EMPTY_FILTER,
+  type AtlasFilter,
   applyRowInputs,
   filterRows,
   keyOfInputs,
@@ -129,10 +130,26 @@ const MapView = ({
   const { pack, template } = env.ref;
   const scenarios = usePackScenarios(env.workspaceId, pack, template, true);
   const labeler = env.labeler;
-  const [shown, setShown] = useState(false);
-  const [query, setQuery] = useState("");
+  const { location } = useSpace();
+  const urlParams = new URLSearchParams(location.search);
+  // Показ вариантов и способ группировки держатся в адресе: ссылка открывает тот же вид.
+  const shown = urlParams.get("all") === "1";
+  const group: "rows" | "outcomes" =
+    urlParams.get("group") === "outcomes" ? "outcomes" : "rows";
+  const setShown = (next: boolean) => {
+    nav.go({ extra: { all: next ? "1" : null } });
+  };
+  const setGroup = (next: "rows" | "outcomes") => {
+    nav.go({ extra: { group: next === "outcomes" ? "outcomes" : null } });
+  };
+  const [filter, setFilter] = useState<AtlasFilter>(EMPTY_FILTER);
   const [limit, setLimit] = useState(PAGE);
   const searchId = useId();
+  const query = filter.query;
+  const changeFilter = (next: AtlasFilter) => {
+    setFilter(next);
+    setLimit(PAGE);
+  };
 
   const inputById = new Map(
     (env.inputs.data?.inputs ?? []).map((input) => [input.id, input]),
@@ -142,14 +159,33 @@ const MapView = ({
     [atlas.outcomes],
   );
   const rows = useMemo(
-    () => filterRows(atlas, { ...EMPTY_FILTER, query }, labeler.value),
-    [atlas, query, labeler.value],
+    () => filterRows(atlas, filter, labeler.value),
+    [atlas, filter, labeler.value],
   );
+  /** Номер варианта результата: порядок в ответе сервера, с единицы. */
+  const numberOf = useMemo(
+    () =>
+      new Map(atlas.outcomes.map((outcome, index) => [outcome.id, index + 1])),
+    [atlas.outcomes],
+  );
+  const outcomeList = useMemo(() => {
+    const list = [...atlas.outcomes];
+    if (filter.sort === "rows") list.sort((a, b) => b.rows - a.rows);
+    return list;
+  }, [atlas.outcomes, filter.sort]);
   const currentKey = keyOfInputs(
     atlas.dimensions,
     mergedInputs(scenarios.data, caseId, current),
   );
   const pinned = Object.entries(pin);
+  const currentRow = atlas.rows.find((row) => row.key === currentKey);
+  const currentOutcome = currentRow
+    ? outcomes.get(currentRow.outcome)
+    : undefined;
+  const filterActive =
+    filter.query !== "" ||
+    filter.outcome !== null ||
+    Object.values(filter.dims).some((value) => value !== "");
 
   return (
     <div className="sp-ck-stack" aria-busy={fetching || undefined}>
@@ -164,6 +200,30 @@ const MapView = ({
           {t("check.map.stale")}
         </p>
       )}
+
+      <section
+        className="sp-ck-now"
+        aria-label={t("check.map.nowLabel")}
+        data-testid="map-now"
+      >
+        <p className="sp-ck-note">{t("check.map.nowTitle")}</p>
+        {currentOutcome ? (
+          <p className="sp-ck-now-line">
+            <span className="sp-ck-current">
+              {t("check.map.outcomeLabel", {
+                n: numberOf.get(currentOutcome.id) ?? 0,
+              })}
+            </span>{" "}
+            <span className="sp-ck-note">
+              {t("check.map.mini", miniOf(currentOutcome.digest))}
+            </span>
+          </p>
+        ) : (
+          <p className="sp-ck-note" data-testid="map-now-none">
+            {t("check.map.nowNone")}
+          </p>
+        )}
+      </section>
 
       {atlas.dimensions.length === 0 ? (
         <p className="sp-ck-note">{t("check.map.noDimensions")}</p>
@@ -244,27 +304,173 @@ const MapView = ({
           aria-label={t("check.map.variantsLabel")}
           className="sp-ck-stack"
         >
-          <label className="sp-ck-search" htmlFor={searchId}>
-            <span className="sr-only">{t("check.map.search")}</span>
-            <input
-              id={searchId}
-              type="search"
-              className="input"
-              placeholder={t("check.map.searchPlaceholder")}
-              value={query}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setLimit(PAGE);
-              }}
-            />
-          </label>
+          <div className="sp-ck-toolbar" role="search">
+            <label className="sp-ck-search" htmlFor={searchId}>
+              <span className="sr-only">{t("check.map.search")}</span>
+              <input
+                id={searchId}
+                type="search"
+                className="input"
+                placeholder={t("check.map.searchPlaceholder")}
+                value={query}
+                onChange={(event) => {
+                  changeFilter({ ...filter, query: event.target.value });
+                }}
+              />
+            </label>
+            <div
+              className="sp-ck-seg"
+              role="group"
+              aria-label={t("check.map.group.label")}
+            >
+              {(["rows", "outcomes"] as const).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={group === value}
+                  data-testid={`map-group-${value}`}
+                  onClick={() => {
+                    setGroup(value);
+                    setLimit(PAGE);
+                  }}
+                >
+                  {t(`check.map.group.${value}`)}
+                </button>
+              ))}
+            </div>
+            <label className="sp-ck-field sp-ck-inline">
+              <span className="sp-ck-note">{t("check.map.sort.label")}</span>
+              <select
+                className="input"
+                value={filter.sort}
+                data-testid="map-sort"
+                onChange={(event) => {
+                  changeFilter({
+                    ...filter,
+                    sort: event.target.value === "rows" ? "rows" : "table",
+                  });
+                }}
+              >
+                <option value="table">{t("check.map.sort.table")}</option>
+                <option value="rows">{t("check.map.sort.rows")}</option>
+              </select>
+            </label>
+          </div>
+          <details className="sp-ck-filters" data-testid="map-filters">
+            <summary>{t("check.map.filters")}</summary>
+            <div className="sp-ck-dims">
+              {atlas.dimensions
+                .filter((dim) => dim.values.length > 1)
+                .map((dim) => (
+                  <label key={dim.input} className="sp-ck-field">
+                    <span className="sp-ck-note">
+                      {labeler.input(dim.input)}
+                    </span>
+                    <select
+                      className="input"
+                      value={filter.dims[dim.input] ?? ""}
+                      data-testid={`map-filter-${dim.input}`}
+                      onChange={(event) => {
+                        changeFilter({
+                          ...filter,
+                          dims: {
+                            ...filter.dims,
+                            [dim.input]: event.target.value,
+                          },
+                        });
+                      }}
+                    >
+                      <option value="">{t("check.map.filterAll")}</option>
+                      {dim.values.map((value) => (
+                        <option key={value} value={value}>
+                          {labeler.value(dim.input, value)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+            </div>
+          </details>
+          {filter.outcome !== null && (
+            <p className="sp-ck-note" data-testid="map-outcome-filter">
+              {t("check.map.onlyOutcome", {
+                n: numberOf.get(filter.outcome) ?? 0,
+              })}{" "}
+              <button
+                type="button"
+                className="btn sm"
+                onClick={() => {
+                  changeFilter({ ...filter, outcome: null });
+                }}
+              >
+                {t("check.map.allOutcomes")}
+              </button>
+            </p>
+          )}
           <p className="sp-ck-note" role="status">
-            {t("check.map.shownCount", {
-              shown: Math.min(limit, rows.length),
-              total: rows.length,
-            })}
+            {group === "rows"
+              ? t("check.map.shownCount", {
+                  shown: Math.min(limit, rows.length),
+                  total: rows.length,
+                })
+              : t("check.map.outcomesCount", { count: outcomeList.length })}
+            {filterActive && (
+              <>
+                {" "}
+                <button
+                  type="button"
+                  className="btn sm"
+                  onClick={() => {
+                    changeFilter({ ...EMPTY_FILTER, sort: filter.sort });
+                  }}
+                >
+                  {t("check.map.resetFilter")}
+                </button>
+              </>
+            )}
           </p>
-          {rows.length === 0 ? (
+          {group === "outcomes" ? (
+            <ul className="sp-ck-variants" data-testid="map-outcomes">
+              {outcomeList.slice(0, limit).map((outcome) => {
+                const isCurrent = outcome.id === currentOutcome?.id;
+                return (
+                  <li
+                    key={outcome.id}
+                    className="sp-ck-variant"
+                    data-current={isCurrent || undefined}
+                  >
+                    <span className="sp-ck-message">
+                      {t("check.map.outcomeLabel", {
+                        n: numberOf.get(outcome.id) ?? 0,
+                      })}
+                    </span>
+                    <span className="sp-ck-note">
+                      {t("check.map.outcomeRows", { count: outcome.rows })}
+                    </span>
+                    <span className="sp-ck-note">
+                      {t("check.map.mini", miniOf(outcome.digest))}
+                    </span>
+                    {isCurrent && (
+                      <span className="sp-ck-current">
+                        {t("check.map.current")}
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      className="btn sm"
+                      data-testid={`map-show-rows-${outcome.id}`}
+                      onClick={() => {
+                        changeFilter({ ...filter, outcome: outcome.id });
+                        setGroup("rows");
+                      }}
+                    >
+                      {t("check.map.showRows")}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : rows.length === 0 ? (
             <p className="sp-ck-note">{t("check.map.noResults")}</p>
           ) : (
             <ul className="sp-ck-variants">
@@ -327,7 +533,7 @@ const MapView = ({
               })}
             </ul>
           )}
-          {rows.length > limit && (
+          {(group === "rows" ? rows.length : outcomeList.length) > limit && (
             <div>
               <button
                 type="button"

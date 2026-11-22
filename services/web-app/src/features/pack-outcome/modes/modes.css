@@ -724,3 +724,30 @@
     justify-content: flex-start;
   }
 }
+
+/* Технические подробности изменения (подставляются новой «Проверкой»). */
+.cmp-tech {
+  margin-top: 0.25rem;
+}
+.cmp-tech summary {
+  cursor: pointer;
+  font-size: 0.75rem;
+  color: var(--fg-2);
+}
+.cmp-tech dl {
+  margin: 0.375rem 0 0;
+  font-size: 0.75rem;
+}
+.cmp-tech dl > div {
+  display: flex;
+  gap: 0.75rem;
+}
+.cmp-tech dt {
+  color: var(--fg-2);
+  flex: none;
+}
+.cmp-tech dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+}

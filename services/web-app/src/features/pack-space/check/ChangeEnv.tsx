@@ -1,10 +1,14 @@
 import { useMemo, type ReactNode } from "react";
 import { useIsPhoneWidth } from "@shared/lib";
+import { useTranslation } from "react-i18next";
 import {
   ChangeEnvContext,
+  ChangeWordsContext,
   ruleLocation,
   type ChangeEnv,
+  type ChangeWords,
 } from "@features/pack-outcome/check";
+import { plainChange } from "../plain/changes";
 import type { CheckEnv } from "./useCheckEnv";
 
 /**
@@ -19,6 +23,15 @@ export const CheckChangeEnv = ({
   children: ReactNode;
 }) => {
   const phone = useIsPhoneWidth();
+  const { t } = useTranslation("packSpace");
+  const { naming } = env;
+  const words = useMemo<ChangeWords>(
+    () => ({
+      words: (change) => plainChange(change, naming, t),
+      techSummary: t("plain.tech.summary"),
+    }),
+    [naming, t],
+  );
   const known = env.inputs.data?.inputs;
   const { versionPath, openFile } = env;
   const value = useMemo<ChangeEnv>(
@@ -36,7 +49,9 @@ export const CheckChangeEnv = ({
   );
   return (
     <ChangeEnvContext.Provider value={value}>
-      {children}
+      <ChangeWordsContext.Provider value={words}>
+        {children}
+      </ChangeWordsContext.Provider>
     </ChangeEnvContext.Provider>
   );
 };

@@ -227,15 +227,18 @@ describe("предпросмотр PDF по условиям студента", 
     expect(start).toHaveBeenCalledTimes(2);
   });
 
-  it("сбой запуска: сообщение сервера и повтор по кнопке", async () => {
+  it("сбой запуска: понятный заголовок, сообщение сервера в подробностях и повтор по кнопке", async () => {
     start.mockRejectedValueOnce(
       new ApiError("Сервер сборки недоступен.", "internal_error", 503),
     );
     renderPreview(panel());
 
-    expect(await screen.findByTestId("sp-pv-failed")).toHaveTextContent(
-      "Сервер сборки недоступен.",
-    );
+    const failed = await screen.findByTestId("sp-pv-failed");
+    expect(failed).toHaveTextContent("PDF не собрался");
+    // Текст сервера остаётся в технических подробностях, а не в заголовке.
+    expect(
+      within(failed).getByText("Сервер сборки недоступен.").closest("details"),
+    ).not.toBeNull();
     fireEvent.click(screen.getByTestId("sp-pv-build"));
     expect(await screen.findByTestId("sp-pv-page")).toBeInTheDocument();
   });

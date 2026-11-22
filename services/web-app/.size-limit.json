@@ -309,7 +309,7 @@
     "name": "Словарь нового интерфейса Студии (ru и en, features/pack-space)",
     "path": "dist/assets/locale-packSpace-*.js",
     "gzip": true,
-    "limit": "40 kB"
+    "limit": "50 kB"
   },
   {
     "name": "Студия шаблонов, экран «Результат» (lazy, features/pack-outcome)",
