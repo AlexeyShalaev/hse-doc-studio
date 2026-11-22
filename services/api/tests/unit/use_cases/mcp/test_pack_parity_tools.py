@@ -23,7 +23,15 @@ from hse_doc_studio.core.mcp.entities import MCP_PACKS_SCOPE
 from hse_doc_studio.core.pack_studio.entities import WorkspaceKind
 from hse_doc_studio.core.pack_studio.errors import PackStudioError, PackStudioErrorCode
 from hse_doc_studio.use_cases.mcp.catalog import MCP_TOOL_CLASSES, RULES_BY_NAME
-from hse_doc_studio.use_cases.mcp.tools import pack_edit, pack_git, pack_help, pack_scenarios, pack_workspaces
+from hse_doc_studio.use_cases.mcp.tools import (
+    pack_changes,
+    pack_edit,
+    pack_forms,
+    pack_git,
+    pack_help,
+    pack_scenarios,
+    pack_workspaces,
+)
 from hse_doc_studio.use_cases.mcp.tools._base import ArgumentError
 from hse_doc_studio.use_cases.mcp.tools.packs import default_hint
 from hse_doc_studio.use_cases.pack_studio.access import PackStudioAccess
@@ -69,6 +77,10 @@ NEW_TOOLS = (
     pack_scenarios.PackOutcomeAtlasTool,
     pack_scenarios.PackOutcomeExplainTool,
     pack_scenarios.PackOutcomeMatrixTool,
+    # Студия шаблонов целиком (pack-studio-mcp.md).
+    pack_changes.PackChangesTool,
+    pack_forms.PackChecksTool,
+    pack_forms.PackVersionNumberTool,
 )
 
 

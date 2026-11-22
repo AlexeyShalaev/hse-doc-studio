@@ -48,6 +48,7 @@ GROUPS: Final[dict[str, tuple[str, tuple[str, ...]]]] = {
             "pack_delete_file",
             "pack_model_action",
             "pack_submission_edit",
+            "pack_checks",
             "pack_set_placement",
         ),
     ),
@@ -72,7 +73,10 @@ GROUPS: Final[dict[str, tuple[str, tuple[str, ...]]]] = {
             "pack_scenario_run",
         ),
     ),
-    "version": ("Версии / Versions", ("pack_new_version", "pack_version_notes", "pack_release")),
+    "version": (
+        "Версии / Versions",
+        ("pack_new_version", "pack_version_number", "pack_version_notes", "pack_release"),
+    ),
     "git": (
         "Git и предложение / Git and proposal",
         (

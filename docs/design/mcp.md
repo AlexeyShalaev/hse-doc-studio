@@ -175,6 +175,8 @@
 | packs | `pack_git_status` | R | раздел, область `packs` | новый (M26) |
 | packs | `pack_propose` | X ! | раздел, область `packs`; `confirm: true` | новый (M26) |
 | packs | `pack_changes` | R | раздел, область `packs`; частота `git_sync` | новый (pack-studio-mcp.md, P4): панель «Изменения» и следующий шаг |
+| packs | `pack_checks` | W | раздел, область `packs`; частота `upload` | новый (pack-studio-mcp.md, срез B): правила проверки формой |
+| packs | `pack_version_number` | W | раздел, область `packs` | новый (pack-studio-mcp.md, срез B): `renumber` и `move_edits` |
 | packs | `pack_help` | R | раздел, область `packs` | новый (pack-studio parity): каталог тулов `pack_*` и порядок сценария «создать шаблон и ветку»; читает только каталог |
 | packs | `pack_tree` | R | раздел, область `packs` | новый (pack-studio parity): дерево файлов пространства: паки, версии со статусом, файлы с `read_only` |
 | packs | `pack_model` | R | раздел, область `packs` | новый (pack-studio parity): модель версии с etag манифестов и использованием полей (формы версии) |

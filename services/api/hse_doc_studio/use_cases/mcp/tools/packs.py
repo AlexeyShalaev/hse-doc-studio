@@ -685,7 +685,8 @@ class PackPreviewBuildTool(PackTool):
             '{"lang": "en", "staffing": "team2", "supervisor": "company", "meta.<поле>": "..."}. variant: вариант '
             "документа (у запроса с одним документом, например beamer у презентации), scenario: id сценария пака "
             "(вводные и набор данных берутся из него, combination ложится поверх). Варианты, документы и наборы "
-            "видны в pack_read с version. С build_id тул только ждёт уже начатую сборку. "
+            "видны в pack_read с version (блок preview). С build_id тул только ждёт уже начатую сборку, с build_id "
+            "и cancel: true останавливает её. "
             "Текст PDF и журнал сборки читает pack_preview_read."
         ),
         parameters=_schema(
@@ -698,6 +699,7 @@ class PackPreviewBuildTool(PackTool):
                 "variant": {"type": "string", "description": "Вариант документа (один документ в запросе)"},
                 "scenario": {"type": "string", "description": "Id сценария пака"},
                 "build_id": {"type": "string", "description": "Ждать уже начатую сборку"},
+                "cancel": {"type": "boolean", "default": False, "description": "С build_id: остановить сборку"},
                 "wait_s": {
                     "type": "integer",
                     "default": PREVIEW_WAIT_S,
@@ -713,6 +715,9 @@ class PackPreviewBuildTool(PackTool):
         workspace_id = uuid_arg(args, "workspace_id")
         wait_s = int_arg(args, "wait_s", PREVIEW_WAIT_S, lo=0, hi=PREVIEW_MAX_WAIT_S)
         previews = await self._deps.get(PackPreviewService)
+        if bool_arg(args, "cancel", False):
+            stopped = await previews.cancel(actor, workspace_id, uuid_arg(args, "build_id"))
+            return json_result({"builds": [_build(stopped)]})
         if optional_text(args, "build_id"):
             builds = [await previews.get(actor, workspace_id, uuid_arg(args, "build_id"))]
         else:
