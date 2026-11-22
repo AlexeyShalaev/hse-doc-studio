@@ -576,7 +576,7 @@ async def test__lint_tool__real_vkr_text_and_json_agree(studio: Studio) -> None:
     ws = await _folder(studio)
 
     async with _client(studio) as client:
-        text = await _text(client, "pack_outcome_lint", {"workspace_id": ws, "version": _ref(VKR)})
+        text = await _text(client, "pack_outcome_lint", {"workspace_id": ws, "version": _ref(VKR), "wording": "tech"})
         data = await _json(client, "pack_outcome_lint", {"workspace_id": ws, "version": _ref(VKR), "format": "json"})
 
     assert (
@@ -606,4 +606,4 @@ async def test__lint_tool__a_draft_edit_shows_up_and_head_has_no_jinja(studio: S
 
     assert "visible-if-value-not-in-options" in work
     assert "visible-if-value-not-in-options" not in head
-    assert "Правила Jinja только на рабочем дереве" in head
+    assert "Тексты шаблонов проверяются только по моим текущим правкам" in head

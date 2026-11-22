@@ -32,6 +32,7 @@ from hse_doc_studio.use_cases.mcp.tools.pack_outcome_view import (
     loc,
     split_sections,
 )
+from hse_doc_studio.use_cases.mcp.tools.pack_plain import Naming, lint_plain_text, naming_of, plain_finding
 from hse_doc_studio.use_cases.mcp.tools.packs import (
     _VERSION,
     _WORKSPACE_ID,
@@ -42,6 +43,7 @@ from hse_doc_studio.use_cases.mcp.tools.packs import (
 )
 from hse_doc_studio.use_cases.pack_studio.outcome_lint import PackOutcomeLintService
 from hse_doc_studio.use_cases.pack_studio.outcome_service import OutcomeRequest, OutcomeState, PackOutcomeService
+from hse_doc_studio.use_cases.pack_studio.preview import PackPreviewService
 
 # Пределы вводных те же, что у запроса эндпоинта (`PackOutcomeRequest`): 64 ключа, значение до 128 знаков.
 MAX_INPUTS: Final = 64
@@ -368,6 +370,7 @@ class PackOutcomeTool(PackTool):
 
 _SEVERITIES: Final = ("error", "warning", "info")
 _MAX_FINDINGS: Final = 40
+_WORDINGS: Final = ("plain", "tech")
 _MAX_UNCOVERED: Final = 8
 
 
@@ -433,7 +436,9 @@ class PackOutcomeLintTool(PackTool):
             "согласованные с манифестом, и (jinja: true, рабочее дерево) шаблоны Jinja, которые падают при рендере и "
             "молча копируются как есть. У каждой находки файл, указатель, строка и подсказка. Плюс покрытие правил "
             "пака сценариями (процент достижимых исходов, какие правила и комбинации ничего не проверяет, какие "
-            "сценарии добавить). severity: error, warning (по умолчанию) или info. format: text (по умолчанию), "
+            "сценарии добавить). Слова по умолчанию те же, что на вкладке «Проверка» интерфейса (wording: plain: "
+            "заголовок и «Как исправить», в квадратных скобках правило, файл и строка); wording: tech даёт тексты "
+            "правил линтера. severity: error, warning (по умолчанию) или info. format: text (по умолчанию), "
             "json или both. Только чтение. Пример: "
             '{"workspace_id": "<uuid>", "version": "hse-cs-se/vkr/2026.1.2", "jinja": true}.'
         ),
@@ -449,6 +454,12 @@ class PackOutcomeLintTool(PackTool):
                 },
                 "severity": {"type": "string", "enum": list(_SEVERITIES), "default": "warning"},
                 "limit": {"type": "integer", "default": _MAX_FINDINGS, "description": "Находок в тексте не больше"},
+                "wording": {
+                    "type": "string",
+                    "enum": list(_WORDINGS),
+                    "default": "plain",
+                    "description": "plain: словами вкладки «Проверка» интерфейса; tech: тексты правил линтера",
+                },
                 "format": {"type": "string", "enum": ["text", "json", "both"], "default": "text"},
             },
             ("workspace_id", "version"),
@@ -456,9 +467,10 @@ class PackOutcomeLintTool(PackTool):
     )
     kind = ToolKind.read
 
-    async def run(self, actor: Actor, args: dict[str, object]) -> ToolResult:
+    async def run(self, actor: Actor, args: dict[str, object]) -> ToolResult:  # noqa: C901 — разбор аргументов и два вида
         ref = version_arg(args)
         state = _state_arg(args)
+        wording = _choice(args, "wording", _WORDINGS, "plain")
         severity = _choice(args, "severity", _SEVERITIES, "warning")
         layout = _choice(args, "format", ("text", "json", "both"), "text")
         raw_limit = args.get("limit", _MAX_FINDINGS)
@@ -482,9 +494,32 @@ class PackOutcomeLintTool(PackTool):
             return refusal(exc, hint=outcome_hint(exc))
         if reply.body is None:
             raise ArgumentError("empty reply")
-        text, truncated = lint_text(reply.body, severity, limit)
+        body: Mapping[str, Any] = reply.body
+        if wording == "plain":
+            naming = await self._naming(actor, args, state)
+            text, truncated = lint_plain_text(body, naming, _SEVERITIES, severity, limit)
+            body = {**body, "findings": [{**f, "plain": plain_finding(f, naming)} for f in body["findings"]]}
+        else:
+            text, truncated = lint_text(body, severity, limit)
         if layout == "text":
             return ToolResult.ok(text, truncated=truncated)
         if layout == "json":
-            return ToolResult.ok(dump(reply.body), truncated=False)
-        return ToolResult.ok(dump({"text": text, "data": reply.body}), truncated=truncated)
+            return ToolResult.ok(dump(body), truncated=False)
+        return ToolResult.ok(dump({"text": text, "data": body}), truncated=truncated)
+
+    async def _naming(self, actor: Actor, args: Mapping[str, object], state: OutcomeState) -> Naming:
+        """Названия документов, подписей, точек сдачи и условий версии для слов интерфейса; чего нет, нейтрально."""
+        ref = version_arg(args)
+        workspace_id = uuid_arg(args, "workspace_id")
+        desc = await (await self._deps.get(PackPreviewService)).describe(
+            actor, workspace_id, ref.pack, ref.template, ref.version
+        )
+        inputs: list[Mapping[str, Any]] = []
+        try:
+            reply = await (await self._deps.get(PackOutcomeService)).inputs(
+                actor, workspace_id, ref.pack, ref.template, ref.version, state
+            )
+            inputs = list((reply.body or {}).get("inputs") or [])
+        except PackStudioError:
+            inputs = []
+        return naming_of(desc.version, inputs)

@@ -1,0 +1,570 @@
+{
+ "ru": {
+  "plain": {
+   "finding": {
+    "share": "Так бывает в {{n}} из {{total}} сочетаний условий.",
+    "unknown": {
+     "how": "Подробности ниже, в «Технических подробностях»."
+    },
+    "slot-never-routed": {
+     "title": "Подпись «{{signature}}» не появится ни в одной сдаче ни при каких условиях",
+     "how": "Добавьте эту подпись в нужный документ или в порядок подписания сдачи либо удалите её из списка подписей версии."
+    },
+    "route-step-without-person": {
+     "title": "В «{{point}}» есть шаг подписи, который ждёт отсутствующего человека: {{people}}",
+     "how": "Если человек обязателен, не допускайте проект без него. Если нет, сделайте шаг зависимым от человека, чтобы он появлялся только тогда, когда человек есть."
+    },
+    "route-gap": {
+     "title": "В «{{point}}» нужны подписи, но иногда подписать некому",
+     "how": "Добавьте подпись автора или подпись человека, который есть в таких проектах, либо не допускайте проект без руководителя."
+    },
+    "visible-if-unknown-field": {
+     "title": "Поле анкеты показывается по ответу на поле, которого в анкете нет",
+     "how": "Выберите существующее поле той же анкеты в условии показа или уберите условие: иначе поле не появится никогда."
+    },
+    "visible-if-value-not-in-options": {
+     "title": "Поле анкеты ждёт ответ, которого нельзя выбрать",
+     "how": "Возьмите значение из списка вариантов того поля, от которого зависит показ, или уберите условие: иначе поле не появится никогда."
+    },
+    "required-hidden": {
+     "meta": {
+      "title": "Обязательное поле данных проекта скрыто при любых условиях",
+      "how": "Заполнить его нельзя. Разрешите показ при подходящих видах работы или снимите обязательность."
+     },
+     "form": {
+      "title": "Обязательная анкета или её поля скрыты при любых условиях",
+      "how": "Заполнить их нельзя. Разрешите показ при подходящих видах работы или снимите обязательность."
+     },
+     "other": {
+      "title": "Обязательное поле скрыто при любых условиях",
+      "how": "Заполнить его нельзя. Разрешите показ при подходящих видах работы или снимите обязательность."
+     }
+    },
+    "field-never-visible": {
+     "title": "Поле скрыто при любых условиях: студент его не увидит",
+     "how": "Проверьте, для каких видов работы и ответов поле показывается, либо удалите его."
+    },
+    "variant-lang-outside-langs": {
+     "langs": {
+      "title": "Документ «{{document}}» рассчитан на языки, которых нет у версии: {{langs}}",
+      "how": "Добавьте эти языки в версию вместе с файлами или уберите их у документа."
+     },
+     "plain": {
+      "title": "Документ «{{document}}» рассчитан на язык, которого нет у версии",
+      "how": "Добавьте язык в версию вместе с файлами или уберите его у документа."
+     }
+    },
+    "skip-if-nda-without-nda": {
+     "title": "Документ «{{document}}» в «{{point}}» пропускается при NDA, а NDA в версии нет",
+     "how": "Добавьте NDA в версию или уберите условие пропуска."
+    },
+    "when-unknown-person": {
+     "person": {
+      "title": "Условие подписи называет человека, которого нет среди ролей",
+      "how": "Выберите роль из списка: научный руководитель, консультант или академический руководитель."
+     },
+     "slot": {
+      "title": "Условие ссылается на подпись, которой нет в списке подписей версии",
+      "how": "Добавьте такую подпись в версию или поправьте её название."
+     },
+     "document": {
+      "title": "Условие ссылается на документ, которого нет в версии",
+      "how": "Добавьте документ в версию или поправьте его название."
+     }
+    },
+    "when-never-held": {
+     "title": "Подпись «{{signature}}» у документа «{{document}}» в «{{point}}» не появится никогда",
+     "how": "Проверьте, о каком человеке говорит условие и бывает ли он в проектах. Либо этот документ в этой сдаче не бывает в комплекте."
+    },
+    "when-always-held": {
+     "title": "Условие у подписи «{{signature}}» документа «{{document}}» в «{{point}}» выполняется всегда",
+     "how": "Условие лишнее: уберите его, если подпись нужна всем, или сузьте."
+    },
+    "slot-when-overlap": {
+     "title": "У подписи «{{signature}}» документа «{{document}}» в «{{point}}» два условия, которые могут сработать вместе",
+     "how": "Сделайте условия взаимоисключающими (например, разные роли руководителя) или оставьте одно: иначе подпись получит двух подписантов."
+    },
+    "document-never-active": {
+     "title": "Документ «{{document}}» не попадает в комплект ни при каких условиях",
+     "how": "Проверьте, для каких видов работы и составов он назначен: возможно, они не пересекаются. Либо удалите документ."
+    },
+    "item-never-active": {
+     "title": "Документ «{{document}}» не сдаётся в «{{point}}» ни при каких условиях, хотя в комплекте бывает",
+     "how": "Проверьте виды работы и пропуск при NDA у этого пункта: вместе с условиями документа они не оставляют ни одного случая."
+    },
+    "point-empty": {
+     "all": {
+      "title": "«{{point}}» пуста при любых условиях: нечего сдавать",
+      "how": "Проверьте, для каких видов работы назначены документы этой сдачи."
+     },
+     "some": {
+      "title": "«{{point}}» пуста в {{n}} из {{total}} сочетаний условий: нечего сдавать",
+      "how": "Это нормально, если сдача нужна не всем видам работы. Иначе проверьте, для каких видов работы назначены её документы."
+     }
+    },
+    "translation-missing": {
+     "name": {
+      "title": "Не хватает перевода названия: {{langs}}",
+      "how": "Добавьте перевод или уберите язык из версии."
+     },
+     "hint": {
+      "title": "Не хватает перевода подсказки: {{langs}}",
+      "how": "Добавьте перевод или уберите язык из версии."
+     }
+    },
+    "builtin-gate-mismatch": {
+     "manualsField": {
+      "title": "Документы руководств есть, а поля выбора руководств у проекта нет",
+      "how": "Добавьте в данные проекта поле выбора руководств или уберите эти документы."
+     },
+     "manualsOptions": {
+      "title": "Варианты выбора руководств не совпадают со словами, по которым Студия включает документы",
+      "how": "Назовите варианты так, чтобы в них встречалось название руководства."
+     },
+     "ndaDocument": {
+      "title": "Документ NDA есть, а переключателя NDA у проекта нет",
+      "how": "Добавьте в данные проекта переключатель NDA или уберите документ."
+     },
+     "ndaField": {
+      "title": "Переключатель NDA есть, а документа NDA нет",
+      "how": "Добавьте документ NDA или уберите переключатель."
+     }
+    },
+    "dimension-no-effect": {
+     "title": "Условие «{{condition}}» ни на что не влияет",
+     "how": "Нормально, если поле только печатается в документах. Иначе проверьте условия, которые должны его учитывать."
+    },
+    "jinja-fail-open": {
+     "title": "Текст шаблона документа «{{document}}» не заполняется данными",
+     "how": "Исправьте выражение в шаблоне или защитите значение на случай пустых данных. Пока ошибка есть, в PDF попадёт сырой текст шаблона."
+    },
+    "jinja-unknown-meta-key": {
+     "title": "Шаблон документа «{{document}}» читает поле проекта, которого нет",
+     "how": "Добавьте поле в данные проекта или поправьте его название в шаблоне: сейчас значение всегда пустое."
+    },
+    "atlas-skipped": {
+     "numbers": {
+      "title": "Шаблон слишком большой для полной проверки: сочетаний условий {{rows}}, предел {{limit}}",
+      "how": "Зафиксируйте значения части условий в разделе «Что на что влияет»: проверка поместится в предел."
+     },
+     "plain": {
+      "title": "Шаблон слишком большой для полной проверки",
+      "how": "Зафиксируйте значения части условий в разделе «Что на что влияет»: проверка поместится в предел."
+     }
+    }
+   },
+   "fallback": {
+    "role": "один из участников",
+    "slot": "…",
+    "document": "…",
+    "point": "…",
+    "input": "…",
+    "metaField": "поле данных проекта",
+    "form": "анкета",
+    "formField": "поле анкеты",
+    "check": "проверка",
+    "lang": "один из языков"
+   },
+   "role": {
+    "author": "Автор",
+    "authorN": "Автор {{n}}",
+    "supervisor": "Научный руководитель",
+    "co_supervisor": "Консультант",
+    "academic_supervisor": "Академический руководитель"
+   },
+   "lang": {
+    "ru": "русский",
+    "en": "английский"
+   }
+  },
+  "issues": {
+   "summary": "Проверка шаблона. Ошибок: {{errors}}, замечаний: {{warnings}}",
+   "infos": "Подсказок: {{count}}",
+   "severity": {
+    "error": "Ошибка",
+    "warning": "Замечание",
+    "info": "Подсказка"
+   },
+   "hint": "Как исправить:",
+   "emptyTitle": "Замечаний нет",
+   "coverage": {
+    "title": "Какие правила проверены готовыми случаями",
+    "percent": "{{percent}} %",
+    "percentLabel": "Правил проверено готовыми случаями: {{percent}} %",
+    "approximate": "Цифры приблизительные: вариантов слишком много, настоящий процент не меньше показанного.",
+    "full": "Проверено полностью: {{count}}",
+    "half": "Проверено не до конца: {{count}}",
+    "none": "Не проверено: {{count}}",
+    "cases": "Готовых случаев: {{count}}.",
+    "variants": "Затронуто вариантов результата: {{touched}} из {{total}}.",
+    "addMany": "Добавить готовые случаи ({{count}})",
+    "addOne": "Добавить готовый случай",
+    "addHow": "Откройте ситуацию на вкладке «Результат» и нажмите «Запомнить этот случай».",
+    "rowsLabel": "Ситуации, которые проверят больше всего правил",
+    "gain": "Проверит ещё правил: {{count}}.",
+    "rulesTitle": "Правила, проверенные не до конца",
+    "omitted": "Ещё правил не показано: {{count}}.",
+    "stateNone": "Не проверено ни в одном случае",
+    "stateHalf": "Проверено не до конца",
+    "seen": "Случаи видели: {{states}}.",
+    "seenNone": "Ни один готовый случай не добирается до этого правила.",
+    "missing": "Не хватает: {{states}}.",
+    "outcome": {
+     "held": "условие выполнено",
+     "not_held": "условие не выполнено"
+    }
+   },
+   "line": "строка {{line}}",
+   "textsUnavailable": "Тексты шаблонов проверяются только по моим текущим правкам.",
+   "skippedTitle": "Шаблон слишком большой для полной проверки",
+   "skippedLead": "Часть проверок пропущена. Зафиксируйте значения части условий в разделе «Что на что влияет», и проверка поместится в предел."
+  },
+  "next": {
+   "connecting": "Подключаем…",
+   "checkAccess": "Проверить доступ",
+   "folder": "Записано в папку",
+   "folderTitle": "Правки сразу записываются в папку на диске. Отправки отсюда нет: git в этой папке не настроен.",
+   "makeCopy": "Править копию",
+   "toDraft": "К моему черновику {{version}}",
+   "fixErrors": "Исправить ошибки · {{count}}",
+   "describe": "Описать изменения",
+   "submit": "Отправить на рассмотрение",
+   "requestOpen": "Запрос {{label}} открыт",
+   "request": {
+    "pending": "Запрос {{label}} · проверки идут",
+    "passed": "Запрос {{label}} · проверки прошли",
+    "failed": "Запрос {{label}} · проверки не прошли",
+    "awaiting_approval": "Запрос {{label}} · ждут одобрения"
+   },
+   "updateRequest": "Обновить запрос",
+   "startNew": "Начать новую правку",
+   "hint": {
+    "checkAccess": "Не удалось подключиться к репозиторию. Проверим адрес и доступ.",
+    "makeCopy": "Эта версия выпущена и не меняется. Сделаем её копию для ваших правок: номер подберём сами.",
+    "toDraft": "Ваши правки лежат в другой версии. Откроем её.",
+    "fixErrors": "Проверка нашла ошибки, пока они есть, отправить нельзя. Покажем, что исправить.",
+    "describe": "Напишите пару фраз о том, что изменилось. Это нужно для выпуска версии.",
+    "submit": "Всё готово. Откроем панель «Изменения», там одна кнопка отправки.",
+    "request": "Ваши правки на рассмотрении. Откроем панель «Изменения» с подробностями.",
+    "updateRequest": "После отправки вы ещё правили. Добавим новые правки в тот же запрос.",
+    "startNew": "Запрос принят. Начнём новую правку от свежей основной ветки."
+   }
+  },
+  "situation": {
+   "std": {
+    "lang": "Язык работы",
+    "kind": "Вид работы",
+    "staffing": "Число авторов",
+    "supervisor": "Научный руководитель",
+    "co_supervisor": "Консультант",
+    "academic_supervisor": "Академический руководитель"
+   },
+   "values": {
+    "lang": {
+     "ru": "Русский",
+     "en": "English"
+    },
+    "kind": {
+     "project": "Проектная",
+     "research": "Исследовательская"
+    },
+    "staffing": {
+     "solo": "Один автор",
+     "team2": "Два автора",
+     "team3": "Три автора"
+    },
+    "supervisor": {
+     "university": "Из ВШЭ",
+     "company": "Из компании",
+     "none": "Нет"
+    }
+   },
+   "yes": "Да",
+   "no": "Нет"
+  }
+ },
+ "en": {
+  "plain": {
+   "finding": {
+    "share": "This happens in {{n}} of {{total}} combinations of conditions.",
+    "unknown": {
+     "how": "See the details below, under “Technical details”."
+    },
+    "slot-never-routed": {
+     "title": "The “{{signature}}” signature never appears in any submission, whatever the conditions",
+     "how": "Add this signature to the document or to the signing order of a submission, or remove it from the version’s list of signatures."
+    },
+    "route-step-without-person": {
+     "title": "“{{point}}” has a signing step that waits for a person who is missing: {{people}}",
+     "how": "If the person is required, do not allow a project without them. If not, make the step depend on the person so it appears only when the person is there."
+    },
+    "route-gap": {
+     "title": "“{{point}}” needs signatures, but sometimes there is nobody to sign",
+     "how": "Add the author’s signature or the signature of a person who is present in such projects, or do not allow a project without a supervisor."
+    },
+    "visible-if-unknown-field": {
+     "title": "A form field is shown depending on a field that does not exist in the form",
+     "how": "Pick an existing field of the same form in the display condition, or remove the condition: otherwise the field never appears."
+    },
+    "visible-if-value-not-in-options": {
+     "title": "A form field waits for an answer that cannot be chosen",
+     "how": "Take the value from the options of the field the display depends on, or remove the condition: otherwise the field never appears."
+    },
+    "required-hidden": {
+     "meta": {
+      "title": "A required project data field is hidden under all conditions",
+      "how": "It cannot be filled in. Allow showing it for suitable kinds of work or make it optional."
+     },
+     "form": {
+      "title": "A required form or its fields are hidden under all conditions",
+      "how": "They cannot be filled in. Allow showing them for suitable kinds of work or make them optional."
+     },
+     "other": {
+      "title": "A required field is hidden under all conditions",
+      "how": "It cannot be filled in. Allow showing it for suitable kinds of work or make it optional."
+     }
+    },
+    "field-never-visible": {
+     "title": "A field is hidden under all conditions: the student will never see it",
+     "how": "Check for which kinds of work and answers the field is shown, or delete it."
+    },
+    "variant-lang-outside-langs": {
+     "langs": {
+      "title": "Document “{{document}}” is meant for languages the version does not have: {{langs}}",
+      "how": "Add these languages to the version together with the files, or remove them from the document."
+     },
+     "plain": {
+      "title": "Document “{{document}}” is meant for a language the version does not have",
+      "how": "Add the language to the version together with the files, or remove it from the document."
+     }
+    },
+    "skip-if-nda-without-nda": {
+     "title": "Document “{{document}}” in “{{point}}” is skipped under an NDA, but the version has no NDA",
+     "how": "Add an NDA to the version or remove the skip condition."
+    },
+    "when-unknown-person": {
+     "person": {
+      "title": "A signature condition names a person who is not among the roles",
+      "how": "Pick a role from the list: supervisor, consultant or academic supervisor."
+     },
+     "slot": {
+      "title": "A condition refers to a signature that is not in the version’s list of signatures",
+      "how": "Add such a signature to the version or fix its name."
+     },
+     "document": {
+      "title": "A condition refers to a document that is not in the version",
+      "how": "Add the document to the version or fix its name."
+     }
+    },
+    "when-never-held": {
+     "title": "The “{{signature}}” signature of document “{{document}}” in “{{point}}” never appears",
+     "how": "Check which person the condition speaks about and whether such a person exists in projects. Or this document is never in the kit for this submission."
+    },
+    "when-always-held": {
+     "title": "The condition of the “{{signature}}” signature of document “{{document}}” in “{{point}}” always holds",
+     "how": "The condition is redundant: remove it if everyone needs the signature, or narrow it."
+    },
+    "slot-when-overlap": {
+     "title": "The “{{signature}}” signature of document “{{document}}” in “{{point}}” has two conditions that can hold together",
+     "how": "Make the conditions mutually exclusive (for example, different supervisor roles) or keep one: otherwise the signature gets two signers."
+    },
+    "document-never-active": {
+     "title": "Document “{{document}}” never gets into the kit, whatever the conditions",
+     "how": "Check which kinds of work and staffings it is assigned to: they may not overlap. Or delete the document."
+    },
+    "item-never-active": {
+     "title": "Document “{{document}}” is never submitted in “{{point}}”, although it can be in the kit",
+     "how": "Check the kinds of work and the NDA skip of this item: together with the document’s conditions they leave no case."
+    },
+    "point-empty": {
+     "all": {
+      "title": "“{{point}}” is empty under all conditions: nothing to submit",
+      "how": "Check for which kinds of work the documents of this submission are assigned."
+     },
+     "some": {
+      "title": "“{{point}}” is empty in {{n}} of {{total}} combinations of conditions: nothing to submit",
+      "how": "This is fine if the submission is not needed for every kind of work. Otherwise check for which kinds of work its documents are assigned."
+     }
+    },
+    "translation-missing": {
+     "name": {
+      "title": "A name has no translation: {{langs}}",
+      "how": "Add the translation or remove the language from the version."
+     },
+     "hint": {
+      "title": "A hint has no translation: {{langs}}",
+      "how": "Add the translation or remove the language from the version."
+     }
+    },
+    "builtin-gate-mismatch": {
+     "manualsField": {
+      "title": "The manuals documents exist, but the project has no field to choose manuals",
+      "how": "Add a manuals choice field to the project data or remove these documents."
+     },
+     "manualsOptions": {
+      "title": "The manuals options do not match the words Studio uses to include documents",
+      "how": "Name the options so that the name of the manual appears in them."
+     },
+     "ndaDocument": {
+      "title": "The NDA document exists, but the project has no NDA switch",
+      "how": "Add an NDA switch to the project data or remove the document."
+     },
+     "ndaField": {
+      "title": "The NDA switch exists, but there is no NDA document",
+      "how": "Add the NDA document or remove the switch."
+     }
+    },
+    "dimension-no-effect": {
+     "title": "The condition “{{condition}}” changes nothing",
+     "how": "That is fine if the field is only printed in documents. Otherwise check the conditions that should take it into account."
+    },
+    "jinja-fail-open": {
+     "title": "The template text of document “{{document}}” cannot be filled in with data",
+     "how": "Fix the expression in the template or guard the value against empty data. While the error stays, the raw template text ends up in the PDF."
+    },
+    "jinja-unknown-meta-key": {
+     "title": "The template of document “{{document}}” reads a project field that does not exist",
+     "how": "Add the field to the project data or fix its name in the template: for now the value is always empty."
+    },
+    "atlas-skipped": {
+     "numbers": {
+      "title": "The template is too large for a full check: {{rows}} combinations of conditions, limit {{limit}}",
+      "how": "Fix the values of some conditions in “What affects what”: the check will fit into the limit."
+     },
+     "plain": {
+      "title": "The template is too large for a full check",
+      "how": "Fix the values of some conditions in “What affects what”: the check will fit into the limit."
+     }
+    }
+   },
+   "fallback": {
+    "role": "one of the participants",
+    "slot": "…",
+    "document": "…",
+    "point": "…",
+    "input": "…",
+    "metaField": "a project data field",
+    "form": "form",
+    "formField": "form field",
+    "check": "check",
+    "lang": "one of the languages"
+   },
+   "role": {
+    "author": "Author",
+    "authorN": "Author {{n}}",
+    "supervisor": "Supervisor",
+    "co_supervisor": "Consultant",
+    "academic_supervisor": "Academic supervisor"
+   },
+   "lang": {
+    "ru": "Russian",
+    "en": "English"
+   }
+  },
+  "issues": {
+   "summary": "Template check. Errors: {{errors}}, warnings: {{warnings}}",
+   "infos": "Hints: {{count}}",
+   "severity": {
+    "error": "Error",
+    "warning": "Warning",
+    "info": "Hint"
+   },
+   "hint": "How to fix:",
+   "emptyTitle": "No issues",
+   "coverage": {
+    "title": "Which rules are checked by ready-made cases",
+    "percent": "{{percent}} %",
+    "percentLabel": "Rules checked by ready-made cases: {{percent}} %",
+    "approximate": "The numbers are approximate: there are too many variants, the real percentage is not lower than shown.",
+    "full": "Fully checked: {{count}}",
+    "half": "Partly checked: {{count}}",
+    "none": "Not checked: {{count}}",
+    "cases": "Ready-made cases: {{count}}.",
+    "variants": "Result variants touched: {{touched}} of {{total}}.",
+    "addMany": "Add ready-made cases ({{count}})",
+    "addOne": "Add a ready-made case",
+    "addHow": "Open the situation on the Result tab and press \"Save this case\".",
+    "rowsLabel": "Situations that would check the most rules",
+    "gain": "Would check more rules: {{count}}.",
+    "rulesTitle": "Rules that are not fully checked",
+    "omitted": "More rules not shown: {{count}}.",
+    "stateNone": "Not checked in any case",
+    "stateHalf": "Partly checked",
+    "seen": "The cases saw: {{states}}.",
+    "seenNone": "No ready-made case reaches this rule.",
+    "missing": "Missing: {{states}}.",
+    "outcome": {
+     "held": "condition met",
+     "not_held": "condition not met"
+    }
+   },
+   "line": "line {{line}}",
+   "textsUnavailable": "Template texts are checked only against my current edits.",
+   "skippedTitle": "The template is too large for a full check",
+   "skippedLead": "Some checks were skipped. Fix the values of some conditions in \"What affects what\" and the check will fit the limit."
+  },
+  "next": {
+   "connecting": "Connecting…",
+   "checkAccess": "Check access",
+   "folder": "Saved to the folder",
+   "folderTitle": "Edits are written straight to the folder on disk. There is nothing to send from here: git is not set up in this folder.",
+   "makeCopy": "Edit a copy",
+   "toDraft": "Go to my draft {{version}}",
+   "fixErrors": "Fix errors · {{count}}",
+   "describe": "Describe changes",
+   "submit": "Send for review",
+   "requestOpen": "Request {{label}} is open",
+   "request": {
+    "pending": "Request {{label}} · checks running",
+    "passed": "Request {{label}} · checks passed",
+    "failed": "Request {{label}} · checks failed",
+    "awaiting_approval": "Request {{label}} · waiting for approval"
+   },
+   "updateRequest": "Update request",
+   "startNew": "Start a new edit",
+   "hint": {
+    "checkAccess": "Could not connect to the repository. We will check the address and access.",
+    "makeCopy": "This version is released and does not change. We will make a copy for your edits and pick its number ourselves.",
+    "toDraft": "Your edits are in another version. We will open it.",
+    "fixErrors": "The check found errors. You cannot send until they are fixed. We will show what to fix.",
+    "describe": "Write a couple of sentences about what changed. It is needed to release the version.",
+    "submit": "All set. We will open the Changes panel, it has a single send button.",
+    "request": "Your edits are under review. We will open the Changes panel with the details.",
+    "updateRequest": "You kept editing after sending. We will add the new edits to the same request.",
+    "startNew": "The request was accepted. We will start a new edit from the fresh main branch."
+   }
+  },
+  "situation": {
+   "std": {
+    "lang": "Work language",
+    "kind": "Kind of work",
+    "staffing": "Number of authors",
+    "supervisor": "Academic supervisor",
+    "co_supervisor": "Co-supervisor",
+    "academic_supervisor": "Programme supervisor"
+   },
+   "values": {
+    "lang": {
+     "ru": "Russian",
+     "en": "English"
+    },
+    "kind": {
+     "project": "Project",
+     "research": "Research"
+    },
+    "staffing": {
+     "solo": "One author",
+     "team2": "Two authors",
+     "team3": "Three authors"
+    },
+    "supervisor": {
+     "university": "From HSE",
+     "company": "From a company",
+     "none": "None"
+    }
+   },
+   "yes": "Yes",
+   "no": "No"
+  }
+ }
+}
