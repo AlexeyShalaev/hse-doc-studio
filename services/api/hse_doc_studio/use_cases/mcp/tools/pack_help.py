@@ -54,7 +54,14 @@ GROUPS: Final[dict[str, tuple[str, tuple[str, ...]]]] = {
     ),
     "check": (
         "Проверка / Checking",
-        ("pack_lint", "pack_classify", "pack_preview_build", "pack_preview_read"),
+        (
+            "pack_lint",
+            "pack_classify",
+            "pack_preview_build",
+            "pack_preview_read",
+            "pack_signature_render",
+            "pack_signature_check",
+        ),
     ),
     "outcome": (
         "Результат и сценарии / Outcome and scenarios",
@@ -114,7 +121,11 @@ FLOW_RU: Final = (
         "какие вводные что меняют и почему. pack_scenario_write фиксирует ожидания, pack_scenario_run проверяет их; "
         "pack_outcome_lint ищет дефекты правил и показывает покрытие сценариями."
     ),
-    "7. pack_preview_build: настоящая сборка PDF на раннере (по необходимости).",
+    (
+        "7. pack_preview_build: настоящая сборка PDF на раннере. Места подписей: pack_signature_render (картинка "
+        "страницы с рамками), pack_signature_check (проверка и suggested_ops), pack_set_placement с build_id, снова "
+        "render и check."
+    ),
     (
         "8. pack_changes: что изменено и следующий шаг (как кнопка «Изменения»); pack_git_commit: сохранить точку; "
         "pack_git_diff и pack_outcome_impact: что изменится против основной ветки."
@@ -146,7 +157,11 @@ FLOW_EN: Final = (
         "pack_scenario_run checks them; "
         "pack_outcome_lint finds rule defects and shows the scenario coverage."
     ),
-    "7. pack_preview_build: a real PDF build on a runner (when needed).",
+    (
+        "7. pack_preview_build: a real PDF build on a runner. Signature places: pack_signature_render (the page with "
+        "boxes), pack_signature_check (findings and suggested_ops), pack_set_placement with build_id, then render and "
+        "check again."
+    ),
     (
         "8. pack_changes: what changed and the next step (like the Changes button); pack_git_commit: save a point; "
         "pack_git_diff and pack_outcome_impact: what changes against the main branch."

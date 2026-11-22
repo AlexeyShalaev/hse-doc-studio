@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date, datetime
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, Literal, Protocol
 from uuid import UUID
@@ -57,6 +58,7 @@ from hse_doc_studio.core.pack_studio.scaffold import (
     ScaffoldSource,
     SourcePack,
 )
+from hse_doc_studio.core.pack_studio.sign_check import PageLayout, Rect
 from hse_doc_studio.core.pack_studio.submission import SubmissionOp, VersionSubmission
 from hse_doc_studio.core.pack_studio.versions import (
     BaseRegistry,
@@ -644,6 +646,39 @@ class IPackVersions(Protocol):
         registry: BaseRegistry,
         today: date,
     ) -> ReleasedVersionView: ...
+
+
+class MarkKind(StrEnum):
+    """Что нарисовано поверх страницы: рамка подписи, метка даты, линия якоря, предложенная рамка, рамка с ошибкой."""
+
+    sign = "sign"
+    date = "date"
+    anchor = "anchor"
+    suggested = "suggested"
+    problem = "problem"
+
+
+@dataclass(frozen=True)
+class Mark:
+    kind: MarkKind
+    rect: Rect
+    label: str = ""
+
+
+class IPdfPages(Protocol):
+    """Страницы PDF предпросмотра для мест подписей (pack-studio-mcp.md, 4.5): разбор, растр и картинка с рамками.
+
+    Номера страниц с единицы, всё в мм от левого верхнего угла. `ink` доля тёмных пикселей под рамкой без линий и без
+    закрашенных `blank`; None, если страницы нет.
+    """
+
+    def page_count(self, data: bytes) -> int: ...
+
+    def layouts(self, data: bytes, pages: Sequence[int]) -> dict[int, PageLayout]: ...
+
+    def ink(self, data: bytes, boxes: Sequence[tuple[int, Rect, Sequence[Rect]]], dpi: int) -> list[float | None]: ...
+
+    def render(self, data: bytes, page: int, dpi: int, marks: Sequence[Mark]) -> bytes: ...
 
 
 class IPdfTextReader(Protocol):

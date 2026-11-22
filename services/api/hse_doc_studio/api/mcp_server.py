@@ -149,8 +149,13 @@ async def _call_tool(ctx: ServerRequestContext[Any, Any], params: types.CallTool
         meta = {"code": out.error_code.value}
         if out.retry_after_s is not None:
             meta["retry_after_s"] = out.retry_after_s
+    content: list[types.TextContent | types.ImageContent] = [types.TextContent(type="text", text=out.result.text)]
+    content += [
+        types.ImageContent(type="image", data=base64.b64encode(image.data).decode("ascii"), mime_type=image.mime_type)
+        for image in out.result.images
+    ]
     return types.CallToolResult(
-        content=[types.TextContent(type="text", text=out.result.text)],
+        content=content,
         is_error=out.result.is_error,
         meta=meta,
     )

@@ -30,6 +30,7 @@ from hse_doc_studio.use_cases.mcp.tools import (
     pack_git,
     pack_help,
     pack_scenarios,
+    pack_signatures,
     pack_workspaces,
 )
 from hse_doc_studio.use_cases.mcp.tools._base import ArgumentError
@@ -81,6 +82,8 @@ NEW_TOOLS = (
     pack_changes.PackChangesTool,
     pack_forms.PackChecksTool,
     pack_forms.PackVersionNumberTool,
+    pack_signatures.PackSignatureRenderTool,
+    pack_signatures.PackSignatureCheckTool,
 )
 
 
