@@ -453,17 +453,22 @@ jobs:
           uv run --frozen --no-sync hse-doc-studio pack check ../../packs "${base[@]}"
 
   # ── Frontend ─────────────────────────────────────────────────────────────
-  # Два джоба параллельно: статические проверки со сборкой и vitest. `pnpm install` берёт пакеты из кэша
-  # setup-node (секунды), а vitest на 4 vCPU идёт ~6 минут, поэтому он ещё и делится на два шарда по файлам.
+  # Параллельно: ESLint с типами (самый долгий шаг, 5 минут одним процессом) делится на 3 шарда по файлам, остальные
+  # статические проверки со сборкой идут в одном джобе, vitest делится на 4 шарда по файлам. `pnpm install` берёт
+  # пакеты из кэша setup-node (секунды).
 
-  frontend:
-    name: Frontend · Lint, types & build
+  frontend-lint:
+    name: Frontend · ESLint (${{ matrix.shard }}/3)
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: services/web-app
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -478,8 +483,37 @@ jobs:
           cache-dependency-path: services/web-app/pnpm-lock.yaml
       - name: Install
         run: pnpm install --frozen-lockfile
-      - name: Lint (ESLint)
-        run: pnpm lint
+      # Файлы делятся по кругу: каждый шард видит весь проект (типы берутся из tsconfig), но проверяет свою треть файлов.
+      # Список тот же, что у `eslint .`: ts, tsx и js-конфиги; игнорируемое конфигом (dist, coverage …) отфильтрует сам
+      # eslint (--no-warn-ignored), новый файл попадёт в какой-то шард автоматически.
+      - name: Lint (ESLint, shard ${{ matrix.shard }}/3)
+        run: |
+          git ls-files -z -- '*.ts' '*.tsx' '*.js' '*.mjs' '*.cjs' \
+            | tr '\0' '\n' | sed 's#^services/web-app/##' | sort \
+            | awk -v shard=${{ matrix.shard }} 'NR % 3 == shard % 3' > "$RUNNER_TEMP/eslint-files.txt"
+          wc -l < "$RUNNER_TEMP/eslint-files.txt"
+          xargs -a "$RUNNER_TEMP/eslint-files.txt" pnpm exec eslint --no-warn-ignored
+
+  frontend:
+    name: Frontend · Lint, types & build
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/web-app
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: services/web-app/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: services/web-app/pnpm-lock.yaml
+      - name: Install
+        run: pnpm install --frozen-lockfile
       - name: Format check (Prettier)
         run: pnpm format:check
       # Ключи локализации: скрипт падает, если t('…') ссылается на несуществующий ключ.
@@ -499,7 +533,7 @@ jobs:
         run: pnpm bundlesize
 
   frontend-test:
-    name: Frontend · Test (${{ matrix.shard }}/2)
+    name: Frontend · Test (${{ matrix.shard }}/4)
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
@@ -509,7 +543,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -522,8 +556,8 @@ jobs:
           cache-dependency-path: services/web-app/pnpm-lock.yaml
       - name: Install
         run: pnpm install --frozen-lockfile
-      - name: Test (vitest, shard ${{ matrix.shard }}/2)
-        run: pnpm test:coverage --shard=${{ matrix.shard }}/2
+      - name: Test (vitest, shard ${{ matrix.shard }}/4)
+        run: pnpm test:coverage --shard=${{ matrix.shard }}/4
       # Codecov сводит загрузки шардов одного коммита с одним флагом в одно покрытие.
       - uses: codecov/codecov-action@v7
         with:
@@ -585,6 +619,7 @@ jobs:
       - backend-coverage
       - backend-test-no-server
       - frontend
+      - frontend-lint
       - frontend-test
       - user-docs
     runs-on: ubuntu-latest
