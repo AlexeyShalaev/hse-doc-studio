@@ -7,6 +7,8 @@ import "./modes/modes.css";
 export { CompareMode } from "./modes/CompareMode";
 export { ChangeList } from "./modes/ChangeList";
 export { ChangeEnvContext } from "./modes/changeEnv";
+export { ChangeWordsContext } from "./modes/changeWords";
+export type { ChangeWords } from "./modes/changeWords";
 export type { ChangeEnv } from "./modes/changeEnv";
 export { useLabeler } from "./ui/inputs/useLabeler";
 export type { Labeler } from "./ui/inputs/useLabeler";

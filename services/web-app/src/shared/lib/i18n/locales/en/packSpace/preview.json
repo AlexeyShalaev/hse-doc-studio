@@ -39,14 +39,6 @@
     "log": "Open the log"
   },
   "quota": "The maximum number of builds is running ({{limit}}). Wait for one to finish and build again.",
-  "error": {
-    "render_failed": "The template could not be filled with data: the text has an error or the build took too long.",
-    "interrupted": "The build was interrupted by a Studio restart. Build again.",
-    "pdf_missing": "The build finished but no PDF appeared.",
-    "build_failed": "The document did not build: the text has an error.",
-    "font_missing": "The build server does not have a font the document needs.",
-    "generic": "The build failed (code {{code}})."
-  },
   "errorHint": "The place of the error is shown in the build log.",
   "findings": {
     "title": "Notes on this file",
@@ -68,5 +60,6 @@
   "pages_one": "{{count}} page",
   "pages_few": "{{count}} pages",
   "pages_many": "{{count}} pages",
-  "pages_other": "{{count}} pages"
+  "pages_other": "{{count}} pages",
+  "fieldTech": "Field and value"
 }

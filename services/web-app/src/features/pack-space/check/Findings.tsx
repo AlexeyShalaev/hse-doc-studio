@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import { CircleAlert, Eye, Info, TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { OutcomeFinding } from "@entities/pack-studio";
@@ -6,6 +7,7 @@ import {
   type IndexedFinding,
   type Severity,
 } from "@features/pack-outcome/check";
+import { plainFinding } from "../plain/findings";
 import type { CheckEnv } from "./useCheckEnv";
 
 const ICON = {
@@ -70,6 +72,7 @@ export const Witness = ({
 const Finding = ({ item, env }: { item: IndexedFinding; env: CheckEnv }) => {
   const { t } = useTranslation("packSpace");
   const finding: OutcomeFinding = item.finding;
+  const plain = plainFinding(finding, env.naming, t);
   const Icon = ICON[finding.severity];
   const elements = finding.elements.slice(0, MAX_ELEMENTS);
   const witnesses = finding.witnesses.slice(0, MAX_WITNESSES);
@@ -91,12 +94,11 @@ const Finding = ({ item, env }: { item: IndexedFinding; env: CheckEnv }) => {
           </span>
         )}
       </p>
-      <p className="sp-ck-message">{finding.message}</p>
-      {finding.hint ? (
-        <p className="sp-ck-hint">
-          <strong>{t("check.issues.hint")}</strong> {finding.hint}
-        </p>
-      ) : null}
+      <p className="sp-ck-message">{plain.title}</p>
+      {plain.extra ? <p className="sp-ck-note">{plain.extra}</p> : null}
+      <p className="sp-ck-hint">
+        <strong>{t("check.issues.hint")}</strong> {plain.how}
+      </p>
       {elements.length > 0 && (
         <div className="sp-ck-chips">
           <span className="sp-ck-note">{t("check.issues.elements")}</span>
@@ -107,14 +109,16 @@ const Finding = ({ item, env }: { item: IndexedFinding; env: CheckEnv }) => {
               className="sp-ck-chip"
               aria-label={t("check.issues.showElement", {
                 section: t(`check.sections.${element.section}`),
-                id: element.id,
+                name: env.naming.element(element.section, element.id),
               })}
               onClick={() => {
                 env.showElement(element);
               }}
             >
               {t(`check.sections.${element.section}`)}
-              <span className="sp-ck-chip-id">{element.id}</span>
+              <span className="sp-ck-chip-id">
+                {env.naming.element(element.section, element.id)}
+              </span>
             </button>
           ))}
           {finding.elements.length > elements.length && (
@@ -161,20 +165,12 @@ const Finding = ({ item, env }: { item: IndexedFinding; env: CheckEnv }) => {
       <details className="sp-ck-tech">
         <summary>{t("check.tech")}</summary>
         <dl>
-          <dt>{t("check.issues.techRule")}</dt>
-          <dd>{finding.rule_id}</dd>
-          {finding.file ? (
-            <>
-              <dt>{t("check.issues.techFile")}</dt>
-              <dd>{finding.file}</dd>
-            </>
-          ) : null}
-          {finding.pointer ? (
-            <>
-              <dt>{t("check.issues.techPointer")}</dt>
-              <dd>{finding.pointer}</dd>
-            </>
-          ) : null}
+          {plain.tech.map((row) => (
+            <Fragment key={row.label}>
+              <dt>{row.label}</dt>
+              <dd>{row.value}</dd>
+            </Fragment>
+          ))}
         </dl>
       </details>
     </li>

@@ -98,6 +98,43 @@ describe("вкладка «Проверка»", { timeout: 30_000 }, () => {
       ).toBeEnabled();
     });
 
+    it("находки человеческими словами: текст сервера, правило и файл только в технических подробностях (V1)", async () => {
+      openLint();
+      await screen.findByText(/Проверка шаблона/);
+      const items = screen.getAllByTestId("check-finding");
+      expect(items.length).toBeGreaterThan(0);
+      for (const item of items) {
+        const clone = item.cloneNode(true) as HTMLElement;
+        const tech = clone.querySelector("details");
+        expect(tech).not.toBeNull();
+        tech?.remove();
+        expect(clone.textContent).not.toMatch(
+          /слот|атлас|вводн|signing_slots|signatures\.|visible_if|supported_|\bhelp\b|\blangs\b|\bwhen\b|[a-z]+_[a-z]+|[a-z]+-[a-z]+/i,
+        );
+        // Сырое сообщение сервера и номер правила на месте, под «Технические подробности».
+        const raw = item.querySelector("details dl")?.textContent ?? "";
+        expect(raw).toMatch(/Текст сервера/);
+        expect(raw).toMatch(/Номер проверки/);
+      }
+    });
+
+    it("подпись, которой не будет: заголовок словами, роль из словаря, остальные названия не получены: «…», «Как исправить» есть (V1)", async () => {
+      openLint();
+      const title = await screen.findByText(
+        "Подпись «Академический руководитель» у документа «…» в «…» не появится никогда",
+      );
+      expect(title.textContent).toBe(
+        "Подпись «Академический руководитель» у документа «…» в «…» не появится никогда",
+      );
+      const item = title.closest("li");
+      expect(item?.textContent).toMatch(/Как исправить:/);
+      const clone = item?.cloneNode(true) as HTMLElement;
+      clone.querySelector("details")?.remove();
+      expect(clone.textContent).not.toMatch(
+        /academic_supervisor|project_proposal/,
+      );
+    });
+
     it("файл и номер проверки спрятаны в технических подробностях", async () => {
       openLint();
       await screen.findByText(/Проверка шаблона/);
@@ -316,6 +353,21 @@ describe("вкладка «Проверка»", { timeout: 30_000 }, () => {
       expect(screen.getByText("Два готовых случая")).toBeInTheDocument();
       expect(screen.queryByText("Два сценария")).toBeNull();
       expect(screen.queryByText(/Рабочее дерево/)).toBeNull();
+    });
+
+    it("подписи изменений словами: роли по-русски, сырые «участник supervisor» и «было: …» в технических подробностях (V1)", async () => {
+      open((client) => {
+        seedCompare(client);
+      }, `?${COMPARE_SEARCH}`);
+      await screen.findAllByText("Слева");
+      const view = document.querySelector(".sp-ck");
+      const clone = view?.cloneNode(true) as HTMLElement;
+      for (const tech of clone.querySelectorAll("details")) tech.remove();
+      expect(clone.textContent).not.toMatch(
+        /участник [a-z]|[a-z]+_[a-z]+|было: [a-z]|шаг \d/,
+      );
+      expect(clone.textContent).toMatch(/Участник: Консультант/);
+      expect(view?.textContent).toMatch(/Вид изменения/);
     });
 
     it("«К проверке» убирает сравнение и его стороны из адреса", async () => {
