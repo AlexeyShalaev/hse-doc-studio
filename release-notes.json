@@ -1,6 +1,40 @@
 {
   "releases": [
     {
+      "version": "0.38.0",
+      "date": "2026-11-22",
+      "notes": [
+        {
+          "ru": "Студия паков: новый интерфейс, переделанный с нуля. Пока он включается по ссылке: добавьте ?ux=2 к адресу Студии паков, выбор запоминается, а ?ux=1 возвращает прежний вид. Вместо россыпи переключателей у пространства три вкладки: «Результат», «Содержимое», «Проверка», одна главная кнопка следующего шага и кнопка «Изменения» со статусом правок. При входе открывается версия с вашими правками, затем последняя открытая, затем версия по умолчанию.",
+          "en": "Pack Studio: a new interface rebuilt from scratch. For now it is turned on by a link: add ?ux=2 to the Pack Studio address, the choice is remembered, and ?ux=1 brings back the previous view. Instead of many switches, a space has three tabs, Result, Content and Check, one main button for the next step and a Changes button with the status of your edits. On entry the version with your edits opens first, then the last visited one, then the default version."
+        },
+        {
+          "ru": "Новый интерфейс, «Результат»: полоса «Для какого студента» заменила панель вводных. В центре части результата с оглавлением, блок «Не вошло» с причинами и подсветка того, что поменялось после смены студента. Панель «Подробности» объясняет предложениями, почему элемент такой, и показывает, что изменится, если поменять условие. Условие правится прямо на месте, с лентой правок и откатом.",
+          "en": "New interface, Result: a For which student strip replaces the inputs panel. The centre shows the parts of the result with a table of contents, a Not included block with reasons and a highlight of what changed after picking another student. The Details panel explains in sentences why an element is the way it is and shows what changes if a condition changes. A condition is edited in place, with a list of edits and undo."
+        },
+        {
+          "ru": "Новый интерфейс, «Содержимое»: навигация по документам и разделам версии, текст документа с автосохранением и переходом к ближайшей находке, подписи документа и раздел «Подписи и места», части версии и «Все файлы». PDF можно посмотреть так, как он соберётся для выбранного студента. Кнопка «Править копию» одна и та же во всех местах.",
+          "en": "New interface, Content: navigation over the documents and sections of a version, the document text with autosave and a jump to the nearest finding, the document signatures and a Signatures and places section, the version parts and All files. The PDF can be previewed as it will be built for the chosen student. The Edit a copy button is the same everywhere."
+        },
+        {
+          "ru": "Новый интерфейс, «Проверка»: находки пака простыми словами, типичные случаи с окном случая (ожидания, «Принять», удаление, вид глазами студента, фильтры, сортировка и «на экране сейчас»), «Что на что влияет» и сравнение версий. Сюда же вернулось всё полезное из прежних «Матрицы» и «Атласа».",
+          "en": "New interface, Check: pack findings in plain words, typical cases with a case window (expectations, Accept, delete, the student view, filters, sorting and on screen now), What affects what and version comparison. Everything useful from the former Matrix and Atlas moved here."
+        },
+        {
+          "ru": "Новый интерфейс на телефоне и планшете: нижние вкладки со значком числа правок, листы вместо боковых панелей, крупные зоны нажатия.",
+          "en": "The new interface on phones and tablets: bottom tabs with a badge for the number of edits, sheets instead of side panels, large touch targets."
+        },
+        {
+          "ru": "Тексты сервера (находки линтера, ошибки сборки, изменения при сравнении) в Студии теперь показываются человеческими формулировками. Админка Студии шаблонов переписана простым языком, в ней появились чек-лист настройки и понятный список источников шаблонов. Словарь терминов, справка и документация сайта приведены к новым названиям.",
+          "en": "Server texts (linter findings, build errors, changes in a comparison) are now shown in the Studio in plain wording. The Template Studio admin page is rewritten in plain language, with a setup checklist and a clear list of template sources. The glossary, the help and the site documentation use the new names."
+        },
+        {
+          "ru": "Манифесты паков разбираются быстрее, поэтому сервер стартует быстрее.",
+          "en": "Pack manifests are parsed faster, so the server starts faster."
+        }
+      ]
+    },
+    {
       "version": "0.37.0",
       "date": "2026-11-20",
       "notes": [
