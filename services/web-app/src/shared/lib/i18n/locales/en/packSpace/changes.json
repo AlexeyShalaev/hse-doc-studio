@@ -231,7 +231,7 @@
     "where": {
       "new": "We will send your edits for review: repository maintainers will check them and accept them into the main branch {{base}}. For that a merge request opens, that is, a request to accept your edits. You do not need to create a branch: it is created automatically.",
       "update": "New edits will be added to the already open request {{label}}. Nothing needs to be created again.",
-      "service": "Sending goes on behalf of the Studio installation, your name will be on the edits.",
+      "service": "Sending uses the access of the connected repository, your name will be on the edits.",
       "viaFork": "Edits go through your copy of the repository (a fork): {{url}}."
     },
     "request": {

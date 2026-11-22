@@ -175,8 +175,8 @@ _HINTS: Final[dict[str, tuple[str, str]]] = {
         ),
     ),
     "service_access_missing": (
-        "Служебного доступа к репозиторию нет: добавьте доступ git в интерфейсе и укажите credential_id.",
-        "There is no service access for the repository: add git access in the interface and pass credential_id.",
+        "Подключённого репозитория нет: добавьте доступ git в интерфейсе и укажите credential_id.",
+        "The repository is not connected: add git access in the interface and pass credential_id.",
     ),
     "yaml_patch_conflict": (
         (
@@ -201,8 +201,8 @@ _HINTS: Final[dict[str, tuple[str, str]]] = {
         "The token needs the packs scope: issue a token with the mcp and packs scopes.",
     ),
     "pack_studio_forbidden": (
-        "Нужно право «Автор шаблонов»: его выдаёт админ установки.",
-        "The 'Template author' right is required: the installation admin grants it.",
+        "Нужен доступ к Студии шаблонов: его выдаёт админ установки.",
+        "Access to Template Studio is required: the installation admin grants it.",
     ),
 }
 

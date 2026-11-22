@@ -46,8 +46,8 @@
       "hint": "Checkpoints and packages, signature status."
     },
     "packs": {
-      "title": "Pack Studio",
-      "hint": "Template packs: workspaces, files, checks, preview, new version, proposing changes. Needs the Pack author right and a token with the Pack Studio scope."
+      "title": "Template Studio",
+      "hint": "Document templates: spaces, files, checks, preview, a copy of a version, sending changes for review. Needs access to Template Studio (granted by an administrator) and a token with the Template Studio scope."
     },
     "admin": {
       "title": "Administration",
