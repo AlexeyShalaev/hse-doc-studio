@@ -27,7 +27,7 @@ import {
   type ScenarioForm,
 } from "@features/pack-outcome/check";
 import { Modal } from "@shared/ui";
-import { useMakeCopy } from "../../details/useMakeCopy";
+import { useCopyVersion } from "../../next-step/useCopyVersion";
 import { useNaming } from "../../plain/useNaming";
 import { WordsOverlay } from "../WordsOverlay";
 import { CheckChangeEnv } from "../ChangeEnv";
@@ -274,7 +274,7 @@ export const CaseDialog = ({
     [screenEnv, naming],
   );
   const actions = useCaseActions(env.workspaceId, env.ref);
-  const copy = useMakeCopy();
+  const copy = useCopyVersion({ toastOnError: true });
   const [confirm, setConfirm] = useState(false);
   const [accepting, setAccepting] = useState(false);
 
@@ -402,7 +402,7 @@ export const CaseDialog = ({
                     className="btn sm primary"
                     disabled={copy.pending}
                     data-testid="case-copy"
-                    onClick={copy.run}
+                    onClick={() => void copy.run()}
                   >
                     {t("check.case.copy")}
                   </button>
