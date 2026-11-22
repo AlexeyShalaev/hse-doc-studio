@@ -214,7 +214,10 @@
      "not_held": "условие не выполнено"
     }
    },
-   "line": "строка {{line}}"
+   "line": "строка {{line}}",
+   "textsUnavailable": "Тексты шаблонов проверяются только по моим текущим правкам.",
+   "skippedTitle": "Шаблон слишком большой для полной проверки",
+   "skippedLead": "Часть проверок пропущена. Зафиксируйте значения части условий в разделе «Что на что влияет», и проверка поместится в предел."
   },
   "next": {
    "connecting": "Подключаем…",
@@ -495,7 +498,10 @@
      "not_held": "condition not met"
     }
    },
-   "line": "line {{line}}"
+   "line": "line {{line}}",
+   "textsUnavailable": "Template texts are checked only against my current edits.",
+   "skippedTitle": "The template is too large for a full check",
+   "skippedLead": "Some checks were skipped. Fix the values of some conditions in \"What affects what\" and the check will fit the limit."
   },
   "next": {
    "connecting": "Connecting…",

@@ -304,6 +304,10 @@ def lint_plain_text(  # noqa: C901 — сводка, находки и покр�
     lines = [say("issues.summary", {"errors": body["errors"], "warnings": body["warnings"]}, lang)]
     if body.get("infos"):
         lines.append(say("issues.infos", {"count": body["infos"]}, lang))
+    if body.get("atlas_skipped"):
+        lines.append(f"{say('issues.skippedTitle', lang=lang)}. {say('issues.skippedLead', lang=lang)}")
+    if body.get("jinja") == "unavailable":
+        lines.append(say("issues.textsUnavailable", lang=lang))
     for item in shown[:limit]:
         plain = plain_finding(item, naming)
         level = say(f"issues.severity.{item['severity']}", lang=lang)

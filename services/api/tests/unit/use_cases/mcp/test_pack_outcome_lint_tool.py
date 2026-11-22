@@ -26,7 +26,7 @@ from hse_doc_studio.use_cases.pack_studio.outcome_service import OutcomeReply
 
 WS = uuid4()
 ACTOR = Actor.user("u1", source=ActorSource.pat, scopes=frozenset({"mcp", "packs"}))
-_ARGS = {"workspace_id": str(WS), "version": "hse-cs-se/vkr/2026.1.2"}
+_ARGS = {"wording": "tech", "workspace_id": str(WS), "version": "hse-cs-se/vkr/2026.1.2"}
 
 _BODY: dict[str, Any] = {
     "workspace_id": str(WS),
