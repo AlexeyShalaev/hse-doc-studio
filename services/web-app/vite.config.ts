@@ -158,7 +158,7 @@ export default defineConfig(({ mode }) => {
             if (id.endsWith("/src/pages/PackStudioPage/index.ts")) {
               return "assets/pack-studio-app-[hash].js";
             }
-            // Новый интерфейс Студии шаблонов (флаг `?ux=2`, срез S0): свой чанк, старый вид его не грузит.
+            // Экраны пространства Студии шаблонов (pages/PackStudioPage/space): свой чанк.
             if (id.endsWith("/src/pages/PackStudioPage/space/index.ts")) {
               return "assets/pack-space-[hash].js";
             }

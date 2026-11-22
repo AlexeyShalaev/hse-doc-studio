@@ -300,26 +300,16 @@
     "limit": "30.5 kB"
   },
   {
-    "name": "Студия шаблонов, новый интерфейс (lazy, ?ux=2: pages/PackStudioPage/space и все области features/pack-space, вместе)",
+    "name": "Студия шаблонов: экраны пространства (lazy, pages/PackStudioPage/space и все области features/pack-space, вместе)",
     "path": "dist/assets/pack-space-*.js",
     "gzip": true,
     "limit": "100 kB"
   },
   {
-    "name": "Словарь нового интерфейса Студии (ru и en, features/pack-space)",
+    "name": "Словарь экранов пространства Студии (ru и en, features/pack-space)",
     "path": "dist/assets/locale-packSpace-*.js",
     "gzip": true,
     "limit": "50 kB"
-  },
-  {
-    "name": "Студия шаблонов, экран «Результат» (lazy, features/pack-outcome)",
-    "path": [
-      "dist/assets/pack-outcome-*.js",
-      "!dist/assets/pack-outcome-modes-*.js",
-      "!dist/assets/pack-outcome-lint-*.js"
-    ],
-    "gzip": true,
-    "limit": "50.2 kB"
   },
   {
     "name": "Режимы «Матрица», «Атлас», «Сравнить» экрана «Результат» (lazy, features/pack-outcome/modes)",
