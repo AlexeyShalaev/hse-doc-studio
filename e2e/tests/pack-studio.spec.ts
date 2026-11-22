@@ -699,7 +699,10 @@ for (const lang of LANGS) {
       await expect(page).toHaveURL(/changes=1/);
       const panel = page.getByTestId("sp-changes-panel");
       await expect(panel).toBeVisible();
-      await expect(panel.getByTestId("sp-ch-what")).toContainText("meta");
+      // Правка в общем файле версии названа по смыслу, без пути.
+      await expect(panel.getByTestId("sp-ch-what")).toContainText(
+        text("Общие части документов", "Parts shared by documents"),
+      );
 
       // «Что изменится у студентов»: в одном случае из трёх результат изменится, нужна отметка «я знаю».
       const primary = panel.getByTestId("sp-sb-primary");
@@ -838,6 +841,10 @@ for (const lang of LANGS) {
       await shot(page, L, "ps-76-copy-done");
     });
 
+    test.describe("места подписей", () => {
+      // Высокое окно: страница PDF и рамка помещаются без прокрутки, мышь тянет то, что видно.
+      test.use({ viewport: { width: 1600, height: 1500 } });
+
     test("места подписей на собранном PDF: общее место становится местом документа", async ({ page }) => {
       await mockWorkspaces(page);
       const places = await mockPlaces(page);
@@ -855,7 +862,6 @@ for (const lang of LANGS) {
         `[title="${lang === "ru" ? "Научный руководитель (общее место)" : "Supervisor (shared place)"}"]`,
       );
       await expect(frame).toBeVisible({ timeout: 15_000 });
-      // Страница PDF ниже списка подписей: мышь тянет только то, что на экране.
       await frame.scrollIntoViewIfNeeded();
       await shot(page, L, "ps-70-places");
       const box = await frame.boundingBox();
@@ -873,6 +879,7 @@ for (const lang of LANGS) {
       });
       await expect(page.getByTestId("places-supervisor")).toHaveAttribute("data-status", "own");
       await shot(page, L, "ps-75-places-moved");
+    });
     });
 
     test.describe("телефон 360", () => {
