@@ -7,6 +7,7 @@ import { useLabeler } from "@features/pack-outcome/check";
 import { useSpace } from "../context/SpaceContext";
 import { useSituation } from "../context/useSituation";
 import { useSpaceNav } from "../context/useSpaceNav";
+import { useNaming } from "../plain/useNaming";
 import { filePathIn, witnessInputs } from "./lib";
 
 /**
@@ -20,6 +21,7 @@ export const useCheckEnv = () => {
   const situation = useSituation();
   const inputs = usePackOutcomeInputs(workspace.id, versionRef, "work_tree");
   const labeler = useLabeler(inputs.data?.inputs);
+  const naming = useNaming(workspace.id, versionRef, inputs.data?.inputs);
   const versionPath = version?.path ?? "";
   const { inputs: current, caseId } = situation;
   const known = inputs.data?.inputs;
@@ -32,6 +34,8 @@ export const useCheckEnv = () => {
       released,
       inputs,
       labeler,
+      /** Названия документов, подписей и участников словами пака. */
+      naming,
       /** Результат при условиях из находки или правила (поверх нынешних условий экрана). */
       showSituation: (witness: Readonly<Record<string, string>>) => {
         nav.go({
@@ -66,6 +70,7 @@ export const useCheckEnv = () => {
       released,
       inputs,
       labeler,
+      naming,
       nav,
       known,
       current,

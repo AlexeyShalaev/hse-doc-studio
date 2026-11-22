@@ -1,4 +1,4 @@
-import { useId, useMemo, useState } from "react";
+import { useContext, useId, useMemo, useState } from "react";
 import { Cpu, ExternalLink, FileCode } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { OutcomeChange } from "@entities/pack-studio";
@@ -7,6 +7,7 @@ import { changeKey, reasonTrace } from "../lib/compare";
 import { makeTraceText } from "../lib/explain";
 import { DecisionStatus } from "../ui/rules/StateChip";
 import { useChangeEnv } from "./changeEnv";
+import { ChangeWordsContext } from "./changeWords";
 
 const SYMBOL_KEY = { "+": "added", "~": "changed", "-": "removed" } as const;
 
@@ -28,10 +29,14 @@ export const ChangeList = ({
   testId = "outcome-change-list",
 }: ChangeListProps) => {
   const { t } = useTranslation("packOutcome");
+  const plainWords = useContext(ChangeWordsContext);
   return (
     <ul className="cmp-changes" data-testid={testId}>
       {changes.map((change, index) => {
         const symbol = SYMBOL_KEY[change.symbol];
+        const plain = plainWords?.words(change) ?? null;
+        const beforeText = plain ? plain.before : change.before;
+        const afterText = plain ? plain.after : change.after;
         return (
           <li
             key={changeKey(change, index)}
@@ -48,29 +53,46 @@ export const ChangeList = ({
               </span>
             </span>
             <div className="cmp-change-body">
-              <p className="cmp-change-label">{change.label}</p>
+              <p className="cmp-change-label">{plain?.label ?? change.label}</p>
               {(change.before !== null || change.after !== null) && (
                 <dl className="cmp-values">
                   <div className="cmp-value" data-side="before">
                     <dt>{t("modes.compare.left")}</dt>
                     <dd>
-                      {change.before !== null
-                        ? t("scenarios.diff.was", { value: change.before })
-                        : t("modes.compare.absent")}
+                      {change.before === null
+                        ? t("modes.compare.absent")
+                        : beforeText === null
+                          ? "—"
+                          : t("scenarios.diff.was", { value: beforeText })}
                     </dd>
                   </div>
                   <div className="cmp-value" data-side="after">
                     <dt>{t("modes.compare.right")}</dt>
                     <dd>
-                      {change.after !== null
-                        ? t("scenarios.diff.now", { value: change.after })
-                        : t("modes.compare.absent")}
+                      {change.after === null
+                        ? t("modes.compare.absent")
+                        : afterText === null
+                          ? "—"
+                          : t("scenarios.diff.now", { value: afterText })}
                     </dd>
                   </div>
                 </dl>
               )}
               {withWhy && (change.why?.length ?? 0) > 0 && (
                 <ChangeWhy change={change} />
+              )}
+              {plain && plainWords && plain.tech.length > 0 && (
+                <details className="cmp-tech">
+                  <summary>{plainWords.techSummary}</summary>
+                  <dl>
+                    {plain.tech.map((row) => (
+                      <div key={row.label}>
+                        <dt>{row.label}</dt>
+                        <dd>{row.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </details>
               )}
             </div>
           </li>

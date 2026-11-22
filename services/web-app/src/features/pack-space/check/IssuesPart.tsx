@@ -22,6 +22,7 @@ import { CheckFailure } from "./CheckFailure";
 import { Coverage } from "./Coverage";
 import { FindingGroups } from "./Findings";
 import { Notice } from "./Notice";
+import { plainFinding } from "../plain/findings";
 import { useCheckEnv } from "./useCheckEnv";
 
 /** Фильтры и поиск нужны, когда находок много: до этого они только мешают. */
@@ -38,7 +39,7 @@ export const IssuesPart = () => {
   const { t } = useTranslation("packSpace");
   const env = useCheckEnv();
   const { selection } = useSpace();
-  const { workspaceId, ref, released } = env;
+  const { workspaceId, ref, released, naming } = env;
   const [textsAsked, setTextsAsked] = useState(false);
   const [severity, setSeverity] = useState<Severities>("all");
   const [query, setQuery] = useState("");
@@ -74,15 +75,19 @@ export const IssuesPart = () => {
             (item) => `${item.section}:${item.id}` === selection,
           )) &&
         (needle === "" ||
-          [
-            finding.rule_id,
-            finding.message,
-            finding.hint ?? "",
-            finding.file ?? "",
-            ...finding.elements.map((item) => `${item.section} ${item.id}`),
-          ].some((text) => text.toLocaleLowerCase().includes(needle))),
+          (() => {
+            const plain = plainFinding(finding, naming, t);
+            return [
+              plain.title,
+              plain.how,
+              finding.file ?? "",
+              ...finding.elements.map((item) =>
+                naming.element(item.section, item.id),
+              ),
+            ];
+          })().some((text) => text.toLocaleLowerCase().includes(needle))),
     );
-  }, [findings, severity, query, selectedOnly, selection]);
+  }, [findings, severity, query, selectedOnly, selection, naming, t]);
   const groups = SEVERITIES.flatMap((level) => {
     const items = shownItems.filter((item) => item.finding.severity === level);
     return items.length > 0 ? [{ severity: level, items }] : [];
@@ -258,7 +263,9 @@ export const IssuesPart = () => {
                     setSelectedOnly(event.target.checked);
                   }}
                 />
-                {t("check.issues.selectedOnly", { id: element.id })}
+                {t("check.issues.selectedOnly", {
+                  name: naming.element(element.section, element.id),
+                })}
               </label>
             )}
           </div>

@@ -8,11 +8,12 @@ import {
   usePackSignatures,
 } from "@entities/pack-studio";
 import { Button, EmptyState, ErrorState, Spinner } from "@shared/ui";
-import { Notice } from "@shared/ui/ConflictKit";
 import { useSpace } from "../../context/SpaceContext";
 import { useSituation } from "../../context/useSituation";
 import { useSpaceNav } from "../../context/useSpaceNav";
 import type { DocumentSegmentProps } from "../contract";
+import { failureInput } from "../../plain/failure";
+import { PlainFailureNotice } from "../../plain/PlainFailureNotice";
 import { useContentNav } from "../useContentNav";
 import { PlacesEditor } from "./PlacesEditor";
 import { useDocumentPdf } from "./useDocumentPdf";
@@ -159,25 +160,16 @@ const WithPdf = ({
       );
     case "failed":
       return (
-        <div data-testid="ct-sg-failed">
-          <Notice
-            tone="err"
-            role="alert"
-            text={
-              <span>
-                <b>{t("content.signatures.failed")}</b>{" "}
-                {pdf.error !== null
-                  ? packErrorText(pdf.error)
-                  : (pdf.build?.error?.detail ?? "")}
-              </span>
-            }
-            action={
-              <Button size="xs" variant="secondary" onClick={pdf.retry}>
-                {t("content.signatures.retry")}
-              </Button>
-            }
-          />
-        </div>
+        <PlainFailureNotice
+          testId="ct-sg-failed"
+          lead={t("content.signatures.failed")}
+          input={failureInput(pdf.error, pdf.build?.error)}
+          action={
+            <Button size="xs" variant="secondary" onClick={pdf.retry}>
+              {t("content.signatures.retry")}
+            </Button>
+          }
+        />
       );
     case "ready":
       return (
