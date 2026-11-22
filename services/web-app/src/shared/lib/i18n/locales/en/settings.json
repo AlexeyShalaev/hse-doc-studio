@@ -561,7 +561,7 @@
   },
   "packStudio": {
     "title": "Template Studio",
-    "lead": "Template author tools: edit packs in an editor with checks, in workspaces over a packs git repository or a folder on disk.",
+    "lead": "Template author tools: the result for a student, editing templates in an editor with checks, in spaces from a git repository or a folder on disk.",
     "toggle": "Template author tools",
     "toggleHint": "A “Template Studio” button appears in the header. Projects are not affected.",
     "locked": "Set when the Studio started (an environment variable or the Template Studio profile).",
