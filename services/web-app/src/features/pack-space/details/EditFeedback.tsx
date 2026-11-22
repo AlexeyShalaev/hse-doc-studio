@@ -1,8 +1,8 @@
 import { Redo2, Undo2, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { packErrorText } from "@entities/pack-studio";
-import type { RuleEdit } from "@features/pack-outcome/lib/edit/plan";
-import { tallyDelta } from "@features/pack-outcome/lib/edit/delta";
+import type { RuleEdit } from "./edit/model/plan";
+import { tallyDelta } from "./edit/model/delta";
 import type { ConditionEdit } from "./edit/useConditionEdit";
 
 /** Сколько изменившихся строк видно сразу. */

@@ -1,7 +1,5 @@
 import type {
   PackLocalizedList,
-  PackVersionNumbers,
-  PackVersionReason,
   PackVersionState,
   UpdateClass,
 } from "@entities/pack-studio";
@@ -42,12 +40,6 @@ export const notesParallel = (notes: PackLocalizedList): boolean =>
 export const currentClass = (state: PackVersionState): UpdateClass | null =>
   state.by_number ?? state.minimum;
 
-/** Номер, предложенный для класса: свой, если подходит, иначе следующий свободный. */
-export const numberFor = (
-  numbers: PackVersionNumbers,
-  cls: UpdateClass,
-): string | null => numbers[cls];
-
 /**
  * Нужно ли объяснение класса (`release.note`): номер мягче того, что предлагают
  * мягкие правила классификатора (template-studio.md, 7.2), но не мягче минимума.
@@ -60,20 +52,4 @@ export const needsNote = (state: PackVersionState): boolean => {
     isSofter(chosen, state.suggested) &&
     (state.minimum === null || !isSofter(chosen, state.minimum))
   );
-};
-
-/**
- * Куда ведёт причина класса: файл версии (`files/...`, `checks[x]`) или её
- * манифест (`version.yaml`) для путей модели.
- */
-export const reasonTarget = (
-  versionDir: string,
-  reason: PackVersionReason,
-): string => {
-  if (reason.path.startsWith("files/") || reason.path.startsWith("checks/")) {
-    return `${versionDir}/${reason.path}`;
-  }
-  const check = /^checks\[([^\]]+)\]/.exec(reason.path);
-  if (check?.[1]) return `${versionDir}/checks/${check[1]}`;
-  return `${versionDir}/version.yaml`;
 };

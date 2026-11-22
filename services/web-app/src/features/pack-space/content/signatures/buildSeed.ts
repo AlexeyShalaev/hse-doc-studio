@@ -3,7 +3,7 @@ import type { PreviewRunnerSeed } from "@features/pack-preview";
 import {
   INPUTS_SOURCE,
   previewTarget,
-} from "@features/pack-outcome/lib/previewRequest";
+} from "@features/pack-preview/lib/previewRequest";
 
 // Готовая сборка документа, подложенная до первого кадра: только для галереи и тестов, где сервера
 // нет. Рабочий экран сюда ничего не кладёт и собирает PDF сам (`useDocumentPdf`).

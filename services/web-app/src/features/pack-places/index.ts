@@ -1,5 +1,3 @@
-export { PackPlacesEditor } from "./ui/PackPlacesEditor";
-export type { PackPlacesEditorProps } from "./ui/PackPlacesEditor";
 // Модель мест (чистые функции): новый экран «Содержимое, Подписи» строит свой редактор на ней.
 export {
   bindingOf,

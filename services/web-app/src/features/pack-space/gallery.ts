@@ -12,9 +12,9 @@ const modules = import.meta.glob<{ galleryEntries: GalleryEntry[] }>(
 export const getPackSpaceGallery = (): GalleryGroup[] => [
   {
     id: "pack-space",
-    title: "Студия шаблонов: новый интерфейс",
+    title: "Студия шаблонов: экраны пространства",
     description:
-      "Каркас и области нового вида Студии (`?ux=2`): светлая и тёмная темы, десктоп, планшет, телефон.",
+      "Каркас и области экрана пространства: светлая и тёмная темы, десктоп, планшет, телефон.",
     entries: Object.keys(modules)
       .sort()
       .flatMap((path) => modules[path]?.galleryEntries ?? []),

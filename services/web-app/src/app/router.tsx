@@ -66,7 +66,6 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
             { getSigningPageGallery },
             { getCheckpointDeadlineGallery },
             { getPackStudioGallery },
-            { getPackOutcomeGallery },
             { getPackSpaceGallery },
             demo,
           ] = await Promise.all([
@@ -80,7 +79,6 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
             import("@pages/SigningPage/gallery"),
             import("@features/checkpoint-deadline/gallery"),
             import("@pages/PackStudioPage/gallery"),
-            import("@features/pack-outcome/gallery"),
             import("@features/pack-space/gallery"),
             import("./demo"),
             loadSigningNamespace(),
@@ -128,11 +126,7 @@ const devRoutes: RouteObject[] = import.meta.env.DEV
             {
               id: "pack-studio",
               title: "Студия шаблонов",
-              groups: [
-                ...getPackStudioGallery(),
-                ...getPackOutcomeGallery(),
-                ...getPackSpaceGallery(),
-              ],
+              groups: [...getPackStudioGallery(), ...getPackSpaceGallery()],
             },
           ];
           // Серверные записи ходят в демо-мир, даже если приложение запущено без него.

@@ -22,11 +22,8 @@ import { SpaceScreen } from "../shell/SpaceScreen";
 import { defineSpaceSlots } from "../shell/spaceSlots";
 import { DetailsPanel } from "./DetailsPanel";
 import { feedKey, writeEditFeed } from "./edit/editFeed";
-import {
-  pushEdit,
-  emptyHistory,
-} from "@features/pack-outcome/lib/edit/history";
-import type { RuleEdit } from "@features/pack-outcome/lib/edit/plan";
+import { pushEdit, emptyHistory } from "./edit/model/history";
+import type { RuleEdit } from "./edit/model/plan";
 
 // Галерея «Подробностей» (S7): правая колонка «Результата» на эталонах контракта, без сервера.
 // Результат, вопрос «почему так» и описание версии кладутся в кэш запросов; центр экрана это

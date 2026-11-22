@@ -312,6 +312,22 @@ describe("«Подробности»", () => {
       errors.mockRestore();
     });
 
+    it("«Убрать условие» снимает условие из файла версии, «Отменить» в ленте его возвращает", async () => {
+      mount(`${VKR}/result?${DOC}`);
+      const before = [...kinds("technical_specification")];
+      const form = await openForm();
+      const [remove] = await within(form).findAllByTestId("sp-edit-remove");
+      if (!remove) throw new Error("нет кнопки «Убрать условие»");
+      await userEvent.click(remove);
+      await waitFor(() => {
+        expect(kinds("technical_specification")).toBeUndefined();
+      });
+      await userEvent.keyboard("{Control>}z{/Control}");
+      await waitFor(() => {
+        expect(kinds("technical_specification")).toEqual(before);
+      });
+    });
+
     it("«Готово» закрывает форму, правки остаются", async () => {
       mount(`${VKR}/result?${DOC}`);
       const form = await openForm();

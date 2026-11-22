@@ -6,7 +6,7 @@ import {
   ASSERTION_KINDS,
   assertionKey,
   suggestAssertions,
-} from "@features/pack-outcome/check";
+} from "@entities/pack-studio/outcome/scenarios";
 import { describeExpect, expectKindLabel, type ExpectNames } from "./expect";
 
 /**

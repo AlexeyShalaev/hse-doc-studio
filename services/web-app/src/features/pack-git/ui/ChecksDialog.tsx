@@ -15,7 +15,6 @@ import {
   packErrorText,
   usePackChecks,
   type PackCiCheck,
-  type PackCiStatus,
 } from "@entities/pack-studio";
 import { Button, Modal, Spinner } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
@@ -40,51 +39,6 @@ const CHECK_TONE: Record<PackCiCheck["state"], string> = {
   skipped: "ps-ci-dim",
   cancelled: "ps-ci-dim",
   awaiting_approval: "ps-ci-wait",
-};
-
-const STATE_TONE: Record<PackCiStatus["state"], string> = {
-  none: "ps-ci-dim",
-  pending: "ps-ci-wait",
-  awaiting_approval: "ps-ci-wait",
-  success: "ps-ci-ok",
-  failure: "ps-ci-err",
-  unknown: "ps-ci-dim",
-};
-
-/** Метка статуса проверок в панели git: состояние одной точкой и словом. */
-export const CiBadge = ({
-  status,
-  loading,
-  onClick,
-}: {
-  status: PackCiStatus | undefined;
-  loading: boolean;
-  onClick: () => void;
-}) => {
-  const { t } = useTranslation("packStudio");
-  const state = status ? (status.available ? status.state : "unknown") : null;
-  return (
-    <button
-      type="button"
-      className={clsx(
-        "ps-git-chip ps-git-chip-btn",
-        state && STATE_TONE[state],
-      )}
-      onClick={onClick}
-      data-testid="git-ci"
-      data-state={state ?? "loading"}
-      title={t("git.ci.open")}
-    >
-      {loading && !status ? (
-        <Spinner size="sm" />
-      ) : (
-        <span className="ps-ci-dot" aria-hidden="true" />
-      )}
-      <span className="ps-hide-phone">
-        {state ? t(`git.ci.state.${state}`) : t("git.ci.loading")}
-      </span>
-    </button>
-  );
 };
 
 export type ChecksDialogProps = {

@@ -3,7 +3,7 @@ import {
   usePackOutcomeInputs,
   type OutcomeElementRef,
 } from "@entities/pack-studio";
-import { useLabeler } from "@features/pack-outcome/check";
+import { useLabeler } from "@entities/pack-studio/outcome/useLabeler";
 import { useSpace } from "../context/SpaceContext";
 import { useSituation } from "../context/useSituation";
 import { useSpaceNav } from "../context/useSpaceNav";

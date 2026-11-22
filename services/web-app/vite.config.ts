@@ -158,9 +158,17 @@ export default defineConfig(({ mode }) => {
             if (id.endsWith("/src/pages/PackStudioPage/index.ts")) {
               return "assets/pack-studio-app-[hash].js";
             }
-            // Новый интерфейс Студии шаблонов (флаг `?ux=2`, срез S0): свой чанк, старый вид его не грузит.
+            // Экраны пространства Студии шаблонов (pages/PackStudioPage/space): свой чанк.
             if (id.endsWith("/src/pages/PackStudioPage/space/index.ts")) {
               return "assets/pack-space-[hash].js";
+            }
+            // Блок «Что изменится у студентов» панели «Изменения»: свой чанк и свой бюджет.
+            if (
+              id.endsWith(
+                "/src/features/pack-space/changes/impact/ImpactBlock.tsx",
+              )
+            ) {
+              return "assets/impact-[hash].js";
             }
             // Ленивые части областей нового интерфейса (slots.tsx кладёт их через lazy()): чанк
             // называется по области, чтобы бюджет `pack-space-*` видел их все.
@@ -170,31 +178,9 @@ export default defineConfig(({ mode }) => {
             if (spaceArea) {
               return `assets/pack-space-${spaceArea[1] ?? ""}-[name]-[hash].js`;
             }
-            // Экран «Результат» Студии шаблонов (срез F1): грузится с первым входом в пространство.
-            if (id.endsWith("/src/features/pack-outcome/index.ts")) {
-              return "assets/pack-outcome-[hash].js";
-            }
-            // Режимы «Матрица», «Атлас», «Сравнить» экрана «Результат» (срез F9): открывают реже результата.
-            if (id.endsWith("/src/features/pack-outcome/modes/index.ts")) {
-              return "assets/pack-outcome-modes-[hash].js";
-            }
-            // Режим «Проверка» экрана «Результат» (срез F11): линтер результата и покрытие, открывают редко.
-            if (id.endsWith("/src/features/pack-outcome/lint/index.ts")) {
-              return "assets/pack-outcome-lint-[hash].js";
-            }
             // Формы манифестов Студии шаблонов (срезы T11-T14): грузятся вкладкой «Форма».
             if (id.endsWith("/src/features/pack-submission-form/index.ts")) {
               return "assets/pack-submission-form-[hash].js";
-            }
-            // Мини-форма правила и полоса правок экрана «Результат» (срез F7): грузятся по требованию.
-            if (
-              id.endsWith("/src/features/pack-outcome/ui/edit/EditPanels.tsx")
-            ) {
-              return "assets/outcome-edit-[hash].js";
-            }
-            // Мини-форма одной записи (правка по месту на экране «Результат», срез F7).
-            if (id.endsWith("/src/features/pack-forms/rule.ts")) {
-              return "assets/pack-rule-form-[hash].js";
             }
             if (id.endsWith("/src/features/pack-checks-form/index.ts")) {
               return "assets/pack-checks-form-[hash].js";

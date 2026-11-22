@@ -5,8 +5,8 @@
       "date": "2026-11-22",
       "notes": [
         {
-          "ru": "Студия паков: новый интерфейс, переделанный с нуля. Пока он включается по ссылке: добавьте ?ux=2 к адресу Студии паков, выбор запоминается, а ?ux=1 возвращает прежний вид. Вместо россыпи переключателей у пространства три вкладки: «Результат», «Содержимое», «Проверка», одна главная кнопка следующего шага и кнопка «Изменения» со статусом правок. При входе открывается версия с вашими правками, затем последняя открытая, затем версия по умолчанию.",
-          "en": "Pack Studio: a new interface rebuilt from scratch. For now it is turned on by a link: add ?ux=2 to the Pack Studio address, the choice is remembered, and ?ux=1 brings back the previous view. Instead of many switches, a space has three tabs, Result, Content and Check, one main button for the next step and a Changes button with the status of your edits. On entry the version with your edits opens first, then the last visited one, then the default version."
+          "ru": "Студия паков: новый интерфейс, переделанный с нуля. Вместо россыпи переключателей у пространства три вкладки: «Результат», «Содержимое», «Проверка», одна главная кнопка следующего шага и кнопка «Изменения» со статусом правок. При входе открывается версия с вашими правками, затем последняя открытая, затем версия по умолчанию.",
+          "en": "Pack Studio: a new interface rebuilt from scratch. Instead of many switches, a space has three tabs, Result, Content and Check, one main button for the next step and a Changes button with the status of your edits. On entry the version with your edits opens first, then the last visited one, then the default version."
         },
         {
           "ru": "Новый интерфейс, «Результат»: полоса «Для какого студента» заменила панель вводных. В центре части результата с оглавлением, блок «Не вошло» с причинами и подсветка того, что поменялось после смены студента. Панель «Подробности» объясняет предложениями, почему элемент такой, и показывает, что изменится, если поменять условие. Условие правится прямо на месте, с лентой правок и откатом.",

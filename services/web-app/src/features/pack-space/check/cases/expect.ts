@@ -1,6 +1,6 @@
 import type { TFunction } from "i18next";
 import type { PackOutcome, ScenarioAssertion } from "@entities/pack-studio";
-import type { AssertionKind } from "@features/pack-outcome/check";
+import type { AssertionKind } from "@entities/pack-studio/outcome/scenarios";
 import { pickLocalized } from "@shared/lib/i18n/pickLocalized";
 import type { Naming } from "../../plain/naming";
 

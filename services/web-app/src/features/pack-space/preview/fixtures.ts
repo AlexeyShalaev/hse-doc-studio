@@ -17,7 +17,7 @@ import {
   previewTarget,
   runKeyOf,
   INPUTS_SOURCE,
-} from "@features/pack-outcome/lib/previewRequest";
+} from "@features/pack-preview/lib/previewRequest";
 import { GALLERY_REF, GALLERY_WORKSPACE } from "../galleryKit";
 import { seedPreviewBuild } from "./buildSeed";
 

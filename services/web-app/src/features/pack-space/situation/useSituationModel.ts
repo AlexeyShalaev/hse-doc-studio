@@ -12,13 +12,13 @@ import {
   baselineOf,
   exampleDefaultsOf,
   withValue,
-} from "@features/pack-outcome/lib/inputs";
+} from "@entities/pack-studio/outcome/inputs";
 import {
   badgeOf,
   resultsById,
   scenarioName,
   type ScenarioBadge,
-} from "@features/pack-outcome/lib/scenarios";
+} from "@entities/pack-studio/outcome/scenarios";
 import { useSpace } from "../context/SpaceContext";
 import { useSituation } from "../context/useSituation";
 import { deltaStore } from "./deltaStore";

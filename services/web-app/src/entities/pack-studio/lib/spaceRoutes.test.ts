@@ -1,4 +1,11 @@
 import { describe, expect, it } from "vitest";
+import {
+  packFilesPath,
+  packNewVersionPath,
+  packOutcomePath,
+  packRulePath,
+  packWorkspacePath,
+} from "./routes";
 import { isSpaceTab, legacyToSpace, spacePath } from "./spaceRoutes";
 
 const WS = "w1";
@@ -78,9 +85,49 @@ describe("перенаправления: старый адрес, новый а
       "/pack-studio/w/a%20b/result/p/t/2026.1.2",
       "/pack-studio/w/a%20b/t/p/t/2026.1.2/result",
     ],
+    // Флаг `ux` из 0.38.0 ничего не значит: отбрасывается.
+    [`${RESULT}?ux=1&view=atlas`, `${NEW}/check?part=map`],
+    [`${BASE}?ux=2&view=files`, `${FB}/content?part=files`],
   ];
   it.each(table)("%s -> %s", (from, to) => {
     expect(toNew(from, from.includes("a%20b") ? "a b" : WS)).toBe(to);
+  });
+
+  // Ссылки прежнего вида строили эти функции (письма, закладки, «Назад к результату»): каждая
+  // доходит до своего экрана.
+  it("адреса функций прежнего вида ведут на свой экран", () => {
+    const ref = { pack: "hse-cs-se", template: "vkr", version: "2026.1.2" };
+    const enc = encodeURIComponent(FILE);
+    expect(toNew(packWorkspacePath(WS))).toBe(`${FB}/result`);
+    expect(toNew(packWorkspacePath(WS, FILE))).toBe(
+      `${NEW}/content?file=${enc}`,
+    );
+    expect(toNew(packFilesPath(WS))).toBe(`${FB}/content?part=files`);
+    expect(toNew(packOutcomePath(WS, ref, "selected=documents%3Ats"))).toBe(
+      `${NEW}/result?sel=documents%3Ats`,
+    );
+    expect(toNew(packOutcomePath(WS, null))).toBe(`${FB}/result`);
+    expect(
+      toNew(
+        packRulePath(WS, FILE, {
+          pointer: "/supported_kinds",
+          pane: "form",
+          from: packOutcomePath(WS, ref),
+        }),
+      ),
+    ).toBe(
+      `${NEW}/content?file=${enc}&at=%2Fsupported_kinds&pane=form&from=${encodeURIComponent(packOutcomePath(WS, ref))}`,
+    );
+    const copy = legacyToSpace(
+      WS,
+      ...(packNewVersionPath(WS, ref).split("?") as [string, string]),
+    );
+    expect(copy).toMatchObject({
+      ref: null,
+      template: { pack: "hse-cs-se", template: "vkr" },
+      tab: "result",
+      search: "copy=1",
+    });
   });
 
   it("корень пространства без параметров: вход выбирает версию и вкладку сам", () => {

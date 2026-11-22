@@ -15,8 +15,8 @@ import {
   type PackScenarioEntry,
   type PackScenarioRunResult,
 } from "@entities/pack-studio";
+import { ChangeList } from "../compare/ChangeList";
 import {
-  ChangeList,
   SCENARIO_LANGS,
   badgeOf,
   formOf,
@@ -25,7 +25,7 @@ import {
   scenarioName,
   type ScenarioBadge,
   type ScenarioForm,
-} from "@features/pack-outcome/check";
+} from "@entities/pack-studio/outcome/scenarios";
 import { Modal } from "@shared/ui";
 import { useCopyVersion } from "../../next-step/useCopyVersion";
 import { useNaming } from "../../plain/useNaming";

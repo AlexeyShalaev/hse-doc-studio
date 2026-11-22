@@ -56,6 +56,8 @@ export type ChangesPanelProps = {
   impact?: ReactNode;
   /** Сообщение сверху (например, отказ «Забрать новое»). */
   notice?: ReactNode;
+  /** «Перенести правки в новую версию» (`MoveEditsNotice`): и у git, и у папки на диске. */
+  moveEdits?: ReactNode;
   /**
    * Место для S4. Действие у строки «нужны заметки» (кнопка «Написать»), раздел отправки между
    * проверками и подвалом и главная кнопка подвала. Пока S4 нет, они пусты.
@@ -505,6 +507,7 @@ export const ChangesPanel = ({
   onGoCheck,
   impact,
   notice,
+  moveEdits,
   notesAction,
   submit,
   primary,
@@ -540,6 +543,7 @@ export const ChangesPanel = ({
   } else if (status.workspaceKind === "folder") {
     body = (
       <>
+        {moveEdits}
         <Banner
           icon={<Folder size="1rem" aria-hidden="true" />}
           testId="sp-ch-folder"
@@ -586,6 +590,7 @@ export const ChangesPanel = ({
     body = (
       <>
         {notice}
+        {moveEdits}
         {status.behind > 0 &&
           (request.kind === "none" || request.kind === "open") && (
             <Banner

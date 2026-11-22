@@ -2,44 +2,10 @@
   "title": "Outcome",
   "skip": "Skip to the outcome",
   "loading": "Loading the outcome",
-  "regions": {
-    "inputs": "Inputs",
-    "result": "Outcome",
-    "rules": "Rules and reasons"
-  },
   "bar": {
-    "label": "Outcome settings",
-    "pack": "Pack",
-    "template": "Template",
-    "version": "Version",
-    "scenario": "Scenario",
-    "noScenario": "No scenario (free inputs)",
-    "noScenarios": "No scenarios yet",
-    "scenarioBroken": "{{name}} (invalid inputs)",
-    "scenarioMissing": "{{id}} (not in the template)",
-    "mode": "Mode",
-    "modeAuthor": "Author",
-    "modeStudent": "As a student",
-    "state": "Outcome from",
     "stateWorkTree": "Working tree",
     "stateHead": "Last commit",
-    "stateBase": "Base",
-    "files": "Files",
-    "filesMode": "Files mode",
-    "filesModeHint": "File tree, editor and preview",
-    "released": "The version is released and cannot be edited: create a new one.",
-    "releasedMark": "Version released",
-    "reference": "Data from reference fixtures",
-    "modeHint": "Hold Alt to see the author view",
-    "modePeek": "Alt is held: the author view is shown",
-    "modeNoteStudent": "Mode \"As a student\": showing what the student will see.",
-    "modeNoteAuthor": "Mode \"Author\": reasons and rules are shown.",
-    "propose": "Propose",
-    "proposeHint": "Propose changes: checks, commit, push and a PR",
-    "proposeLint": "Pack checks failed: {{count}} findings. Fix them in Files mode.",
-    "proposeLintOpen": "Open files",
-    "proposeLintTitle": "Pack checks failed",
-    "proposeLintClose": "Close"
+    "stateBase": "Base"
   },
   "status": {
     "saved": "Saved",
@@ -145,18 +111,12 @@
     "impact": "Impact: \"{{name}}\""
   },
   "result": {
-    "documents_one": "{{count}} document",
-    "documents_other": "{{count}} documents",
     "signers_one": "{{count}} signer",
     "signers_other": "{{count}} signers",
-    "summary": "In the set: {{documents}}, {{signers}}",
-    "announce": "Documents in the set: {{active}} of {{total}}, signers: {{signers}}",
     "sections": "Outcome sections",
     "emptyTitle": "The version has no documents",
     "emptyLead": "Add a document in the version form and the outcome will appear here.",
-    "emptyAction": "Open the version form",
-    "stale": "The previous outcome is shown: the new one could not be loaded.",
-    "updating": "Updating"
+    "stale": "The previous outcome is shown: the new one could not be loaded."
   },
   "filters": {
     "search": "Search",
@@ -325,53 +285,6 @@
     "extraFrom": "from {{source}}",
     "noItems": "The checkpoint has no items."
   },
-  "route": {
-    "stats": {
-      "points": "Checkpoints with signatures",
-      "steps": "Steps",
-      "pairs": "Signatures",
-      "skipped": "Skipped",
-      "mayAdd": "Can be added"
-    },
-    "filterPoint": "Checkpoint",
-    "filterAll": "All checkpoints",
-    "empty": "The version has no checkpoints, so there is no route.",
-    "order": "Order:",
-    "orderSource": {
-      "profile": "from the checkpoint",
-      "version": "from the version",
-      "builtin": "built in"
-    },
-    "preset": "route preset",
-    "stepsLabel": "Route steps of checkpoint \"{{point}}\"",
-    "step": "Step {{n}}",
-    "parallel": "in parallel",
-    "noName": "not set",
-    "noPerson": "step without a person",
-    "pairs": "Signatures by document",
-    "pairsLabel": "Signatures of document \"{{doc}}\"",
-    "source": {
-      "point": "from the checkpoint",
-      "preset": "from the preset"
-    },
-    "optional": "Optional",
-    "whenSet": "if {{person}} is set",
-    "whenOrg": "if {{person}} is from {{org}}",
-    "orgOf": {
-      "university": "HSE",
-      "company": "the company"
-    },
-    "skippedBlock": "Skipped by a condition",
-    "skippedPrefix": "skipped:",
-    "skippedUnknown": "the slot condition is not met",
-    "mayAddBlock": "Can be added when the project is created",
-    "mayAddLead": "The project author will turn these signatures on.",
-    "noRouteBlock": "Checkpoints without signatures",
-    "noRouteLead": "These checkpoints need no signatures.",
-    "warnTitle": "No person for a route step",
-    "warnStep": "Point \"{{point}}\", step {{step}}: {{who}} is not set",
-    "emptySteps": "No steps"
-  },
   "reasons": {
     "unset": "not set",
     "orgOf": "{{subject}} organization",
@@ -429,31 +342,6 @@
     }
   },
   "rules": {
-    "title": "Rules and reasons",
-    "emptyTitle": "No element selected",
-    "emptyLead": "Pick a document, field, participant, point or route step to see why it is the way it is.",
-    "selected": "Selected element",
-    "section": "Section",
-    "clear": "Clear selection",
-    "studentHidden": "Rules are hidden in the \"As a student\" mode.",
-    "kind": {
-      "document": "Document",
-      "meta": "Project field",
-      "form": "Form",
-      "form_field": "Form field",
-      "participant": "Participant",
-      "point": "Submission point",
-      "point_item": "Point item",
-      "point_extra": "Point extra file",
-      "route": "Point route",
-      "route_step": "Route step",
-      "route_pair": "Document and slot pair",
-      "route_skipped": "Skipped pair",
-      "check": "Check rule",
-      "unknown": "Element"
-    },
-    "inPoint": "in point \"{{point}}\"",
-    "stepTitle": "Step {{n}}, {{point}}",
     "state": {
       "active": "in the bundle",
       "inactive": "switched off",
@@ -497,8 +385,6 @@
     "joinAll": ", and ",
     "joinAny": ", or ",
     "noTerms": "No conditions: the rule sets an order.",
-    "skippedNote": "Not checked: the outcome was decided earlier.",
-    "now": "Now:",
     "inEngine": "in the engine",
     "builtin": {
       "nda_gate": "The NDA rule is built into the engine: a document is switched off when the project has an NDA. It can be moved to the manifest later.",
@@ -507,74 +393,11 @@
       "builtin_route": "The built-in signing order: neither the version nor the point set its own.",
       "other": "The rule is built into the engine and has no file."
     },
-    "openRule": "Open rule",
-    "openSource": "Source",
-    "chain": {
-      "title": "Rule chain",
-      "empty": "This element has no rules of its own.",
-      "emptyDepends": "Its state is changed by the inputs under \"What if\".",
-      "emptyStatic": "It does not depend on the inputs."
-    },
-    "stepNote": "A step's chain is the route order and the decisions about the document and slot pairs of its people.",
-    "readers": {
-      "title": "What else this rule decides",
-      "lead": "Other elements the same decisions talk about.",
-      "more_one": "Show {{count}} more",
-      "more_other": "Show {{count}} more",
-      "less": "Collapse"
-    },
-    "whatIf": {
-      "title": "What changes if...",
-      "if": "If \"{{input}}\": {{value}}",
-      "current": "(now {{value}})",
-      "then": "Element:",
-      "applied": "Applied: \"{{input}}\": {{value}}.",
-      "restore": "Undo",
-      "none": "No input changes this element."
-    },
-    "busy_one": "The server is busy, retrying in {{count}} second.",
-    "busy_other": "The server is busy, retrying in {{count}} seconds.",
-    "busyFailed": "The server is busy, the reason did not load",
-    "failed": "Could not load the reason",
-    "announce": {
-      "loaded": "Reason loaded: {{title}}",
-      "failed": "Could not load the reason"
-    },
-    "impact": {
-      "kind": "Input impact",
-      "wait": "Loading inputs and the outcome...",
-      "unknown": "This version has no such input.",
-      "inert": "This input affects nothing: no section of the outcome changes with it.",
-      "elements_one": "Affects {{count}} element",
-      "elements_other": "Affects {{count}} elements",
-      "sections_one": "in {{count}} section",
-      "sections_other": "in {{count}} sections",
-      "rulesRead": "read by {{count}} rules",
-      "noLinks": "In this combination the input's decisions are tied to no element. It changes the sections: {{sections}}.",
-      "rules": "Rules that read it",
-      "rulesHere": "{{here}} of {{total}} fired in this combination."
-    },
-    "editRule": "Edit rule"
-  },
-  "footer": {
-    "note": "A calculation on test data, nothing is sent.",
-    "outOfScope": "Not covered: {{items}}",
-    "scope": {
-      "python_checks": "Python checks",
-      "signature_anchors": "signature places by PDF anchors",
-      "tex_content": "TeX content",
-      "jinja_content": "Jinja content"
-    }
+    "openRule": "Open rule"
   },
   "errors": {
     "title": "Could not get the outcome",
-    "reason": "Reason: {{reason}}",
-    "openSource": "Open the source",
-    "openFiles": "Open files",
-    "workTree": "Back to the working tree",
-    "versionMissingTitle": "Version not found",
-    "versionMissingLead": "The workspace has no version {{version}} of the {{template}} template. Pick another one in the version list.",
-    "treeFailed": "Could not load the workspace tree"
+    "reason": "Reason: {{reason}}"
   },
   "drawer": {
     "title": "Files",
@@ -611,207 +434,11 @@
       "run_error": "Run fails"
     }
   },
-  "checks": {
-    "scopeTitle": "Only which rules apply, not their results",
-    "scopeLead": "Check results (findings) are not part of the instant calculation: this shows which rules apply to the documents of the set. Findings are visible in the preview.",
-    "scopeMissing": "Not counted here: {{items}}.",
-    "pythonHint": "Python rule: runs only at build time, not part of the instant calculation",
-    "engine": "Engine:",
-    "severity": {
-      "err": "Error",
-      "warn": "Warning",
-      "info": "Notice"
-    },
-    "off": {
-      "prefix": "not applied:",
-      "disabled": "the rule is turned off in the check settings",
-      "category_disabled": "category \"{{category}}\" is turned off",
-      "no_active_document": "no such document in the set ({{documents}})"
-    },
-    "offGroup": {
-      "disabled": "Turned off in settings",
-      "category_disabled": "Category turned off",
-      "no_active_document": "Document not in the set"
-    },
-    "offBlock": "Not applied in this combination",
-    "layer": "Layer:",
-    "layerNone": "no layer",
-    "noDocument": "No document given",
-    "stats": {
-      "enabled": "Apply",
-      "off": "Not applied",
-      "python": "Python"
-    },
-    "filterSeverity": "Severity",
-    "filterEngine": "Engine",
-    "filter": {
-      "all": "All"
-    },
-    "noneApplicable": "No rule applies to the documents of this combination.",
-    "unavailableTitle": "The server returned no rules",
-    "unavailableLead": "The response came without check rules. Recalculate.",
-    "emptyTitle": "The version has no check rules",
-    "emptyLead": "Add check rules in the version's checks form."
-  },
   "part": {
     "failed": "Could not load the \"{{name}}\" section",
     "failedStale": "Could not refresh the \"{{name}}\" section: showing the previous data"
   },
-  "branches": {
-    "variantsTitle": "Document variants",
-    "variantsEmpty": "The documents of this combination have no variants.",
-    "variantChosen": "chosen",
-    "variantLang": "Unavailable variants exist only for a language other than {{lang}}.",
-    "showThis": "Show: {{label}}",
-    "showVariant": "Show the result with variant \"{{label}}\" for \"{{name}}\"",
-    "languageTitle": "Edition language and fallbacks",
-    "languageLead": "Project language: {{lang}}. A document with no edition in it uses the template's default language.",
-    "fallbackBadge": "falls back to another language",
-    "fallbackEmpty": "Every document has an edition in the project language.",
-    "whatIfTitle": "What changes with another choice",
-    "alternatives": "Values of the input \"{{name}}\"",
-    "current": "current",
-    "noChange": "no change",
-    "show": "Show these inputs",
-    "showInput": "Show the result where \"{{name}}\" is \"{{value}}\"",
-    "delta": {
-      "added": "added: {{count}}",
-      "changed": "changed: {{count}}",
-      "removed": "removed: {{count}}"
-    },
-    "unavailableTitle": "The server returned no branches",
-    "unavailableLead": "The response came without input details. Recalculate.",
-    "emptyTitle": "The result does not depend on the inputs",
-    "emptyLead": "No input changes the set, the participants, the points or the route.",
-    "filterAffects": "Changes",
-    "filter": {
-      "all": "All sections"
-    },
-    "stats": {
-      "inputs": "Inputs that change the result",
-      "alternatives": "Other values",
-      "same": "No change",
-      "variants": "Documents with variants",
-      "fallback": "Language fallbacks"
-    },
-    "workspace": {
-      "title": "Workspace branch",
-      "branch": "Work branch",
-      "base": "Base",
-      "drift": "Relative to base",
-      "driftValue": "ahead by {{ahead}}, behind by {{behind}}",
-      "uncommitted": "Unsaved edits",
-      "state": "Result computed from",
-      "fingerprint": "Result fingerprint",
-      "noBranch": "none",
-      "noGit": "Git state not received yet",
-      "folder": "A folder workspace without git: there is no branch or base, the result is computed from the working tree.",
-      "compareNote": "The same fingerprint on a branch and on the base means the same result. The counts and fingerprints below are per section: compare them by switching \"Outcome from\" at the top."
-    }
-  },
   "scenarios": {
-    "loading": "Loading scenarios...",
-    "loadFailed": "Could not load the scenarios",
-    "loadFailedShort": "Scenarios did not load",
-    "running": "Running scenarios...",
-    "runAll": "Run all",
-    "runFailed": "Could not run the scenarios",
-    "list": "Template scenarios",
-    "panelLabel": "Scenario picker",
-    "chip": "{{bad}} of {{total}}",
-    "chipTitle": "Not matching expectations: {{bad}} of {{total}}",
-    "saveAs": "Save as scenario",
-    "manage": "Manage",
-    "readOnlyState": "Scenarios can be edited only when the result is read from the working tree",
-    "readOnlyStudent": "Scenarios cannot be edited in the \"As a student\" mode",
-    "save": "Save",
-    "saving": "Saving...",
-    "cancel": "Cancel",
-    "close": "Close",
-    "undo": "Undo",
-    "saved": "Scenario \"{{name}}\" saved",
-    "inputsSaved": "Inputs written to scenario \"{{name}}\"",
-    "deleted": "Scenario \"{{name}}\" deleted",
-    "restored": "Scenario \"{{name}}\" restored",
-    "accepted": "Snapshot of scenario \"{{name}}\" updated",
-    "acceptUndone": "Previous snapshot of scenario \"{{name}}\" restored",
-    "copySuffix": "(copy)",
-    "status": {
-      "passed": "Matches",
-      "failed": "Changed",
-      "error": "Error",
-      "unchecked": "No expectations",
-      "broken": "File unreadable",
-      "pending": "Running...",
-      "unknown": "Not run"
-    },
-    "tally": {
-      "passed": "{{count}} passed",
-      "failed": "{{count}} changed",
-      "errors_one": "{{count}} error",
-      "errors_other": "{{count}} errors",
-      "unchecked": "{{count}} without expectations",
-      "broken_one": "{{count}} broken file",
-      "broken_other": "{{count}} broken files"
-    },
-    "empty": {
-      "title": "Create the first scenario from the current inputs",
-      "lead": "A scenario remembers the inputs and the expected result; after a rule edit you see which scenarios drifted. For example:",
-      "exampleCoursework": "Coursework: \"Company supervisor with a co-supervisor\"",
-      "exampleVkr": "Thesis: \"NDA and only the programmer's manual\""
-    },
-    "dialog": {
-      "createTitle": "Save as scenario",
-      "createLead": "The inputs and the example data set come from the screen.",
-      "duplicateTitle": "Duplicate scenario",
-      "duplicateLead": "The copy gets a new file name and the same inputs, snapshot and assertions.",
-      "inputsNote_one": "{{count}} input goes into the file, the rest use their defaults.",
-      "inputsNote_other": "{{count}} inputs go into the file, the rest use their defaults."
-    },
-    "fields": {
-      "name": "Name ({{lang}})",
-      "nameRequired": "Give a name in at least one language",
-      "description": "Description ({{lang}})",
-      "id": "File name",
-      "idHint": "Latin letters, digits and dashes, for example company-supervisor",
-      "idRequired": "Give a file name",
-      "idFormat": "Lowercase Latin letters and digits with single dashes between them, up to 64 characters",
-      "idTaken": "A scenario with this file name already exists",
-      "versions": "Which versions it applies to"
-    },
-    "versions": {
-      "any": "Any version",
-      "this": "Only version {{version}}",
-      "series": "The {{series}} series",
-      "custom": "Custom version patterns",
-      "customLabel": "Version patterns",
-      "customHint": "Comma separated; an asterisk stands for any ending, for example 2026.1.*"
-    },
-    "expect": {
-      "title": "Expected result",
-      "snapshot": "Remember a snapshot of the result",
-      "snapshotHint": "A run shows any difference from the snapshot: it catches everything but is noisy after every edit.",
-      "refresh": "Record the snapshot again from the current result",
-      "assertions": "Assertions: pointed expectations that survive unrelated edits"
-    },
-    "assertions": {
-      "selected_one": "{{count}} assertion selected",
-      "selected_other": "{{count}} assertions selected",
-      "all": "Assert as is",
-      "none": "Clear all",
-      "noResult": "The result is not loaded yet, so there are no ready assertions.",
-      "groupCount": "{{selected}} of {{total}}"
-    },
-    "kind": {
-      "document_state": "Documents",
-      "document_count": "Document count",
-      "participant_present": "Participants",
-      "item_active": "Submission point items",
-      "route_steps": "Route steps",
-      "route_pair": "Signers in the route",
-      "meta_visible": "Field visibility",
-      "snapshot": "Result snapshot"
-    },
     "assertion": {
       "document_state": {
         "active": "Document \"{{doc}}\" is in the set",
@@ -842,38 +469,6 @@
         "no": "Signer \"{{persona}}\" is not in the route: document \"{{doc}}\", slot {{slot}}, point \"{{point}}\""
       }
     },
-    "failure": {
-      "title": "Could not write the scenario",
-      "staleTitle": "The scenario file has changed",
-      "staleLead": "It was edited after you opened it. Refresh to see the current version, or save yours over it.",
-      "missingTitle": "The scenario is gone",
-      "missingLead": "The file was deleted. Refresh the list.",
-      "refresh": "Refresh",
-      "overwrite": "Save over it",
-      "invalid": "The server rejected the scenario: {{reason}}",
-      "taken": "A scenario with this file name already exists.",
-      "takeFree": "Use \"{{id}}\"",
-      "offline": "No connection to the server. The scenario was not written.",
-      "server": "The server could not write the scenario.",
-      "busy": "The server is busy calculating, try again in a moment."
-    },
-    "panel": {
-      "properties": "Scenario properties",
-      "result": "Run result",
-      "brokenTitle": "The scenario file cannot be read",
-      "openFile": "Open the file",
-      "passed": "The result matches the snapshot and the assertions.",
-      "unchecked": "The scenario has no snapshot or assertions, it only shows the result.",
-      "errorTitle": "The scenario does not fit this version",
-      "errorLead": "The scenario inputs cannot be read on this version.",
-      "noRun": "The scenario has not been run yet.",
-      "overridden": "Inputs are changed on the screen: the snapshot is taken from the scenario's own inputs, not the changed ones.",
-      "accept": "Accept the current result as expected",
-      "record": "Record a result snapshot",
-      "acceptHint": "The new snapshot replaces the previous one. You can undo it within ten seconds.",
-      "duplicate": "Duplicate",
-      "delete": "Delete"
-    },
     "diff": {
       "failures": "Differences",
       "snapshot": "Difference from the snapshot",
@@ -886,16 +481,6 @@
       "removed": "Removed",
       "was": "was: {{value}}",
       "now": "now: {{value}}"
-    },
-    "saveInputs": {
-      "title": "Save the inputs into scenario \"{{name}}\"",
-      "lead": "What is changed on the screen goes into the scenario file.",
-      "list": "What changes in the inputs",
-      "added": "{{input}}: value \"{{value}}\" will be added",
-      "changed": "{{input}}: was \"{{before}}\", will be \"{{after}}\"",
-      "example": "Example data set: {{value}}",
-      "refresh": "Update the snapshot for the new inputs",
-      "assertions": "Assertions stay as they are: the run will show which ones stopped holding."
     }
   },
   "pale": {
@@ -907,7 +492,6 @@
   },
   "student": {
     "label": "Student view",
-    "summary": "This is how the student's project looks with the chosen inputs.",
     "optional": "optional",
     "perAuthor": "each author",
     "documents": {
@@ -940,100 +524,7 @@
     }
   },
   "edit": {
-    "title": "Edit the rule",
-    "close": "Close the editor",
-    "undo": "Undo",
-    "redo": "Redo",
-    "undoHint": "Undo the last edit (Ctrl+Z)",
-    "redoHint": "Redo the undone edit (Ctrl+Shift+Z)",
-    "dismiss": "Got it",
-    "loading": "Loading the manifest record",
-    "loadFailed": "Could not read the manifest",
-    "newVersion": "Create a new version",
-    "blocked": {
-      "released": "The version is released and immutable: editing is off.",
-      "state": "Only the working tree can be edited: switch the state to Working tree.",
-      "registry": "Registry releases are read-only."
-    },
-    "removeCondition": "Remove the condition",
-    "delete": {
-      "slot": "Delete the slot",
-      "item": "Delete the item",
-      "extra": "Delete the point file"
-    },
-    "record": {
-      "slot": "signature slot",
-      "item": "point item",
-      "extra": "extra point file",
-      "condition": "condition"
-    },
-    "removed": {
-      "condition": "Condition removed.",
-      "record": "Deleted: {{what}}."
-    },
-    "confirm": {
-      "condition": "Remove the condition?",
-      "record": "Delete the {{what}}?",
-      "noOutcome": "The outcome is not loaded yet, so the number of affected elements is unknown.",
-      "none": "In the current combination of inputs the rule decides no outcome element.",
-      "count_one": "Affects {{count}} outcome element in the current combination.",
-      "count_other": "Affects {{count}} outcome elements in the current combination.",
-      "more_one": "and {{count}} more",
-      "more_other": "and {{count}} more",
-      "scope": "The number comes from the trace of the shown outcome; the server did not compute other input combinations. A deletion can be undone for 10 seconds, then from the edit history.",
-      "yes": "Yes, remove",
-      "no": "Keep it"
-    },
-    "notice": {
-      "driftTitle": "The record changed after this edit",
-      "driftLead": "It was changed outside this screen or by another edit. Undo or redo will overwrite those changes.",
-      "forceUndo": "Undo anyway",
-      "forceRedo": "Redo anyway",
-      "staleTitle": "The file changed while you were editing",
-      "staleLead": "The record was reread from disk. Check the value and repeat the edit.",
-      "missingTitle": "The record is no longer in the manifest",
-      "missingLead": "The manifest was changed outside this screen. The model was reread; choose the element again.",
-      "errorTitle": "The edit was not saved"
-    },
-    "bar": {
-      "label": "Edits on this screen"
-    },
-    "delta": {
-      "same": "The outcome did not change",
-      "dismiss": "Hide the comparison",
-      "title": {
-        "apply": "The outcome changed",
-        "undo": "After the undo the outcome changed",
-        "redo": "After the redo the outcome changed"
-      },
-      "symbol": {
-        "+": "Added",
-        "~": "Changed",
-        "-": "Removed"
-      },
-      "from": "was {{before}}, now {{after}}"
-    },
-    "history": {
-      "title_one": "Edit history ({{count}})",
-      "title_other": "Edit history ({{count}})",
-      "applied": "in effect",
-      "undone": "undone"
-    },
-    "entry": {
-      "set": "{{rule}}: changed",
-      "setAt": "{{rule}} ({{place}}): changed",
-      "remove": "{{rule}}: removed",
-      "removeAt": "{{rule}} ({{place}}): removed",
-      "delete": "Deleted: {{rule}}",
-      "deleteAt": "Deleted: {{rule}} ({{place}})"
-    },
-    "live": {
-      "saved": "The edit is saved, the outcome is being recalculated.",
-      "undone": "Undone.",
-      "redone": "Redone.",
-      "same": "The outcome did not change.",
-      "delta": "The outcome changed: {{added}} added, {{changed}} changed, {{removed}} removed."
-    }
+    "title": "Edit the rule"
   },
   "preview": {
     "open": "PDF preview",
@@ -1340,133 +831,8 @@
     }
   },
   "lint": {
-    "title": "Pack check",
-    "findingsTitle": "Findings",
-    "loading": "Checking the pack (a few seconds; the atlas rules take longer than the static ones)...",
-    "busyRetry": "The server is busy, retrying the check (attempt {{count}})...",
-    "rateWait": "Too many checks (limit 6 per minute). Retrying on its own in {{seconds}} s.",
-    "cancel": "Cancel",
-    "cancelledTitle": "Check cancelled",
-    "cancelledLead": "Run it again when you need it.",
-    "again": "Check",
-    "recheck": "Check again",
-    "stale": "Showing the previous check result: a new one could not be fetched.",
-    "elapsed": "The check took {{seconds}} s.",
-    "summary": "{{errors}}, {{warnings}}, {{infos}}",
-    "live": "Check finished: {{errors}}, {{warnings}}, {{infos}}.",
-    "released": "The version is released and immutable: the check is read-only, fixes go into a new version.",
-    "atlasSkippedTitle": "The pack is too large for the atlas check",
-    "atlasSkippedLead": "Rules that enumerate combinations were skipped, only the static ones ran. Pin inputs in the Atlas view so the table fits the limit.",
-    "emptyTitle": "No findings",
-    "emptyLead": "The linter found no problems in the pack rules.",
-    "noMatchTitle": "Nothing matches the filters",
-    "noMatchLead": "Relax the filters or clear the search.",
-    "severity": {
-      "error": "Error",
-      "warning": "Warning",
-      "info": "Information"
-    },
-    "group": {
-      "error": "Errors",
-      "warning": "Warnings",
-      "info": "Information",
-      "listOf": "Findings of rule {{rule}}"
-    },
-    "filters": {
-      "search": "Search findings",
-      "searchPlaceholder": "Rule, text, file, element",
-      "severity": "Level",
-      "severity_all": "All",
-      "severity_error": "Errors",
-      "severity_warning": "Warnings",
-      "severity_info": "Information",
-      "rule": "Rule",
-      "ruleAll": "All rules",
-      "selectedOnly": "Only the selected element ({{id}})",
-      "reset": "Reset filters"
-    },
-    "finding": {
-      "hint": "How to fix:",
-      "line": "line {{line}}",
-      "elements": "Affects:",
-      "witnesses": "Seen with:",
-      "openRule": "Open the rule",
-      "showCombo": "Show the combination",
-      "showInResult": "Show in the outcome",
-      "showInResultOf": "Show in the outcome: {{section}}, {{id}}",
-      "moreElements_one": "and {{count}} more",
-      "moreElements_other": "and {{count}} more"
-    },
-    "jinja": {
-      "run": "Check Jinja templates",
-      "done": "Jinja templates checked",
-      "running": "Checking Jinja templates (sandbox render, takes longer)...",
-      "lead": "Renders templates in a sandbox: slower, work tree only, at most 6 times a minute.",
-      "notWorkTree": "Jinja is only checked in the work tree.",
-      "unavailable": "Jinja templates are only checked in the work tree; the check did not run for this state."
-    },
-    "badge": {
-      "open": "Open the pack check",
-      "clean": "Pack check: no errors or warnings",
-      "spoken": "Pack check: {{errors}}, {{warnings}}"
-    },
     "brief": {
-      "percent": "Scenario coverage {{percent}}%",
-      "approximate": "approximate",
-      "details": "Details in the check",
       "open": "Open the pack check"
-    },
-    "rules": {
-      "title": "Pack check",
-      "count_one": "{{count}} finding for this element",
-      "count_other": "{{count}} findings for this element",
-      "open": "Open in the check",
-      "more": "and {{count}} more"
-    },
-    "coverage": {
-      "title": "Rule coverage by scenarios",
-      "percent": "{{percent}}%",
-      "percentLabel": "Rule coverage by scenarios: {{percent}}%",
-      "approximate": "Coverage is approximate: the atlas is too large, the numbers are a lower bound.",
-      "rulesLabel": "Rules by coverage",
-      "outcome": {
-        "held": "held",
-        "not_held": "not held"
-      },
-      "stateNone": "Not covered",
-      "stateHalf": "Half covered",
-      "seen": "Scenarios saw: {{outcomes}}.",
-      "seenNone": "Scenarios saw no outcome.",
-      "missing": "Missing: {{outcomes}}.",
-      "byScenarios_one": "Scenarios that read the rule: {{count}}.",
-      "byScenarios_other": "Scenarios that read the rule: {{count}}.",
-      "scenarios_one": "Scenarios: {{count}}.",
-      "scenarios_other": "Scenarios: {{count}}.",
-      "rows": "Atlas rows touched: {{touched}} of {{total}}.",
-      "rulesTitle": "Rules without full coverage",
-      "showAll": "Show all ({{count}})",
-      "omitted_one": "{{count}} more rule is not shown.",
-      "omitted_other": "{{count}} more rules are not shown.",
-      "addMany": "Add scenarios ({{count}})",
-      "addOne": "Add a scenario",
-      "addRow": "Add as a scenario",
-      "rowsLabel": "Combinations that close the most outcomes",
-      "gain_one": "Closes {{count}} rule outcome.",
-      "gain_other": "Closes {{count}} rule outcomes.",
-      "covered_one": "Fully covered: {{count}}",
-      "covered_other": "Fully covered: {{count}}",
-      "half_one": "Half covered: {{count}}",
-      "half_other": "Half covered: {{count}}",
-      "uncovered_one": "Not covered: {{count}}",
-      "uncovered_other": "Not covered: {{count}}"
-    },
-    "counts": {
-      "errors_one": "{{count}} error",
-      "errors_other": "{{count}} errors",
-      "warnings_one": "{{count}} warning",
-      "warnings_other": "{{count}} warnings",
-      "infos_one": "{{count}} note",
-      "infos_other": "{{count}} notes"
     }
   }
 }

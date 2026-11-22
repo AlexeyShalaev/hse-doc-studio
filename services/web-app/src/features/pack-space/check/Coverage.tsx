@@ -6,7 +6,7 @@ import {
   coveragePercent,
   isUncoveredRule,
   missingOutcomes,
-} from "@features/pack-outcome/check";
+} from "@entities/pack-studio/outcome/lint";
 import { SituationText, Witness } from "./Findings";
 import type { CheckEnv } from "./useCheckEnv";
 

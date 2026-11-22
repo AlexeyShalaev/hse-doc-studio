@@ -15,12 +15,9 @@ import {
   ChecksDialog,
   CommitDialog,
   DiffDialog,
-  ImpactSlot,
   MergeConflictDialog,
   RepoAccessDialog,
   StartOverDialog,
-  impactVersions,
-  type ImpactReport,
 } from "@features/pack-git";
 import { pickLocalized, toast } from "@shared/lib";
 import { Button } from "@shared/ui";
@@ -31,7 +28,10 @@ import { SubmitPrimary } from "../next-step/SubmitPrimary";
 import { SubmitSection } from "../next-step/SubmitSection";
 import { useSubmit } from "../next-step/useSubmit";
 import { ChangesPanel, type ChangesAction } from "./ChangesPanel";
+import { MoveEditsNotice } from "./MoveEditsNotice";
 import { describePath } from "./describeChanges";
+import { ImpactSlot, type ImpactReport } from "./impact/ImpactSlot";
+import { impactVersions } from "./impact/impactVersions";
 import { useChangesData } from "./useChangesStatus";
 import "./space-changes.css";
 
@@ -170,6 +170,7 @@ export const ChangesDrawer = () => {
           nav.go({ tab: "check", part: "issues" });
         }}
         onAction={onAction}
+        moveEdits={<MoveEditsNotice />}
         notesAction={
           <Button size="xs" variant="ghost" onClick={submit.focusNotes}>
             {t("changes.submit.notes.write")}

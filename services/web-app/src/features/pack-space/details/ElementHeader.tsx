@@ -1,7 +1,7 @@
 import { Check, CircleOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { PackOutcome } from "@entities/pack-studio";
-import type { ElementInfo } from "@features/pack-outcome/lib/elements";
+import type { ElementInfo } from "@entities/pack-studio/outcome/elements";
 import { Badge } from "@shared/ui";
 import { isIn, type ElementGroup, type ElementState } from "./elementGroup";
 

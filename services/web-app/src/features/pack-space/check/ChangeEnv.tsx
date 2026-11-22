@@ -1,13 +1,9 @@
 import { useMemo, type ReactNode } from "react";
 import { useIsPhoneWidth } from "@shared/lib";
 import { useTranslation } from "react-i18next";
-import {
-  ChangeEnvContext,
-  ChangeWordsContext,
-  ruleLocation,
-  type ChangeEnv,
-  type ChangeWords,
-} from "@features/pack-outcome/check";
+import { ChangeEnvContext, type ChangeEnv } from "./compare/changeEnv";
+import { ChangeWordsContext, type ChangeWords } from "./compare/changeWords";
+import { ruleLocation } from "@entities/pack-studio/outcome/rules";
 import { plainChange } from "../plain/changes";
 import type { CheckEnv } from "./useCheckEnv";
 

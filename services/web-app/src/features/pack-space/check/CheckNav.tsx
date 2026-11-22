@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { usePackOutcomeLint } from "@entities/pack-studio";
-import { countsOf } from "@features/pack-outcome/check";
+import { countsOf } from "@entities/pack-studio/outcome/lint";
 import { useSpace } from "../context/SpaceContext";
 import { useSpaceNav } from "../context/useSpaceNav";
 import { readCheck, type CheckPart } from "./lib";

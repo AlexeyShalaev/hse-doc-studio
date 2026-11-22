@@ -26,7 +26,7 @@ If at sending the Studio sees that the number is taken in the main branch, it of
 
 ## Move the edits { #move }
 
-If the folder of a released version was edited bypassing the Studio (files changed in the repository or in the folder), it no longer matches the list of releases. Such edits are moved into a copy with the next number: in git the folder of the released version returns to the main branch, in a folder on disk you return it yourself (for example `git checkout`). The **Move the edits to a new version** button exists so far only in the previous look of the Studio (`?ux=1`).
+If the folder of a released version was edited bypassing the Studio (files changed in the repository or in the folder), it no longer matches the list of releases. Such edits are moved into a copy with the next number: in git the folder of the released version returns to the main branch, in a folder on disk you return it yourself (for example `git checkout`). Open the released version and the **Changes** panel: at the top there is a "Released version was edited outside the Studio" notice with a **Move the edits to 2026.1.4** button (the number is picked automatically). The Studio moves the edits and opens the new version.
 
 The same on the command line: `hse-doc-studio pack new-version`, `pack classify`, `pack freeze`, see [Command line and CI](ci.md).
 

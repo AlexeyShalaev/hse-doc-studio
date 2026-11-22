@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import type { OutcomeElementRef, OutcomeTrace } from "@entities/pack-studio";
-import { ruleKey } from "@features/pack-outcome/lib/rules";
+import { ruleKey } from "@entities/pack-studio/outcome/rules";
 import { useSpace } from "../context/SpaceContext";
 import { useSpaceNav } from "../context/useSpaceNav";
 

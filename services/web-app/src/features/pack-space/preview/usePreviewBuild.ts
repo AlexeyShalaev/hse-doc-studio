@@ -20,7 +20,7 @@ import {
   previewTarget,
   runKeyOf,
   staleByFiles,
-} from "@features/pack-outcome/lib/previewRequest";
+} from "@features/pack-preview/lib/previewRequest";
 import { ApiError } from "@shared/api";
 import { useSpace } from "../context/SpaceContext";
 import { useSituation } from "../context/useSituation";

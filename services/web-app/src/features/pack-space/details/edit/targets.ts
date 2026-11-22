@@ -1,9 +1,6 @@
 import type { OutcomeTrace } from "@entities/pack-studio";
-import { ruleKey } from "@features/pack-outcome/lib/rules";
-import {
-  isEditableShape,
-  shapeOf,
-} from "@features/pack-outcome/lib/edit/shape";
+import { ruleKey } from "@entities/pack-studio/outcome/rules";
+import { isEditableShape, shapeOf } from "./model/shape";
 import type { EditTarget } from "./useConditionEdit";
 
 /**

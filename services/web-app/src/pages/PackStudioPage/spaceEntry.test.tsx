@@ -4,7 +4,6 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   packStudioKeys,
-  resetPackStudioUx,
   type PackTree,
   type PackWorkspace,
 } from "@entities/pack-studio";
@@ -24,7 +23,7 @@ vi.mock("./OutcomeRoute", () => ({
 }));
 
 const WS = GALLERY_WORKSPACE.id;
-const ENTRY = `/pack-studio/w/${WS}?ux=2`;
+const ENTRY = `/pack-studio/w/${WS}`;
 const T = `/pack-studio/w/${WS}/t`;
 
 const Probe = () => {
@@ -70,27 +69,25 @@ const where = () => screen.getByTestId("location").textContent;
 // Чанк нового вида грузится лениво: под нагрузкой первый кадр бывает медленным.
 const shell = () => screen.findByTestId("sp-shell", {}, { timeout: 8000 });
 
-describe("вход в пространство нового вида: версия с моими изменениями", () => {
+describe("вход в пространство: версия с моими изменениями", () => {
   beforeEach(async () => {
     await loadPackSpaceNamespace();
-    resetPackStudioUx();
     window.localStorage.clear();
   });
   afterEach(() => {
     cleanup();
-    resetPackStudioUx();
   });
 
   it("есть изменения в черновике: вход открывает его, а не версию по умолчанию", async () => {
     open(ENTRY, { changed: [`${BASE}/2026.1.3/version.yaml`] });
     await shell();
-    expect(where()).toBe(`${T}/hse-cs-sse/coursework/2026.1.3/result?ux=2`);
+    expect(where()).toBe(`${T}/hse-cs-sse/coursework/2026.1.3/result`);
   });
 
   it("изменений нет: версия по умолчанию", async () => {
     open(ENTRY, { changed: [] });
     await shell();
-    expect(where()).toBe(`${T}/hse-cs-sse/coursework/2026.1.2/result?ux=2`);
+    expect(where()).toBe(`${T}/hse-cs-sse/coursework/2026.1.2/result`);
   });
 
   it("изменения в другом шаблоне: открывается он", async () => {
@@ -98,13 +95,13 @@ describe("вход в пространство нового вида: верси
       changed: ["hse-cs-msc/templates/thesis/versions/2026.1.2/a.tex"],
     });
     await shell();
-    expect(where()).toBe(`${T}/hse-cs-msc/thesis/2026.1.2/result?ux=2`);
+    expect(where()).toBe(`${T}/hse-cs-msc/thesis/2026.1.2/result`);
   });
 
   it("в папке на диске git не спрашивается, вход не ждёт", async () => {
     open(ENTRY, { workspace: { kind: "folder" } });
     await shell();
-    expect(where()).toBe(`${T}/hse-cs-sse/coursework/2026.1.2/result?ux=2`);
+    expect(where()).toBe(`${T}/hse-cs-sse/coursework/2026.1.2/result`);
   });
 
   it("нет паков: причина и «Создать пак»", async () => {

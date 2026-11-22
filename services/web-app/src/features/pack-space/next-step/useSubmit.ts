@@ -18,7 +18,7 @@ import {
   type PackVersionRef,
   type PackVersionState,
 } from "@entities/pack-studio";
-import type { ImpactReport } from "@features/pack-git";
+import type { ImpactReport } from "../changes/impact/ImpactSlot";
 import { currentClass } from "@features/pack-version";
 import { toast } from "@shared/lib";
 import type { ChangesData } from "../changes/useChangesStatus";

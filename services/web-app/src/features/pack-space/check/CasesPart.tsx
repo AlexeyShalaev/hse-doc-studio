@@ -19,14 +19,14 @@ import {
   cellOf,
   countCells,
   fingerprintGroups,
-  resultsById,
   tallyRows,
-} from "@features/pack-outcome/check";
+} from "@entities/pack-studio/outcome/matrix";
+import { resultsById } from "@entities/pack-studio/outcome/scenarios";
 import { pickLocalized } from "@shared/lib/i18n/pickLocalized";
 import { EmptyState } from "@shared/ui";
 import { useSpace } from "../context/SpaceContext";
 import { useSpaceNav } from "../context/useSpaceNav";
-import { ChangeList } from "@features/pack-outcome/check";
+import { ChangeList } from "./compare/ChangeList";
 import { CheckChangeEnv } from "./ChangeEnv";
 import { CheckFailure } from "./CheckFailure";
 import { CaseDialog } from "./cases/CaseDialog";

@@ -6,7 +6,6 @@ import { ApiError } from "@shared/api";
 import {
   packStudioApi,
   packStudioKeys,
-  resetPackStudioUx,
   type PackTree,
   type PackWorkspace,
 } from "@entities/pack-studio";
@@ -20,14 +19,7 @@ import { PackStudioApp } from "./PackStudioApp";
 vi.mock("@widgets/AppTitlebar", () => ({ AppTitlebar: () => null }));
 vi.mock("@widgets/AppStatusBar", () => ({ AppStatusBar: () => null }));
 vi.mock("./WorkspacesScreen", () => ({
-  WorkspacesScreen: () => <div data-testid="old-list" />,
-}));
-vi.mock("./WorkspaceEntry", () => ({
-  WorkspaceEntry: () => <div data-testid="old-entry" />,
-}));
-vi.mock("./OutcomeRoute", () => ({
-  OutcomeEntry: () => <div data-testid="old-outcome-entry" />,
-  OutcomeRoute: () => <div data-testid="old-outcome" />,
+  WorkspacesScreen: () => <div data-testid="ws-list" />,
 }));
 
 const WS = GALLERY_WORKSPACE.id;
@@ -69,49 +61,25 @@ const open = (
 const where = () => screen.getByTestId("location").textContent;
 const shell = () => screen.findByTestId("sp-shell");
 
-describe("маршруты Студии шаблонов: флаг ?ux=2", () => {
+describe("маршруты Студии шаблонов", () => {
   beforeEach(() => {
-    resetPackStudioUx();
     window.localStorage.clear();
   });
   afterEach(() => {
     cleanup();
-    resetPackStudioUx();
   });
 
-  describe("без флага всё как раньше", () => {
-    it("список, вход в пространство и «Результат» открывают прежние экраны", async () => {
+  describe("адреса из раздела 4.2 открывают пространство без флагов", () => {
+    it("список пространств", async () => {
       open("/pack-studio");
-      expect(await screen.findByTestId("old-list")).toBeInTheDocument();
-      cleanup();
-      open(`${BASE}?file=x`);
-      expect(await screen.findByTestId("old-entry")).toBeInTheDocument();
-      cleanup();
-      open(`${BASE}/result`);
-      expect(
-        await screen.findByTestId("old-outcome-entry"),
-      ).toBeInTheDocument();
-      cleanup();
-      open(`${BASE}/result/hse-cs-sse/coursework/2026.1.2?i.kind=research`);
-      expect(await screen.findByTestId("old-outcome")).toBeInTheDocument();
+      expect(await screen.findByTestId("ws-list")).toBeInTheDocument();
       expect(screen.queryByTestId("sp-shell")).toBeNull();
-      expect(where()).toBe(
-        `${BASE}/result/hse-cs-sse/coursework/2026.1.2?i.kind=research`,
-      );
     });
 
-    it("новый адрес без флага уходит в список, новый вид не грузится", async () => {
-      open(`${DRAFT}/result`);
-      expect(await screen.findByTestId("old-list")).toBeInTheDocument();
-      expect(where()).toBe("/pack-studio");
-    });
-  });
-
-  describe("?ux=2: адреса из раздела 4.2 открывают оболочку", () => {
     it.each([
-      ["result", `${DRAFT}/result?ux=2`],
-      ["content", `${DRAFT}/content?ux=2`],
-      ["check", `${DRAFT}/check?ux=2`],
+      ["result", `${DRAFT}/result`],
+      ["content", `${DRAFT}/content`],
+      ["check", `${DRAFT}/check`],
     ])("вкладка %s: название пространства и три вкладки", async (tab, url) => {
       open(url);
       await shell();
@@ -128,13 +96,13 @@ describe("маршруты Студии шаблонов: флаг ?ux=2", () =>
     });
 
     it("корень пространства: перенаправление на версию по умолчанию", async () => {
-      open(`${BASE}?ux=2`);
+      open(BASE);
       await shell();
-      expect(where()).toBe(`${DEFAULT}/result?ux=2`);
+      expect(where()).toBe(`${DEFAULT}/result`);
     });
 
     it("переключение вкладок меняет адрес", async () => {
-      open(`${DRAFT}/result?ux=2&i.kind=research`);
+      open(`${DRAFT}/result?i.kind=research`);
       await shell();
       // Вкладка «Содержимое» грузится лениво: переход завершается после загрузки её чанка.
       fireEvent.click(screen.getByTestId("sp-tab-content"));
@@ -147,57 +115,87 @@ describe("маршруты Студии шаблонов: флаг ?ux=2", () =>
       });
     });
 
-    it("флаг запоминается: следующий заход без query остаётся в новом виде", async () => {
-      open(`${DRAFT}/result?ux=2`);
-      await shell();
-      cleanup();
-      open(`${DRAFT}/result`);
-      await shell();
-      cleanup();
-      open(`${DRAFT}/result?ux=1`);
-      expect(await screen.findByTestId("old-list")).toBeInTheDocument();
-    });
-
     it("версия без вкладки и неизвестная вкладка ведут на «Результат», query остаётся", async () => {
-      open(`${DRAFT}?ux=2&i.kind=research`);
+      open(`${DRAFT}?i.kind=research`);
       await shell();
-      expect(where()).toBe(`${DRAFT}/result?ux=2&i.kind=research`);
+      expect(where()).toBe(`${DRAFT}/result?i.kind=research`);
       cleanup();
-      open(`${DRAFT}/files?ux=2`);
+      open(`${DRAFT}/files`);
       await shell();
-      expect(where()).toBe(`${DRAFT}/result?ux=2`);
+      expect(where()).toBe(`${DRAFT}/result`);
     });
 
     it("версии нет в дереве: вход подбирает место сам", async () => {
-      open(`${T}/0.0.1/result?ux=2&i.kind=research`);
+      open(`${T}/0.0.1/result?i.kind=research`);
       await shell();
-      expect(where()).toBe(`${DEFAULT}/result?ux=2&i.kind=research`);
+      expect(where()).toBe(`${DEFAULT}/result?i.kind=research`);
+    });
+
+    it("неизвестный адрес под /pack-studio ведёт в список", async () => {
+      open("/pack-studio/nope/deeper");
+      expect(await screen.findByTestId("ws-list")).toBeInTheDocument();
+      expect(where()).toBe("/pack-studio");
     });
   });
 
-  describe("?ux=2: старые адреса перенаправляются", () => {
+  describe("флаг ?ux= из 0.38.0 больше ничего не значит", () => {
+    it.each([
+      [`${DRAFT}/result?ux=2`, `${DRAFT}/result`],
+      [`${DRAFT}/check?ux=1&i.kind=research`, `${DRAFT}/check?i.kind=research`],
+      [`${BASE}?ux=2`, `${DEFAULT}/result`],
+      [`${BASE}?ux=1`, `${DEFAULT}/result`],
+    ])("%s -> %s", async (from, to) => {
+      open(from);
+      await shell();
+      expect(where()).toBe(to);
+    });
+
+    it("на списке пространств тоже убирается", async () => {
+      open("/pack-studio?ux=1");
+      expect(await screen.findByTestId("ws-list")).toBeInTheDocument();
+      expect(where()).toBe("/pack-studio");
+    });
+
+    it("память флага в браузере стирается и на вид не влияет", async () => {
+      window.localStorage.setItem("ps.ux", "1");
+      open(`${DRAFT}/result`);
+      await shell();
+      expect(window.localStorage.getItem("ps.ux")).toBeNull();
+    });
+  });
+
+  describe("старые адреса прежнего вида перенаправляются", () => {
     const FILE = encodeURIComponent(
       "hse-cs-sse/templates/coursework/versions/2026.1.3/version.yaml",
     );
     it.each([
+      [`${BASE}/result/hse-cs-sse/coursework/2026.1.3`, `${DRAFT}/result`],
       [
-        `${BASE}/result/hse-cs-sse/coursework/2026.1.3?ux=2`,
-        `${DRAFT}/result?ux=2`,
+        `${BASE}/result/hse-cs-sse/coursework/2026.1.3?selected=documents%3Ats&i.kind=research&scenario=c1`,
+        `${DRAFT}/result?sel=documents%3Ats&i.kind=research&case=c1`,
       ],
       [
-        `${BASE}/result/hse-cs-sse/coursework/2026.1.3?ux=2&selected=documents%3Ats&i.kind=research&scenario=c1`,
-        `${DRAFT}/result?ux=2&sel=documents%3Ats&i.kind=research&case=c1`,
+        `${BASE}/result/hse-cs-sse/coursework/2026.1.3?view=atlas`,
+        `${DRAFT}/check?part=map`,
       ],
       [
-        `${BASE}/result/hse-cs-sse/coursework/2026.1.3?ux=2&view=atlas`,
-        `${DRAFT}/check?ux=2&part=map`,
+        `${BASE}/result/hse-cs-sse/coursework/2026.1.3?view=matrix`,
+        `${DRAFT}/check?part=cases`,
       ],
-      [`${BASE}/result?ux=2`, `${DEFAULT}/result?ux=2`],
-      [`${BASE}?ux=2&file=${FILE}`, `${DRAFT}/content?file=${FILE}&ux=2`],
-      [`${BASE}?ux=2&view=files`, `${DEFAULT}/content?ux=2&part=files`],
       [
-        `${BASE}?ux=2&view=files&newVersion=hse-cs-sse%2Fcoursework`,
-        `${DEFAULT}/result?ux=2&copy=1`,
+        `${BASE}/result/hse-cs-sse/coursework/2026.1.3?view=lint`,
+        `${DRAFT}/check?part=issues`,
+      ],
+      [`${BASE}/result`, `${DEFAULT}/result`],
+      [`${BASE}?file=${FILE}`, `${DRAFT}/content?file=${FILE}`],
+      [`${BASE}?view=files`, `${DEFAULT}/content?part=files`],
+      [
+        `${BASE}?view=files&newVersion=hse-cs-sse%2Fcoursework`,
+        `${DEFAULT}/result?copy=1`,
+      ],
+      [
+        `${BASE}/result/hse-cs-sse/coursework/2026.1.3?ux=2&view=compare`,
+        `${DRAFT}/check?compare=1`,
       ],
     ])("%s", async (from, to) => {
       open(from);
@@ -206,7 +204,7 @@ describe("маршруты Студии шаблонов: флаг ?ux=2", () =>
     });
 
     it("память последнего места: вход в корень возвращает версию, вкладку и условия", async () => {
-      open(`${DRAFT}/check?ux=2&i.kind=research`);
+      open(`${DRAFT}/check?i.kind=research`);
       await shell();
       cleanup();
       open(BASE);
@@ -215,9 +213,9 @@ describe("маршруты Студии шаблонов: флаг ?ux=2", () =>
     });
   });
 
-  describe("?ux=2: особые состояния", () => {
+  describe("особые состояния", () => {
     it("пространство клонируется: сообщение вместо оболочки", async () => {
-      open(`${DRAFT}/result?ux=2`, {
+      open(`${DRAFT}/result`, {
         workspace: { state: "cloning", busy: true },
       });
       expect(await screen.findByTestId("ws-cloning")).toBeInTheDocument();
@@ -235,7 +233,7 @@ describe("маршруты Студии шаблонов: флаг ?ux=2", () =>
       });
       render(
         <QueryClientProvider client={client}>
-          <MemoryRouter initialEntries={["/pack-studio/w/nope?ux=2"]}>
+          <MemoryRouter initialEntries={["/pack-studio/w/nope"]}>
             <Routes>
               <Route path="/pack-studio/*" element={<PackStudioApp />} />
             </Routes>
@@ -252,7 +250,7 @@ describe("маршруты Студии шаблонов: флаг ?ux=2", () =>
     });
 
     it("в пространстве нет версий: объяснение и возврат к списку", async () => {
-      open(`${BASE}?ux=2`, { tree: { ...GALLERY_TREE, packs: [] } });
+      open(BASE, { tree: { ...GALLERY_TREE, packs: [] } });
       expect(
         await screen.findByTestId("space-no-versions"),
       ).toBeInTheDocument();

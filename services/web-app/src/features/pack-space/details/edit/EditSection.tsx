@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { packErrorText } from "@entities/pack-studio";
-import { resolvePointer } from "@features/pack-outcome/lib/edit/pointer";
+import { resolvePointer } from "./model/pointer";
 import { Spinner } from "@shared/ui";
 import type { Words } from "../words";
 import { ConditionForm } from "./ConditionForm";

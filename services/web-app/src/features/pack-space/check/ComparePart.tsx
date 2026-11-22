@@ -5,14 +5,14 @@ import { useTranslation } from "react-i18next";
 import { usePackScenarios } from "@entities/pack-studio";
 import {
   OutcomeModelContext,
-  parseOutcomeSearch,
   type OutcomeModel,
-} from "@features/pack-outcome";
+} from "@entities/pack-studio/outcome/model";
+import { parseOutcomeSearch } from "@entities/pack-studio/outcome/urlState";
+import { CompareMode } from "./compare/CompareMode";
 import {
-  CompareMode,
   formatSide,
   type CompareSide,
-} from "@features/pack-outcome/check";
+} from "@entities/pack-studio/outcome/compareSide";
 import { useIsPhoneWidth } from "@shared/lib";
 import { useSpace } from "../context/SpaceContext";
 import { useSpaceNav } from "../context/useSpaceNav";

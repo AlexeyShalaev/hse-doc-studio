@@ -1,4 +1,4 @@
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   afterEach,
@@ -10,8 +10,10 @@ import {
   vi,
 } from "vitest";
 import { packStudioApi } from "@entities/pack-studio";
+import { LOCAL_BOOTSTRAP, sessionKeys } from "@entities/session";
 import { loadPackSpaceNamespace } from "@shared/lib/i18n/packSpaceNamespace";
-import { SpaceBar } from "./SpaceBar";
+import { GALLERY_WORKSPACE } from "../galleryKit";
+import { SpaceBar, WorkspaceBar } from "./SpaceBar";
 import { renderNav } from "./navTestKit";
 
 describe("SpaceBar: назад, название, «Ещё»", () => {
@@ -128,5 +130,36 @@ describe("SpaceBar: назад, название, «Ещё»", () => {
     await user.click(await screen.findByTestId("sp-ws-delete"));
     await screen.findByRole("dialog");
     expect(screen.queryByTestId("sp-ws-delete-unsent")).toBeNull();
+  });
+
+  it("папка в локальной Студии: «Подключить к каталогу Студии» открывает окно каталога", async () => {
+    const user = userEvent.setup();
+    const { client } = renderNav(
+      <WorkspaceBar
+        workspace={{
+          ...GALLERY_WORKSPACE,
+          kind: "folder",
+          folder: "/Users/anna/packs",
+        }}
+        navigate={() => undefined}
+      />,
+    );
+    act(() => {
+      client.setQueryData(sessionKeys.bootstrap(), LOCAL_BOOTSTRAP);
+    });
+    await user.click(screen.getByTestId("sp-ws-menu"));
+    await user.click(await screen.findByTestId("sp-ws-catalog"));
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("пространство над git: пункта каталога нет", async () => {
+    const user = userEvent.setup();
+    const { client } = renderNav(<SpaceBar />);
+    act(() => {
+      client.setQueryData(sessionKeys.bootstrap(), LOCAL_BOOTSTRAP);
+    });
+    await user.click(screen.getByTestId("sp-ws-menu"));
+    await screen.findByTestId("sp-ws-refresh");
+    expect(screen.queryByTestId("sp-ws-catalog")).toBeNull();
   });
 });

@@ -18,11 +18,7 @@ import {
   type PackVersionModel,
   type PackYamlOp,
 } from "@entities/pack-studio";
-import {
-  deltaElement,
-  diffOutcomes,
-  type DeltaItem,
-} from "@features/pack-outcome/lib/edit/delta";
+import { deltaElement, diffOutcomes, type DeltaItem } from "./model/delta";
 import {
   markRedone,
   markUndone,
@@ -30,14 +26,14 @@ import {
   redoTarget,
   undoTarget,
   type History,
-} from "@features/pack-outcome/lib/edit/history";
-import { dataOf, fileOf, placeOf } from "@features/pack-outcome/lib/edit/place";
+} from "./model/history";
+import { dataOf, fileOf, placeOf } from "./model/place";
 import {
   guardHolds,
   planChange,
   type Planned,
   type RuleEdit,
-} from "@features/pack-outcome/lib/edit/plan";
+} from "./model/plan";
 import type {
   RuleChange,
   RuleFormContext,

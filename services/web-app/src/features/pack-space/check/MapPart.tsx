@@ -15,10 +15,10 @@ import {
   applyRowInputs,
   filterRows,
   keyOfInputs,
-  mergedInputs,
   miniOf,
-  type Labeler,
-} from "@features/pack-outcome/check";
+} from "@entities/pack-studio/outcome/atlas";
+import { mergedInputs } from "@entities/pack-studio/outcome/scenarios";
+import { type Labeler } from "@entities/pack-studio/outcome/useLabeler";
 import { Badge } from "@shared/ui";
 import { useSpace } from "../context/SpaceContext";
 import { useSituation } from "../context/useSituation";

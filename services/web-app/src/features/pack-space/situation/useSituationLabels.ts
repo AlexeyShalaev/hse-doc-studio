@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import type { OutcomeInput } from "@entities/pack-studio";
 import { pickLocalized } from "@shared/lib/i18n/pickLocalized";
-import { STANDARD_INPUTS, isToken } from "@features/pack-outcome/lib/inputs";
+import { STANDARD_INPUTS, isToken } from "@entities/pack-studio/outcome/inputs";
 
 /**
  * Подписи условий и их значений. Первой берётся подпись из пака (`label`, ru и en), затем

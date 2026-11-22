@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { usePackOutcome } from "@entities/pack-studio";
-import { StudentView } from "@features/pack-outcome/check";
+import { StudentView } from "./student/StudentView";
 import { Modal, Spinner } from "@shared/ui";
 import { WordsOverlay } from "../WordsOverlay";
 import { Notice } from "../Notice";
