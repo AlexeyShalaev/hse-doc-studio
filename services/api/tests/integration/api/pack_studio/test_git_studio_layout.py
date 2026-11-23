@@ -144,7 +144,8 @@ async def test__edit_refresh_commit_diff_merge__base_moved_its_rules(stand: Stan
     merged = await stand.client.post(_git_url(ws_id, "/merge-base"))
     after = await _git(stand, ws_id)
 
-    assert refreshed["error"] is None, refreshed
+    # Правка не сохранена: дерево остаётся на месте, карточка говорит почему.
+    assert refreshed["error"]["code"] == "refresh_dirty", refreshed
     assert {c["path"]: c["status"] for c in view["uncommitted"]} == {_DRAFT_TEX: "modified"}
     assert (view["ahead"], view["behind"]) == (0, 1)
     # «Обновить» догружает и блобы базы под папкой паков: паки маленькие.
@@ -262,7 +263,7 @@ async def test__https_with_token__fresh_clone_and_refresh_of_the_studio_layout(
     version = run_git("--version")  # при сбое видно, на какой версии git он случился (прод: 2.39)
     assert fresh.status_code == 200, f"{version}: {fresh.text}"
     assert healed.status_code == 200, f"{version}: {healed.text}"
-    assert refreshed["error"] is None, f"{version}: {refreshed}"
+    assert refreshed["error"]["code"] == "refresh_dirty", f"{version}: {refreshed}"
     assert moved.status_code == 200, f"{version}: {moved.text}"
     assert moved.json()["behind"] == 1
     token = str(server.token)

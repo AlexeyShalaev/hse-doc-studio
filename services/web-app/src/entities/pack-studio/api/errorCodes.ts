@@ -72,6 +72,7 @@ export const PACK_STUDIO_ERROR_CODES = [
   "outcome_busy",
   "outcome_element_not_found",
   "outcome_too_large",
+  "refresh_dirty",
 ] as const;
 
 export type PackStudioErrorCode = (typeof PACK_STUDIO_ERROR_CODES)[number];

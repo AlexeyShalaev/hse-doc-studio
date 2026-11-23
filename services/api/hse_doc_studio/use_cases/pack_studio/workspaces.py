@@ -2,7 +2,10 @@
 
 Пространство над git создаётся сразу (`cloning`), клон идёт в фоне: частичный, без блобов, разреженное дерево только
 с папкой паков. Клиент опрашивает `GET /workspaces/{id}` до `ready` или `failed`. «Обновить» делает выборку базовой
-ветки (рабочее дерево не трогается) и пересчитывает выпущенные версии; у неудачного клона начинает его заново.
+ветки и пересчитывает выпущенные версии; у неудачного клона начинает его заново. Рабочее дерево «Обновить» двигает
+только у пространства без рабочей ветки, которое стоит на базе без своих коммитов: чистое дерево переезжает на свежую
+вершину базы (перемотка), а при несохранённых правках остаётся как есть, и в карточке код `refresh_dirty`. Ветку с
+правками «Обновить» не трогает: базу в неё вливает «Забрать новое» (`merge-base`).
 
 Выпущенные версии (D10) это реестры `releases.yaml` базовой ветки после выборки: у пространства над git они
 кешируются в `base-releases.json` рядом с хранилищем. Папка (только локально) берёт реестры с диска.
@@ -426,8 +429,10 @@ class PackWorkspaceService:
             sha = await self._git.fetch(dirs, target, branch=branch, limits=self._limits)
             released = await self._git.released(dirs, target, branch=branch, packs_path=ws.packs_path)
             await asyncio.to_thread(_save_released, dirs.root / _RELEASES_CACHE, released)
+            # Выборка уже удалась: отказ перемотки дерева виден в карточке, а свежая вершина базы записывается.
+            moved = await self._advance(ws, dirs, target)
             now = _now()
-            done = replace(ws, base_sha=sha, fetched_at=now, error=None, updated_at=now)
+            done = replace(ws, base_sha=sha, fetched_at=now, error=moved, updated_at=now)
         except (GitSyncError, PackStudioError) as exc:
             # Неудачная выборка не закрывает файлы: пространство остаётся готовым, ошибка видна в карточке.
             done = replace(ws, error=_error_of(exc), updated_at=_now())
@@ -445,6 +450,27 @@ class PackWorkspaceService:
                     updated_at=done.updated_at,
                 )
             )
+
+    async def _advance(self, ws: PackWorkspace, dirs: WorkspaceDirs, target: RemoteTarget) -> WorkspaceError | None:
+        """Перемотка дерева на свежую базу после выборки, если своего поверх базы нет; иначе ничего.
+
+        Двигается только пространство без рабочей ветки, у которого HEAD без ветки и без своих коммитов (`ahead` 0)
+        отстаёт от базы. Несохранённые правки (и новые файлы) дерево не дают трогать: `refresh_dirty`. Работает под тем
+        же замком пространства, что выборка, поэтому другие операции git сюда не вклиниваются.
+        """
+        if ws.work_branch is not None:
+            return None
+        base_branch = ws.base_branch or ""
+        try:
+            status = await self._git.status(dirs, target, base_branch=base_branch, packs_path=ws.packs_path)
+            if status.branch is not None or status.ahead > 0 or status.behind == 0:
+                return None
+            if status.dirty:
+                return _error_of(PackStudioError(PackStudioErrorCode.refresh_dirty))
+            await self._git.advance_to_base(dirs, target, base_branch=base_branch)
+        except (GitSyncError, PackStudioError) as exc:
+            return _error_of(exc)
+        return None
 
     # ── служебное ────────────────────────────────────────────────────────────
 

@@ -304,6 +304,7 @@
     "outcome_busy": "The outcome calculation took too long or the server is busy with other calculations. Try again later.",
     "outcome_element_not_found": "There is no such element in the result under these conditions. The version may have changed: refresh the result.",
     "outcome_too_large": "The response is too large: select fewer ready cases.",
+    "refresh_dirty": "The main branch was fetched, but the files stayed as they were: there are unsaved edits. Save a point and take the news from the main branch, or discard the edits, then refresh again.",
     "source_not_found": "Catalog source not found. Reload the page.",
     "source_busy": "This source is already being checked or applied. Wait for it to finish.",
     "source_kind_not_allowed": "This kind of source is not available here: a folder connects only in the local Studio.",

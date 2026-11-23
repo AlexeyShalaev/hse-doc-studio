@@ -131,6 +131,17 @@ _HINTS: Final[dict[str, tuple[str, str]]] = {
         "Есть несохранённые правки: сохраните их pack_git_commit и повторите.",
         "There are uncommitted edits: save them with pack_git_commit and retry.",
     ),
+    "refresh_dirty": (
+        (
+            "База выбрана, но дерево не сдвинуто: есть несохранённые правки. Сохраните их (pack_git_commit) и влейте "
+            "базу (pack_git_merge_base) или отбросьте (pack_git_start_over с discard), затем pack_workspace_refresh."
+        ),
+        (
+            "The base was fetched but the tree did not move: there are uncommitted edits. Save them (pack_git_commit) "
+            "and merge the base (pack_git_merge_base), or discard them (pack_git_start_over with discard), then call "
+            "pack_workspace_refresh."
+        ),
+    ),
     "workspace_busy": (
         "С пространством идёт другая операция (клон, выборка, git): повторите через несколько секунд.",
         "Another operation (clone, fetch, git) is running on the workspace: retry in a few seconds.",
@@ -287,8 +298,17 @@ def _workspace(view: WorkspaceView, official: OfficialPacks | None) -> dict[str,
         "ci_status": ws.ci_status,
         "fork": ws.fork_url,
         "official": official is not None and official.is_official(ws),
-        "error": None if ws.error is None else {"code": ws.error.code, "detail": ws.error.detail},
+        "error": None if ws.error is None else _workspace_error(ws.error.code, ws.error.detail),
     }
+
+
+def _workspace_error(code: str, detail: str) -> dict[str, object]:
+    """Ошибка карточки пространства: код, текст и, если он есть для кода, что делать тулами MCP."""
+    error: dict[str, object] = {"code": code, "detail": detail}
+    pair = _HINTS.get(code)
+    if pair is not None:
+        error["hint"] = localized_error(*pair)
+    return error
 
 
 def _git(view: GitView) -> dict[str, object]:

@@ -56,7 +56,8 @@ async def _base_moved_under_local_edits(stand: Stand, remote: BareRemote, ws_id:
     await _put(stand, ws_id, _DRAFT_TEX, b"\\documentclass{article}\n% mine\n")
     refreshed = await _refresh(stand, ws_id)
     assert refreshed["base_sha"] == remote.head("main")
-    assert refreshed["error"] is None, refreshed
+    # Несохранённая правка: дерево не перематывается на новую базу.
+    assert refreshed["error"]["code"] == "refresh_dirty", refreshed
     # «Обновить» догрузила блобы базы под папкой паков.
     assert not _missing_in_base(stand, ws_id, _DRAFT_TEX)
 
@@ -86,14 +87,19 @@ async def test__git_view__base_moved_and_its_blobs_are_missing__answers_without_
     assert _missing_in_base(stand, ws_id, _DRAFT_TEX)
 
 
-async def test__git_view__file_equal_to_the_new_base__is_not_changed(stand: Stand) -> None:
+async def test__git_view__file_back_to_the_fork_point__is_not_changed(stand: Stand) -> None:
     remote = _remote(stand.root)
+    assert (await stand.client.put("/api/v1/profile", json={"name": "Анна", "email": "anna@example.org"})).is_success
     ws = await _git_workspace(stand, remote)
     ws_id = str(ws["id"])
+    original = (_store(stand, ws_id) / "tree" / "packs" / _DRAFT_TEX).read_bytes()
     await _base_moved_under_local_edits(stand, remote, ws_id)
+    committed = await stand.client.post(f"{API}/workspaces/{ws_id}/git/commit", json={})
+    assert committed.status_code == 200, committed.text
     _forget_base_blob(stand, ws_id)
-    # Человек вручную привёл файл к тексту базы: от базы он не отличается, хотя от своего коммита отличается.
-    await _put(stand, ws_id, _DRAFT_TEX, _THEIRS)
+    # Человек вручную вернул файл к тексту точки расхождения с базой: своей правки в нём больше нет, хотя от своего
+    # коммита он отличается. Сверка идёт по хэшам, блобы не читаются.
+    await _put(stand, ws_id, _DRAFT_TEX, original)
 
     resp = await stand.client.get(f"{API}/workspaces/{ws_id}/git")
 
@@ -101,6 +107,25 @@ async def test__git_view__file_equal_to_the_new_base__is_not_changed(stand: Stan
     body = resp.json()
     assert {c["path"]: c["status"] for c in body["uncommitted"]} == {_DRAFT_TEX: "modified"}
     assert _DRAFT_TEX not in {c["path"] for c in body["changed"]}
+    # Новое только в базе (заметки) своей правкой пространства не считается.
+    assert _NOTES not in {c["path"] for c in body["changed"]}
+
+
+async def test__git_view__file_equal_to_the_new_base__is_still_an_own_change(stand: Stand) -> None:
+    remote = _remote(stand.root)
+    ws = await _git_workspace(stand, remote)
+    ws_id = str(ws["id"])
+    await _base_moved_under_local_edits(stand, remote, ws_id)
+    _forget_base_blob(stand, ws_id)
+    # Человек вручную привёл файл к тексту новой базы: это его правка от точки расхождения, как в запросе на слияние.
+    await _put(stand, ws_id, _DRAFT_TEX, _THEIRS)
+
+    resp = await stand.client.get(f"{API}/workspaces/{ws_id}/git")
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert {c["path"]: c["status"] for c in body["changed"]} == {_DRAFT_TEX: "modified"}
+    assert _missing_in_base(stand, ws_id, _DRAFT_TEX)
 
 
 async def test__commit_and_diff__base_blobs_missing__work_and_diff_fetches_them(stand: Stand) -> None:
@@ -117,9 +142,11 @@ async def test__commit_and_diff__base_blobs_missing__work_and_diff_fetches_them(
     assert committed.status_code == 200, committed.text
     assert committed.json()["git"]["ahead"] == 1
     assert diff.status_code == 200, diff.text
-    # Полный diff нужен текст базы: блоб подгружается с доступом пространства.
-    assert "-% theirs in base" in diff.json()["diff"]
+    # diff своих правок от точки расхождения с базой: текст новой базы в нём не участвует.
+    assert "-% draft" in diff.json()["diff"]
     assert "+% mine" in diff.json()["diff"]
+    assert "theirs in base" not in diff.json()["diff"]
+    assert _NOTES not in diff.json()["diff"]
 
 
 async def test__https_workspace_with_token__git_view_and_diff_after_base_moved(
@@ -156,9 +183,10 @@ async def test__https_workspace_with_token__git_view_and_diff_after_base_moved(
     diff = await stand.client.get(f"{API}/workspaces/{ws_id}/git/diff")
 
     assert view.status_code == 200, view.text
-    assert {c["path"]: c["status"] for c in view.json()["changed"]}[_DRAFT_TEX] == "modified"
+    assert {c["path"]: c["status"] for c in view.json()["changed"]} == {_DRAFT_TEX: "modified"}
     assert diff.status_code == 200, diff.text
-    assert "-% theirs in base" in diff.json()["diff"]
+    assert "-% draft" in diff.json()["diff"]
+    assert "+% mine" in diff.json()["diff"]
     token = str(server.token)
     assert token not in view.text
     assert token not in diff.text

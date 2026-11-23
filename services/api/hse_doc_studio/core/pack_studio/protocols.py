@@ -195,8 +195,9 @@ class IPackWorkspaceGit(Protocol):
     async def status(
         self, dirs: WorkspaceDirs, target: RemoteTarget, *, base_branch: str, packs_path: str
     ) -> WorkGitStatus:
-        """Ветка, вершина, правки после коммита и отличия от базы под папкой паков. Сеть (доступ `target`) только
-        чтобы догрузить блоб частичного клона, без которого локальный git не может ответить."""
+        """Ветка, вершина, правки после коммита и свои отличия под папкой паков: от точки расхождения с базой
+        (`base...HEAD` плюс правки на диске), поэтому отставание от базы правками не считается. Сеть (доступ `target`)
+        только чтобы догрузить блоб частичного клона, без которого локальный git не может ответить."""
         ...
 
     async def local_branches(self, dirs: WorkspaceDirs) -> tuple[str, ...]: ...
@@ -237,6 +238,11 @@ class IPackWorkspaceGit(Protocol):
         """Дерево на вершину базы без ветки, правки на диске отбрасываются. Возвращает вершину."""
         ...
 
+    async def advance_to_base(self, dirs: WorkspaceDirs, target: RemoteTarget, *, base_branch: str) -> str:
+        """Чистое дерево без ветки на свежую вершину базы (уже выбранной), без принудительного checkout: правку,
+        которую он перезаписал бы, git не трогает и отказывает. Возвращает вершину."""
+        ...
+
     async def base_registries(
         self, dirs: WorkspaceDirs, target: RemoteTarget, *, base_branch: str, paths: Sequence[str]
     ) -> dict[str, str]:
@@ -246,7 +252,7 @@ class IPackWorkspaceGit(Protocol):
     async def diff(
         self, dirs: WorkspaceDirs, target: RemoteTarget, *, base_branch: str, packs_path: str, max_bytes: int
     ) -> tuple[str, bool]:
-        """Единый diff пространства от базы (коммиты и правки на диске) и признак, что он обрезан."""
+        """Единый diff своих правок от точки расхождения с базой (коммиты и правки на диске) и признак обрезки."""
         ...
 
     # ── срез T10: мастер «Новая версия» ──

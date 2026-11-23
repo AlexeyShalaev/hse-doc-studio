@@ -190,6 +190,9 @@ async def test__commit__moves_head_with_the_scenario_but_not_base(stand: Stand) 
 
 async def test__base_moved_on_the_server__refresh_moves_base_scenarios_and_keeps_head(stand: Stand) -> None:
     remote, ws = await _ready(stand)
+    # Своя ветка: «Обновить» её не трогает (пространство без ветки переехало бы на свежую базу целиком).
+    branch = await stand.client.post(f"{API}/workspaces/{ws}/git/branch", json={"name": "mine/scenarios"})
+    assert branch.status_code == 200, branch.text
     seed_remote(
         remote,
         {

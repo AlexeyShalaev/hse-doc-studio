@@ -254,6 +254,77 @@ async def test__diff__shows_commits_and_new_files_against_the_base(stand: Stand)
     assert resp.json()["truncated"] is False
 
 
+async def _refresh(stand: Stand, ws_id: str) -> dict[str, Any]:
+    started = await stand.client.post(f"{API}/workspaces/{ws_id}/refresh")
+    assert started.status_code == 202, started.text
+    return await stand.settled(ws_id)
+
+
+async def test__refresh__clean_workspace_without_branch__moves_to_the_fresh_base(stand: Stand) -> None:
+    remote, ws_id = await _ready(stand)
+    seed_remote(
+        remote,
+        {"packs/demo/notes.md": "новое в базе\n", f"packs/{_DRAFT_TEX}": "\\documentclass{article}\n% base\n"},
+        message="base moved",
+    )
+
+    card = await _refresh(stand, ws_id)
+    git = await _git(stand, ws_id)
+
+    assert card["error"] is None
+    assert card["base_sha"] == remote.head("main")
+    assert git["branch"] is None
+    assert git["head_sha"] == remote.head("main")
+    assert (git["ahead"], git["behind"]) == (0, 0)
+    assert git["changed"] == []
+    assert git["dirty"] is False
+    tree = _store(stand, ws_id) / "tree" / "packs"
+    assert (tree / "demo" / "notes.md").read_text(encoding="utf-8") == "новое в базе\n"
+    assert (tree / _DRAFT_TEX).read_bytes() == b"\\documentclass{article}\n% base\n"
+    # Вне папки паков дерево по-прежнему разреженное.
+    assert sorted(p.name for p in tree.parent.iterdir()) == ["packs"]
+
+
+async def test__refresh__unsaved_edits__tree_stays_and_card_says_refresh_dirty(stand: Stand) -> None:
+    remote, ws_id = await _ready(stand)
+    cloned = remote.head("main")
+    await _put(stand, ws_id, _DRAFT_TEX, b"\\documentclass{article}\n% mine\n")
+    seed_remote(remote, {"packs/demo/notes.md": "новое в базе\n"}, message="base moved")
+
+    card = await _refresh(stand, ws_id)
+    git = await _git(stand, ws_id)
+
+    assert card["base_sha"] == remote.head("main")
+    assert card["error"]["code"] == "refresh_dirty"
+    assert git["head_sha"] == cloned
+    assert git["behind"] == 1
+    tree = _store(stand, ws_id) / "tree" / "packs"
+    assert (tree / _DRAFT_TEX).read_bytes() == b"\\documentclass{article}\n% mine\n"
+    assert not (tree / "demo" / "notes.md").exists()
+    # Отличия это только своя правка: новый файл базы не «удалён» пространством.
+    assert [c["path"] for c in git["changed"]] == [_DRAFT_TEX]
+
+
+async def test__refresh__work_branch__tree_and_branch_stay(stand: Stand) -> None:
+    remote, ws_id = await _ready(stand)
+    await _put(stand, ws_id, _DRAFT_TEX, b"\\documentclass{article}\n% mine\n")
+    commit = (await stand.client.post(_git_url(ws_id, "/commit"), json={})).json()
+    seed_remote(remote, {"packs/demo/notes.md": "новое в базе\n"}, message="base moved")
+
+    card = await _refresh(stand, ws_id)
+    git = await _git(stand, ws_id)
+
+    assert card["error"] is None
+    assert git["branch"] == card["work_branch"]
+    assert git["head_sha"] == commit["sha"]
+    assert (git["ahead"], git["behind"]) == (1, 1)
+    # Три точки: свои коммиты от точки расхождения, без файлов, которые есть только в новой базе.
+    assert [c["path"] for c in git["changed"]] == [_DRAFT_TEX]
+    diff = (await stand.client.get(_git_url(ws_id, "/diff"))).json()["diff"]
+    assert "+% mine" in diff
+    assert "notes.md" not in diff
+
+
 async def test__checks__before_any_push__report_none(stand: Stand) -> None:
     _, ws_id = await _ready(stand)
 
