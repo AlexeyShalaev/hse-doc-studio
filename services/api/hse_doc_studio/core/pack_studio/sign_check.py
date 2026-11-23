@@ -54,6 +54,12 @@ _CAPTIONS: Final = re.compile(
     r"^\(?(подпись|signature|подп\.?|м\.?\s?п\.?|дата|date|расшифровка подписи)\)?[.,:;]?$", re.I
 )
 _WORD: Final = re.compile(r"[a-zа-яё]{4,}", re.I)
+# Строка даты «« __ » ______ 2026 г.»: справа от пропуска год или «г.», слева закрывающая кавычка дня.
+_DATE_RIGHT: Final = re.compile(r"^(?:\d{4}|г)\b", re.I)
+_DATE_LEFT: Final = re.compile(r"[»”\"]$")
+# Слово «на той же строке», что и пропуск: низ слова не дальше этого от линии, зазор по горизонтали до 4 мм.
+_DATE_ROW_MM: Final = 2.5
+_DATE_GAP_MM: Final = 4.0
 
 
 class Severity(StrEnum):
@@ -292,6 +298,19 @@ def underscore_lines(words: Sequence[Word]) -> tuple[Line, ...]:
     return tuple(found)
 
 
+def is_date_blank(line: Line, words: Sequence[Word]) -> bool:
+    """Пропуск месяца в строке даты «« __ » ______ 2026 г.»: сразу справа год или «г.», сразу слева «»». Это не
+    строка подписи, даже если рядом подпись слота («Научный руководитель» над колонкой с подписью и датой)."""
+    for word in words:
+        if abs(word.rect.y1 - line.y) > _DATE_ROW_MM:
+            continue
+        right = 0 <= word.rect.x0 - line.x1 <= _DATE_GAP_MM and _DATE_RIGHT.match(word.text)
+        left = 0 <= line.x0 - word.rect.x1 <= _DATE_GAP_MM and _DATE_LEFT.search(word.text)
+        if right or left:
+            return True
+    return False
+
+
 def is_sign_line(rect: Rect, page_width: float) -> bool:
     return LINE_MIN_MM <= rect.width <= page_width * LINE_MAX_SHARE and rect.height <= LINE_MAX_THICK_MM
 
@@ -350,21 +369,25 @@ def _covered_text(rect: Rect, glyphs: Sequence[Glyph], words: Sequence[Word]) ->
 def suggest(line: Line, width: float, layout: PageLayout, others: Sequence[Rect]) -> Rect | None:
     """Рамка над линией: ширина прежняя (не шире линии плюс 10 мм), центр над серединой линии, верх на 10 мм выше
     линии, как у места на якоре по умолчанию; если так она закрывает текст или чужую рамку, низ на 1 мм ниже линии.
-    Плохая рамка не предлагается."""
+    Если чисто не встаёт ни так, ни так, годится рамка, которая закрывает только мелкий текст (подпись под соседней
+    строкой «И.О. Фамилия»): проверка сама считает это замечанием, а не ошибкой. Плохая рамка не предлагается."""
     w = max(min(width, line.width + 10.0), min(_MIN_WIDTH_MM, line.width + 10.0))
     x0 = min(max(line.cx - w / 2, PRINT_MARGIN_MM), layout.width_mm - PRINT_MARGIN_MM - w)
+    small: Rect | None = None
     for top in (line.y + ANCHOR_DEFAULT_DY_MM, line.y + 1.0 - w * SIGN_ASPECT):
         candidate = sign_rect(round(x0), round(top), round(w))
         if candidate.y0 < PRINT_MARGIN_MM or candidate.y1 > layout.height_mm - PRINT_MARGIN_MM:
             continue
         if not on_line(candidate, line):
             continue
-        if _covered_text(candidate, layout.glyphs, layout.words):
-            continue
         if any(candidate.overlap(o) > 0 for o in others):
             continue
+        if _covered_text(candidate, layout.glyphs, layout.words):
+            if small is None and _all_small(candidate, layout.glyphs):
+                small = candidate
+            continue
         return candidate
-    return None
+    return small
 
 
 @dataclass(frozen=True)
@@ -376,7 +399,7 @@ class _Claim:
 def _pick_line(place: Place, layout: PageLayout, claimed: Sequence[_Claim]) -> Line | None:
     """Своя линия слота на странице рамки: больше всего очков `_score`, при равенстве ближе к рамке; без очков
     ближайшая свободная не дальше 60 мм."""
-    lines = [ln for ln in layout.lines if ln.source is not LineSource.anchor]
+    lines = [ln for ln in layout.lines if ln.source is not LineSource.anchor and not is_date_blank(ln, layout.words)]
     taken = {(c.line.x0, c.line.y) for c in claimed if c.slot != place.slot}
     free = [ln for ln in lines if (ln.x0, ln.y) not in taken]
     scored = [(_score(ln, layout.words, place.words), ln) for ln in free]
