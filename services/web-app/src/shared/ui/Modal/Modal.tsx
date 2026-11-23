@@ -1,5 +1,6 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { clsx } from "clsx";
+import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useIsPhoneWidth } from "../../lib/viewport";
 import { useUiVariant } from "../UiVariant";
@@ -33,6 +34,31 @@ export const Modal = ({
   // Телефон: окно становится шторкой снизу. Раскладку делает CSS (index.css, .modal-panel),
   // атрибут нужен тестам и стилям, которым надо знать форму.
   const form = useIsPhoneWidth() ? "sheet" : "dialog";
+  // Куда вернуть фокус после закрытия. У Radix фокус возвращается на `Dialog.Trigger`, а окна
+  // приложения открываются своими кнопками без него, и фокус уходил на body: клавиатура и
+  // скринридер теряли место. Запоминаем, что было в фокусе при открытии, и возвращаем туда.
+  const returnTo = useRef<HTMLElement | null>(null);
+  const content = useRef<HTMLDivElement>(null);
+  const rememberFocus = () => {
+    const active = document.activeElement;
+    returnTo.current =
+      active instanceof HTMLElement && active !== document.body ? active : null;
+  };
+  const restoreFocus = (event: Event) => {
+    const target = returnTo.current;
+    returnTo.current = null;
+    if (!target?.isConnected) return;
+    const active = document.activeElement;
+    // Фокус уже увели в другое место (например, onClose открыл следующий шаг): не мешаем.
+    const free =
+      active === null ||
+      active === document.body ||
+      !active.isConnected ||
+      content.current?.contains(active) === true;
+    if (!free) return;
+    event.preventDefault();
+    target.focus();
+  };
   return (
     <DialogPrimitive.Root
       open={isOpen}
@@ -48,6 +74,9 @@ export const Modal = ({
           )}
         />
         <DialogPrimitive.Content
+          ref={content}
+          onOpenAutoFocus={rememberFocus}
+          onCloseAutoFocus={restoreFocus}
           data-form={form}
           className={clsx(
             "modal-panel fixed left-1/2 top-1/2 z-[101] -translate-x-1/2 -translate-y-1/2",
