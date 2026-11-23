@@ -58,7 +58,7 @@
     "tokenPlaceholder": "Paste the token",
     "show": "Show token",
     "hide": "Hide token",
-    "stored": "The token is stored encrypted on this computer and is never shown again.",
+    "stored": "The token is stored encrypted and is never shown again.",
     "advanced": "Advanced",
     "label": "Access name",
     "username": "User name",
@@ -241,7 +241,7 @@
         "cancel": "Cancel",
         "failed": "Could not replace the token.",
         "done": "Token replaced",
-        "keepHint": "The token is stored encrypted on this computer and is never shown again."
+        "keepHint": "The token is stored encrypted and is never shown again."
       },
       "deleteDialog": {
         "title": "Delete the access “{{label}}”?",
