@@ -1,9 +1,12 @@
-"""Patch-версии с исправленными текстами `{ ru, en }` дают тот же PDF, что и предыдущие, настоящий TeX Live.
+"""Patch-версии с исправленными текстами `{ ru, en }` и с якорями мест подписей дают тот же PDF, что и предыдущие,
+настоящий TeX Live.
 
 `hse-cs-sse/coursework` 2026.1.6, `hse-cs-se/coursework` и `vkr` 2026.1.2, `hse-cs-se/pp` 2026.1.1 отличаются от
 предыдущих версий только кавычками у подписей полей, названий проверок и описания точки (запятая без кавычек резала
-строку, `flow_text_lint`). Подписи в документ не печатаются: каждый документ и каждый LaTeX-вариант обеих версий
-собирается с одними данными проекта, и PDF совпадают байт в байт.
+строку, `flow_text_lint`). `hse-cs-sse/coursework` 2026.1.7, `hse-cs-se/coursework` и `vkr` 2026.1.3 добавляют только
+якоря мест подписей (`\\hseSignAnchor`, `\\hseDateAnchor`), а якоря ничего не печатают (signing-route.md, 15.17.5).
+Подписи и якоря в документ не печатаются: каждый документ и каждый LaTeX-вариант обеих версий собирается с одними
+данными проекта, и PDF совпадают байт в байт.
 
 Нужны docker и образ TeX в HSE_TEST_TEX_IMAGE. Комплекты ЕСПД `hse-cs-se/coursework` и `vkr` это десятки сборок
 (около получаса), поэтому они собираются только с HSE_TEST_TEX_ALL_PATCHES=1; в CI идут КП магистратуры и PP:
@@ -68,12 +71,20 @@ _CASES = [
     _Case("hse-cs-sse", "coursework", "2026.1.5", "2026.1.6", "ru", ProjectKind.project),
     _Case("hse-cs-sse", "coursework", "2026.1.5", "2026.1.6", "en", ProjectKind.project),
     _Case("hse-cs-se", "pp", "2026.1", "2026.1.1", "en", ProjectKind.research),
+    # Якоря подписи и даты научного руководителя на титуле отчёта.
+    _Case("hse-cs-sse", "coursework", "2026.1.6", "2026.1.7", "ru", ProjectKind.project),
+    _Case("hse-cs-sse", "coursework", "2026.1.6", "2026.1.7", "en", ProjectKind.project),
 ]
 _ESPD_SETS = [
     _Case("hse-cs-se", "coursework", "2026.1.1", "2026.1.2", "ru", ProjectKind.project),
     _Case("hse-cs-se", "coursework", "2026.1.1", "2026.1.2", "ru", ProjectKind.research),
     _Case("hse-cs-se", "vkr", "2026.1.1", "2026.1.2", "ru", ProjectKind.project),
     _Case("hse-cs-se", "vkr", "2026.1.1", "2026.1.2", "ru", ProjectKind.research),
+    # Якоря мест подписей на линиях листа утверждения, титулов и форм ПДП.
+    _Case("hse-cs-se", "coursework", "2026.1.2", "2026.1.3", "ru", ProjectKind.project),
+    _Case("hse-cs-se", "coursework", "2026.1.2", "2026.1.3", "ru", ProjectKind.research),
+    _Case("hse-cs-se", "vkr", "2026.1.2", "2026.1.3", "ru", ProjectKind.project),
+    _Case("hse-cs-se", "vkr", "2026.1.2", "2026.1.3", "ru", ProjectKind.research),
 ]
 _HEAVY = pytest.mark.skipif(
     not os.environ.get("HSE_TEST_TEX_ALL_PATCHES"), reason="комплект ЕСПД собирается с HSE_TEST_TEX_ALL_PATCHES=1"
