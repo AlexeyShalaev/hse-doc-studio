@@ -29,6 +29,16 @@ _TEXTS: Final[Mapping[Code, tuple[str, str]]] = {
         "Места нет: якорь записи не найден в сборке, рамка за краем листа или места нет совсем.",
         "No place: the entry's anchor is missing in the build, the box is off the sheet, or there is no place.",
     ),
+    Code.anchor_missing: (
+        (
+            "В этой сборке нет строки слота (якорь «{anchor}»): при этих данных или в этом варианте документа шаблон "
+            "её не печатает, место не ставится. Проверьте сборку, где строка есть."
+        ),
+        (
+            "This build has no line for the slot (anchor «{anchor}»): the template does not print it for this data or "
+            "this document variant, so there is no place. Check a build where the line is printed."
+        ),
+    ),
     Code.page_out_of_range: (
         "Страница {page} больше числа страниц PDF ({pages}).",
         "Page {page} is past the PDF end ({pages}).",

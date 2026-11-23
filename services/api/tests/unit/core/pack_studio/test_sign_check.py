@@ -181,3 +181,16 @@ def test__far_box__suggestion_may_cover_only_small_caption_text() -> None:
 def _xy(rect: Rect | None) -> tuple[float, float, float]:
     assert rect is not None
     return rect.x0, rect.y0, rect.width
+
+
+def test__slot_line_not_printed_in_this_build__a_hint_not_an_error() -> None:
+    # Место консультанта на якоре, а строку консультанта шаблон без консультанта не печатает: места нет по замыслу.
+    checks = check_places([], [("supervisor", "S")], {}, 1, {}, absent=[("co_supervisor", "C", "co_supervisor")])
+
+    by = {c.slot: c for c in checks}
+    assert _codes(by["supervisor"]) == ["no_place"]
+    assert by["supervisor"].status is not None
+    assert by["supervisor"].status.value == "error"
+    assert _codes(by["co_supervisor"]) == ["anchor_missing"]
+    assert by["co_supervisor"].findings[0].data == {"anchor": "co_supervisor"}
+    assert by["co_supervisor"].status is None

@@ -70,6 +70,7 @@ class Severity(StrEnum):
 
 class Code(StrEnum):
     no_place = "no_place"
+    anchor_missing = "anchor_missing"
     page_out_of_range = "page_out_of_range"
     outside_page = "outside_page"
     near_edge = "near_edge"
@@ -83,6 +84,7 @@ class Code(StrEnum):
 
 SEVERITY: Final[Mapping[Code, Severity]] = {
     Code.no_place: Severity.error,
+    Code.anchor_missing: Severity.info,
     Code.page_out_of_range: Severity.error,
     Code.outside_page: Severity.error,
     Code.near_edge: Severity.warning,
@@ -421,17 +423,26 @@ def check_places(  # noqa: C901, PLR0912, PLR0915 — правила разде�
     page_count: int,
     ink: Mapping[int, float],
     anchors: Mapping[str, tuple[int, Line]] | None = None,
+    absent: Sequence[tuple[str, str, str]] = (),
 ) -> tuple[SlotCheck, ...]:
     """Находки по местам подписей сборки.
 
     `places` рамки сборки (подписи и метки даты), `missing` слоты документа без рамки (id и подпись), `layouts`
     страницы с рамками и якорями, `ink` доля чернил под рамкой подписи по индексу в `places`, `anchors` линии якорей
-    подписей сборки по id слота (страница и линия).
+    подписей сборки по id слота (страница и линия). `absent` слоты, место которых на якоре, а якоря в известных якорях
+    сборки нет (id, подпись, якорь): шаблон не печатает их строку при этих данных (строка консультанта без
+    консультанта), места нет по замыслу (signing-route.md, 15.17.8), это подсказка, а не ошибка.
     """
     anchors = anchors or {}
     result: list[SlotCheck] = [
         SlotCheck(slot, label, None, None, (Finding(Code.no_place, SEVERITY[Code.no_place]),))
         for slot, label in missing
+    ]
+    result += [
+        SlotCheck(
+            slot, label, None, None, (Finding(Code.anchor_missing, SEVERITY[Code.anchor_missing], {"anchor": a}),)
+        )
+        for slot, label, a in absent
     ]
     signs = [(i, p) for i, p in enumerate(places) if p.kind is PlaceKind.sign]
     claims: list[_Claim] = []
