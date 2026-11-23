@@ -34,11 +34,22 @@ const Opener = () => {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)}>
+      <button
+        type="button"
+        onClick={() => {
+          setOpen(true);
+        }}
+      >
         More conditions
       </button>
       {open ? (
-        <Modal isOpen onClose={() => setOpen(false)} title="All conditions">
+        <Modal
+          isOpen
+          onClose={() => {
+            setOpen(false);
+          }}
+          title="All conditions"
+        >
           <button type="button">Value</button>
         </Modal>
       ) : null}
