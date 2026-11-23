@@ -183,6 +183,23 @@ class SqlApiTokenRepository:
             ).scalars()
             return [_api_token(row) for row in rows]
 
+    async def get(self, user_id: str, token_id: str) -> ApiToken | None:
+        async with self._sessions.use() as db:
+            row = (
+                await db.execute(select(ApiTokenRow).where(ApiTokenRow.id == token_id, ApiTokenRow.user_id == user_id))
+            ).scalar_one_or_none()
+            return _api_token(row) if row else None
+
+    async def set_scopes(self, user_id: str, token_id: str, scopes: frozenset[TokenScope]) -> bool:
+        async with self._sessions.use() as db:
+            result = await db.execute(
+                update(ApiTokenRow)
+                .where(ApiTokenRow.id == token_id, ApiTokenRow.user_id == user_id)
+                .values(scopes=sorted(scope.value for scope in scopes))
+                .returning(ApiTokenRow.id)
+            )
+            return result.first() is not None
+
     async def delete(self, user_id: str, token_id: str) -> bool:
         async with self._sessions.use() as db:
             result = await db.execute(

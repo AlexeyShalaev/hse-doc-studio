@@ -131,6 +131,8 @@ IDENTITY_ERROR_STATUS: Mapping[IdentityErrorCode, int] = {
     IdentityErrorCode.runner_offline: _STATE,
     IdentityErrorCode.runner_disk_busy: _STATE,
     IdentityErrorCode.disk_target_unavailable: _STATE,
+    IdentityErrorCode.token_scope_not_allowed: _FORBIDDEN,
+    IdentityErrorCode.api_token_expired: _STATE,
 }
 
 

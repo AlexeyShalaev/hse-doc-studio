@@ -1,4 +1,5 @@
-"""Персональные токены доступа: выпуск, показ один раз, Bearer на API, отзыв и запрет управлять токенами токеном."""
+"""Персональные токены доступа: выпуск, показ один раз, Bearer на API, смена прав, отзыв и запрет управлять
+токенами токеном."""
 
 from __future__ import annotations
 
@@ -21,13 +22,18 @@ from hse_doc_studio.api.guards import install_exception_handlers, project_access
 from hse_doc_studio.api.route_scopes import ROUTE_SCOPES, RouteScope
 from hse_doc_studio.api.routers.v1 import api_router
 from hse_doc_studio.core.access.context import current_actor
-from hse_doc_studio.core.identity.entities import ApiToken, Session, TokenScope, User, UserStatus
+from hse_doc_studio.core.identity.entities import ApiToken, ApiTokenOrigin, Session, TokenScope, User, UserStatus
 from hse_doc_studio.core.identity.normalize import hash_token, normalize_email
 from hse_doc_studio.core.identity.protocols import IActorResolver
 from hse_doc_studio.core.mode import StudioMode
 from hse_doc_studio.infra.identity.resolvers import BearerActorResolver, ChainActorResolver, SessionCookieResolver
 from hse_doc_studio.use_cases.admin.lifecycle import ExportMyDataUC
-from hse_doc_studio.use_cases.identity.api_tokens import CreateApiTokenUC, ListApiTokensUC, RevokeApiTokenUC
+from hse_doc_studio.use_cases.identity.api_tokens import (
+    CreateApiTokenUC,
+    ListApiTokensUC,
+    RevokeApiTokenUC,
+    UpdateApiTokenScopesUC,
+)
 from hse_doc_studio.use_cases.identity.sessions import ListSessionsUC, SessionService
 from hse_doc_studio.use_cases.server_setup.state import KEY_SETUP_COMPLETED
 from httpx import ASGITransport, AsyncClient
@@ -57,7 +63,7 @@ class _World:
         self.settings = InMemoryInstanceSettingsRepository()
         self.lifecycle = InMemoryUserLifecycle(store)
 
-    async def add_user(self, email: str = "anna@example.org") -> User:
+    async def add_user(self, email: str = "anna@example.org", *, admin: bool = False) -> User:
         user = User(
             id=f"u_{await self.users.count()}",
             email=email,
@@ -66,6 +72,7 @@ class _World:
             status=UserStatus.active,
             created_at=NOW,
             email_verified=True,
+            is_instance_admin=admin,
         )
         await self.users.add(user)
         await self.settings.set(KEY_SETUP_COMPLETED, True, source="test")
@@ -128,6 +135,10 @@ class _Provider(Provider):
     @provide
     def create_token(self) -> CreateApiTokenUC:
         return CreateApiTokenUC(self._w.tokens, self._w.audit, _Uow())
+
+    @provide
+    def update_token(self) -> UpdateApiTokenScopesUC:
+        return UpdateApiTokenScopesUC(self._w.tokens, self._w.audit, _Uow())
 
     @provide
     def revoke_token(self) -> RevokeApiTokenUC:
@@ -361,3 +372,178 @@ async def test_export_by_token_or_anonymous_is_refused(env: tuple[AsyncClient, _
     anonymous = await client.get("/api/v1/account/export")
 
     assert (by_token.status_code, anonymous.status_code) == (403, 401)
+
+
+# Смена прав существующего токена (PATCH /account/tokens/{id}): значение то же, права новые со следующего запроса.
+
+
+async def _patch(client: AsyncClient, token_id: str, scopes: list[str], headers: dict[str, str]) -> Any:
+    return await client.patch(f"/api/v1/account/tokens/{token_id}", json={"scopes": scopes}, headers=headers)
+
+
+async def test_owner_changes_scopes_and_the_next_request_uses_them(env: tuple[AsyncClient, _World]) -> None:
+    client, world = env
+    created = await _issue(client, world, scopes=["git:read"])
+    token_id, secret = created["item"]["id"], created["token"]
+    assert (await client.get("/api/v1/whoami", headers=_bearer(secret))).status_code == 403
+
+    added = await _patch(client, token_id, ["git:read", "api", "mcp"], _cookie("mine"))
+
+    assert added.status_code == 200, added.text
+    assert added.headers["cache-control"] == "no-store"
+    assert added.json()["scopes"] == ["api", "git:read", "mcp"]
+    assert added.json()["prefix"] == created["item"]["prefix"]
+    assert secret not in added.text
+    assert (await client.get("/api/v1/whoami", headers=_bearer(secret))).status_code == 200
+
+    removed = await _patch(client, token_id, ["mcp"], _cookie("mine"))
+
+    assert removed.json()["scopes"] == ["mcp"]
+    assert (await client.get("/api/v1/whoami", headers=_bearer(secret))).status_code == 403
+    listing = (await client.get("/api/v1/account/tokens", headers=_cookie("mine"))).json()
+    assert listing[0]["scopes"] == ["mcp"]
+    events = [e for e in await world.audit.list(limit=50) if e.action == "pat.scopes_update"]
+    assert [(e.target, e.details["added"], e.details["removed"]) for e in reversed(events)] == [
+        (token_id, ["api", "mcp"], []),
+        (token_id, [], ["api", "git:read"]),
+    ]
+    assert all(secret not in json.dumps(e.details) for e in events)
+
+
+async def test_same_scopes_change_nothing_and_are_not_audited(env: tuple[AsyncClient, _World]) -> None:
+    client, world = env
+    created = await _issue(client, world)
+
+    response = await _patch(client, created["item"]["id"], ["git:read", "api"], _cookie("mine"))
+
+    assert response.status_code == 200
+    assert response.json()["scopes"] == ["api", "git:read"]
+    assert not [e for e in await world.audit.list(limit=50) if e.action == "pat.scopes_update"]
+
+
+async def test_token_cannot_change_scopes_of_itself_or_another_token(env: tuple[AsyncClient, _World]) -> None:
+    client, world = env
+    created = await _issue(client, world, scopes=["api"])
+    other = await client.post("/api/v1/account/tokens", json=CREATE, headers=_cookie("mine"))
+    headers = _bearer(created["token"])
+
+    own = await _patch(client, created["item"]["id"], ["api", "mcp", "packs"], headers)
+    foreign = await _patch(client, other.json()["item"]["id"], ["api", "git:write"], headers)
+
+    assert (own.status_code, foreign.status_code) == (403, 403)
+    assert [t.scopes for t in await world.tokens.list_for_user("u_0")] == [
+        frozenset({TokenScope.api}),
+        frozenset({TokenScope.api, TokenScope.git_read}),
+    ]
+
+
+async def test_scope_change_needs_a_login(env: tuple[AsyncClient, _World]) -> None:
+    client, world = env
+    created = await _issue(client, world)
+
+    response = await _patch(client, created["item"]["id"], ["api"], {})
+
+    assert response.status_code == 401
+
+
+async def test_another_user_cannot_change_scopes(env: tuple[AsyncClient, _World]) -> None:
+    client, world = env
+    created = await _issue(client, world, scopes=["api"])
+    boris = await world.add_user("boris@example.org")
+    await world.add_session(boris, "boris")
+
+    response = await _patch(client, created["item"]["id"], ["api", "mcp"], _cookie("boris"))
+
+    assert response.status_code == 404
+    assert [t.scopes for t in await world.tokens.list_for_user("u_0")] == [frozenset({TokenScope.api})]
+
+
+async def test_revoked_token_cannot_be_changed(env: tuple[AsyncClient, _World]) -> None:
+    client, world = env
+    created = await _issue(client, world)
+    token_id = created["item"]["id"]
+    await client.delete(f"/api/v1/account/tokens/{token_id}", headers={**_cookie("mine"), "X-CSRF-Token": "csrf-mine"})
+
+    response = await _patch(client, token_id, ["api", "mcp"], _cookie("mine"))
+
+    assert response.status_code == 404
+    assert await world.tokens.list_for_user("u_0") == []
+
+
+async def test_expired_token_cannot_be_changed(env: tuple[AsyncClient, _World]) -> None:
+    client, world = env
+    user = await world.add_user()
+    await world.add_session(user, "mine")
+    token = await world.add_token(user, "hsd_pat_" + "x" * 32, expires_at=NOW - timedelta(seconds=1))
+
+    response = await _patch(client, token.id, ["api", "mcp"], _cookie("mine"))
+
+    assert response.status_code == 409
+    assert response.json()["code"] == "api_token_expired"
+    assert (await world.tokens.list_for_user(user.id))[0].scopes == frozenset({TokenScope.api})
+
+
+async def test_admin_only_scope_is_refused_to_a_non_admin(env: tuple[AsyncClient, _World]) -> None:
+    client, world = env
+    created = await _issue(client, world, scopes=["mcp"])
+
+    changed = await _patch(client, created["item"]["id"], ["mcp", "mcp:admin"], _cookie("mine"))
+    issued = await client.post(
+        "/api/v1/account/tokens", json={**CREATE, "scopes": ["mcp", "mcp:admin"]}, headers=_cookie("mine")
+    )
+
+    assert (changed.status_code, issued.status_code) == (403, 403)
+    assert changed.json()["code"] == issued.json()["code"] == "token_scope_not_allowed"
+    assert [t.scopes for t in await world.tokens.list_for_user("u_0")] == [frozenset({TokenScope.mcp})]
+
+
+async def test_admin_may_add_the_admin_scope(env: tuple[AsyncClient, _World]) -> None:
+    client, world = env
+    admin = await world.add_user(admin=True)
+    await world.add_session(admin, "root")
+    token = await world.add_token(admin, "hsd_pat_" + "r" * 32, scopes=frozenset({TokenScope.mcp}))
+
+    response = await _patch(client, token.id, ["mcp", "mcp:admin"], _cookie("root"))
+
+    assert response.status_code == 200, response.text
+    assert response.json()["scopes"] == ["mcp", "mcp:admin"]
+
+
+async def test_removing_a_scope_that_is_no_longer_allowed_is_fine(env: tuple[AsyncClient, _World]) -> None:
+    """Бывший админ: `mcp:admin` у токена остался; его можно убрать и можно оставить, добавляя другое право."""
+    client, world = env
+    user = await world.add_user()
+    await world.add_session(user, "mine")
+    token = await world.add_token(user, "hsd_pat_" + "f" * 32, scopes=frozenset({TokenScope.mcp, TokenScope.mcp_admin}))
+
+    kept = await _patch(client, token.id, ["mcp", "mcp:admin", "packs"], _cookie("mine"))
+    dropped = await _patch(client, token.id, ["mcp"], _cookie("mine"))
+
+    assert (kept.status_code, dropped.status_code) == (200, 200)
+    assert dropped.json()["scopes"] == ["mcp"]
+
+
+async def test_device_token_stays_a_git_token(env: tuple[AsyncClient, _World]) -> None:
+    client, world = env
+    user = await world.add_user()
+    await world.add_session(user, "mine")
+    token = await world.add_token(
+        user, "hsd_pat_" + "d" * 32, scopes=frozenset({TokenScope.git_read}), origin=ApiTokenOrigin.device
+    )
+
+    refused = await _patch(client, token.id, ["git:read", "api"], _cookie("mine"))
+    allowed = await _patch(client, token.id, ["git:read", "git:write"], _cookie("mine"))
+
+    assert refused.status_code == 403
+    assert refused.json()["code"] == "token_scope_not_allowed"
+    assert allowed.json()["scopes"] == ["git:read", "git:write"]
+
+
+@pytest.mark.parametrize("scopes", [[], ["admin"], ["api"] * 8])
+async def test_scope_change_validates_the_request(env: tuple[AsyncClient, _World], scopes: list[str]) -> None:
+    client, world = env
+    created = await _issue(client, world)
+
+    response = await _patch(client, created["item"]["id"], scopes, _cookie("mine"))
+
+    assert response.status_code == 422
