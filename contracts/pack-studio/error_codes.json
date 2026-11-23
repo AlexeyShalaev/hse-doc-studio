@@ -67,5 +67,6 @@
   "diff_base_unavailable",
   "outcome_busy",
   "outcome_element_not_found",
-  "outcome_too_large"
+  "outcome_too_large",
+  "refresh_dirty"
 ]

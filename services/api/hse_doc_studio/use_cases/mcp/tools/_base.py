@@ -9,7 +9,7 @@ from collections.abc import Mapping
 from datetime import date, datetime
 from enum import Enum
 from pathlib import PurePath
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Final
 from uuid import UUID
 
 from hse_doc_studio.core.agent.entities import AgentToolContext, ToolResult, ToolSpec
@@ -19,6 +19,11 @@ from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.mcp.protocols import IDependencyResolver
 
 PROJECT_ID_SCHEMA: Mapping[str, Any] = {"type": "string", "description": "Идентификатор проекта (UUID)"}
+
+# Ожидание итога в одном вызове тула. Клиенты MCP обрывают вызов по своему таймауту запроса (60 с в SDK, у Claude Code
+# вызов с ожиданием 120 с падал «The operation timed out»), поэтому один вызов ждёт не дольше этого: больший `wait_s`
+# принимается и урезается. Дольше ждут повторным вызовом с id начатой операции.
+MCP_MAX_WAIT_S: Final = 50
 
 
 class ArgumentError(ValueError):
@@ -73,6 +78,11 @@ def int_arg(args: Mapping[str, object], key: str, default: int, *, lo: int, hi: 
     if not isinstance(raw, int | float):
         return default
     return max(lo, min(hi, int(raw)))
+
+
+def wait_arg(args: Mapping[str, object], default: int) -> int:
+    """`wait_s` вызова: 0..MCP_MAX_WAIT_S, больший урезается (вызов должен вернуться раньше таймаута клиента)."""
+    return int_arg(args, "wait_s", min(default, MCP_MAX_WAIT_S), lo=0, hi=MCP_MAX_WAIT_S)
 
 
 def bool_arg(args: Mapping[str, object], key: str, default: bool) -> bool:

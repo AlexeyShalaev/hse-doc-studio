@@ -122,6 +122,36 @@ async def test__status__is_local_and_never_compares_file_contents_with_the_base(
     assert (status.behind, status.ahead) == (2, 0)
 
 
+async def test__status__compares_with_the_fork_point_not_the_fresh_base(tmp_path: Path) -> None:
+    fork_point = "f" * 40
+    runner = _status_runner()
+    runner._replies["merge-base"] = lambda _a: GitResult(0, f"{fork_point}\n".encode(), "")
+    git = PackWorkspaceGit(runner, GitConfig())  # type: ignore[arg-type]
+
+    await git.status(workspace_dirs(_tree(tmp_path)), _TARGET, base_branch="main", packs_path="packs")
+
+    (merge_base,) = [args for args in runner.local if _subcommand(args) == "merge-base"]
+    assert merge_base[-2:] == ["refs/remotes/origin/main", "HEAD"]
+    (diff_index,) = [args for args in runner.local if _subcommand(args) == "diff-index"]
+    # Три точки: новое в базе после клона правками пространства не считается.
+    assert fork_point in diff_index
+    assert "refs/remotes/origin/main" not in diff_index
+    assert runner.network == []
+
+
+async def test__advance_to_base__checkout_is_not_forced(tmp_path: Path) -> None:
+    runner = _Runner({"rev-parse": lambda _a: GitResult(0, f"{_HEAD}\n".encode(), "")})
+    git = PackWorkspaceGit(runner, GitConfig())  # type: ignore[arg-type]
+
+    sha = await git.advance_to_base(workspace_dirs(tmp_path), _TARGET, base_branch="main")
+
+    checkout = next(args for args in runner.network if _subcommand(args) == "checkout")
+    assert sha == _HEAD
+    assert "--force" not in checkout
+    assert checkout[-2:] == ["--no-recurse-submodules", "refs/remotes/origin/main"]
+    assert not any(_subcommand(args) == "clean" for args in [*runner.local, *runner.network])
+
+
 async def test__commit__staged_check_is_plumbing_without_rename_detection(tmp_path: Path) -> None:
     runner = _Runner({"diff-index": lambda _a: GitResult(0, b"", "")})
     git = PackWorkspaceGit(runner, GitConfig())  # type: ignore[arg-type]

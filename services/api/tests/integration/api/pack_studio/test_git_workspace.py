@@ -136,10 +136,11 @@ async def test__refresh__version_released_in_base__becomes_read_only(stand: Stan
 
     assert started.status_code == 202
     assert refreshed["base_sha"] == remote.head("main")
-    assert refreshed["error"] is None
+    # Несохранённая правка: дерево не перематывается, карточка говорит почему.
+    assert refreshed["error"]["code"] == "refresh_dirty"
     assert after.status_code == 409
     assert after.json()["code"] == "version_released"
-    # Рабочее дерево выборка не трогает: правка человека на месте.
+    # Рабочее дерево с правкой выборка не трогает: правка человека на месте.
     assert (_store(stand, ws_id) / "tree" / "packs" / path).read_bytes() == b"draft edit"
 
 

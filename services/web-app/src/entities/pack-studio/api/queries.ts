@@ -161,10 +161,29 @@ export const usePackWorkspaces = () =>
       query.state.data?.some((w) => w.busy) ? WORKSPACE_POLL_MS : false,
   });
 
+/**
+ * Фоновая операция пространства (клон, «Обновить») закончилась. «Обновить» могла
+ * перемотать дерево без ветки на свежую базу и поменять выпущенные версии: дерево,
+ * состояние git, diff, открытые файлы и проверки читаются заново.
+ */
+export const settleWorkspace = (client: QueryClient, id: string) => {
+  const scope = packStudioKeys.workspace(id);
+  for (const part of ["tree", "git", "diff", "file", "lint"]) {
+    void client.invalidateQueries({ queryKey: [...scope, part] });
+  }
+};
+
 export const usePackWorkspace = (id: string) =>
   useQuery({
     queryKey: packStudioKeys.workspace(id),
-    queryFn: () => packStudioApi.workspace(id),
+    queryFn: async ({ client }) => {
+      const before = client.getQueryData<PackWorkspace>(
+        packStudioKeys.workspace(id),
+      );
+      const workspace = await packStudioApi.workspace(id);
+      if (before?.busy && !workspace.busy) settleWorkspace(client, id);
+      return workspace;
+    },
     refetchInterval: (query) => pollWhileBusy(query.state.data),
   });
 

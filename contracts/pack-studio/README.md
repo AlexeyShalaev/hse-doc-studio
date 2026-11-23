@@ -19,7 +19,7 @@ API `/api/v1/pack-studio/*` и `/api/admin/pack-studio*` (`docs/design/template-
 | `POST /pack-studio/workspaces` | `PackWorkspace` | `CreatePackWorkspaceRequest`; папка 201 `ready`, git 202 `cloning` (клон в фоне) |
 | `GET /pack-studio/workspaces/{id}` | `PackWorkspace` | опрос до `ready` или `failed` (`busy` false) |
 | `DELETE /pack-studio/workspaces/{id}` | 204 | у git удаляется клон, у папки только запись |
-| `POST /pack-studio/workspaces/{id}/refresh` | 202 `PackWorkspace` | выборка базовой ветки и пересчёт выпущенных; у неудачного клона клон заново |
+| `POST /pack-studio/workspaces/{id}/refresh` | 202 `PackWorkspace` | выборка базовой ветки и пересчёт выпущенных; у неудачного клона клон заново; пространство без рабочей ветки и своих коммитов с чистым деревом переезжает на свежую базу, при несохранённых правках дерево остаётся, в `error.code` карточки `refresh_dirty` |
 | `GET /pack-studio/workspaces/{id}/tree` | `PackTree` | паки, шаблоны, версии с `released` и `modified`, файлы с `read_only` |
 | `GET /pack-studio/workspaces/{id}/files/{path}` | байты | `ETag`; `X-Pack-Read-Only`, если файл менять нельзя |
 | `PUT /pack-studio/workspaces/{id}/files/{path}` | `PackFileVersion` | файл целиком, `If-Match` по желанию |
@@ -27,8 +27,8 @@ API `/api/v1/pack-studio/*` и `/api/admin/pack-studio*` (`docs/design/template-
 | `DELETE /pack-studio/workspaces/{id}/files/{path}` | 204 | файл (`If-Match` по желанию) или папка |
 | `POST /pack-studio/workspaces/{id}/lint` | `PackLint` | `PackLintRequest`: файл версии даёт `pack_lint` всей версии и схемы её манифестов, `pack.yaml`, `template.yaml`, `releases.yaml` схему файла, прочее `scope: none`; находки с файлом и строкой для редактора (срез T8) |
 | `GET /pack-studio/workspaces/{id}/hints?path=` | `PackEditorHints` | автодополнение: поля анкеты версии файла и макросы `\hse...` её динамических инклудов (срез T8) |
-| `GET /pack-studio/workspaces/{id}/git` | `PackGit` | ветка (null: вершина базы без ветки), правки после коммита, отличия от базы, ahead и behind, ссылка compare, если ветка отправлена без PR |
-| `GET /pack-studio/workspaces/{id}/git/diff` | `PackDiff` | единый diff от базы (коммиты и правки, новые файлы тоже), обрезан по `max_diff_bytes` |
+| `GET /pack-studio/workspaces/{id}/git` | `PackGit` | ветка (null: база без ветки), правки после коммита, свои отличия от точки расхождения с базой (`base...HEAD` и правки на диске: новое только в базе сюда не попадает), ahead и behind, ссылка compare, если ветка отправлена без PR |
+| `GET /pack-studio/workspaces/{id}/git/diff` | `PackDiff` | единый diff своих правок от точки расхождения с базой (коммиты и правки, новые файлы тоже), обрезан по `max_diff_bytes` |
 | `POST /pack-studio/workspaces/{id}/git/branch` | `PackGit` | `PackBranchRequest`: без имени Студия называет ветку сама; новая ветка на текущей вершине (правки остаются), своя прежняя или ветка с сервера только при чистом дереве (`workspace_dirty`) |
 | `POST /pack-studio/workspaces/{id}/git/commit` | `PackCommitResponse` | `PackCommitRequest`: «Сохранить версию», автор и коммиттер из профиля, сообщение по conventional commits; без ветки она создаётся |
 | `POST /pack-studio/workspaces/{id}/git/propose` | `PackProposeResponse` | `PackProposeRequest`: коммит несохранённого, проверки пака (`lint_failed`), push, PR GitHub или MR GitLab; нет права push: `fork_required`, повтор с `fork` |
