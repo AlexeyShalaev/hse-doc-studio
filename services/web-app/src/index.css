@@ -85,12 +85,12 @@
        должны различаться с одного взгляда. */
     --c-ok: oklch(70% 0.19 152);
     --c-warn: oklch(78% 0.17 60);
-    --c-err: oklch(70% 0.21 25);
+    --c-err: oklch(73% 0.18 25);
     --c-info: oklch(72% 0.14 230);
 
     --c-ok-soft: oklch(70% 0.19 152 / 0.14);
     --c-warn-soft: oklch(78% 0.17 60 / 0.14);
-    --c-err-soft: oklch(70% 0.21 25 / 0.14);
+    --c-err-soft: oklch(73% 0.18 25 / 0.14);
     --c-info-soft: oklch(72% 0.14 230 / 0.14);
 
     /* Categorical series for the disk-usage breakdown (Настройки → Диск).
@@ -133,22 +133,26 @@
     --fg-3: #9099b8;
     --c-pending: var(--fg-3);
 
-    --accent: oklch(48% 0.19 var(--accent-h));
+    /* Тоны ниже - это и цвет текста меток («черновик», «Замечание», «новое»):
+       текст тона на его мягкой подложке поверх bg-0..bg-2 держит WCAG AA
+       4.5:1, это проверяет src/tokenContrast.test.ts. */
+    --accent: oklch(44% 0.19 var(--accent-h));
     --accent-ink: #ffffff;
-    --accent-soft: oklch(48% 0.19 var(--accent-h) / 0.1);
-    --accent-line: oklch(48% 0.19 var(--accent-h) / 0.25);
+    --accent-soft: oklch(44% 0.19 var(--accent-h) / 0.1);
+    --accent-line: oklch(44% 0.19 var(--accent-h) / 0.25);
 
-    /* Зелёный — тёмный изумрудный, оранжевый — светлее и заметно краснее:
-       на белом фоне прежняя пара (50%/155 и 58%/60) сливалась в точках. */
-    --c-ok: oklch(52% 0.17 150);
-    --c-warn: oklch(65% 0.19 50);
-    --c-err: oklch(54% 0.22 27);
-    --c-info: oklch(52% 0.15 230);
+    /* Зелёный - тёмный изумрудный, оранжевый - коричнево-янтарный, красный -
+       чистый красный: тоны разведены по оттенку, раз светлота у всех одна
+       (её задаёт контраст текста). */
+    --c-ok: oklch(45% 0.15 150);
+    --c-warn: oklch(48% 0.14 65);
+    --c-err: oklch(49% 0.2 27);
+    --c-info: oklch(45% 0.14 230);
 
-    --c-ok-soft: oklch(52% 0.17 150 / 0.1);
-    --c-warn-soft: oklch(65% 0.19 50 / 0.12);
-    --c-err-soft: oklch(54% 0.22 27 / 0.1);
-    --c-info-soft: oklch(52% 0.15 230 / 0.1);
+    --c-ok-soft: oklch(45% 0.15 150 / 0.1);
+    --c-warn-soft: oklch(48% 0.14 65 / 0.12);
+    --c-err-soft: oklch(49% 0.2 27 / 0.1);
+    --c-info-soft: oklch(45% 0.14 230 / 0.1);
 
     /* Categorical series for the disk-usage breakdown — see the dark block
        above for the validation note; same hues, re-stepped for this surface. */
