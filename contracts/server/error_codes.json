@@ -99,5 +99,7 @@
   "runner_disk_unsupported",
   "runner_offline",
   "runner_disk_busy",
-  "disk_target_unavailable"
+  "disk_target_unavailable",
+  "token_scope_not_allowed",
+  "api_token_expired"
 ]

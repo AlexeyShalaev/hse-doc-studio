@@ -27,10 +27,11 @@ from hse_doc_studio.api.schemas.session import (
     CreateApiTokenRequest,
     CreateApiTokenResponse,
     UpdateAccountRequest,
+    UpdateApiTokenRequest,
     VerifyEmailRequest,
 )
 from hse_doc_studio.core.access.context import current_actor
-from hse_doc_studio.core.access.entities import ActorSource
+from hse_doc_studio.core.access.entities import Actor, ActorSource
 from hse_doc_studio.core.identity.entities import ApiToken as ApiTokenEntity
 from hse_doc_studio.core.identity.entities import TokenScope as TokenScopeEntity
 from hse_doc_studio.core.identity.errors import IdentityError, IdentityErrorCode
@@ -46,7 +47,12 @@ from hse_doc_studio.use_cases.identity.account_profile import (
     UpdateAccountInput,
     UpdateAccountUC,
 )
-from hse_doc_studio.use_cases.identity.api_tokens import CreateApiTokenUC, ListApiTokensUC, RevokeApiTokenUC
+from hse_doc_studio.use_cases.identity.api_tokens import (
+    CreateApiTokenUC,
+    ListApiTokensUC,
+    RevokeApiTokenUC,
+    UpdateApiTokenScopesUC,
+)
 from hse_doc_studio.use_cases.identity.change_password import ChangePasswordUC
 from hse_doc_studio.use_cases.identity.oidc_identities import ListOidcIdentitiesUC, UnlinkOidcIdentityUC
 from hse_doc_studio.use_cases.identity.oidc_login import StartOidcLoginUC
@@ -243,14 +249,20 @@ async def change_password(body: ChangePasswordRequest, request: Request) -> Resp
     return Response(status_code=status.HTTP_204_NO_CONTENT, headers={"Cache-Control": "no-store"})
 
 
-def _session_user_id() -> str:
-    """Токенами управляет только вошедший по cookie: украденный токен не должен плодить новые."""
+def _session_actor() -> Actor:
+    """Токенами управляет только вошедший по cookie: украденный токен не должен плодить новые и поднимать права."""
     actor = current_actor()
     if actor is None or not actor.id:
         raise IdentityError(IdentityErrorCode.auth_required)
     if actor.source is not ActorSource.session:
         raise IdentityError(IdentityErrorCode.forbidden)
-    return actor.id
+    return actor
+
+
+def _session_user_id() -> str:
+    user_id = _session_actor().id
+    assert user_id is not None  # noqa: S101 — _session_actor уже отказал бы без id
+    return user_id
 
 
 def _token_item(token: ApiTokenEntity) -> ApiToken:
@@ -291,13 +303,34 @@ async def list_tokens(request: Request, response: Response) -> list[ApiToken]:
 
 @router.post("/account/tokens", response_model=CreateApiTokenResponse, status_code=status.HTTP_201_CREATED)
 async def create_token(body: CreateApiTokenRequest, request: Request, response: Response) -> CreateApiTokenResponse:
-    """Открытое значение токена есть только в этом ответе."""
-    user_id = _session_user_id()
+    """Открытое значение токена есть только в этом ответе. `mcp:admin` только админу установки (403)."""
+    actor = _session_actor()
+    assert actor.id is not None  # noqa: S101 — _session_actor уже отказал бы без id
     created = await (await request.state.dishka_container.get(CreateApiTokenUC)).execute(
-        user_id, body.name, frozenset(TokenScopeEntity(scope) for scope in body.scopes), body.expires_in_days
+        actor.id,
+        body.name,
+        frozenset(TokenScopeEntity(scope) for scope in body.scopes),
+        body.expires_in_days,
+        instance_admin=actor.is_instance_admin,
     )
     response.headers["Cache-Control"] = "no-store"
     return CreateApiTokenResponse(token=created.secret, item=_token_item(created.item))
+
+
+@router.patch("/account/tokens/{token_id}", response_model=ApiToken)
+async def update_token(token_id: str, body: UpdateApiTokenRequest, request: Request, response: Response) -> ApiToken:
+    """Новый набор прав токена; значение то же. Только сессией (токен прав не меняет): 403 `forbidden`.
+    Чужой или отозванный 404, истёкший 409 `api_token_expired`, недоступное право 403 `token_scope_not_allowed`."""
+    actor = _session_actor()
+    assert actor.id is not None  # noqa: S101 — _session_actor уже отказал бы без id
+    change = await (await request.state.dishka_container.get(UpdateApiTokenScopesUC)).execute(
+        actor.id,
+        token_id,
+        frozenset(TokenScopeEntity(scope) for scope in body.scopes),
+        instance_admin=actor.is_instance_admin,
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return _token_item(change.item)
 
 
 @router.delete("/account/tokens/{token_id}", status_code=status.HTTP_204_NO_CONTENT)

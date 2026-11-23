@@ -1,5 +1,5 @@
 import { useId, useState, type FormEvent } from "react";
-import { KeyRound, Plus, Trash2 } from "lucide-react";
+import { KeyRound, Plus, SlidersHorizontal, Trash2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Badge, Button, Input, SecretOnce, Select, Spinner } from "@shared/ui";
 import { Notice } from "@shared/ui/ConflictKit";
@@ -13,12 +13,13 @@ import { ACTIONS, HINT } from "../lib/styles";
 import {
   DEFAULT_EXPIRY,
   TOKEN_EXPIRIES,
-  TOKEN_SCOPES,
   formatDay,
   isExpired,
+  offeredScopes,
   scopeKey,
 } from "../lib/tokens";
 import { AccountCard } from "./parts";
+import { TokenScopesDialog } from "./TokenScopesDialog";
 
 export type TokensCardProps = {
   status: "loading" | "error" | "ready";
@@ -41,6 +42,12 @@ export type TokensCardProps = {
   onCreate: (body: CreateApiTokenRequest, done: () => void) => void;
   onRevoke: (id: string) => void;
   onDismissCreated?: () => void;
+  /** «Изменить права»: новый набор прав того же токена; done вызывают после успеха. Без него кнопки нет. */
+  onUpdateScopes?: (id: string, scopes: TokenScope[], done: () => void) => void;
+  updatingScopes?: boolean;
+  updateFailure?: Failure | null;
+  /** Окно прав закрыто: сбросить ошибку сохранения. */
+  onUpdateClosed?: () => void;
 };
 
 const NAME_MAX = 80;
@@ -63,11 +70,14 @@ export const TokensCard = ({
   onCreate,
   onRevoke,
   onDismissCreated,
+  onUpdateScopes,
+  updatingScopes = false,
+  updateFailure = null,
+  onUpdateClosed,
 }: TokensCardProps) => {
   const { t, i18n } = useTranslation("account");
-  const offered = TOKEN_SCOPES.filter(
-    (scope) => instanceAdmin || scope !== "mcp:admin",
-  );
+  const offered = offeredScopes(instanceAdmin);
+  const [editing, setEditing] = useState<ApiToken | null>(null);
   const uid = useId();
   const [open, setOpen] = useState(startOpen || preset === "git");
   const [name, setName] = useState(() =>
@@ -274,61 +284,93 @@ export const TokensCard = ({
                             })}
                       </span>
                     </div>
-                    {confirmId === token.id ? (
-                      <div
-                        className="flex"
-                        style={{ gap: "0.375rem", flexShrink: 0 }}
-                        role="group"
-                        aria-label={t("tokens.confirmRevoke", {
-                          name: token.name,
-                        })}
-                      >
+                    <div
+                      className="flex"
+                      style={{
+                        gap: "0.375rem",
+                        flexShrink: 0,
+                        flexWrap: "wrap",
+                        justifyContent: "flex-end",
+                        maxWidth: "50%",
+                      }}
+                    >
+                      {onUpdateScopes && !expired && confirmId !== token.id && (
                         <Button
                           type="button"
-                          variant="danger"
+                          variant="outline"
                           size="xs"
-                          data-testid={`token-revoke-confirm-${token.id}`}
+                          aria-label={t("tokens.edit.openAria", {
+                            name: token.name,
+                          })}
+                          data-testid={`token-edit-${token.id}`}
                           onClick={() => {
-                            setConfirmId(null);
-                            onRevoke(token.id);
+                            setEditing(token);
                           }}
+                          style={{ gap: "0.375rem" }}
                         >
-                          {t("tokens.revokeYes")}
+                          <SlidersHorizontal
+                            size="0.75rem"
+                            aria-hidden="true"
+                          />
+                          {t("tokens.edit.open")}
                         </Button>
+                      )}
+                      {confirmId === token.id ? (
+                        <div
+                          className="flex"
+                          style={{ gap: "0.375rem", flexShrink: 0 }}
+                          role="group"
+                          aria-label={t("tokens.confirmRevoke", {
+                            name: token.name,
+                          })}
+                        >
+                          <Button
+                            type="button"
+                            variant="danger"
+                            size="xs"
+                            data-testid={`token-revoke-confirm-${token.id}`}
+                            onClick={() => {
+                              setConfirmId(null);
+                              onRevoke(token.id);
+                            }}
+                          >
+                            {t("tokens.revokeYes")}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="xs"
+                            onClick={() => {
+                              setConfirmId(null);
+                            }}
+                          >
+                            {t("tokens.revokeNo")}
+                          </Button>
+                        </div>
+                      ) : (
                         <Button
                           type="button"
-                          variant="ghost"
+                          variant="outline"
                           size="xs"
+                          aria-disabled={busy}
+                          aria-label={t("tokens.revokeAria", {
+                            name: token.name,
+                          })}
+                          data-testid={`token-revoke-${token.id}`}
                           onClick={() => {
-                            setConfirmId(null);
+                            if (!busy) setConfirmId(token.id);
                           }}
+                          style={{ gap: "0.375rem", flexShrink: 0 }}
                         >
-                          {t("tokens.revokeNo")}
+                          {busy ? (
+                            <Spinner size="sm" />
+                          ) : (
+                            <Trash2 size="0.75rem" aria-hidden="true" />
+                          )}
+                          {t("tokens.revoke")}
                         </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="xs"
-                        aria-disabled={busy}
-                        aria-label={t("tokens.revokeAria", {
-                          name: token.name,
-                        })}
-                        data-testid={`token-revoke-${token.id}`}
-                        onClick={() => {
-                          if (!busy) setConfirmId(token.id);
-                        }}
-                        style={{ gap: "0.375rem", flexShrink: 0 }}
-                      >
-                        {busy ? (
-                          <Spinner size="sm" />
-                        ) : (
-                          <Trash2 size="0.75rem" aria-hidden="true" />
-                        )}
-                        {t("tokens.revoke")}
-                      </Button>
-                    )}
+                      )}
+                    </div>
                   </li>
                 );
               })}
@@ -507,6 +549,19 @@ export const TokensCard = ({
           )}
         </>
       )}
+      <TokenScopesDialog
+        token={editing}
+        instanceAdmin={instanceAdmin}
+        saving={updatingScopes}
+        failure={updateFailure}
+        onSave={(scopes, done) => {
+          if (editing) onUpdateScopes?.(editing.id, scopes, done);
+        }}
+        onClose={() => {
+          setEditing(null);
+          onUpdateClosed?.();
+        }}
+      />
     </AccountCard>
   );
 };

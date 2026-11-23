@@ -96,6 +96,7 @@ _SCHEMAS: dict[str, Any] = {
     "ApiToken": s.ApiToken,
     "ApiTokenList": list[s.ApiToken],
     "CreateApiTokenRequest": s.CreateApiTokenRequest,
+    "UpdateApiTokenRequest": s.UpdateApiTokenRequest,
     "CreateApiTokenResponse": s.CreateApiTokenResponse,
     "ProjectSummary": s.ProjectSummary,
     "ProjectSummaryList": list[s.ProjectSummary],

@@ -79,6 +79,7 @@
       "org_member_remove": "Person removed from an organization",
       "org_member_role": "Organization role changed",
       "pat_revoke": "Access token revoked",
+      "pat_scopes_update": "Access token permissions changed",
       "project_build_runners_update": "Project build policy changed",
       "project_delete": "Project deleted",
       "project_member_remove": "Project access revoked",
@@ -362,7 +363,10 @@
       "grant_id": "Grant",
       "kind": "Kind",
       "url": "Address",
-      "packs_path": "Packs folder"
+      "packs_path": "Packs folder",
+      "scopes": "Permissions",
+      "added": "Added",
+      "removed": "Removed"
     },
     "values": {
       "password": "password",

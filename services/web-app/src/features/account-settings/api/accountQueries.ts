@@ -1,5 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { sessionKeys, type CreateApiTokenRequest } from "@entities/session";
+import {
+  sessionKeys,
+  type CreateApiTokenRequest,
+  type TokenScope,
+} from "@entities/session";
 import { accountApi, type AccountPatch } from "./accountApi";
 
 export const accountKeys = {
@@ -85,6 +89,16 @@ export const useCreateToken = () => {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (body: CreateApiTokenRequest) => accountApi.createToken(body),
+    onSuccess: () =>
+      client.invalidateQueries({ queryKey: accountKeys.tokens() }),
+  });
+};
+
+export const useUpdateTokenScopes = () => {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, scopes }: { id: string; scopes: TokenScope[] }) =>
+      accountApi.updateTokenScopes(id, { scopes }),
     onSuccess: () =>
       client.invalidateQueries({ queryKey: accountKeys.tokens() }),
   });

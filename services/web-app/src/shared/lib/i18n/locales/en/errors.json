@@ -213,6 +213,8 @@
     "runner_offline": "The runner is offline. You can clean its disk when it is back.",
     "runner_disk_busy": "A cleanup is already running on this runner. Wait for it to finish.",
     "disk_target_unavailable": "The runner cannot clean this right now. Refresh the measurement and try again.",
+    "token_scope_not_allowed": "This token can't be given that permission.",
+    "api_token_expired": "The token has expired, so its permissions can't be changed. Create a new one.",
     "pack_archive_format_unknown": "Archive format «{{format}}» is not supported.",
     "pack_archive_format_unavailable": "Archive format «{{format}}» is unavailable: the tool it needs is not installed here. Choose ZIP.",
     "pack_slot_not_signed": "Document «{{doc}}»: the signature «{{slot}}» is not ready yet. {{hint}}",

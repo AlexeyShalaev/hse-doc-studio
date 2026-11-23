@@ -1,6 +1,7 @@
 import { demoError, demoJson, demoNoContent } from "@shared/api/demo";
 import type { DemoResponse, DemoRoute } from "@shared/api/demo";
 import { validateEmail } from "@entities/profile";
+import { TokenScopeSchema } from "@entities/session";
 import type { ApiToken, TokenScope } from "@entities/session";
 import { effectiveOf } from "./accounts";
 import { accountOf, signOut, type ServerDemoWorld } from "./world";
@@ -255,6 +256,32 @@ export const createAccountRoutes = (
         status: 201,
         data: { token: secret, item },
       } satisfies DemoResponse;
+    },
+  },
+  {
+    method: "PATCH",
+    pattern: "/account/tokens/:id",
+    handler: (req) => {
+      const account = accountOf(getWorld());
+      if (!account) return unauth();
+      const token = account.tokens.find((t) => t.id === req.params.id);
+      if (!token) return demoError(404, "not_found", "Not Found");
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const raw: unknown[] = Array.isArray(body.scopes) ? body.scopes : [];
+      const scopes = raw.filter(
+        (s): s is TokenScope => TokenScopeSchema.safeParse(s).success,
+      );
+      if (scopes.length === 0 || scopes.length !== raw.length) {
+        return invalid("scopes", "required", "Выбери хотя бы одно право.");
+      }
+      const updated: ApiToken = {
+        ...token,
+        scopes: [...new Set(scopes)].sort(),
+      };
+      account.tokens = account.tokens.map((t) =>
+        t.id === token.id ? updated : t,
+      );
+      return demoJson(updated);
     },
   },
   {

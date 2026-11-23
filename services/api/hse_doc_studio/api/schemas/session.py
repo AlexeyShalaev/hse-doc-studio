@@ -345,6 +345,11 @@ class CreateApiTokenRequest(StrictModel):
     expires_in_days: int | None = Field(ge=1, le=365)
 
 
+class UpdateApiTokenRequest(StrictModel):
+    # Новый полный набор прав: чего нет в списке, то убирается. Значение токена не меняется.
+    scopes: list[TokenScope] = Field(min_length=1, max_length=7)
+
+
 class CreateApiTokenResponse(StrictModel):
     token: str
     item: ApiToken

@@ -224,6 +224,21 @@ async def test__api_token__delete_requires_owner(repos: Repos, user: str) -> Non
     assert await repos.api_tokens.list_for_user("u1") == []
 
 
+async def test__api_token__get_and_set_scopes_require_owner(repos: Repos, user: str) -> None:
+    token = make_api_token("t1")
+    await repos.api_tokens.add(token)
+    wanted = frozenset({TokenScope.mcp, TokenScope.packs})
+
+    assert await repos.api_tokens.get("u1", "t1") == token
+    assert await repos.api_tokens.get("u2", "t1") is None
+    assert not await repos.api_tokens.set_scopes("u2", "t1", wanted)
+    assert not await repos.api_tokens.set_scopes("u1", "missing", wanted)
+    assert await repos.api_tokens.set_scopes("u1", "t1", wanted)
+
+    found = await repos.api_tokens.get_by_hash("hash-t1")
+    assert found == replace(token, scopes=wanted)
+
+
 async def test__auth_token__consume__single_use_and_kind_checked(repos: Repos, user: str) -> None:
     token = AuthToken(token_hash="h", kind=AuthTokenKind.reset_password, user_id="u1", expires_at=NOW + HOUR)
     await repos.auth_tokens.add(token)
