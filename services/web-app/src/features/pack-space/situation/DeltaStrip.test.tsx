@@ -57,15 +57,17 @@ describe("DeltaStrip", () => {
     expect(screen.queryByTestId("sp-delta")).not.toBeInTheDocument();
   });
 
-  it("после смены условия: числа из сравнения по разделам", () => {
+  it("после смены условия: строки частей центра, а не элементы сервера", () => {
     record();
     show();
     const strip = screen.getByTestId("sp-delta");
     expect(strip).toHaveTextContent(
       "После «Научный руководитель: Из компании» результат изменился:",
     );
-    expect(strip).toHaveTextContent("Участники +1.");
-    expect(strip).toHaveTextContent("Подписи +3, изменено 1, убрано 2.");
+    expect(strip).toHaveTextContent("Участники: добавлено 1.");
+    // Сервер: шаги и пары одной точки (+3, ~1, −2); на экране это одна строка подписей точки.
+    expect(strip).toHaveTextContent("Подписи: изменено 1.");
+    expect(strip).not.toHaveTextContent("Проверки");
   });
 
   it("«Показать только изменившееся» пишет delta=1 в адрес, кнопка меняется", () => {

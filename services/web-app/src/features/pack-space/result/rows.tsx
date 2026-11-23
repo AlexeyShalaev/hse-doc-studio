@@ -3,7 +3,7 @@ import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useSpace } from "../context/SpaceContext";
 import { useSituation } from "../context/useSituation";
-import type { ChangeSymbol } from "../situation/deltaSummary";
+import { hasNestedRows, type ChangeSymbol } from "../situation/deltaSummary";
 import { useSpaceNav } from "../context/useSpaceNav";
 import { useParts } from "./partsStore";
 import type { Reason, ShowAction } from "./reasons";
@@ -18,15 +18,16 @@ export type RowDelta = {
 export const DeltaContext = createContext<RowDelta | null>(null);
 
 /**
- * Знак изменения строки. Точка сдачи и порядок подписей это целая строка, а сервер отдаёт изменения
- * по их пунктам и шагам (`route:<точка>/step/2`): такая строка считается изменённой.
+ * Знак изменения строки. Точка сдачи, порядок подписей и анкета это целая строка, а сервер отдаёт
+ * изменения по их пунктам, шагам и полям (`route:<точка>/step/2`): такая строка считается
+ * изменённой. Так же строки считает плашка «что изменилось» (`summarizeDelta`).
  */
 const changeOf = (
   changed: ReadonlyMap<string, ChangeSymbol>,
   sel: string,
 ): ChangeSymbol | undefined => {
   const own = changed.get(sel);
-  if (own !== undefined || !/^(points|route):[^/]+$/.test(sel)) return own;
+  if (own !== undefined || !hasNestedRows(sel)) return own;
   for (const key of changed.keys()) {
     if (key.startsWith(`${sel}/`)) return "~";
   }
