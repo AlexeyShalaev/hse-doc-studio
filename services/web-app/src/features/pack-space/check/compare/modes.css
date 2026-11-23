@@ -219,6 +219,15 @@
 
 /* ── телефон: матрица карточками, стороны сравнения в столбец, строки атласа во всю ширину ── */
 @media (max-width: 767.98px) {
+  /* Длинная подпись («Моя последняя сохранённая точка и мои правки») переносится, а не упирается
+     в края кнопки. */
+  .cmp-presets .btn {
+    max-width: 100%;
+    height: auto;
+    min-height: var(--touch-min);
+    white-space: normal;
+    text-align: left;
+  }
   .cmp-sides {
     grid-template-columns: minmax(0, 1fr);
   }

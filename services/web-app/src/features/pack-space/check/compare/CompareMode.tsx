@@ -28,6 +28,7 @@ import { ModeSkeleton } from "./ModeSkeleton";
 import { useScenarioUi } from "./scenarioUi";
 import { ChangeList } from "./ChangeList";
 import { ModeFailure } from "./ModeFailure";
+import "./styles";
 
 const STATES: readonly OutcomeState[] = ["work_tree", "head", "base"];
 const SAME = "same";

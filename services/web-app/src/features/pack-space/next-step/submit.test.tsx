@@ -335,6 +335,36 @@ describe("отправка в панели «Изменения»", () => {
     },
   );
 
+  it.each(["credentials_missing", "auth_failed", "push_denied"])(
+    "нет доступа к репозиторию (%s): под ошибкой кнопка «Доступ к репозиторию», а не только «Повторить»",
+    async (code) => {
+      const stubs = stubWrite();
+      stubs.propose.mockRejectedValueOnce(
+        new ApiError("нет доступа", code, 409),
+      );
+      mount();
+      await userEvent.click(await ready());
+      const failed = await screen.findByTestId("sp-sb-failure", undefined, {
+        timeout: 15000,
+      });
+      await userEvent.click(within(failed).getByTestId("sp-sb-access"));
+      expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    },
+  );
+
+  it("сбой без отношения к доступу: кнопки доступа нет", async () => {
+    const stubs = stubWrite();
+    stubs.propose.mockRejectedValueOnce(
+      new ApiError("упало", "workspace_git_failed", 500),
+    );
+    mount();
+    await userEvent.click(await ready());
+    const failed = await screen.findByTestId("sp-sb-failure", undefined, {
+      timeout: 15000,
+    });
+    expect(within(failed).queryByTestId("sp-sb-access")).toBeNull();
+  });
+
   it("номер уже выпущен в основной ветке: предлагается перенести правки в свободный", async () => {
     const stubs = stubWrite();
     stubs.release.mockRejectedValueOnce(

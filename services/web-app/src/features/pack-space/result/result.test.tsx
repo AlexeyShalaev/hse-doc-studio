@@ -229,7 +229,7 @@ describe("центр «Результата»", () => {
         "sp-doc-missing-shared_technical_specification",
       );
       expect(row).toHaveTextContent(
-        "Состав: нужно «команда из двух, команда из трёх», сейчас «один автор».",
+        "Число авторов: нужно «два автора, три автора», сейчас «один автор».",
       );
       const show = within(row).getByRole("button", { name: /Показать при/ });
       fireEvent.click(show);
@@ -266,7 +266,7 @@ describe("центр «Результата»", () => {
       });
       const row = screen.getByTestId("sp-person-missing-co_supervisor");
       expect(row).toHaveTextContent(
-        "Нет, пока условие «Второй руководитель» стоит «нет».",
+        "Нет, пока условие «Консультант» стоит «нет».",
       );
       fireEvent.click(
         within(row).getByRole("button", { name: /Показать при/ }),
