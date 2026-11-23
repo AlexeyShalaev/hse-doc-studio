@@ -196,7 +196,7 @@ test.describe("маршрут и места из шаблона КП 2026.1.5", 
     await expect(page.getByTestId("route-slot-academic_supervisor")).toContainText(
       "добавлена шаблоном: научный руководитель не из ВШЭ",
     );
-    await expect(page.getByTestId("route-slot-co_supervisor")).toContainText("добавлена шаблоном: указан консультант");
+    await expect(page.getByTestId("route-slot-co_supervisor")).toContainText("добавлена шаблоном: указан соруководитель");
     // Якорей у сборки поддельного TeX нет: место из шаблона в мм, не «по строке шаблона».
     const origin = page.getByTestId("place-origin-supervisor");
     await expect(origin).toHaveAttribute("data-origin", "template");
