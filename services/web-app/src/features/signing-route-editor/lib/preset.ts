@@ -11,7 +11,7 @@ import type {
 
 const PERSONS = new Set(["supervisor", "co_supervisor", "academic_supervisor"]);
 
-/** Условие словами: «научный руководитель не из ВШЭ», «указан консультант». */
+/** Условие словами: «научный руководитель не из ВШЭ», «указан соруководитель». */
 export const useConditionText = () => {
   const { t } = useTranslation("signingRouteEditor");
   return useCallback(

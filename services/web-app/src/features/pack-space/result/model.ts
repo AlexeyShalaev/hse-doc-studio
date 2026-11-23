@@ -227,7 +227,7 @@ export const shortName = (name: string): string => {
   return cut === undefined ? name : name.slice(0, cut);
 };
 
-/** Порядок подписания словами: «Автор, затем руководитель и второй руководитель». */
+/** Порядок подписания словами: «Автор, затем руководитель и соруководитель». */
 export const routeText = (
   t: T,
   outcome: PackOutcome,

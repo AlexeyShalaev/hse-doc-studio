@@ -137,7 +137,7 @@ describe("центр «Результата»", () => {
       "20 полей, 2 нужно при создании, 1 анкета",
     );
     expect(screen.getByTestId("sp-part-people-toggle")).toHaveTextContent(
-      "автор, руководитель из компании, второй руководитель из ВШЭ, академический руководитель из ВШЭ",
+      "автор, руководитель из компании, соруководитель из ВШЭ, академический руководитель из ВШЭ",
     );
     expect(screen.getByTestId("sp-part-deadlines-toggle")).toHaveTextContent(
       "4 точки:",
@@ -266,7 +266,7 @@ describe("центр «Результата»", () => {
       });
       const row = screen.getByTestId("sp-person-missing-co_supervisor");
       expect(row).toHaveTextContent(
-        "Нет, пока условие «Второй руководитель» стоит «нет».",
+        "Нет, пока условие «Соруководитель» стоит «нет».",
       );
       fireEvent.click(
         within(row).getByRole("button", { name: /Показать при/ }),
@@ -323,7 +323,7 @@ describe("центр «Результата»", () => {
       await mount({ open: ["signatures"] });
       const row = screen.getByTestId("sp-sign-topic-approval");
       expect(row).toHaveTextContent(
-        "Автор, затем руководитель и второй руководитель, затем академический руководитель",
+        "Автор, затем руководитель и соруководитель, затем академический руководитель",
       );
       expect(row).toHaveTextContent("5 подписей");
       // Точки без подписей в список не попадают.

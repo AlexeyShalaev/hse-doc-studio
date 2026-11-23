@@ -576,13 +576,13 @@
     },
     "person": {
       "supervisor": "supervisor",
-      "co_supervisor": "consultant",
+      "co_supervisor": "co-supervisor",
       "academic_supervisor": "academic supervisor"
     },
     "role": {
       "author": "Author",
       "supervisor": "Supervisor",
-      "co_supervisor": "Consultant",
+      "co_supervisor": "Co-supervisor",
       "academic_supervisor": "Academic supervisor"
     },
     "kinds": {
