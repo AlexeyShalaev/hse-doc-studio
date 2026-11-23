@@ -1,0 +1,71 @@
+% !TeX program = xelatex
+% ============================================================
+% project_description/preamble.tex — преамбула «Детального описания
+% проекта» к КТ1/КТ2 курсового проекта ОП ПИ ФКН НИУ ВШЭ.
+% Это НЕ ЕСПД-документ (без штампа/рамки/ЛУ) — лёгкий планировочный
+% документ по Прил. 6 (прикладной) / Прил. 7 (исследовательский)
+% Программы практики. Язык — по project.lang. Данные — из common/meta.
+% ============================================================
+% Планировочный документ КТ1/КТ2 — используем ТОЛЬКО свободные шрифты texlive
+% с кириллицей (Tinos ≈ Times New Roman, DejaVu), без пробы фирменных
+% Times New Roman / Arial / Consolas. Проба отсутствующих фирменных шрифтов в
+% стоковом Docker-образе уводила загрузку в классический (TFM) путь mktextfm и
+% валила сборку; свободные аналоги грузятся напрямую через fontspec и всегда есть.
+\usepackage{fontspec}
+\setmainfont{Tinos}[Extension=.ttf, UprightFont=*-Regular, BoldFont=*-Bold, ItalicFont=*-Italic, BoldItalicFont=*-BoldItalic]
+\setsansfont{DejaVuSans}[Extension=.ttf, UprightFont=*, BoldFont=*-Bold, ItalicFont=*-Oblique, BoldItalicFont=*-BoldOblique]
+\setmonofont{DejaVuSansMono}[Extension=.ttf, UprightFont=*, BoldFont=*-Bold, ItalicFont=*-Oblique, BoldItalicFont=*-BoldOblique]
+
+\usepackage[english,russian]{babel}
+
+
+\usepackage[a4paper,left=25mm,right=15mm,top=20mm,bottom=20mm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{indentfirst}
+\setlength{\parindent}{1.25cm}
+\setlength{\parskip}{6pt}
+
+\usepackage{microtype}
+\usepackage{csquotes}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{tabularx}
+\usepackage{adjustbox}
+\usepackage{xurl}
+\urlstyle{same}
+\usepackage{hyphenat}
+\usepackage{caption}
+\DeclareCaptionLabelSeparator{emdash}{~---~}
+\captionsetup[table]{position=top,labelsep=emdash,justification=raggedright,singlelinecheck=false}
+
+\addto\captionsrussian{\renewcommand{\tablename}{Таблица}}
+
+
+\usepackage{enumitem}
+\setlist{nosep}
+\setlist[itemize,1]{label=--}
+\usepackage{fancyhdr}
+\pagestyle{plain}
+\usepackage{titlesec}
+\titleformat{\section}{\bfseries\large}{\thesection}{0.6em}{}
+\titlespacing*{\section}{0pt}{*2}{6pt}
+\titleformat{\subsection}{\bfseries}{\thesubsection}{0.6em}{}
+\titlespacing*{\subsection}{0pt}{*1.5}{4pt}
+
+\emergencystretch=5em
+\tolerance=2000
+\hyphenpenalty=300
+
+\usepackage{hyperref}
+\hypersetup{unicode=true,breaklinks=true,colorlinks=true,linkcolor=black,urlcolor=blue,citecolor=blue}
+
+% ── Данные проекта (\hse… макросы) ──
+\input{../common/meta}
+\input{../common/commands}
