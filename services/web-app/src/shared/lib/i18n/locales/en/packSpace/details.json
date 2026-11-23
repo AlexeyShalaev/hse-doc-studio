@@ -13,8 +13,8 @@
       "project": "Project",
       "research": "Research",
       "solo": "One author",
-      "team2": "Team of two",
-      "team3": "Team of three",
+      "team2": "Two authors",
+      "team3": "Three authors",
       "ru": "Russian",
       "en": "English",
       "yes": "Yes",
@@ -22,7 +22,7 @@
       "university": "HSE",
       "company": "Company",
       "none": "None",
-      "team": "Team of two or three"
+      "team": "Two or three authors"
     }
   },
   "verb": {
