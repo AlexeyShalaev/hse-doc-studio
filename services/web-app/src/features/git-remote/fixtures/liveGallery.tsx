@@ -75,7 +75,7 @@ const cardEntry = (
   },
 });
 
-const TOKEN_HINT = "Адрес уже в поле. После «Далее» вставь любой токен.";
+const TOKEN_HINT = "Адрес уже в поле. После «Далее» вставьте любой токен.";
 
 // Живые записи про серверы и токены: адрес подставлен, сценарий выбирается сам.
 const accessLiveGroups = (): GalleryGroup[] => [
@@ -182,7 +182,7 @@ const accessLiveGroups = (): GalleryGroup[] => [
       connectEntry(
         "live_tls_ca",
         "Сертификат организации",
-        `${TOKEN_HINT} После «Сохранить и проверить» откроется окно сертификата: добавь центр выдачи.`,
+        `${TOKEN_HINT} После «Сохранить и проверить» откроется окно сертификата: добавьте центр выдачи.`,
         "provider_tls_ca",
         "connect",
         "https://gitlab.hse.local/team/paper.git",
@@ -266,7 +266,7 @@ export const getRemoteLiveGallery = (): GalleryGroup[] => [
       connectEntry(
         "live_connect_profile",
         "Подключение без автора версий",
-        "Окно начинается с «Представься».",
+        "Окно начинается с «Представьтесь».",
         "connect_no_profile",
       ),
       connectEntry(

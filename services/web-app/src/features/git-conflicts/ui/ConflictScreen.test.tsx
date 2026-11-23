@@ -374,7 +374,7 @@ describe("ConflictScreen", () => {
     await screen.findByRole("group", { name: "Конфликт 1 из 3" });
     await openFile("appendix.tex");
     expect(
-      await screen.findByText("В репозитории файл удалён, а у тебя изменён."),
+      await screen.findByText("В репозитории файл удалён, а у вас изменён."),
     ).toBeInTheDocument();
     expect(screen.getAllByText("Файла нет").length).toBeGreaterThan(0);
     expect(

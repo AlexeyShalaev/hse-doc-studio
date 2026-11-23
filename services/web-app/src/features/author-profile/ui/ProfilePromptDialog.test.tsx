@@ -51,7 +51,7 @@ describe("ProfilePromptDialog", () => {
     vi.spyOn(profileApi, "get").mockResolvedValue(DEFAULT_PROFILE);
     mount({ reason: "connect" });
     expect(
-      await screen.findByRole("dialog", { name: "Представься" }),
+      await screen.findByRole("dialog", { name: "Представьтесь" }),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/Чтобы подключить репозиторий/),

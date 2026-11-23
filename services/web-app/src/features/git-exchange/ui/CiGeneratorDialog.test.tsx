@@ -146,7 +146,7 @@ describe("окно автосборки (CI)", () => {
         triggers: ["push", "tag"],
       });
     });
-    expect(screen.getByText(/ставишь тег вида v1.0/)).toBeInTheDocument();
+    expect(screen.getByText(/ставите тег вида v1.0/)).toBeInTheDocument();
   });
 
   it("дает выбрать документы и не пускает дальше с пустым выбором", async () => {
@@ -159,7 +159,7 @@ describe("окно автосборки (CI)", () => {
 
     await user.click(screen.getByRole("radio", { name: "Выбрать" }));
     expect(
-      screen.getByText("Выбери хотя бы один документ."),
+      screen.getByText("Выберите хотя бы один документ."),
     ).toBeInTheDocument();
     expect(writeButton()).toBeDisabled();
 
@@ -171,7 +171,7 @@ describe("окно автосборки (CI)", () => {
         expect.objectContaining({ docs: ["thesis"] }),
       );
     });
-    expect(screen.queryByText("Выбери хотя бы один документ.")).toBeNull();
+    expect(screen.queryByText("Выберите хотя бы один документ.")).toBeNull();
   });
 
   it("без единого запуска объясняет, что выбрать, и ждёт исправления", async () => {
@@ -181,7 +181,7 @@ describe("окно автосборки (CI)", () => {
     await screen.findByTestId("ci-yaml");
     await user.click(screen.getByTestId("ci-trigger-push"));
     expect(
-      screen.getByText("Выбери хотя бы один способ запуска."),
+      screen.getByText("Выберите хотя бы один способ запуска."),
     ).toBeInTheDocument();
     expect(writeButton()).toBeDisabled();
   });

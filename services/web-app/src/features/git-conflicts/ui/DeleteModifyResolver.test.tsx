@@ -88,7 +88,7 @@ describe("DeleteModifyResolver", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        /Файл исчезнет из проекта, твои правки в нём не сохранятся/,
+        /Файл исчезнет из проекта, ваши правки в нём не сохранятся/,
       ),
     ).toBeInTheDocument();
   });

@@ -335,19 +335,19 @@ describe("окно загрузки файла проекта", () => {
         "bundle_invalid",
         400,
         "Файл не похож на файл проекта Студии.",
-        "Попроси выгрузить его ещё раз.",
+        "Попросите выгрузить его ещё раз.",
       ],
       [
         "bundle_prerequisites_missing",
         400,
         "Нужен более ранний файл или полная выгрузка.",
-        "Попроси коллегу выгрузить проект целиком.",
+        "Попросите коллегу выгрузить проект целиком.",
       ],
       [
         "unrelated_histories",
         409,
         "Файл относится к другому проекту.",
-        "Проверь, тот ли файл выбран.",
+        "Проверьте, тот ли файл выбран.",
       ],
       [
         "not_a_studio_project",
@@ -424,14 +424,14 @@ describe("окно загрузки файла проекта", () => {
       expect(screen.queryByRole("alert")).toBeNull();
     });
 
-    it("profile_required открывает окно «Представься» и закрывает внешнее окно", async () => {
+    it("profile_required открывает окно «Представьтесь» и закрывает внешнее окно", async () => {
       reject("profile_required", 409, "Нужен профиль");
       const onNavigate = vi.fn();
       const { onClose } = mount({ onNavigate });
       const user = await choose(bundle());
       await user.click(submit());
       expect(await screen.findByRole("alert")).toHaveTextContent(
-        "Сначала укажи имя и e-mail автора",
+        "Сначала укажите имя и e-mail автора",
       );
       await user.click(screen.getByRole("button", { name: "Указать автора" }));
       expect(onClose).toHaveBeenCalledTimes(1);

@@ -86,7 +86,7 @@ describe("ProfileForm", () => {
     expect(screen.queryByRole("alert")).toBeNull();
     await user.tab();
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Укажи адрес вида name@example.com.",
+      "Укажите адрес вида name@example.com.",
     );
     expect(emailInput()).toHaveAttribute("aria-invalid", "true");
   });
@@ -161,7 +161,7 @@ describe("ProfileForm", () => {
     await user.type(emailInput(), "i@b.ru");
     await user.click(saveButton());
     const alert = await screen.findByRole("alert");
-    expect(alert).toHaveTextContent("Укажи адрес вида name@example.com.");
+    expect(alert).toHaveTextContent("Укажите адрес вида name@example.com.");
     expect(emailInput()).toHaveAttribute("aria-invalid", "true");
     await user.type(emailInput(), "m");
     expect(screen.queryByRole("alert")).toBeNull();

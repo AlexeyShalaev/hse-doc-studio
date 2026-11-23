@@ -64,7 +64,7 @@ export const createAccountRoutes = (
 
       if (typeof body.name === "string") {
         const name = body.name.replace(/\s+/g, " ").trim();
-        if (name === "") return invalid("name", "required", "Укажи имя.");
+        if (name === "") return invalid("name", "required", "Укажите имя.");
         next.name = name;
       }
       if (typeof body.commit_name === "string") {
@@ -221,9 +221,9 @@ export const createAccountRoutes = (
             ["api", "git:read", "git:write"].includes(String(s)),
           )
         : [];
-      if (name === "") return invalid("name", "required", "Укажи название.");
+      if (name === "") return invalid("name", "required", "Укажите название.");
       if (scopes.length === 0) {
-        return invalid("scopes", "required", "Выбери хотя бы одно право.");
+        return invalid("scopes", "required", "Выберите хотя бы одно право.");
       }
       if (name.toLowerCase().startsWith("limit")) {
         return demoError(429, "rate_limited", "Too many attempts", {

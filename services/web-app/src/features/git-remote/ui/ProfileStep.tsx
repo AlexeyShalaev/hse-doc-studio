@@ -9,7 +9,7 @@ export type ProfileStepProps = {
   onCancel: () => void;
 };
 
-// «Представься»: имя и e-mail подпишут версии, которые уйдут в репозиторий. Без
+// «Представьтесь»: имя и e-mail подпишут версии, которые уйдут в репозиторий. Без
 // них сервер не подключает репозиторий и не клонирует (profile_required).
 export const ProfileStep = ({ onSaved, onCancel }: ProfileStepProps) => {
   const { t } = useTranslation("gitRemote");

@@ -310,7 +310,7 @@ describe("карточка репозитория в настройках про
     ).toBeDisabled();
   });
 
-  it("при отсутствии автора просит открыть окно «Представься»", async () => {
+  it("при отсутствии автора просит открыть окно «Представьтесь»", async () => {
     const user = userEvent.setup();
     renderSettings(<RemoteConnectionCard projectId={PROJECT_ID} />, {
       status: connected({

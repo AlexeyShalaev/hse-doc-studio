@@ -6,8 +6,8 @@ import { FileDropZone, type FileDropZoneHandle } from "./FileDropZone";
 
 const props = {
   accept: ".bundle",
-  title: "Перетащи файл или",
-  action: "выбери",
+  title: "Перетащите файл или",
+  action: "выберите",
   activeTitle: "Отпусти файл",
   inputLabel: "Файл",
   testId: "zone",
@@ -54,11 +54,11 @@ describe("FileDropZone", () => {
   it("меняет подпись, пока файл над областью", () => {
     render(<FileDropZone {...props} onFile={vi.fn()} />);
     const zone = screen.getByTestId("zone");
-    expect(zone).toHaveTextContent("Перетащи файл или выбери");
+    expect(zone).toHaveTextContent("Перетащите файл или выберите");
     fireEvent.dragOver(zone);
     expect(zone).toHaveTextContent("Отпусти файл");
     fireEvent.dragLeave(zone);
-    expect(zone).toHaveTextContent("Перетащи файл или выбери");
+    expect(zone).toHaveTextContent("Перетащите файл или выберите");
   });
 
   it("открывает окно выбора с клавиатуры и через open()", async () => {

@@ -26,7 +26,7 @@ type SyncUiState = {
   connectDialog: { mode: ConnectDialogMode } | null;
   // Окно обмена файлом (bundle): открывают со страницы истории и из настроек.
   bundleDialogOpen: boolean;
-  // Окно «Представься»: имя и e-mail автора нужны до первой синхронизации.
+  // Окно «Представьтесь»: имя и e-mail автора нужны до первой синхронизации.
   profileDialogOpen: boolean;
   command: SyncCommand | null;
   // Для каждого проекта: идентификатор последней синхронизации, о которой уже
