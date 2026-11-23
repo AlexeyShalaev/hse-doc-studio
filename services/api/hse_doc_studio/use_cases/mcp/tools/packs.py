@@ -49,6 +49,7 @@ from hse_doc_studio.core.pack_studio.scaffold import (
 )
 from hse_doc_studio.core.pack_studio.versions import LANGS, VersionNotesInput, VersionState
 from hse_doc_studio.use_cases.mcp.tools._base import (
+    MCP_MAX_WAIT_S,
     ArgumentError,
     McpTool,
     bool_arg,
@@ -58,6 +59,7 @@ from hse_doc_studio.use_cases.mcp.tools._base import (
     optional_text,
     text_arg,
     uuid_arg,
+    wait_arg,
 )
 from hse_doc_studio.use_cases.pack_studio.access import PackStudioAccess
 from hse_doc_studio.use_cases.pack_studio.files import PackFilesService
@@ -71,8 +73,8 @@ from hse_doc_studio.use_cases.pack_studio.versions import CreateVersionInput, Pa
 from hse_doc_studio.use_cases.pack_studio.workspaces import PackWorkspaceService, WorkspaceView
 
 # Сколько ждать сборку предпросмотра в одном вызове: меньше таймаута запроса у клиентов MCP (60 с в SDK).
+# Ожидание сборки в одном вызове: не дольше MCP_MAX_WAIT_S, дальше повторный вызов с build_id.
 PREVIEW_WAIT_S: Final = 45
-PREVIEW_MAX_WAIT_S: Final = 240
 _POLL_S = 0.5
 # Сколько символов файла, журнала и PDF уходит в ответ по умолчанию и не больше.
 _READ_CHARS: Final = 60_000
@@ -700,11 +702,14 @@ class PackPreviewBuildTool(PackTool):
         name="pack_preview_build",
         description=(
             "Студия шаблонов: собрать документы версии на тестовых данных в песочнице раннера и дождаться итога до "
-            "wait_s секунд. Без documents собирается первый документ. example: набор данных (по умолчанию первый: "
-            "файл examples/*.yaml или auto:normal; ещё auto:long и auto:empty), combination: переключатели "
-            '{"lang": "en", "staffing": "team2", "supervisor": "company", "meta.<поле>": "..."}. variant: вариант '
-            "документа (у запроса с одним документом, например beamer у презентации), scenario: id сценария пака "
-            "(вводные и набор данных берутся из него, combination ложится поверх). Варианты, документы и наборы "
+            f"wait_s секунд (не больше {MCP_MAX_WAIT_S}: больший урезается, иначе клиент MCP оборвёт вызов по "
+            "таймауту). Долгую сборку начните без ожидания (wait_s: 0) или с коротким и вызывайте снова с build_id, "
+            "пока она не закончится. Без documents собирается первый документ. example: набор данных (по "
+            "умолчанию первый: файл examples/*.yaml или auto:normal; ещё auto:long и auto:empty), combination: "
+            'переключатели {"lang": "en", "staffing": "team2", "supervisor": "company", "meta.<поле>": "..."}. '
+            "variant: вариант документа (у запроса с одним документом, например beamer у презентации), scenario: "
+            "id сценария пака (вводные и набор данных берутся из него, combination ложится поверх). Варианты, "
+            "документы и наборы "
             "видны в pack_read с version (блок preview). С build_id тул только ждёт уже начатую сборку, с build_id "
             "и cancel: true останавливает её. "
             "Текст PDF и журнал сборки читает pack_preview_read."
@@ -723,7 +728,10 @@ class PackPreviewBuildTool(PackTool):
                 "wait_s": {
                     "type": "integer",
                     "default": PREVIEW_WAIT_S,
-                    "description": f"Сколько секунд ждать итога (0..{PREVIEW_MAX_WAIT_S})",
+                    "description": (
+                        f"Сколько секунд ждать итога в этом вызове (0..{MCP_MAX_WAIT_S}, больше урезается); "
+                        "дольше: повторный вызов с build_id"
+                    ),
                 },
             },
             ("workspace_id",),
@@ -733,7 +741,7 @@ class PackPreviewBuildTool(PackTool):
 
     async def run(self, actor: Actor, args: dict[str, object]) -> ToolResult:
         workspace_id = uuid_arg(args, "workspace_id")
-        wait_s = int_arg(args, "wait_s", PREVIEW_WAIT_S, lo=0, hi=PREVIEW_MAX_WAIT_S)
+        wait_s = wait_arg(args, PREVIEW_WAIT_S)
         previews = await self._deps.get(PackPreviewService)
         if bool_arg(args, "cancel", False):
             stopped = await previews.cancel(actor, workspace_id, uuid_arg(args, "build_id"))
