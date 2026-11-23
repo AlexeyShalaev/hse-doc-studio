@@ -212,6 +212,10 @@
     white-space: normal;
     overflow-wrap: anywhere;
   }
+  /* Название открывает пространство: на телефоне это тоже зона касания, а не строка в 20 px. */
+  .sp-ws-name {
+    min-height: var(--touch-min);
+  }
   .sp-paths,
   .sp-paths[data-count="2"],
   .sp-paths[data-count="1"] {
