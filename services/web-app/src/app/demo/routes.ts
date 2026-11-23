@@ -196,7 +196,11 @@ const statusResponse = (projectId: string): DemoResponse =>
 const profileGate = (): DemoResponse | null =>
   world.profile
     ? null
-    : demoError(409, "profile_required", "Сначала укажите имя и e-mail автора.");
+    : demoError(
+        409,
+        "profile_required",
+        "Сначала укажите имя и e-mail автора.",
+      );
 
 // Состояния, в которых синхронизация запрещена, и ответ на попытку.
 const blockedResponse = (project: DemoProjectGit): DemoResponse | null => {
