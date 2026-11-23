@@ -6,48 +6,13 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.40.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.39.0...v0.40.0) (2026-11-23)
+## [0.40.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.39.0...v0.40.0) - 2026-11-23
 
-
-### Features
-
-* **api:** смена прав существующего токена доступа ([9d62e4e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/9d62e4ea0bdb46865ecace32b158b152f833a30b))
-* **web:** «Изменить права» у токена доступа ([7de762a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7de762aeca39543adffee68d601731c10dc4115e))
-* смена прав существующего токена доступа ([e4c8fe4](https://github.com/AlexeyShalaev/hse-doc-studio/commit/e4c8fe4e99bb10f3ffe0dccff6a8c0e95e220d6c))
-
-
-### Bug Fixes
-
-* **git-access:** подсказка про хранение токена верна и на сервере ([7f0c4b0](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7f0c4b0bc0fcb51dc1436c05d34e0acc0b1562e7))
-* **i18n:** интерфейс везде обращается на «вы» ([c2a442a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/c2a442ad3ffefa758334fb0409e05014a322b5e7))
-* **i18n:** одно название для соруководителя во всех словарях ([eb8015c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/eb8015c604cc439674ff187e9f08eb091205be48))
-* **mcp:** тексты Студии шаблонов для MCP совпадают со словарём ([5d8c80d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/5d8c80d82e5f0ac9d2dfa96cb40bae320b5a0a42))
-* **pack-studio:** «Не вошло в комплект» называет условия словами полосы студента ([9d7a816](https://github.com/AlexeyShalaev/hse-doc-studio/commit/9d7a8162eb69cb745469574573875fcd90b4277c))
-* **pack-studio:** «Почему так» называет условия так же, как полоса «Для какого студента» ([570287c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/570287ccbbcdbfcab491a387466421245e492649))
-* **pack-studio:** «Что изменено» называет документы других версий словами ([f538d94](https://github.com/AlexeyShalaev/hse-doc-studio/commit/f538d94266c81896c2b93a90b369c39b8a1dcce9))
-* **pack-studio:** Esc закрывает шторку подробностей, где бы ни был фокус ([6c9714a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/6c9714ac5aa89816f63caade04ee29940c2307e6))
-* **pack-studio:** главная кнопка «Изменений» на телефоне не сжимается вдвое ([80d5125](https://github.com/AlexeyShalaev/hse-doc-studio/commit/80d512513b9d37afeb1eef32877460a26ee375d5))
-* **pack-studio:** кнопки готовых сравнений на телефоне переносят подпись ([64305e9](https://github.com/AlexeyShalaev/hse-doc-studio/commit/64305e94c72f685d9da77eed0305e6922cb73f1d))
-* **pack-studio:** название пространства на телефоне удобно нажимать, en без «propose» ([05a3f65](https://github.com/AlexeyShalaev/hse-doc-studio/commit/05a3f65aa69064211bf7bb98b99c8a7b6b0bde4d))
-* **pack-studio:** одни и те же числа изменений и замечаний на всех экранах ([47a8571](https://github.com/AlexeyShalaev/hse-doc-studio/commit/47a8571ad01fecaa79fcb4acb21228df4286a946))
-* **pack-studio:** плашка «что изменилось» считает строки на экране ([64cabd8](https://github.com/AlexeyShalaev/hse-doc-studio/commit/64cabd8b6c7c46cbd9c2b4ddf476e68a2d639d6b))
-* **pack-studio:** правила Студии в «Проверке» и «Сравнить» без «движка» и «манифеста» ([1bcc1b2](https://github.com/AlexeyShalaev/hse-doc-studio/commit/1bcc1b23ca7a27c1a2fbd0f2fda453dd8d08977b))
-* **pack-studio:** правки по сквозной проверке 0.39.0 ([5778f6e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/5778f6e3a3edcb0e3eaeced43ab3b4943f57fcae))
-* **pack-studio:** при отказе в доступе отправка предлагает «Доступ к репозиторию» ([2d05280](https://github.com/AlexeyShalaev/hse-doc-studio/commit/2d05280989bd31e0b4c7199c92efe2bf9aa96e77))
-* **pack-studio:** проверка мест подписей не берёт пропуск даты за строку подписи ([5165baa](https://github.com/AlexeyShalaev/hse-doc-studio/commit/5165baa41586fbcffdd738cc489976f3d483372d))
-* **pack-studio:** простые слова в окне официальных шаблонов и списке пространств ([b257795](https://github.com/AlexeyShalaev/hse-doc-studio/commit/b25779567e3086936fa46e03dc414eb3cbab189c))
-* **pack-studio:** стили сравнения подключаются вместе с ним ([ace1c98](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ace1c98b9e6e92f89903a4dadfe8b5a5ee04b0c3))
-* **pack-studio:** строка слота, которую шаблон не печатает, это подсказка, а не ошибка ([0b81e9b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/0b81e9b7e2f91895afc52a4a3d3a0ef77b2467c3))
-* **packs:** места подписей на строках шаблона hse-cs-se/coursework 2026.1.3 ([c3549f9](https://github.com/AlexeyShalaev/hse-doc-studio/commit/c3549f9b709c5dfe887a12f0fee6a47a8cc4a35f))
-* **packs:** места подписей на строках шаблона hse-cs-se/vkr 2026.1.3 ([c69d1ec](https://github.com/AlexeyShalaev/hse-doc-studio/commit/c69d1ec7541548e4c91b2cb7cb3ff18a1e88a80c))
-* **packs:** места подписей на строках шаблонов и проверка мест ([6dc7e57](https://github.com/AlexeyShalaev/hse-doc-studio/commit/6dc7e57b1cd085edcf78cac17d0544dc8bd26ab6))
-* **packs:** место подписи руководителя на титуле отчёта hse-cs-sse/coursework 2026.1.7 ([249e680](https://github.com/AlexeyShalaev/hse-doc-studio/commit/249e68084f9aaa08df1e0e168fc7282a2ca12c44))
-* **ui:** зоны касания 44px при касании на любой ширине ([ec35c7a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ec35c7a54c8b1814d66c241e082995319e3fb5dc))
-* **ui:** контраст текста на цветных метках по WCAG AA ([dac8940](https://github.com/AlexeyShalaev/hse-doc-studio/commit/dac8940bc0ccdeb69d947e3d9870db7b49b8761d))
-* **ui:** окно возвращает фокус на кнопку, которой его открыли ([a33888a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/a33888ad4c050b7510f76f026c52e73181aee741))
-* **ui:** уведомления не закрывают кнопки окон и боковых панелей ([4779939](https://github.com/AlexeyShalaev/hse-doc-studio/commit/4779939759c8da3351766f12c837448d6db14780))
-* **ui:** фокус после закрытия окна и подсказка про токен ([aa85499](https://github.com/AlexeyShalaev/hse-doc-studio/commit/aa85499b4ea3d97e26c2ef8988301d1212cee91a))
-* решения по сквозной проверке 0.39.0 ([6c79dd5](https://github.com/AlexeyShalaev/hse-doc-studio/commit/6c79dd5bb189d52783e6811dfa7ebc1c570dd6be))
+- Access tokens: the permissions of an existing token can be changed. In the account settings a token has an Edit permissions button: the same checkboxes as on creation and a summary of what is added and removed. The token itself stays the same and the new permissions apply from the next request; after changing MCP permissions, reconnect the AI client so it sees the new tools. Permissions can only be changed from a browser session, a token cannot raise its own rights, and every change is written to the audit log.
+- Packs: signature places sit on the template's signature lines. In hse-cs-se VKR 2026.1.3 and coursework 2026.1.3 signature places are bound to the signature lines of the approval sheets, title pages and PDP forms; before, boxes could land on text or on each other. hse-cs-sse coursework 2026.1.7 adds the supervisor's signature and date place on the report title page. The text of the documents is unchanged.
+- Pack Studio fixes after an end-to-end check: version comparison always opens with its styles; Why and Not included name conditions the same way as the For which student strip; What changed shows document names instead of ids; the what-changed line counts the rows visible on screen; the number of changed files and of remarks is the same on every screen; when access is refused, sending offers Repository access; Check, the official templates dialog and the workspace list use fewer technical words. On phones Esc closes the details sheet and the send button in Changes is no longer squeezed.
+- Interface: the app consistently addresses the user formally in Russian, the co-supervisor has one name everywhere, coloured labels meet WCAG AA contrast in the light and dark themes, on touch screens every button is at least 44 px, notifications no longer cover the buttons of dialogs and side panels, and closing a dialog returns focus to the button that opened it.
+- MCP: the signature place check no longer mistakes a date blank for a signature line, suggests a place even when no clean one exists, and marks a line the template does not print for this data as a hint rather than an error.
 
 ## [0.39.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.38.0...v0.39.0) - 2026-11-22
 
