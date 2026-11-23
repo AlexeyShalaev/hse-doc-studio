@@ -56,6 +56,14 @@
     }
   }
 
+  /* Основной указатель - палец (планшет, телефон, сенсорный экран): зона касания не меньше
+     44px при любой ширине. Мышь на узком окне остаётся при 40px телефона. */
+  @media (pointer: coarse) {
+    :root {
+      --touch-min: max(2.75rem, 44px);
+    }
+  }
+
   :root,
   [data-theme="dark"] {
     --bg-0: #0a0a0a;
@@ -7729,11 +7737,13 @@ a.adm-row:hover .adm-row-chevron {
   }
 }
 
-/* Планшет с касанием: раскладка десктопа, но кнопки не меньше 36px (--touch-min десктопа). */
-@media (pointer: coarse) and (min-width: 768px) and (max-width: 1023.98px) {
+/* Касание (планшет, телефон, сенсорный экран): раскладка своя для ширины, но кнопки, значки
+   шапки, переключатели, вкладки и пункты меню не меньше 44px (--touch-min при pointer: coarse). */
+@media (pointer: coarse) {
   .btn,
   .btn.sm,
-  .btn.xs {
+  .btn.xs,
+  .btn.lg {
     min-height: var(--touch-min);
     height: auto;
   }
@@ -7744,16 +7754,29 @@ a.adm-row:hover .adm-row-chevron {
     width: var(--touch-min);
     height: var(--touch-min);
   }
-  .seg button {
-    min-height: 2rem;
+  .seg button,
+  .seg.seg-fill button {
+    min-height: var(--touch-min);
+    height: auto;
+  }
+  .tabs .tab {
+    min-height: var(--touch-min);
     height: auto;
   }
   .row-btn,
-  .titlebar-brand {
+  .titlebar-brand,
+  .adm-menu-item {
     min-height: var(--touch-min);
   }
+  .titlebar {
+    height: auto;
+    min-height: var(--touch-min);
+  }
+  .statusbar {
+    height: auto;
+  }
   .statusbar .seg-clickable {
-    min-height: 1.75rem;
+    min-height: var(--touch-min);
     display: inline-flex;
     align-items: center;
   }

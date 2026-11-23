@@ -26,13 +26,15 @@
 
 | Токен | Десктоп | Телефон |
 |---|---|---|
-| `--touch-min` | 36px | 40px |
+| `--touch-min` | 36px (44px при касании) | 40px (44px при касании) |
 | `--touch-lg` | 44px | 44px |
 | `--field-fs` | 13px | 16px |
 | `--page-gutter` | 24px | 16px |
 | `--tabbar-h` | 56px | 56px |
 | `--safe-top/right/bottom/left` | `env(safe-area-inset-*)` | то же |
 | `--kb-inset`, `--vv-height` | 0px, 100dvh | высота экранной клавиатуры и видимой области |
+
+Касание это `@media (pointer: coarse)`: основной указатель палец (планшет, телефон, сенсорный экран). Тогда `--touch-min` 44px при любой ширине, и кнопки, значки шапки, переключатели, вкладки, пункты меню и строка состояния его держат (`index.css`, блок «Касание»). Мышь на узком окне остаётся при 40px.
 
 `--kb-inset` и `--vv-height` пишет `useKeyboardInset` (подключён в `RootLayout` для телефона и планшета) из `visualViewport`: iOS Safari не уменьшает окно раскладки, когда появляется клавиатура, и шторка с `bottom: 0` оказалась бы под ней. В Android Chrome то же даёт `interactive-widget=resizes-content` в метатеге viewport.
 
