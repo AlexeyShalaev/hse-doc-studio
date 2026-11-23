@@ -15,6 +15,7 @@ from uuid import UUID
 
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.catalog import AnchorPlace
+from hse_doc_studio.core.enums import AnchorState
 from hse_doc_studio.core.i18n import current_interface_language, localized_error
 from hse_doc_studio.core.pack_studio.errors import PackStudioError, PackStudioErrorCode
 from hse_doc_studio.core.pack_studio.protocols import IPdfPages, Mark, MarkKind
@@ -89,13 +90,17 @@ class PackPlaceCheckService:
         data = await self._pdf(actor, workspace_id, build_id)
         places: list[Place] = []
         missing: list[tuple[str, str]] = []
+        absent: list[tuple[str, str, str]] = []
         for slot in view.places.slots:
             frame = slot.document
             if frame is None:
                 continue
             label = _pick(slot.label)
             if frame.box is None:
-                missing.append((slot.id, label))
+                if frame.anchor is not None and frame.anchor.state is AnchorState.missing:
+                    absent.append((slot.id, label, frame.anchor.id))
+                else:
+                    missing.append((slot.id, label))
                 continue
             entry = frame.entry
             origin = "mm" if not isinstance(entry, AnchorPlace) else "anchor" if anchors is not None else "fallback"
@@ -148,7 +153,7 @@ class PackPlaceCheckService:
                 index.append(i)
         shares = await asyncio.to_thread(self._pages.ink, data, boxes, INK_DPI) if boxes else []
         ink = {i: share for i, share in zip(index, shares, strict=True) if share is not None}
-        checks = check_places(places, missing, layouts, count, ink, sign_lines)
+        checks = check_places(places, missing, layouts, count, ink, sign_lines, absent)
         inspection = PlaceInspection(
             view=view,
             document=build.document,

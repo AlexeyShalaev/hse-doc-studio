@@ -1,10 +1,11 @@
-import { useIsMutating } from "@tanstack/react-query";
+import { useIsMutating, useQueries } from "@tanstack/react-query";
 import { useMemo, useState, type KeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import {
   PackErrorText,
   mergeConflictFiles,
   notifyPackFilesSaved,
+  packStudioApi,
   packStudioKeys,
   useMergePackBase,
   usePackVersionModel,
@@ -28,11 +29,13 @@ import { SubmitPrimary } from "../next-step/SubmitPrimary";
 import { SubmitSection } from "../next-step/SubmitSection";
 import { useSubmit } from "../next-step/useSubmit";
 import { ChangesPanel, type ChangesAction } from "./ChangesPanel";
+import { changedOf } from "./deriveChangesStatus";
 import { MoveEditsNotice } from "./MoveEditsNotice";
-import { describePath } from "./describeChanges";
+import { describeChanges, describePath } from "./describeChanges";
 import { ImpactSlot, type ImpactReport } from "./impact/ImpactSlot";
 import { impactVersions } from "./impact/impactVersions";
 import { useChangesData } from "./useChangesStatus";
+import { versionKeyOf } from "./versionKey";
 import "./space-changes.css";
 
 type Dialog = "commit" | "branch" | "diff" | "checks" | "access" | "reset";
@@ -43,6 +46,9 @@ const NO_IMPACT: ImpactReport = {
   needsAck: false,
   summary: "",
 };
+
+/** Сколько других изменённых версий называем по именам документов: на каждую отдельный запрос модели. */
+const MAX_NAMED_VERSIONS = 4;
 
 /** Название документа из данных его манифеста (`name: {ru, en}`); нет: пусто. */
 const docName = (data: unknown, lang: string): string => {
@@ -90,6 +96,37 @@ export const ChangesDrawer = () => {
     }
     return names;
   }, [model.data, i18n.language]);
+  // Документы других изменённых версий тоже называем словами, а не идентификаторами
+  // (`explanatory_note: условия`): модели этих версий читаются отдельно, по запросу на версию.
+  const otherRefs = useMemo(() => {
+    const open = versionKeyOf(raw.open);
+    const refs = new Map<string, PackVersionRef>();
+    for (const group of describeChanges(
+      changedOf(raw),
+      raw.open,
+      raw.copy?.dir ?? null,
+    )) {
+      if (group.version && versionKeyOf(group.version) !== open) {
+        refs.set(versionKeyOf(group.version), group.version);
+      }
+    }
+    return [...refs.values()].slice(0, MAX_NAMED_VERSIONS);
+  }, [raw]);
+  const otherModels = useQueries({
+    queries: otherRefs.map((ref) => ({
+      queryKey: packStudioKeys.model(id, ref),
+      queryFn: () => packStudioApi.versionModel(id, ref),
+    })),
+  });
+  const otherDocNames: Record<string, Record<string, string>> = {};
+  otherRefs.forEach((ref, index) => {
+    const names: Record<string, string> = {};
+    for (const doc of otherModels[index]?.data?.documents ?? []) {
+      const name = docName(doc.data ?? doc.manifest?.data, i18n.language);
+      if (name) names[doc.id] = name;
+    }
+    otherDocNames[versionKeyOf(ref)] = names;
+  });
   const templateName = (ref: PackVersionRef): string => {
     const template = tree.packs
       .find((pack) => pack.id === ref.pack)
@@ -162,6 +199,7 @@ export const ChangesDrawer = () => {
       <ChangesPanel
         data={data}
         docNames={docNames}
+        otherDocNames={otherDocNames}
         templateName={templateName}
         busy={busy}
         onClose={closePanel}

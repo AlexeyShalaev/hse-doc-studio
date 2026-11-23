@@ -157,6 +157,17 @@
 .sp-root[data-phone] .sp-ch-foot > .btn:first-child:not(:last-of-type) {
   flex: 1;
   justify-content: center;
+  /* Длинная подпись («Отправить на рассмотрение») переносится, а не вылезает за кнопку. */
+  white-space: normal;
+  text-align: center;
+}
+/* Распорка делила ширину с главной кнопкой поровну и сжимала её вдвое: на телефоне «Ещё» прижимается
+   вправо само. */
+.sp-root[data-phone] .sp-ch-foot-grow {
+  display: none;
+}
+.sp-root[data-phone] .sp-ch-foot > :last-child {
+  margin-left: auto;
 }
 .sp-root[data-phone] .sp-ch-foot-close {
   display: none;

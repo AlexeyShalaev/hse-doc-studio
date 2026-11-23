@@ -4,9 +4,7 @@ import { useTranslation } from "react-i18next";
 import type { PackVersionRef } from "@entities/pack-studio";
 import { versionKey } from "@entities/pack-studio/outcome/impact";
 import { VersionImpact, type VersionReport } from "./VersionImpact";
-import "../../check/compare/outcome.css";
-import "../../check/compare/rules.css";
-import "../../check/compare/modes.css";
+import "../../check/compare/styles";
 import "./impact.css";
 
 /** Что блок сообщает диалогу: ждать ли расчёта, нужна ли отметка «я знаю», текст для тела PR. */

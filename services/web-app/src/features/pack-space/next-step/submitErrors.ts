@@ -32,9 +32,24 @@ export const consentAsked = (error: unknown): LicenseInfo | null => {
   };
 };
 
-/** push_denied: в репозиторий писать нельзя, нужен доступ. */
-export const isPushDenied = (error: unknown): boolean =>
-  codeOf(error) === "push_denied";
+/**
+ * Отказы, которые лечатся доступом к репозиторию: писать нельзя, доступа нет вовсе, токен не подошёл
+ * или истёк. Под ними кнопка «Доступ к репозиторию», иначе «Повторить» упирается в то же самое.
+ */
+const ACCESS_CODES = new Set([
+  "push_denied",
+  "credentials_missing",
+  "auth_failed",
+  "forbidden_write",
+  "token_expired",
+  "sso_required",
+]);
+
+/** Нужен доступ к репозиторию (токен или ключ), чтобы отправка прошла. */
+export const needsAccess = (error: unknown): boolean => {
+  const code = codeOf(error);
+  return code !== null && ACCESS_CODES.has(code);
+};
 
 /**
  * version_taken при выпуске: номер уже выпущен в основной ветке. Возвращает свободный номер, на

@@ -229,7 +229,7 @@ describe("центр «Результата»", () => {
         "sp-doc-missing-shared_technical_specification",
       );
       expect(row).toHaveTextContent(
-        "Состав: нужно «команда из двух, команда из трёх», сейчас «один автор».",
+        "Число авторов: нужно «два автора, три автора», сейчас «один автор».",
       );
       const show = within(row).getByRole("button", { name: /Показать при/ });
       fireEvent.click(show);

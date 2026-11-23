@@ -9,7 +9,7 @@ import {
 import { Button } from "@shared/ui";
 import { isNumberMessage } from "../changes/deriveChangesStatus";
 import { isNumberError } from "./numberFix";
-import { isPushDenied, takenSuggestion } from "./submitErrors";
+import { needsAccess, takenSuggestion } from "./submitErrors";
 import type { SubmitStep } from "./submitSteps";
 import type { SubmitController } from "./useSubmit";
 
@@ -168,8 +168,13 @@ export const Progress = ({
               </Button>
             </>
           )}
-          {isPushDenied(failure.error) && (
-            <Button size="xs" variant="secondary" onClick={onAccess}>
+          {needsAccess(failure.error) && (
+            <Button
+              size="xs"
+              variant="secondary"
+              onClick={onAccess}
+              data-testid="sp-sb-access"
+            >
               {t("changes.submit.failure.access")}
             </Button>
           )}

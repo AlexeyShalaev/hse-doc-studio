@@ -506,6 +506,16 @@
         "id": "snake-case",
         "pattern": "[a-z]+_[a-z_]+",
         "use": "Название словами"
+      },
+      {
+        "id": "engine",
+        "pattern": "движ[ок]",
+        "use": "Встроено в Студию"
+      },
+      {
+        "id": "slot",
+        "pattern": "слот",
+        "use": "Подпись"
       }
     ],
     "en": [
@@ -558,6 +568,16 @@
         "id": "snake-case",
         "pattern": "[a-z]+_[a-z_]+",
         "use": "A name in words"
+      },
+      {
+        "id": "engine",
+        "pattern": "\\bengine\\b",
+        "use": "Built into the Studio"
+      },
+      {
+        "id": "slot",
+        "pattern": "\\bslot\\b",
+        "use": "Signature"
       }
     ],
     "scopes": [
@@ -575,6 +595,10 @@
           "checksForm.category",
           "checksForm.config"
         ]
+      },
+      {
+        "file": "packOutcome/packOutcome.json",
+        "prefixes": ["rules.builtin", "rules.kinds"]
       }
     ]
   },

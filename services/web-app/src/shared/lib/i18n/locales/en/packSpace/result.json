@@ -192,19 +192,19 @@
     "unset": "not set",
     "orgOf": "{{subject}}, organisation",
     "subjects": {
-      "kind": "Type of work",
-      "staffing": "Team size",
-      "lang": "Language",
-      "supervisor": "Supervisor",
+      "kind": "Kind of work",
+      "staffing": "Number of authors",
+      "lang": "Work language",
+      "supervisor": "Academic supervisor",
       "co_supervisor": "Co-supervisor",
-      "academic_supervisor": "Academic supervisor"
+      "academic_supervisor": "Programme supervisor"
     },
     "values": {
       "project": "project",
       "research": "research",
       "solo": "one author",
-      "team2": "team of two",
-      "team3": "team of three",
+      "team2": "two authors",
+      "team3": "three authors",
       "ru": "Russian",
       "en": "English",
       "yes": "yes",
