@@ -37,22 +37,9 @@ export const Toaster = () => {
   if (toasts.length === 0) return null;
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        // Внизу справа, над строкой состояния: сверху уведомление закрывало
-        // кнопку синхронизации и открытую под ней панель, а именно о них оно и сообщает.
-        bottom: "2.5rem",
-        right: "1rem",
-        zIndex: 200,
-        display: "flex",
-        flexDirection: "column",
-        gap: "0.5rem",
-        maxWidth: "23.75rem",
-        pointerEvents: "none",
-      }}
-      aria-live="polite"
-    >
+    // Место задаёт CSS (index.css, .toaster): внизу справа, а при открытом окне, шторке или
+    // боковой панели наверху по центру, чтобы не закрывать их главные кнопки.
+    <div className="toaster" data-testid="toaster" aria-live="polite">
       {toasts.map((t) => {
         const Icon = ICON_BY_KIND[t.kind];
         const color = COLOR_BY_KIND[t.kind];

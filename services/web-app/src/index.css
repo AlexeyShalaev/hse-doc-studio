@@ -3312,6 +3312,32 @@
     outline-offset: 1px;
   }
 
+  /* ── уведомления (Toaster) ──────────────────────────────────── */
+  /* Внизу справа, над строкой состояния: сверху уведомление закрывало кнопку
+     синхронизации и открытую под ней панель, а именно о них оно и сообщает. */
+  .toaster {
+    position: fixed;
+    bottom: 2.5rem;
+    right: 1rem;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: min(23.75rem, calc(100vw - 2rem));
+    pointer-events: none;
+  }
+  /* Открыто окно, шторка или боковая панель: внизу справа у них главные кнопки
+     (подвал окна, «Отправить на рассмотрение» в панели «Изменения»), поэтому
+     уведомление уходит наверх по центру. */
+  body:has([role="dialog"][data-state="open"], [data-form="sheet"], .sp-side)
+    .toaster {
+    top: calc(var(--safe-top) + 0.75rem);
+    bottom: auto;
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
   /* ── modal ──────────────────────────────────────────────────── */
   .scrim {
     position: fixed;
