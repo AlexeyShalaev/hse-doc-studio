@@ -118,7 +118,9 @@
     "passkey_limit": "The passkey limit for the account is reached.",
     "passkeys_disabled": "Passkey sign-in is turned off on this server.",
     "passkey_failed": "The browser couldn't create or use the passkey. Try again.",
-    "passkey_already_registered": "This device's key is already on the account."
+    "passkey_already_registered": "This device's key is already on the account.",
+    "token_scope_not_allowed": "This token can't be given that permission.",
+    "api_token_expired": "The token has expired, so its permissions can't be changed. Create a new one."
   },
   "tokens": {
     "title": "Access tokens",
@@ -161,7 +163,7 @@
       },
       "packs": {
         "title": "Template Studio",
-        "hint": "Template Studio REST and MCP: spaces and template files. Needs access to Template Studio (granted by an administrator) and API or MCP as well."
+        "hint": "Templates in Template Studio: spaces, files, previews. Works only if an administrator gave you access to Template Studio, and together with API or MCP."
       }
     },
     "expiryLabel": "Expires",
@@ -200,6 +202,25 @@
         "desktop": "desktop Studio",
         "cli": "command line"
       }
+    },
+    "edit": {
+      "open": "Edit permissions",
+      "openAria": "Edit permissions of token {{name}}",
+      "title": "Permissions of “{{name}}”",
+      "body": "Tick what this token may do. The token itself stays the same: no need to paste it again into the CLI, scripts or AI clients.",
+      "bodyDevice": "This is a device token: it only works with git. The token itself stays the same, no need to sign in on the device again.",
+      "next": "Next",
+      "back": "Back",
+      "confirmLead": "Check what will change:",
+      "added": "Will be added",
+      "removed": "Will be removed",
+      "effect": "The new permissions apply right away, from the next request with this token.",
+      "mcpReconnect": "An AI client (Claude, Cursor and others) remembers the tool list when it connects. To see the change, reconnect the Studio server in the client or restart the client.",
+      "save": "Save",
+      "saving": "Saving…",
+      "done": "Token permissions saved.",
+      "close": "Done",
+      "notFound": "Token not found: it may have been revoked. Reload the page."
     }
   },
   "identities": {

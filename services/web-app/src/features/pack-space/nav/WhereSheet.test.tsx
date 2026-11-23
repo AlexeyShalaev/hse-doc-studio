@@ -40,7 +40,7 @@ describe("шторка «Куда перейти» (телефон)", () => {
     const mine = within(dialog).getByTestId("sp-where-mine");
     expect(mine).toHaveTextContent("Мои правки");
     expect(mine).toHaveTextContent(
-      "Курсовой проект, версия 2026.1.3, 3 изменения",
+      "Курсовой проект, версия 2026.1.3, 3 файла изменено",
     );
     // Текущие значения отмечены.
     expect(

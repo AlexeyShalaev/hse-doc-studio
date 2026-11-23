@@ -79,6 +79,7 @@
       "org_member_remove": "Человек убран из организации",
       "org_member_role": "Роль в организации изменена",
       "pat_revoke": "Токен доступа отозван",
+      "pat_scopes_update": "Права токена доступа изменены",
       "project_build_runners_update": "Политика сборок проекта изменена",
       "project_delete": "Проект удалён",
       "project_member_remove": "Доступ к проекту отозван",
@@ -364,7 +365,10 @@
       "grant_id": "Право",
       "kind": "Вид",
       "url": "Адрес",
-      "packs_path": "Папка паков"
+      "packs_path": "Папка паков",
+      "scopes": "Права",
+      "added": "Добавлено",
+      "removed": "Убрано"
     },
     "values": {
       "password": "пароль",

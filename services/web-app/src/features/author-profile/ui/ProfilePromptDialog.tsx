@@ -16,7 +16,7 @@ export type ProfilePromptDialogProps = {
   reason?: ProfilePromptReason;
 };
 
-// Окно «Представься» на случай profile_required: подключение, синхронизация и
+// Окно «Представьтесь» на случай profile_required: подключение, синхронизация и
 // клонирование не начинаются, пока не указаны имя и e-mail автора.
 export const ProfilePromptDialog = ({
   isOpen,

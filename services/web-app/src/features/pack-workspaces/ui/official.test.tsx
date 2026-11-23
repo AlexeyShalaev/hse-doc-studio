@@ -135,7 +135,7 @@ describe("официальные шаблоны: подключение", () => 
     await userEvent.click(await screen.findByTestId("ws-connect-official"));
     expect(
       await screen.findByTestId("official-access-token"),
-    ).toHaveTextContent("форк");
+    ).toHaveTextContent("вашу копию репозитория");
     expect(screen.queryByTestId("official-access-bot")).not.toBeInTheDocument();
     expect(screen.getByTestId("official-dialog")).not.toHaveTextContent(
       "служебный аккаунт",
@@ -165,7 +165,17 @@ describe("официальные шаблоны: подключение", () => 
       /^https:\/\/github\.com\/settings\/tokens\/new\?scopes=public_repo&description=/,
     );
     expect(dialog).toHaveTextContent("public_repo");
-    expect(screen.getByTestId("github-fork-note")).toHaveTextContent("форк");
+    // Простые слова: копия репозитория и запрос на слияние; «форк, ветка, PR» только под «Подробнее».
+    expect(screen.getByTestId("github-fork-note")).toHaveTextContent(
+      "копию этого репозитория",
+    );
+    expect(screen.getByTestId("github-fork-note")).not.toHaveTextContent(
+      /форк|ветк|PR/,
+    );
+    expect(screen.getByTestId("token-link-card")).not.toHaveTextContent(
+      /форк, ветка/,
+    );
+    expect(screen.getByTestId("github-fork-details")).toHaveTextContent("форк");
     expect(screen.queryByTestId("github-repo-note")).not.toBeInTheDocument();
     expect(dialog).not.toHaveTextContent("Only select repositories");
     expect(dialog).not.toHaveTextContent("check-runs");

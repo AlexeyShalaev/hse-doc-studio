@@ -22,6 +22,7 @@ from hse_doc_studio.core.identity.entities import (
     OidcProviderQuery,
     RegistrationInvite,
     Session,
+    TokenScope,
     invite_state,
 )
 from hse_doc_studio.core.identity.lifecycle import DELETED_PREFIX
@@ -85,6 +86,17 @@ class InMemoryApiTokenRepository:
     async def list_for_user(self, user_id: str) -> list[ApiToken]:
         found = [t for t in self._items.values() if t.user_id == user_id]
         return sorted(found, key=lambda t: (t.created_at, t.id))
+
+    async def get(self, user_id: str, token_id: str) -> ApiToken | None:
+        token = self._items.get(token_id)
+        return token if token is not None and token.user_id == user_id else None
+
+    async def set_scopes(self, user_id: str, token_id: str, scopes: frozenset[TokenScope]) -> bool:
+        token = await self.get(user_id, token_id)
+        if token is None:
+            return False
+        self._items[token_id] = replace(token, scopes=frozenset(scopes))
+        return True
 
     async def delete(self, user_id: str, token_id: str) -> bool:
         token = self._items.get(token_id)

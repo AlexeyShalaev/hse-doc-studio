@@ -134,7 +134,7 @@ describe("мастер создания проекта на сервере", () 
     }
   });
 
-  it("владельцем можно выбрать только организацию, где ты администратор", () => {
+  it("владельцем можно выбрать только организацию, где вы администратор", () => {
     useCreateWizard.setState({ ...filled, step: 4, maxReached: 4 });
     mount(SERVER);
     const group = screen.getByRole("radiogroup", { name: "Владелец проекта" });

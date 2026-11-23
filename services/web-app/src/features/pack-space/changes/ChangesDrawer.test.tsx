@@ -28,6 +28,7 @@ import {
 } from "@entities/pack-studio";
 import {
   COURSEWORK_INPUTS,
+  COURSEWORK_LINT,
   referenceImpact,
 } from "@entities/pack-studio/reference";
 import { i18n } from "@shared/lib";
@@ -40,6 +41,7 @@ import { renderSpace, SPACE_BASE } from "../spaceTestKit";
 import { ChangesPanel } from "./ChangesPanel";
 import { deriveChangesStatus } from "./deriveChangesStatus";
 import { versionStateOf } from "../next-step/fixtures";
+import { slots as navSlots } from "../nav/slots";
 import { slots } from "./slots";
 
 // Первая панель грузит отдельный чанк и модули диалогов: на нагруженной машине это секунды.
@@ -145,6 +147,10 @@ const ci = (patch: Partial<PackCiStatus> = {}): PackCiStatus => ({
 type Setup = {
   git?: PackGit;
   lint?: PackLint;
+  /** Замечания «Проверки» открытой версии (outcome lint). */
+  remarks?: number;
+  /** С полосами пространства (крошки «Куда перейти»). */
+  withNav?: boolean;
   notes?: boolean;
   ci?: PackCiStatus;
   url?: string;
@@ -178,6 +184,14 @@ const mount = (setup: Setup = {}) => {
       data: referenceImpact("normal"),
       etag: null,
     }),
+    check: vi.spyOn(packOutcomeApi, "lint").mockResolvedValue({
+      data: {
+        ...COURSEWORK_LINT,
+        warnings: setup.remarks ?? 0,
+        infos: 1,
+      },
+      etag: null,
+    }),
     inputs: vi.spyOn(packOutcomeApi, "inputs").mockResolvedValue({
       data: COURSEWORK_INPUTS,
       etag: null,
@@ -188,7 +202,10 @@ const mount = (setup: Setup = {}) => {
   });
   const view = renderSpace(
     <QueryClientProvider client={client}>
-      <SpaceScreen slots={slots} phone={false} />
+      <SpaceScreen
+        slots={setup.withNav ? { ...navSlots, ...slots } : slots}
+        phone={false}
+      />
     </QueryClientProvider>,
     setup.url ?? `${SPACE_BASE}/2026.1.3/result?changes=1`,
   );
@@ -229,6 +246,8 @@ describe("панель «Изменения»", () => {
           pointer: null,
         },
       ]),
+      // «Проверка» видит одно замечание и одну подсказку: в панели то же число, подсказка не считается.
+      remarks: 1,
     });
     const root = await panel();
     await waitFor(() => {
@@ -252,14 +271,51 @@ describe("панель «Изменения»", () => {
     expect(await within(root).findByTestId("sp-ch-ok")).toHaveTextContent(
       "Ошибок нет",
     );
-    expect(within(root).getByTestId("sp-ch-warnings")).toHaveTextContent(
+    expect(await within(root).findByTestId("sp-ch-warnings")).toHaveTextContent(
       "1 замечание к оформлению. Отправке не мешает.",
     );
+    expect(
+      within(within(root).getByTestId("sp-ch-warnings")).getByRole("button", {
+        name: "Открыть «Проверку»",
+      }),
+    ).toBeInTheDocument();
     expect(within(root).queryByTestId("sp-ch-notes")).not.toBeInTheDocument();
     // Простыми словами: никаких «коммитов» и «PR» в основной части панели.
     expect(root.textContent).not.toMatch(/коммит|\bPR\b|push/i);
     expect(within(root).getByTestId("sp-ch-intro")).toHaveTextContent(
       "видите только вы",
+    );
+  });
+
+  it("правки в другой версии: её документы тоже названы словами, а не идентификаторами", async () => {
+    const OTHER = "hse-cs-sse/templates/coursework/versions/2026.1.2";
+    const changed: PackFileChange[] = [
+      ...FILES,
+      {
+        path: `${OTHER}/files/technical_specification/doc.yaml`,
+        status: "modified",
+      },
+    ];
+    const { spies } = mount({ git: gitOf({ changed, uncommitted: changed }) });
+    const root = await panel();
+    const what = await within(root).findByTestId("sp-ch-what");
+    await waitFor(() => {
+      expect(
+        within(what)
+          .getAllByTestId("sp-ch-item")
+          .map((item) => item.textContent),
+      ).toEqual([
+        "Описание версии",
+        "Техническое задание: условия",
+        "Текст программы: текст",
+        "Техническое задание: условия",
+      ]);
+    });
+    expect(what).not.toHaveTextContent("technical_specification");
+    // Модель другой версии читается отдельно, по её адресу.
+    expect(spies.model).toHaveBeenCalledWith(
+      GALLERY_WORKSPACE.id,
+      expect.objectContaining({ version: "2026.1.2" }),
     );
   });
 
@@ -373,6 +429,7 @@ describe("панель «Изменения»", () => {
     ]);
     const { spies } = mount({
       git: gitOf({ changed: copy, uncommitted: copy, branch: null }),
+      withNav: true,
     });
     const reads = vi
       .spyOn(packStudioApi, "readFile")
@@ -415,6 +472,12 @@ describe("панель «Изменения»", () => {
     ).toEqual(["Техническое задание: условия", "Текст программы: текст"]);
     // Внутренних имён и «новое» у каждой строки нет.
     expect(what.textContent).not.toMatch(/doc_\d|новое/);
+    // «Куда перейти» (меню версии в крошках) считает тем же источником и в тех же единицах:
+    // 2 файла, а не 57 новых для git.
+    await userEvent.click(screen.getByTestId("sp-crumb-version"));
+    expect(
+      await screen.findByTestId("sp-crumb-version-item-2026.1.3"),
+    ).toHaveTextContent("2 файла изменено");
   });
 
   it("«Сбросить все мои изменения»: окно с теми же словами, без «свежей main без ветки»", async () => {

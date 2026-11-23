@@ -39,7 +39,7 @@ describe("модель центра «Результата»", () => {
     });
     const vkr = countResult(VKR_OUTCOME);
     expect(vkr.documents).toBe(12);
-    // Руководителя «второй руководитель» нет: в подписантах его не считаем.
+    // Руководителя «соруководитель» нет: в подписантах его не считаем.
     expect(vkr.people).toBe(3);
   });
 
@@ -79,7 +79,7 @@ describe("модель центра «Результата»", () => {
     const point = COURSEWORK_OUTCOME.points[0];
     if (!point) throw new Error("нет точки");
     expect(routeText(t, COURSEWORK_OUTCOME, point)).toBe(
-      "Автор, затем руководитель и второй руководитель, затем академический руководитель",
+      "Автор, затем руководитель и соруководитель, затем академический руководитель",
     );
     const none = COURSEWORK_OUTCOME.points[1];
     if (!none) throw new Error("нет точки");
@@ -118,12 +118,12 @@ describe("причины «не вошло»", () => {
     );
     const reason = reasoner.why(doc?.why ?? []);
     expect(reason?.text).toBe(
-      "Состав: нужно «команда из двух, команда из трёх», сейчас «один автор».",
+      "Число авторов: нужно «два автора, три автора», сейчас «один автор».",
     );
     expect(reason?.action).toEqual({
       input: "staffing",
       value: "team2",
-      label: "Состав: команда из двух",
+      label: "Число авторов: два автора",
     });
   });
 
@@ -131,7 +131,7 @@ describe("причины «не вошло»", () => {
     expect(reasoner.turnOn("co_supervisor")).toEqual({
       input: "co_supervisor",
       value: "yes",
-      label: "Второй руководитель: да",
+      label: "Соруководитель: да",
     });
     expect(reasoner.turnOn("academic_supervisor")).toBeNull();
     expect(reasoner.turnOn("нет такого")).toBeNull();

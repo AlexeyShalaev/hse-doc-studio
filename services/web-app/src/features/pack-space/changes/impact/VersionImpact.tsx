@@ -42,6 +42,7 @@ import {
   type ChangeEnv,
 } from "../../check/compare/changeEnv";
 import { ChangeList } from "../../check/compare/ChangeList";
+import "../../check/compare/styles";
 
 export type VersionReport = {
   /** Расчёт идёт: до ответа не ясно, нужна ли отметка. */

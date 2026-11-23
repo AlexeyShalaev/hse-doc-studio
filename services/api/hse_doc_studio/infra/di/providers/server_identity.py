@@ -132,7 +132,12 @@ from hse_doc_studio.use_cases.admin.users import (
 )
 from hse_doc_studio.use_cases.identity.account_email import ConfirmEmailChangeUC, RequestEmailChangeUC
 from hse_doc_studio.use_cases.identity.account_profile import GetAccountUC, UpdateAccountUC
-from hse_doc_studio.use_cases.identity.api_tokens import CreateApiTokenUC, ListApiTokensUC, RevokeApiTokenUC
+from hse_doc_studio.use_cases.identity.api_tokens import (
+    CreateApiTokenUC,
+    ListApiTokensUC,
+    RevokeApiTokenUC,
+    UpdateApiTokenScopesUC,
+)
 from hse_doc_studio.use_cases.identity.auth_settings import AuthSettingsService, UpdateAuthSettingsUC
 from hse_doc_studio.use_cases.identity.bootstrap import BootstrapUC
 from hse_doc_studio.use_cases.identity.change_password import ChangePasswordUC
@@ -450,6 +455,12 @@ class ServerIdentityProvider(Provider):
         self, tokens: IApiTokenRepository, audit: IAuditLog, uow: IUnitOfWork
     ) -> CreateApiTokenUC:
         return CreateApiTokenUC(tokens, audit, uow)
+
+    @provide
+    def get_update_api_token_scopes_uc(
+        self, tokens: IApiTokenRepository, audit: IAuditLog, uow: IUnitOfWork
+    ) -> UpdateApiTokenScopesUC:
+        return UpdateApiTokenScopesUC(tokens, audit, uow)
 
     @provide
     def get_revoke_api_token_uc(

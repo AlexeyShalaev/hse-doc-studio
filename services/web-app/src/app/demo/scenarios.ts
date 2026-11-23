@@ -121,7 +121,7 @@ export const SCENARIOS: DemoScenario[] = [
     },
   },
   {
-    // Автор версий ещё не указан: окно начинается с «Представься».
+    // Автор версий ещё не указан: окно начинается с «Представьтесь».
     id: "connect_no_profile",
     group: "connect",
     setup: () => undefined,

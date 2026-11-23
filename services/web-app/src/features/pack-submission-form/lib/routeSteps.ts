@@ -97,7 +97,7 @@ export const missingSlots = (
 export const sameSteps = (a: Steps, b: Steps): boolean =>
   JSON.stringify(a) === JSON.stringify(b);
 
-/** Шаги словами: «1. Автор; 2. Научный руководитель, Консультант». */
+/** Шаги словами: «1. Автор; 2. Научный руководитель, Соруководитель». */
 export const stepsText = (
   steps: Steps,
   slotLabel: (slot: string) => string,

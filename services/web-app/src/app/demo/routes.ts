@@ -196,7 +196,11 @@ const statusResponse = (projectId: string): DemoResponse =>
 const profileGate = (): DemoResponse | null =>
   world.profile
     ? null
-    : demoError(409, "profile_required", "Сначала укажи имя и e-mail автора.");
+    : demoError(
+        409,
+        "profile_required",
+        "Сначала укажите имя и e-mail автора.",
+      );
 
 // Состояния, в которых синхронизация запрещена, и ответ на попытку.
 const blockedResponse = (project: DemoProjectGit): DemoResponse | null => {
@@ -236,7 +240,7 @@ const blockedResponse = (project: DemoProjectGit): DemoResponse | null => {
       return demoError(
         409,
         "profile_required",
-        "Сначала укажи имя и e-mail автора.",
+        "Сначала укажите имя и e-mail автора.",
       );
   }
 };
@@ -533,7 +537,7 @@ const projectRoutes: DemoRoute[] = [
         return demoError(
           409,
           "sync_incomplete",
-          "Сначала реши конфликты предыдущей синхронизации.",
+          "Сначала решите конфликты предыдущей синхронизации.",
         );
       }
       const fail = failureOf(project);
@@ -636,7 +640,7 @@ const projectRoutes: DemoRoute[] = [
         return demoError(
           409,
           "plan_outdated",
-          "Чужие изменения обновились: проверь конфликты ещё раз.",
+          "Чужие изменения обновились: проверьте конфликты ещё раз.",
         );
       }
       const given = body.resolutions as
@@ -1239,7 +1243,7 @@ const globalRoutes: DemoRoute[] = [
         return demoError(
           409,
           "host_key_changed",
-          "Для замены ключа введи имя сервера.",
+          "Для замены ключа введите имя сервера.",
           {
             expected: known.fingerprints_sha256[0] ?? "",
             actual: str(body.fingerprint_sha256) ?? "",
@@ -1616,12 +1620,12 @@ const globalRoutes: DemoRoute[] = [
 ];
 
 const PROFILE_ISSUE_TEXT: Record<ProfileIssueCode, string> = {
-  name_required: "Укажи имя: так тебя увидят коллеги.",
+  name_required: "Укажите имя: так вас увидят коллеги.",
   name_too_long: "Слишком длинное имя: не больше 128 символов.",
   name_invalid: "В имени нельзя использовать < и >.",
-  email_required: "Укажи e-mail.",
+  email_required: "Укажите e-mail.",
   email_too_long: "Слишком длинный адрес: не больше 254 символов.",
-  email_invalid: "Укажи адрес вида name@example.com.",
+  email_invalid: "Укажите адрес вида name@example.com.",
 };
 
 const clearProfileBlock = (): void => {

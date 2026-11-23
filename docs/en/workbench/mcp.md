@@ -20,6 +20,21 @@ tags:
 
     An administrator turns MCP on: **Admin → MCP server → “Enable the MCP server”**. Then everyone issues a token: **Settings → Account → Tokens → New token**, permission **MCP**. The server address is `https://<Studio address>/mcp`; the token goes in the `Authorization: Bearer <token>` header.
 
+    If you already have a token, there is no need for a new one: **Settings → Account → Tokens → “Edit permissions”** on that token (see [Token permissions](#scopes)).
+
+### Token permissions { #scopes }
+
+A token can do what its permissions allow. MCP needs the **MCP** permission; **Signing via MCP** lets `sign_submission` sign a submission, **Template Studio** opens the `pack_*` tools, **MCP: administration** opens the admin tools (instance administrators only).
+
+You can change the permissions of an existing token: **Settings → Account → Tokens → “Edit permissions”**. Tick what you need, check the “Will be added” and “Will be removed” summary and save. The token itself stays the same, so nothing changes in the CLI, scripts or AI clients.
+
+- New permissions apply right away, from the next request with this token. A removed permission stops working right away too.
+- An AI client remembers the tool list when it connects. To see new tools (or stop showing removed ones), reconnect the Studio server in the client (`/mcp` in Claude Code, the server restart button in Cursor and VS Code) or restart the client. The Studio runs MCP without sessions, so it cannot tell the client about the change itself.
+- Only a person signed in to the Studio in a browser can change permissions. A token cannot change its own or another token's permissions, neither through MCP nor through the API.
+- You can give the same permissions as when issuing a token: **MCP: administration** only to an instance administrator, only git permissions to a device token (sign-in with a code). Any permission can be removed.
+- An expired token cannot be changed; issue a new one. A revoked token no longer exists.
+- Every change is recorded in the audit log: what was added and what was removed.
+
 ## Connect a client
 
 Ready-made configs with your address are in the Studio: **Settings**, section **AI clients (MCP)**; pick the client from the list. Below are the same configs for the cloud with the address `https://studio.example.org/mcp`. For a local Studio the address is `http://127.0.0.1:17240/mcp`; drop the `Authorization` header, the token variable and `bearer_token_env_var`.
@@ -386,7 +401,7 @@ The check sees only what is in the PDF: text, lines, pixels. It still looks at a
 ## Security
 
 - The client acts as the token owner: the same project roles, quotas and limits as in the interface. Other people's projects do not exist for it.
-- An MCP token needs only the **MCP** permission and gives no access to the regular API. Revoke it where it was issued; it stops working at once.
+- An MCP token needs only the **MCP** permission and gives no access to the regular API. Revoke it where it was issued; it stops working at once. Its permissions are changed in the same place ([Token permissions](#scopes)) and also apply at once.
 - Browser cookies are not accepted on `/mcp`.
 - Every call is logged: tool, project, outcome and time, without argument values. In the cloud the log is on **Admin → MCP server** and in the general audit log; locally it is in the MCP settings.
 - Calls are rate limited (120 a minute per person by default); builds, file writes and git also count against their own limits.

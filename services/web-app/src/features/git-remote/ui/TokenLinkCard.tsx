@@ -186,7 +186,11 @@ export const TokenLinkCard = ({
             ))}
           </span>
         )}
-        <span style={{ fontSize: "0.75rem" }}>{permissions.human[lang]}</span>
+        {/* Вклад через форк: «форк, ветка, PR» из каталога прав методисту ничего не
+            говорят, поэтому здесь простые слова, а технические стоят под «Подробнее». */}
+        <span style={{ fontSize: "0.75rem" }}>
+          {forkFlow ? t("tokenLink.forkRights") : permissions.human[lang]}
+        </span>
       </div>
 
       <ol
@@ -267,6 +271,21 @@ export const TokenLinkCard = ({
           />
           {t("tokenLink.forkNote")}
         </p>
+      )}
+      {forkFlow && (
+        <details className="sync-details" data-testid="github-fork-details">
+          <summary>{t("tokenLink.forkMore")}</summary>
+          <p
+            className="dim"
+            style={{
+              margin: "0.5rem 0 0",
+              fontSize: "0.75rem",
+              lineHeight: 1.5,
+            }}
+          >
+            {t("tokenLink.tech.fork")}
+          </p>
+        </details>
       )}
       {provider === "github" && prefilled && !forkFlow && (
         <p

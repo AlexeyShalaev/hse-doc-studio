@@ -67,6 +67,22 @@ def _codes(report: ChangeReport) -> set[str]:
         (PACKS / "hse-cs-se" / "templates" / "coursework", "2026.1.1", "2026.1.2", PATCH, {"text"}),
         (PACKS / "hse-cs-se" / "templates" / "vkr", "2026.1.1", "2026.1.2", PATCH, {"text"}),
         (PACKS / "hse-cs-se" / "templates" / "pp", "2026.1", "2026.1.1", PATCH, {"text"}),
+        # Места подписей на якорях строк шаблона: заготовки подписания и якоря в исходниках, PDF тот же.
+        (SSE, "2026.1.6", "2026.1.7", PATCH, {"signing_preset", "file_changed"}),
+        (
+            PACKS / "hse-cs-se" / "templates" / "coursework",
+            "2026.1.2",
+            "2026.1.3",
+            PATCH,
+            {"signing_preset", "file_added", "file_changed"},
+        ),
+        (
+            PACKS / "hse-cs-se" / "templates" / "vkr",
+            "2026.1.2",
+            "2026.1.3",
+            PATCH,
+            {"signing_preset", "file_added", "file_changed"},
+        ),
     ],
     ids=[
         "sse-1.1",
@@ -80,6 +96,9 @@ def _codes(report: ChangeReport) -> set[str]:
         "se-coursework-1.2",
         "se-vkr-1.2",
         "se-pp-1.1",
+        "sse-1.7",
+        "se-coursework-1.3",
+        "se-vkr-1.3",
     ],
 )
 def test__real_chains__give_the_expected_reasons(
@@ -102,8 +121,8 @@ def test__sse_2026_1_5__released_as_a_patch_of_2026_1_4() -> None:
 
     assert load_releases(SSE)["2026.1.5"].kind is PATCH
     assert manifest["release"] == {"kind": "patch"}
-    # По умолчанию следующая patch-версия 2026.1.6 (кавычки у текстов), пресеты в ней те же.
-    assert template["default_version"] == "2026.1.6"
+    # По умолчанию последняя patch-версия 2026.1.7 (место руководителя на титуле отчёта), пресеты 2026.1.5 в ней те же.
+    assert template["default_version"] == "2026.1.7"
 
 
 def test__sse_2026_1_5__manifest_differs_only_in_signing_presets_and_deadline_hints() -> None:

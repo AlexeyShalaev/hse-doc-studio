@@ -20,11 +20,14 @@ const RuleItem = ({ rule, env }: { rule: RuleCoverage; env: CheckEnv }) => {
   const { t } = useTranslation("packSpace");
   const { t: tOld } = useTranslation("packOutcome");
   const none = isUncoveredRule(rule);
-  const kind = tOld(`rules.kinds.${rule.kind}`, { defaultValue: rule.kind });
+  // Слова те же, что в «Подробностях» (packSpace): без «слотов», «движка» и «манифеста».
+  const kind = t(`details.tech.kinds.${rule.kind}`, {
+    defaultValue: tOld(`rules.kinds.${rule.kind}`, { defaultValue: rule.kind }),
+  });
   const name =
     rule.rule.origin === "builtin"
-      ? `${kind}: ${tOld(`rules.builtin.${rule.rule.builtin ?? ""}`, {
-          defaultValue: tOld("rules.builtin.other"),
+      ? `${kind}: ${t(`details.why.builtin.${rule.rule.builtin ?? "other"}`, {
+          defaultValue: t("details.why.builtin.other"),
         })}`
       : kind;
   const Icon = none ? CircleDashed : CircleDot;

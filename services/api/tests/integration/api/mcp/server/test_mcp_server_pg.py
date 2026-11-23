@@ -10,7 +10,10 @@ from uuid import UUID
 
 import pytest
 from hse_doc_studio.core.mail.journal import MailCause, MailLogEntry, MailParams, MailStatus
+from hse_doc_studio.infra.db.orm.identity import UserRow
 from hse_doc_studio.infra.db.repositories.mail_log import SqlMailLogRepository
+from httpx2 import Response
+from sqlalchemy import update
 
 from tests.integration.api.personal.conftest import ORIGIN, PASSWORD, Person, Stand, seed_shared_project
 
@@ -19,7 +22,7 @@ pytestmark = pytest.mark.pg
 _HEADERS = {"Accept": "application/json, text/event-stream", "MCP-Protocol-Version": "2025-06-18"}
 
 
-def _token(stand: Stand, email: str, scopes: list[str]) -> dict[str, str]:
+def _login_and_create(stand: Stand, email: str, scopes: list[str]) -> tuple[Response, Response]:
     login = stand.client.post(
         "/api/v1/auth/login", json={"email": email, "password": PASSWORD}, headers={"Origin": ORIGIN}
     )
@@ -30,8 +33,19 @@ def _token(stand: Stand, email: str, scopes: list[str]) -> dict[str, str]:
         headers={"Origin": ORIGIN, "X-CSRF-Token": login.json()["csrf_token"]},
     )
     stand.client.cookies.clear()
+    return login, created
+
+
+def _issue(stand: Stand, email: str, scopes: list[str]) -> tuple[str, dict[str, str]]:
+    """Id токена и заголовок с ним."""
+    _, created = _login_and_create(stand, email, scopes)
     assert created.status_code == 201, created.text
-    return {"Authorization": f"Bearer {created.json()['token']}"}
+    body = created.json()
+    return body["item"]["id"], {"Authorization": f"Bearer {body['token']}"}
+
+
+def _token(stand: Stand, email: str, scopes: list[str]) -> dict[str, str]:
+    return _issue(stand, email, scopes)[1]
 
 
 def _rpc(stand: Stand, headers: dict[str, str], method: str, params: dict[str, Any] | None = None) -> Any:
@@ -194,13 +208,26 @@ async def test__admin_list_mail_log__compact_rows_filtered_by_recipient(stand: S
 
 
 async def test__admin_tools__non_admin_with_scope__hidden(stand: Stand) -> None:
+    """`mcp:admin` выдают только админу; у бывшего админа область остаётся, но тулы ему не видны."""
     _enable(stand, disabled_groups=[])
-    person = await stand.person("dima")
+    person = await stand.person("dima", admin=True)
     headers = _token(stand, person.email, ["mcp", "mcp:admin"])
+    async with stand.sessions.use() as db:
+        await db.execute(update(UserRow).where(UserRow.id == person.id).values(is_instance_admin=False))
 
     result = _call(stand, headers, "admin_list_users", {})
 
     assert result["_meta"]["code"] == "tool_disabled"
+
+
+async def test__admin_scope__is_not_issued_to_a_non_admin(stand: Stand) -> None:
+    person = await stand.person("zoya")
+
+    login, created = _login_and_create(stand, person.email, ["mcp", "mcp:admin"])
+
+    assert login.status_code == 200
+    assert created.status_code == 403
+    assert created.json()["code"] == "token_scope_not_allowed"
 
 
 async def test__journal__admin_sees_calls(stand: Stand) -> None:
@@ -400,3 +427,36 @@ async def test__pack_tools__need_the_packs_scope_and_the_pack_author_right(stand
     assert json.loads(listed["content"][0]["text"]) == {"workspaces": []}
     assert no_right["isError"] is True
     assert json.loads(no_right["content"][0]["text"])["code"] == "pack_studio_forbidden"
+
+
+async def test__scope_change__applies_to_the_next_mcp_request_with_the_same_token(stand: Stand) -> None:
+    """Права токена правят в профиле сессией: следующий запрос MCP с тем же токеном видит новые тулы
+    (сервер без состояния, токен читается из базы на каждый запрос); токеном права не поменять."""
+    _enable(stand)
+    resp = stand.admin().put("/api/admin/pack-studio", json={"enabled": True})
+    assert resp.status_code == 200, resp.text
+    token_id, headers = _issue(stand, "stand-admin@example.org", ["mcp"])
+
+    def names() -> set[str]:
+        return {t["name"] for t in _rpc(stand, headers, "tools/list").json()["result"]["tools"]}
+
+    assert not [n for n in names() if n.startswith("pack_")]
+    by_token = stand.client.patch(
+        f"/api/v1/account/tokens/{token_id}", json={"scopes": ["mcp", "packs"]}, headers=headers
+    )
+    assert by_token.status_code == 403
+    assert not [n for n in names() if n.startswith("pack_")]
+
+    added = stand.admin().patch(f"/api/v1/account/tokens/{token_id}", json={"scopes": ["mcp", "packs"]})
+
+    assert added.status_code == 200, added.text
+    assert "pack_list_workspaces" in names()
+    listed = _call(stand, headers, "pack_list_workspaces", {})
+    assert listed["isError"] is False, listed
+
+    removed = stand.admin().patch(f"/api/v1/account/tokens/{token_id}", json={"scopes": ["api"]})
+
+    assert removed.status_code == 200, removed.text
+    refused = _rpc(stand, headers, "tools/list")
+    assert refused.status_code == 403
+    assert refused.json()["code"] == "insufficient_scope"

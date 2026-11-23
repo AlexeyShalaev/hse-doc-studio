@@ -118,7 +118,7 @@ const has = (url: string, word: string): boolean =>
 const ISSUES: Record<string, DemoUrlError> = {
   offline: {
     code: "offline",
-    detail: "Не удалось связаться с сервером. Проверь интернет и адрес.",
+    detail: "Не удалось связаться с сервером. Проверьте интернет и адрес.",
   },
   missing: {
     code: "not_found_or_no_access",
@@ -131,7 +131,7 @@ const ISSUES: Record<string, DemoUrlError> = {
   slow: { code: "timeout", detail: "Сервер не ответил за отведённое время." },
   limit: {
     code: "rate_limited",
-    detail: "Слишком много запросов, попробуй позже.",
+    detail: "Слишком много запросов, попробуйте позже.",
   },
   denied: {
     code: "auth_failed",
@@ -139,7 +139,7 @@ const ISSUES: Record<string, DemoUrlError> = {
   },
   sso: {
     code: "sso_required",
-    detail: "Организация требует SSO: авторизуй токен для неё на сервере.",
+    detail: "Организация требует SSO: авторизуйте токен для неё на сервере.",
   },
   readonly: {
     code: "forbidden_write",
@@ -320,7 +320,7 @@ export const runDemoProbe = (
         error: {
           code: expired ? "token_expired" : "auth_failed",
           detail: expired
-            ? "Срок действия токена истёк. Выпусти новый."
+            ? "Срок действия токена истёк. Выпустите новый."
             : "Сервер отклонил токен: он отозван или просрочен.",
           host_keys: null,
         },

@@ -14,6 +14,8 @@ export const KNOWN_FAILURES = [
   "passkeys_disabled",
   "passkey_failed",
   "passkey_already_registered",
+  "token_scope_not_allowed",
+  "api_token_expired",
 ] as const;
 
 export const failureKey = (code: string): string =>

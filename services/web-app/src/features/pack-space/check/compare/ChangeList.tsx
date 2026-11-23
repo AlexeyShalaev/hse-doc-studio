@@ -8,6 +8,7 @@ import { makeTraceText } from "@entities/pack-studio/outcome/explain";
 import { DecisionStatus } from "./StateChip";
 import { useChangeEnv } from "./changeEnv";
 import { ChangeWordsContext } from "./changeWords";
+import "./styles";
 
 const SYMBOL_KEY = { "+": "added", "~": "changed", "-": "removed" } as const;
 

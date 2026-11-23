@@ -27,7 +27,7 @@ export type AccessStepProps = {
   onSwitchUrl: (value: string) => void;
 };
 
-// Шаг 2. Как репозиторий узнает, что это ты: токен по https или ключ по ssh.
+// Шаг 2. Как репозиторий узнает, что это вы: токен по https или ключ по ssh.
 export const AccessStep = ({
   url,
   fixing,

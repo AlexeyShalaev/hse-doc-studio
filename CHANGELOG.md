@@ -6,6 +6,14 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.40.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.39.0...v0.40.0) - 2026-11-23
+
+- Access tokens: the permissions of an existing token can be changed. In the account settings a token has an Edit permissions button: the same checkboxes as on creation and a summary of what is added and removed. The token itself stays the same and the new permissions apply from the next request; after changing MCP permissions, reconnect the AI client so it sees the new tools. Permissions can only be changed from a browser session, a token cannot raise its own rights, and every change is written to the audit log.
+- Packs: signature places sit on the template's signature lines. In hse-cs-se VKR 2026.1.3 and coursework 2026.1.3 signature places are bound to the signature lines of the approval sheets, title pages and PDP forms; before, boxes could land on text or on each other. hse-cs-sse coursework 2026.1.7 adds the supervisor's signature and date place on the report title page. The text of the documents is unchanged.
+- Pack Studio fixes after an end-to-end check: version comparison always opens with its styles; Why and Not included name conditions the same way as the For which student strip; What changed shows document names instead of ids; the what-changed line counts the rows visible on screen; the number of changed files and of remarks is the same on every screen; when access is refused, sending offers Repository access; Check, the official templates dialog and the workspace list use fewer technical words. On phones Esc closes the details sheet and the send button in Changes is no longer squeezed.
+- Interface: the app consistently addresses the user formally in Russian, the co-supervisor has one name everywhere, coloured labels meet WCAG AA contrast in the light and dark themes, on touch screens every button is at least 44 px, notifications no longer cover the buttons of dialogs and side panels, and closing a dialog returns focus to the button that opened it.
+- MCP: the signature place check no longer mistakes a date blank for a signature line, suggests a place even when no clean one exists, and marks a line the template does not print for this data as a hint rather than an error.
+
 ## [0.39.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.38.0...v0.39.0) - 2026-11-22
 
 - Pack Studio: the new interface is now the only one and opens right away, without ?ux in the address. The old view (Files, the former Result, Matrix and Atlas) is removed, and old links lead to the right screen of the new interface. The Changes panel again has the Move edits to a new version button for a released version that was edited outside the Studio.

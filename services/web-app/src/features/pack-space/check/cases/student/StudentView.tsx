@@ -11,6 +11,7 @@ import {
   type StudentField,
 } from "@entities/pack-studio/outcome/studentView";
 import "./student.css";
+import "../../compare/styles";
 
 const Block = ({
   title,

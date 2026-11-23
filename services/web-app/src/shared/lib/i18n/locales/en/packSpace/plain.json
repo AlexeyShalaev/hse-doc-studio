@@ -15,7 +15,7 @@
     "author": "Author",
     "authorN": "Author {{n}}",
     "supervisor": "Supervisor",
-    "co_supervisor": "Consultant",
+    "co_supervisor": "Co-supervisor",
     "academic_supervisor": "Academic supervisor"
   },
   "lang": {
@@ -100,7 +100,7 @@
     "when-unknown-person": {
       "person": {
         "title": "A signature condition names a person who is not among the roles",
-        "how": "Pick a role from the list: supervisor, consultant or academic supervisor."
+        "how": "Pick a role from the list: supervisor, co-supervisor or academic supervisor."
       },
       "slot": {
         "title": "A condition refers to a signature that is not in the version’s list of signatures",

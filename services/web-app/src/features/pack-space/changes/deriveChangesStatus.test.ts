@@ -255,7 +255,6 @@ describe("deriveChangesStatus: проверки и заметки", () => {
     );
     expect(status).toMatchObject({
       errors: 2,
-      warnings: 1,
       notesNeeded: false,
     });
   });

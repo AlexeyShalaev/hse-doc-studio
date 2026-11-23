@@ -13,6 +13,15 @@ from tests.factories import project_api_payload
 
 pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git binary not available")
 
+# Последние выпущенные версии шаблонов (`default_version`): обновление рекомендует их.
+SSE_LATEST = "2026.1.7"
+LATEST = {
+    ("hse-cs-sse", "coursework"): SSE_LATEST,
+    ("hse-cs-se", "coursework"): "2026.1.3",
+    ("hse-cs-se", "vkr"): "2026.1.3",
+    ("hse-cs-se", "pp"): "2026.1.1",
+}
+
 
 @pytest.mark.parametrize(("template_id", "lang"), [("vkr", "ru"), ("coursework", "ru"), ("pp", "en")])
 async def test__real_template__fresh_project_matches_its_recorded_base(
@@ -74,7 +83,7 @@ async def test__real_coursework__existing_project_is_offered_the_patch_2026_1_1(
 
     status = (await test_app.get(base)).json()
     assert status["current_version"] == "2026.1"
-    assert status["recommended"]["version"]["version"] == "2026.1.6"
+    assert status["recommended"]["version"]["version"] == SSE_LATEST
     assert status["recommended"]["update_class"] == "patch"
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.1"})).json()
@@ -102,7 +111,7 @@ async def test__real_coursework__2026_1_1_project_is_offered_the_patch_2026_1_2(
 
     status = (await test_app.get(base)).json()
     assert status["current_version"] == "2026.1.1"
-    assert status["recommended"]["version"]["version"] == "2026.1.6"
+    assert status["recommended"]["version"]["version"] == SSE_LATEST
     assert status["recommended"]["update_class"] == "patch"
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.2"})).json()
@@ -136,7 +145,7 @@ async def test__real_coursework__2026_1_2_project_gets_sign_methods_in_patch_202
 
     status = (await test_app.get(base)).json()
     assert status["current_version"] == "2026.1.2"
-    assert status["recommended"]["version"]["version"] == "2026.1.6"
+    assert status["recommended"]["version"]["version"] == SSE_LATEST
     assert status["recommended"]["update_class"] == "patch"
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.3"})).json()
@@ -182,7 +191,7 @@ async def test__real_coursework__2026_1_3_project_gets_form_fixes_in_patch_2026_
 
     status = (await test_app.get(base)).json()
     assert status["current_version"] == "2026.1.3"
-    assert status["recommended"]["version"]["version"] == "2026.1.6"
+    assert status["recommended"]["version"]["version"] == SSE_LATEST
     assert status["recommended"]["update_class"] == "patch"
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.4"})).json()
@@ -221,7 +230,7 @@ async def test__real_coursework__2026_1_4_project_gets_anchors_and_presets_in_pa
 
     status = (await test_app.get(base)).json()
     assert status["current_version"] == "2026.1.4"
-    assert status["recommended"]["version"]["version"] == "2026.1.6"
+    assert status["recommended"]["version"]["version"] == SSE_LATEST
     assert status["recommended"]["update_class"] == "patch"
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.5"})).json()
@@ -270,7 +279,7 @@ async def test__real_template__quoted_texts_patch_changes_no_project_files(
     base = f"/api/v1/projects/{created.json()['id']}/template-update"
 
     status = (await test_app.get(base)).json()
-    assert status["recommended"]["version"]["version"] == patched
+    assert status["recommended"]["version"]["version"] == LATEST[(pack_id, template_id)]
     assert status["recommended"]["update_class"] == "patch"
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": patched})).json()
@@ -279,3 +288,60 @@ async def test__real_template__quoted_texts_patch_changes_no_project_files(
         f"{base}/apply", json={"to_version": patched, "fingerprint": plan["fingerprint"], "resolutions": {}}
     )
     assert applied.status_code == 200, applied.text
+
+
+@pytest.mark.parametrize(
+    ("pack_id", "template_id", "current", "patched", "lang", "kind", "changed"),
+    [
+        # Якоря подписи и даты научного руководителя на титуле отчёта.
+        ("hse-cs-sse", "coursework", "2026.1.6", "2026.1.7", "ru", "project", {"report/title.tex"}),
+        # Якоря в макросах линий листа утверждения и на титуле отчёта, файл макросов якорей.
+        (
+            "hse-cs-se",
+            "coursework",
+            "2026.1.2",
+            "2026.1.3",
+            "ru",
+            "research",
+            {"common/anchors.tex", "common/commands.tex", "report/preamble.tex", "report/title.tex"},
+        ),
+    ],
+)
+async def test__real_template__signature_anchors_patch_changes_only_anchor_lines(  # noqa: PLR0913 — версия и ожидание
+    test_app: AsyncClient,
+    tmp_path: Path,
+    pack_id: str,
+    template_id: str,
+    current: str,
+    patched: str,
+    lang: str,
+    kind: str,
+    changed: set[str],
+) -> None:
+    """Места подписей на якорях (patch): меняются только строки с якорями и добавляется `common/anchors.tex`."""
+    folder = tmp_path / template_id
+    folder.mkdir()
+    payload = {
+        **project_api_payload(str(folder)),
+        "pack_id": pack_id,
+        "template_id": template_id,
+        "version": current,
+        "lang": lang,
+        "kind": kind,
+    }
+    created = await test_app.post("/api/v1/projects", json=payload)
+    assert created.status_code == 201, created.text
+    base = f"/api/v1/projects/{created.json()['id']}/template-update"
+
+    status = (await test_app.get(base)).json()
+    assert status["recommended"]["version"]["version"] == patched
+    assert status["recommended"]["update_class"] == "patch"
+
+    plan = (await test_app.post(f"{base}/plan", json={"to_version": patched})).json()
+    assert {f["path"] for f in plan["files"] if f["action"] != "unchanged"} == changed
+    applied = await test_app.post(
+        f"{base}/apply", json={"to_version": patched, "fingerprint": plan["fingerprint"], "resolutions": {}}
+    )
+    assert applied.status_code == 200, applied.text
+    title = (folder / "report" / "title.tex").read_text(encoding="utf-8")
+    assert "\\hseSignAnchor" in title

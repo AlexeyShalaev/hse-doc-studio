@@ -9,12 +9,13 @@ import {
   TriangleAlert,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import {
   PACK_STUDIO_PATH,
   PackErrorText,
+  usePackOutcomeLint,
   type PackCiStatus,
   type PackDiagnostic,
   type PackVersionRef,
@@ -32,16 +33,35 @@ import {
   type ChangeItem,
 } from "./describeChanges";
 import { itemLabel } from "./itemLabel";
+import { versionKeyOf } from "./versionKey";
 import type { ChangesData } from "./useChangesStatus";
 
 /** Действия панели: диалоги и операции, которыми управляет контейнер. */
 export type ChangesAction =
   "diff" | "checks" | "save" | "branch" | "take" | "access" | "reset";
 
+/** Названия документов версии `ref`: открытой из модели контейнера, остальных из `other`. */
+const namesOf = (
+  ref: PackVersionRef | null,
+  open: PackVersionRef,
+  docNames: Readonly<Record<string, string>>,
+  other: ChangesPanelProps["otherDocNames"],
+): Readonly<Record<string, string>> => {
+  if (ref === null) return {};
+  const key = versionKeyOf(ref);
+  return key === versionKeyOf(open) ? docNames : (other?.[key] ?? {});
+};
+
 export type ChangesPanelProps = {
   data: ChangesData;
   /** Названия документов открытой версии по идентификатору (из модели версии). */
   docNames: Readonly<Record<string, string>>;
+  /**
+   * Названия документов других изменённых версий: ключ `пак/шаблон/версия` (`versionKeyOf`). Нет
+   * версии в списке: её документы называются идентификатором.
+   */
+  otherDocNames?:
+    Readonly<Record<string, Readonly<Record<string, string>>>> | undefined;
   /** Название шаблона для заголовка группы. */
   templateName: (ref: PackVersionRef) => string;
   /** Идёт операция git: действия выключены. */
@@ -145,12 +165,18 @@ const ChangeRow = ({
 const WhatChanged = ({
   data,
   docNames,
+  otherDocNames,
   templateName,
   onOpenFile,
   onAction,
 }: Pick<
   ChangesPanelProps,
-  "data" | "docNames" | "templateName" | "onOpenFile" | "onAction"
+  | "data"
+  | "docNames"
+  | "otherDocNames"
+  | "templateName"
+  | "onOpenFile"
+  | "onAction"
 >) => {
   const { t } = useTranslation("packSpace");
   const { raw } = data;
@@ -182,9 +208,13 @@ const WhatChanged = ({
           </div>
           <ul className="sp-ch-list">
             {group.items.map((item) => {
-              // Документы других версий называем по идентификатору: имён их модель не читалась.
-              const names =
-                group.version?.version === raw.open.version ? docNames : {};
+              // Имена документов своей версии группы; не пришли: идентификатор.
+              const names = namesOf(
+                group.version,
+                raw.open,
+                docNames,
+                otherDocNames,
+              );
               const label = itemLabel(t, item.kind, item.doc, names);
               const path = item.path;
               return (
@@ -220,38 +250,57 @@ const WhatChanged = ({
   );
 };
 
-/** Находки проверки для списка: ошибки без заметок (они отдельным шагом) и замечания. */
-const findingsOf = (data: ChangesData) => {
+/** Ошибки проверки для списка, без заметок (они отдельным шагом). */
+const errorsOf = (data: ChangesData): PackDiagnostic[] => {
   const errors: PackDiagnostic[] = [];
-  const warnings: PackDiagnostic[] = [];
   for (const report of data.raw.lint) {
     for (const finding of report.findings) {
-      if (finding.severity === "warning") warnings.push(finding);
-      else if (
-        report.released ||
-        !(isNotesFinding(finding) || isNumberFinding(finding))
+      if (
+        finding.severity === "error" &&
+        (report.released ||
+          !(isNotesFinding(finding) || isNumberFinding(finding)))
       ) {
         errors.push(finding);
       }
     }
   }
-  return { errors, warnings };
+  return errors;
+};
+
+/**
+ * Замечания открытой версии: то же число, что в «Проверке» (группа «Замечания»), из того же
+ * запроса и кэша. Подсказки не считаются. Подробности и переход к месту живут в «Проверке»
+ * (pack-studio-ux.md, 12.20).
+ */
+const useRemarks = (data: ChangesData): number => {
+  const { raw, status } = data;
+  const lint = usePackOutcomeLint(
+    raw.workspace.id,
+    raw.open,
+    { state: "work_tree" },
+    raw.workspace.kind === "git" && status.changedInVersion > 0,
+  );
+  return status.changedInVersion > 0 ? (lint.data?.warnings ?? 0) : 0;
 };
 
 const Checks = ({
   data,
   docNames,
+  otherDocNames,
   notesAction,
   onOpenFile,
   onGoCheck,
-}: Pick<ChangesPanelProps, "data" | "docNames" | "notesAction"> & {
+}: Pick<
+  ChangesPanelProps,
+  "data" | "docNames" | "otherDocNames" | "notesAction"
+> & {
   onOpenFile: ChangesPanelProps["onOpenFile"];
   onGoCheck: () => void;
 }) => {
   const { t } = useTranslation("packSpace");
-  const [warningsOpen, setWarningsOpen] = useState(false);
   const { status, raw } = data;
-  const { errors, warnings } = useMemo(() => findingsOf(data), [data]);
+  const errors = useMemo(() => errorsOf(data), [data]);
+  const remarks = useRemarks(data);
   const waiting =
     raw.lint.length < lintTargets(changedOf(raw), raw.open).length;
 
@@ -260,7 +309,7 @@ const Checks = ({
       return t("changes.checks.whereVersion", { version: raw.open.version });
     }
     const info = describePath(finding.path);
-    const names = info.version?.version === raw.open.version ? docNames : {};
+    const names = namesOf(info.version, raw.open, docNames, otherDocNames);
     return itemLabel(t, info.kind, info.doc, names);
   };
   const line = (finding: PackDiagnostic): string =>
@@ -326,48 +375,16 @@ const Checks = ({
           {notesAction ?? <span />}
         </div>
       )}
-      {warnings.length > 0 && (
-        <>
-          <div className="sp-ch-row" data-testid="sp-ch-warnings">
-            <Mark tone="warn" />
-            <div className="sp-ch-row-text">
-              {t("changes.checks.warnings", { count: warnings.length })}
-            </div>
-            <Button
-              size="xs"
-              variant="ghost"
-              aria-expanded={warningsOpen}
-              onClick={() => {
-                setWarningsOpen((open) => !open);
-              }}
-            >
-              {warningsOpen
-                ? t("changes.checks.hide")
-                : t("changes.checks.show")}
-            </Button>
+      {remarks > 0 && (
+        <div className="sp-ch-row" data-testid="sp-ch-warnings">
+          <Mark tone="warn" />
+          <div className="sp-ch-row-text">
+            {t("changes.checks.warnings", { count: remarks })}
           </div>
-          {warningsOpen &&
-            warnings.map((finding, index) => (
-              <div
-                className="sp-ch-row"
-                key={`${finding.path ?? ""}:${String(finding.line)}:${String(index)}`}
-              >
-                <span />
-                <div className="sp-ch-row-text sp-ch-muted">
-                  {line(finding)}
-                </div>
-                <Button
-                  size="xs"
-                  variant="ghost"
-                  onClick={() => {
-                    go(finding);
-                  }}
-                >
-                  {t("changes.checks.go")}
-                </Button>
-              </div>
-            ))}
-        </>
+          <Button size="xs" variant="ghost" onClick={onGoCheck}>
+            {t("changes.checks.openCheck")}
+          </Button>
+        </div>
       )}
     </section>
   );
@@ -499,6 +516,7 @@ const Message = ({
 export const ChangesPanel = ({
   data,
   docNames,
+  otherDocNames,
   templateName,
   busy,
   onClose,
@@ -687,6 +705,7 @@ export const ChangesPanel = ({
           <WhatChanged
             data={data}
             docNames={docNames}
+            otherDocNames={otherDocNames}
             templateName={templateName}
             onOpenFile={onOpenFile}
             onAction={onAction}
@@ -697,6 +716,7 @@ export const ChangesPanel = ({
           <Checks
             data={data}
             docNames={docNames}
+            otherDocNames={otherDocNames}
             notesAction={notesAction}
             onOpenFile={onOpenFile}
             onGoCheck={onGoCheck}

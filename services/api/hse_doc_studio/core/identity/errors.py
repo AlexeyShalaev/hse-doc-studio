@@ -124,6 +124,9 @@ class IdentityErrorCode(StrEnum):
     runner_offline = "runner_offline"
     runner_disk_busy = "runner_disk_busy"
     disk_target_unavailable = "disk_target_unavailable"
+    # Права существующего токена доступа (PATCH /account/tokens/{id}).
+    token_scope_not_allowed = "token_scope_not_allowed"  # noqa: S105 — код ошибки, не секрет
+    api_token_expired = "api_token_expired"  # noqa: S105 — код ошибки, не секрет
 
 
 MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
@@ -486,6 +489,14 @@ MESSAGES: dict[IdentityErrorCode, tuple[str, str]] = {
     IdentityErrorCode.disk_target_unavailable: (
         "Раннер сейчас не может очистить это. Обновите замер и попробуйте снова.",
         "The runner cannot clean this right now. Refresh the measurement and try again.",
+    ),
+    IdentityErrorCode.token_scope_not_allowed: (
+        "Такое право этому токену дать нельзя.",
+        "This token can't be given that permission.",
+    ),
+    IdentityErrorCode.api_token_expired: (
+        "Срок токена истёк: права у него не поменять. Создайте новый.",
+        "The token has expired, so its permissions can't be changed. Create a new one.",
     ),
 }
 

@@ -11,7 +11,9 @@ from hse_doc_studio.core.pack_studio.sign_check import (
     PlaceKind,
     Rect,
     SlotCheck,
+    Word,
     check_places,
+    is_date_blank,
     label_words,
     on_line,
     sign_rect,
@@ -125,3 +127,70 @@ def test__underscores__become_a_line_under_the_run() -> None:
     assert line.source is LineSource.underscores
     assert line.y == 120
     assert line.x0 > 40
+
+
+def _words(*runs: tuple[str, float, float]) -> tuple[list[Glyph], tuple[Word, ...]]:
+    glyphs = [g for text, x, baseline in runs for g in _glyphs(text, x, baseline)]
+    return glyphs, words_of(glyphs)
+
+
+def test__is_date_blank__month_gap_between_the_day_and_the_year() -> None:
+    # «« __ » ______ 2026 г.»: пропуск месяца 40..70 мм, слева «»», справа год.
+    _, words = _words(("«__»", 30, 150), ("2026 г.", 72, 150))
+    month = Line(40, 70, 150, LineSource.drawing)
+    sign = Line(40, 70, 130, LineSource.drawing)
+
+    assert is_date_blank(month, words)
+    assert not is_date_blank(sign, words)
+    assert not is_date_blank(Line(110, 160, 150, LineSource.drawing), words)
+
+
+def test__far_box__date_blank_of_the_column_is_not_the_signature_line() -> None:
+    # Колонка «Научный руководитель»: строка подписи на 130 мм, ниже строка даты с пропуском месяца на 150 мм.
+    # Пропуск ближе к рамке, но подпись не на нём.
+    glyphs, words = _words(("Научный руководитель", 30, 110), ("«__»", 20, 150), ("2026 г.", 72, 150))
+    sign = Line(30, 90, 130, LineSource.drawing)
+    month = Line(31, 70, 150, LineSource.drawing)
+    page = PageLayout(1, 210, 297, tuple(glyphs), words, (sign, month))
+    place = _place("supervisor", 30, 160, words=label_words("Научный руководитель", "Supervisor"))
+
+    (check,) = check_places([place], [], {1: page}, 1, {})
+
+    assert check.line == sign
+    assert check.suggested is not None
+    assert on_line(check.suggested, sign)
+
+
+def test__far_box__suggestion_may_cover_only_small_caption_text() -> None:
+    # Над линией 120..170 мм на 150 мм мелкая подпись строки выше («И.О. Фамилия», высота 2 мм) на 141..143 мм:
+    # обе рамки предложения её задевают, но проверка считает это замечанием, а не ошибкой.
+    caption = [Glyph(ch, Rect(130 + i * 1.5, 141, 131.5 + i * 1.5, 143)) for i, ch in enumerate("ИОФамилия")]
+    page = PageLayout(1, 210, 297, tuple(caption), words_of(caption), (_LINE,))
+    place = _place("author", 40, 100)
+
+    (check,) = check_places([place], [], {1: page}, 1, {})
+    (after,) = check_places([_place("author", *_xy(check.suggested))], [], {1: page}, 1, {})
+
+    assert check.line == _LINE
+    assert check.suggested is not None
+    assert on_line(check.suggested, _LINE)
+    assert after.status is not None
+    assert after.status.value == "warning"
+
+
+def _xy(rect: Rect | None) -> tuple[float, float, float]:
+    assert rect is not None
+    return rect.x0, rect.y0, rect.width
+
+
+def test__slot_line_not_printed_in_this_build__a_hint_not_an_error() -> None:
+    # Место консультанта на якоре, а строку консультанта шаблон без консультанта не печатает: места нет по замыслу.
+    checks = check_places([], [("supervisor", "S")], {}, 1, {}, absent=[("co_supervisor", "C", "co_supervisor")])
+
+    by = {c.slot: c for c in checks}
+    assert _codes(by["supervisor"]) == ["no_place"]
+    assert by["supervisor"].status is not None
+    assert by["supervisor"].status.value == "error"
+    assert _codes(by["co_supervisor"]) == ["anchor_missing"]
+    assert by["co_supervisor"].findings[0].data == {"anchor": "co_supervisor"}
+    assert by["co_supervisor"].status is None

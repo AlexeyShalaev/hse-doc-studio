@@ -52,15 +52,6 @@
       "none": "None"
     }
   },
-  "sections": {
-    "documents": "Documents",
-    "meta": "Project data",
-    "forms": "Forms",
-    "participants": "Participants",
-    "points": "Deadlines and hand-in",
-    "route": "Signatures",
-    "checks": "Checks"
-  },
   "cases": {
     "title": "Ready cases",
     "empty": "No ready cases yet. Set the conditions above and choose “Remember this case” in the “More” menu.",
@@ -107,7 +98,7 @@
     "failed": "Could not work out what changed.",
     "same": "After “{{label}}” the result did not change.",
     "changed": "After “{{label}}” the result changed:",
-    "added": "+{{count}}",
+    "added": "{{count}} added",
     "edited": "{{count}} changed",
     "removed": "{{count}} removed",
     "showOnly": "Show only what changed",

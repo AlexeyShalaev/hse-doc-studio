@@ -117,6 +117,7 @@ ROUTE_SCOPES: Mapping[RouteKey, RouteScope] = {
     ("DELETE", "/account/orgs/{slug}/membership"): _A,
     ("GET", "/account/tokens"): _A,
     ("POST", "/account/tokens"): _A,
+    ("PATCH", "/account/tokens/{token_id}"): _A,
     ("DELETE", "/account/tokens/{token_id}"): _A,
     # Организации и группы: роль проверяет сценарий (не участнику 404, мало роли 403)
     ("GET", "/orgs"): _A,

@@ -429,7 +429,7 @@
         "role": {
           "author": "Author",
           "supervisor": "Supervisor",
-          "co_supervisor": "Consultant",
+          "co_supervisor": "Co-supervisor",
           "academic_supervisor": "Academic supervisor"
         }
       }

@@ -63,6 +63,7 @@ export const CONTRACT_SCHEMAS: Record<string, ZodType> = {
   ApiToken: s.ApiTokenSchema,
   ApiTokenList: z.array(s.ApiTokenSchema),
   CreateApiTokenRequest: s.CreateApiTokenRequestSchema,
+  UpdateApiTokenRequest: s.UpdateApiTokenRequestSchema,
   CreateApiTokenResponse: s.CreateApiTokenResponseSchema,
   ProjectSummary: s.ProjectSummarySchema,
   ProjectSummaryList: z.array(s.ProjectSummarySchema),

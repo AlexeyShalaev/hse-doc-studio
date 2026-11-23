@@ -1,0 +1,38 @@
+% ============================================================
+% common/commands.tex — переменные документов ЕСПД.
+% Раздаёт данные проекта (макросы \hse… из common/meta.tex) под
+% «человеческими» именами, которые использует common/title_template.tex
+% и common/styles.tex. Документ подключает этот файл после преамбулы.
+%
+% \docname / \doccode / \doccodelu определяются в самом документе
+% (tz.tex, pmi.tex, …) — они индивидуальны для каждого документа ЕСПД.
+% ============================================================
+
+% ── Данные работы ───────────────────────────────────────────
+\newcommand{\projectname}{\hseProjectName}
+\newcommand{\studentname}{\hseAuthorName}
+\newcommand{\studentgroup}{\hseGroup}
+\newcommand{\yearval}{\hseYear}
+
+% ── Руководитель и со-руководитель ──────────────────────────
+\newcommand{\scientificadvisorname}{\hseSupervisorName}
+\newcommand{\scientificadvisorrole}{\hseSupervisorTitle}
+\newcommand{\coscientificadvisorname}{\hseCoSupervisorName}
+\newcommand{\coscientificadvisorrole}{\hseCoSupervisorTitle}
+
+% ── Академический руководитель ОП ───────────────────────────
+\newcommand{\academicsupervisorname}{\hseAcademicSupervisorName}
+\newcommand{\academicsupervisorrole}{\hseAcademicSupervisorTitle}
+% Пустая строка даты на листе утверждения: дата каждой подписи
+% ставится в инструменте «Подписи» и штампуется на PDF.
+\newcommand{\signdateblank}{«\rule{0.8cm}{0.4pt}» \rule{2.5cm}{0.4pt} \yearval~г.}
+
+% ── Линии подписей ──────────────────────────────────────────
+% Шаблон рисует обычную линию \rule; готовые PNG-подписи накладываются
+% на PDF при упаковке комплекта (слоты author/supervisor/co_supervisor).
+% Перед линией стоит якорь места подписи слота (common/anchors): Студия
+% ставит рамку подписи на эту линию, где бы она ни оказалась. Якорь ничего
+% не печатает. Документ с этими линиями подключает common/anchors.
+\newcommand{\authorsignatureline}[1]{\hseSignAnchor[#1]{author}\rule{#1}{0.4pt}}
+\newcommand{\supervisorsignatureline}[1]{\hseSignAnchor[#1]{supervisor}\rule{#1}{0.4pt}}
+\newcommand{\cosupervisorsignatureline}[1]{\hseSignAnchor[#1]{co_supervisor}\rule{#1}{0.4pt}}

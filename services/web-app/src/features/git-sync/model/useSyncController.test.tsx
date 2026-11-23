@@ -336,7 +336,7 @@ describe("useSyncController", () => {
     expect(toasts()[0]).toMatchObject({
       kind: "error",
       title: "Синхронизация не удалась",
-      message: "Сервер не принял доступ. Проверь токен или ключ.",
+      message: "Сервер не принял доступ. Проверьте токен или ключ.",
     });
     act(() => {
       toasts()[0]?.action?.onClick();

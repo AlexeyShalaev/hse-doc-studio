@@ -316,6 +316,10 @@ export const CreateApiTokenRequestSchema = z.strictObject({
   scopes: z.array(TokenScopeSchema),
   expires_in_days: z.number().int().nullable(),
 });
+// Новый полный набор прав существующего токена (PATCH /account/tokens/{id}).
+export const UpdateApiTokenRequestSchema = z.strictObject({
+  scopes: z.array(TokenScopeSchema),
+});
 export const CreateApiTokenResponseSchema = z.strictObject({
   token: z.string(),
   item: ApiTokenSchema,
@@ -324,6 +328,7 @@ export const CreateApiTokenResponseSchema = z.strictObject({
 export type ApiToken = z.infer<typeof ApiTokenSchema>;
 export type TokenScope = z.infer<typeof TokenScopeSchema>;
 export type CreateApiTokenRequest = z.infer<typeof CreateApiTokenRequestSchema>;
+export type UpdateApiTokenRequest = z.infer<typeof UpdateApiTokenRequestSchema>;
 export type CreateApiTokenResponse = z.infer<
   typeof CreateApiTokenResponseSchema
 >;

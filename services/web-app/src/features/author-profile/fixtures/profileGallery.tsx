@@ -34,11 +34,11 @@ const REASONS: { reason: ProfilePromptReason; title: string }[] = [
   { reason: "clone", title: "при клонировании" },
 ];
 
-/** Автор версий: раздел настроек и окно «Представься» на каждый повод. */
+/** Автор версий: раздел настроек и окно «Представьтесь» на каждый повод. */
 export const getProfileGallery = (): GalleryGroup[] => [
   {
     id: "profile",
-    title: "Раздел настроек и окно «Представься»",
+    title: "Раздел настроек и окно «Представьтесь»",
     entries: [
       {
         id: "profile_section_default",
@@ -62,7 +62,7 @@ export const getProfileGallery = (): GalleryGroup[] => [
       },
       ...REASONS.map(({ reason, title }) => ({
         id: `profile_dialog_${reason}`,
-        title: `Окно «Представься» ${title}`,
+        title: `Окно «Представьтесь» ${title}`,
         note: "Пояснение под заголовком зависит от того, что прервалось.",
         frame: "plain" as const,
         seed: (client: QueryClient) => {

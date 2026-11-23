@@ -23,6 +23,7 @@ import {
   type ChangeEmailResponse,
   type CreateApiTokenRequest,
   type CreateApiTokenResponse,
+  type UpdateApiTokenRequest,
 } from "@entities/session";
 
 // Ошибки формы показывает сама форма: тост не нужен.
@@ -121,6 +122,15 @@ export const accountApi = {
     apiClient
       .post("/account/tokens", body, quiet)
       .then(parseResp(CreateApiTokenResponseSchema)),
+
+  /** Новый набор прав того же токена: значение не меняется, клиентам ничего перенастраивать не нужно. */
+  updateTokenScopes: (
+    id: string,
+    body: UpdateApiTokenRequest,
+  ): Promise<ApiToken> =>
+    apiClient
+      .patch(`/account/tokens/${encodeURIComponent(id)}`, body, quiet)
+      .then(parseResp(ApiTokenSchema)),
 
   revokeToken: async (id: string): Promise<void> => {
     await apiClient.delete(`/account/tokens/${encodeURIComponent(id)}`, quiet);

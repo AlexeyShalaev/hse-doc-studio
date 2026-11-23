@@ -58,7 +58,7 @@
     "lead": "A client does not see a disabled tool. Dangerous ones (delete, rewind, git sync) are enabled by name.",
     "available_one": "{{count}} tool is available to you",
     "available_other": "{{count}} tools are available to you",
-    "tokenHint": "To connect, issue a token with the MCP permission: Settings → Account → Tokens."
+    "tokenHint": "To connect, issue a token with the MCP permission or add it to a token you have (“Edit permissions”): Settings → Account → Tokens."
   },
   "connect": {
     "title": "Connecting",

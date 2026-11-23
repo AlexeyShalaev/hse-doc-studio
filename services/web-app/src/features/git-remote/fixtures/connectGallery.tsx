@@ -674,7 +674,7 @@ const folderEntries = (): GalleryEntry[] => [
 const dialogEntries = (): GalleryEntry[] => [
   {
     id: "dialog_profile",
-    title: "Окно «Представься» внутри подключения",
+    title: "Окно «Представьтесь» внутри подключения",
     note: "Имя и e-mail автора версий; пока их нет, репозиторий не подключается.",
     frame: "window",
     seed: (client: QueryClient) => {

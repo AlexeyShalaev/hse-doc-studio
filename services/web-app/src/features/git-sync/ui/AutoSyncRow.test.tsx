@@ -64,7 +64,7 @@ describe("AutoSyncRow", () => {
         now={NOW}
       />,
     );
-    expect(screen.getByText("Выключена: синхронизируй вручную")).toBeTruthy();
+    expect(screen.getByText("Выключена: синхронизируйте вручную")).toBeTruthy();
     await userEvent.click(screen.getByRole("switch"));
     expect(setEnabled).toHaveBeenLastCalledWith(true);
   });

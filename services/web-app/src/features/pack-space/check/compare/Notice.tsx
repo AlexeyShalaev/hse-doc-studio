@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { CircleAlert, Info } from "lucide-react";
+import "./styles";
 
 type NoticeProps = {
   tone: "error" | "info";
