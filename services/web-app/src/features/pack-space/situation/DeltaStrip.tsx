@@ -3,8 +3,8 @@ import { useTranslation } from "react-i18next";
 import { useSituationDelta } from "./useSituationDelta";
 
 /**
- * Плашка «что изменилось» над результатом: после смены условия одной строкой, на сколько
- * изменился результат (числа даёт сравнение на сервере). «Показать только изменившееся»
+ * Плашка «что изменилось» над результатом: после смены условия одной строкой, сколько строк
+ * в частях центра добавилось, изменилось и ушло (`summarizeDelta`: те же строки, что видны на экране). «Показать только изменившееся»
  * включает фильтр центра, «Скрыть» убирает плашку и подсветку.
  */
 export const DeltaStrip = () => {
@@ -31,8 +31,9 @@ export const DeltaStrip = () => {
           <span>
             {t("situation.delta.changed", { label: delta.label })}{" "}
             {summary?.parts.map((part) => (
-              <span key={part.section} className="sp-delta-part">
-                <b>{t(`situation.sections.${part.section}`)}</b>{" "}
+              <span key={part.part} className="sp-delta-part">
+                <b>{t(`result.parts.${part.part}`)}</b>
+                {": "}
                 {[
                   part.added > 0
                     ? t("situation.delta.added", { count: part.added })

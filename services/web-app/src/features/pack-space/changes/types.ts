@@ -65,8 +65,6 @@ export type ChangesStatus = {
    * версий. Нехватка заметок к версии сюда не входит (см. `notesNeeded`).
    */
   errors: number;
-  /** Замечания к оформлению, отправке не мешают. */
-  warnings: number;
   /**
    * Открытая версия это черновик с правками, а заметок «что изменилось» (ru и en) в ней нет.
    * Ожидаемый шаг («Описать изменения»), а не ошибка.
@@ -87,7 +85,6 @@ export const NO_CHANGES: ChangesStatus = {
   changedInVersion: 0,
   changedElsewhere: null,
   errors: 0,
-  warnings: 0,
   notesNeeded: false,
   request: { kind: "none" },
   behind: 0,

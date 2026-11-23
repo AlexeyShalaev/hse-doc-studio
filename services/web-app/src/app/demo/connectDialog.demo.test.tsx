@@ -127,7 +127,7 @@ describe("окно подключения поверх демо-транспор
     expect(screen.getByRole("button", { name: "Далее" })).toBeDisabled();
   });
 
-  it("без автора версий сначала «Представься»", async () => {
+  it("без автора версий сначала «Представьтесь»", async () => {
     resetWorld("connect_no_profile");
     const user = userEvent.setup();
     mount();
@@ -430,7 +430,7 @@ describe("окно подключения поверх демо-транспор
     ).toHaveTextContent("write_repository");
     await user.click(screen.getByRole("button", { name: "Проверить" }));
     const ready = await screen.findByTestId("probe-result-ready-empty");
-    expect(ready).toHaveTextContent("добавь write_repository");
+    expect(ready).toHaveTextContent("добавьте write_repository");
   });
 
   it("срок токена истёк: проверка говорит об этом, а проверка адреса останавливает", async () => {

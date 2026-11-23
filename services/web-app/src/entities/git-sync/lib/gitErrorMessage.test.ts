@@ -10,7 +10,7 @@ describe("gitErrorMessage", () => {
 
   it("translates a known code and ignores the server text", () => {
     expect(gitErrorMessage("auth_failed", "denied")).toBe(
-      "Сервер не принял доступ. Проверь токен или ключ.",
+      "Сервер не принял доступ. Проверьте токен или ключ.",
     );
   });
 

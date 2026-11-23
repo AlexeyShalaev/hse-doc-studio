@@ -61,7 +61,7 @@
     "when-unknown-person": {
      "person": {
       "title": "Условие подписи называет человека, которого нет среди ролей",
-      "how": "Выберите роль из списка: научный руководитель, консультант или академический руководитель."
+      "how": "Выберите роль из списка: научный руководитель, соруководитель или академический руководитель."
      },
      "slot": {
       "title": "Условие ссылается на подпись, которой нет в списке подписей версии",
@@ -169,7 +169,7 @@
     "author": "Автор",
     "authorN": "Автор {{n}}",
     "supervisor": "Научный руководитель",
-    "co_supervisor": "Консультант",
+    "co_supervisor": "Соруководитель",
     "academic_supervisor": "Академический руководитель"
    },
    "lang": {
@@ -256,7 +256,7 @@
     "kind": "Вид работы",
     "staffing": "Число авторов",
     "supervisor": "Научный руководитель",
-    "co_supervisor": "Консультант",
+    "co_supervisor": "Соруководитель",
     "academic_supervisor": "Академический руководитель"
    },
    "values": {
@@ -345,7 +345,7 @@
     "when-unknown-person": {
      "person": {
       "title": "A signature condition names a person who is not among the roles",
-      "how": "Pick a role from the list: supervisor, consultant or academic supervisor."
+      "how": "Pick a role from the list: supervisor, co-supervisor or academic supervisor."
      },
      "slot": {
       "title": "A condition refers to a signature that is not in the version’s list of signatures",
@@ -453,7 +453,7 @@
     "author": "Author",
     "authorN": "Author {{n}}",
     "supervisor": "Supervisor",
-    "co_supervisor": "Consultant",
+    "co_supervisor": "Co-supervisor",
     "academic_supervisor": "Academic supervisor"
    },
    "lang": {

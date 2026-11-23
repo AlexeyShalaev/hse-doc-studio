@@ -27,7 +27,7 @@ def normalize_name(raw: str | None) -> str:
     """Имя для подписи: NFC, лишние пробелы схлопнуты; иначе `ProfileValidationError`."""
     name = unicodedata.normalize("NFC", raw or "").strip()
     if not name:
-        raise ProfileValidationError("name", "required", localized_error("Укажи имя.", "Enter a name."))
+        raise ProfileValidationError("name", "required", localized_error("Укажите имя.", "Enter a name."))
     if len(name) > MAX_NAME:
         raise ProfileValidationError(
             "name",
@@ -61,7 +61,9 @@ def normalize_email(raw: str | None, *, require_domain_dot: bool = True) -> str:
     """
     email = unicodedata.normalize("NFC", raw or "").strip()
     if not email:
-        raise ProfileValidationError("email", "required", localized_error("Укажи e-mail.", "Enter an e-mail address."))
+        raise ProfileValidationError(
+            "email", "required", localized_error("Укажите e-mail.", "Enter an e-mail address.")
+        )
     if len(email) > MAX_EMAIL:
         raise ProfileValidationError(
             "email",
@@ -83,5 +85,5 @@ def _bad_email() -> ProfileValidationError:
     return ProfileValidationError(
         "email",
         "invalid",
-        localized_error("Укажи адрес вида name@example.com.", "Enter an address like name@example.com."),
+        localized_error("Укажите адрес вида name@example.com.", "Enter an address like name@example.com."),
     )

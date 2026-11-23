@@ -128,7 +128,7 @@
     "role": {
       "author": "Автор",
       "supervisor": "Руководитель",
-      "co_supervisor": "Второй руководитель",
+      "co_supervisor": "Соруководитель",
       "academic_supervisor": "Академический руководитель"
     },
     "org": {
@@ -196,7 +196,7 @@
       "staffing": "Число авторов",
       "lang": "Язык работы",
       "supervisor": "Научный руководитель",
-      "co_supervisor": "Консультант",
+      "co_supervisor": "Соруководитель",
       "academic_supervisor": "Академический руководитель"
     },
     "values": {

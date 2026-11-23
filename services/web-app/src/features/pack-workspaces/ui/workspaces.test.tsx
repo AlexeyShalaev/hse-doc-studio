@@ -209,6 +209,18 @@ describe("список пространств", () => {
     expect(card.getByTestId("ws-status-request")).toBeInTheDocument();
   });
 
+  it("строка источника без имени ветки: ветка только в подсказке", async () => {
+    const official = fixture("git_official");
+    mountView([official], { git: { [official.id]: gitOf(official, clean) } });
+    const card = await screen.findByTestId(`ws-card-${official.id}`);
+    const meta = card.querySelector(".sp-ws-meta");
+    expect(meta).toHaveTextContent("Официальные шаблоны ВШЭ");
+    expect(meta).not.toHaveTextContent(/ветк|master/);
+    expect(meta?.getAttribute("title")).toContain(
+      `Ветка в git: ${official.base_branch ?? ""}`,
+    );
+  });
+
   it("одна залитая кнопка: «Продолжить» у пространства с неотправленными правками", async () => {
     const a = { ...fixture("git_ready"), id: "a", label: "a/packs" };
     const b = { ...fixture("git_ready"), id: "b", label: "b/packs" };

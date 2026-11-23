@@ -124,7 +124,7 @@ describe("VcsTimeline", () => {
     expect(buttons[0]).toBeDisabled();
     expect(buttons[0]).toHaveAttribute(
       "title",
-      expect.stringContaining("Сначала синхронизируй"),
+      expect.stringContaining("Сначала синхронизируйте"),
     );
     const [, pushed] = buttons;
     if (!pushed) throw new Error("restore button missing");

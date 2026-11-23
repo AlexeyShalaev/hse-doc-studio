@@ -112,7 +112,7 @@ describe("SyncPanelView", () => {
           onOpenProfile={onOpenProfile}
         />,
       );
-      expect(screen.getByText(/сначала укажи имя и e-mail/)).toBeTruthy();
+      expect(screen.getByText(/сначала укажите имя и e-mail/)).toBeTruthy();
       await user.click(screen.getByRole("button", { name: "Указать автора" }));
       expect(onOpenProfile).toHaveBeenCalledTimes(1);
     });

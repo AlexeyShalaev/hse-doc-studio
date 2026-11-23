@@ -27,8 +27,9 @@ import {
 // Правила, сверху вниз (первое подходящее заканчивает разбор):
 //  1. Папка на диске или подключение не готово: git нет, изменений не считаем, всё по нулям.
 //  2. git ещё читается или не прочитался: `load`, остальное «ничего не изменено».
-//  3. Иначе: файлы по `git.changed`; ошибки и замечания из проверок изменённых мест; заметки по
-//     манифесту открытой версии; запрос по карточке пространства и проверкам хостинга.
+//  3. Иначе: файлы по `git.changed`; ошибки из проверок изменённых мест (замечания панель берёт
+//     из «Проверки», см. `ChangesPanel`); заметки по манифесту открытой версии; запрос по
+//     карточке пространства и проверкам хостинга.
 
 /** Сколько мест проверяем линтером сразу: на каждое отдельный запрос, расчёт идёт секунды. */
 export const MAX_LINT_TARGETS = 3;
@@ -254,7 +255,6 @@ export const deriveChangesStatus = (raw: ChangesRaw): ChangesStatus => {
   }).length;
 
   let errors = 0;
-  let warnings = 0;
   let notesFinding = false;
   for (const report of raw.lint) {
     const notes = report.findings.filter(isNotesFinding).length;
@@ -266,7 +266,6 @@ export const deriveChangesStatus = (raw: ChangesRaw): ChangesStatus => {
     notesFinding ||=
       skipNotes > 0 && target !== null && sameVersion(target, open);
     errors += Math.max(0, report.errors - skip);
-    warnings += report.warnings;
   }
 
   return {
@@ -275,7 +274,6 @@ export const deriveChangesStatus = (raw: ChangesRaw): ChangesStatus => {
     changedInVersion,
     changedElsewhere: pickElsewhere(tree, open, changed),
     errors,
-    warnings,
     notesNeeded:
       !base.released &&
       ((changedInVersion > 0 && notesMissing(raw.notes)) || notesFinding),

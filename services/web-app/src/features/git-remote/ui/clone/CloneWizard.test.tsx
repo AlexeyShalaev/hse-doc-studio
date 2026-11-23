@@ -768,7 +768,7 @@ describe("мастер клонирования: папка и запуск", ()
     const { startClone } = setup();
     startClone.mockRejectedValue(
       new ApiError(
-        "Папка не пуста. Выбери пустую или новую.",
+        "Папка не пуста. Выберите пустую или новую.",
         "folder_not_empty",
         409,
       ),
@@ -989,7 +989,7 @@ describe("мастер клонирования: загрузка", () => {
         percent: null,
         error: {
           code: "folder_not_empty",
-          detail: "Папка не пуста. Выбери пустую или новую.",
+          detail: "Папка не пуста. Выберите пустую или новую.",
         },
       }),
     });

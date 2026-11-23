@@ -372,7 +372,7 @@ describe("вкладка «Проверка»", { timeout: 30_000 }, () => {
       expect(clone.textContent).not.toMatch(
         /участник [a-z]|[a-z]+_[a-z]+|было: [a-z]|шаг \d/,
       );
-      expect(clone.textContent).toMatch(/Участник: Консультант/);
+      expect(clone.textContent).toMatch(/Участник: Соруководитель/);
       expect(view?.textContent).toMatch(/Вид изменения/);
     });
 

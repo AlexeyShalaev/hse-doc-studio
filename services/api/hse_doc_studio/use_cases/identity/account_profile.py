@@ -52,7 +52,7 @@ def _blank_to_none(value: str | None) -> str | None:
 def _account_name(raw: str | None) -> str:
     name = " ".join((raw or "").split())
     if not name:
-        raise ProfileValidationError("name", "required", localized_error("Укажи имя.", "Enter a name."))
+        raise ProfileValidationError("name", "required", localized_error("Укажите имя.", "Enter a name."))
     if len(name) > ACCOUNT_NAME_MAX:
         raise ProfileValidationError(
             "name",

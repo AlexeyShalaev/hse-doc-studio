@@ -359,7 +359,12 @@
     "steps": "Detailed steps",
     "docs": "{{provider}} documentation",
     "legacyGitlab": "This is GitLab {{version}}, an old version: its token page is different. We open the address for older versions.",
-    "forkNote": "This repository is not yours, so a fine-grained token for it cannot be issued. Studio creates a fork in your account, pushes the branch there and opens a pull request: a classic token with the public_repo scope is enough for that. It works for all your public repositories, so set an expiry date and revoke the token when you no longer need it."
+    "forkNote": "The official templates live in someone else's repository, so Studio makes a copy of that repository in your GitHub account, saves your edits there and opens a merge request from it. A token with this scope works for all your public repositories: set an expiry date and revoke the token when you no longer need it.",
+    "forkRights": "This scope is enough for Studio to send your edits to the official templates under your name.",
+    "forkMore": "Details",
+    "tech": {
+      "fork": "Technically this is a fork of the repository in your account, a branch in the fork and a pull request to the official repository. GitHub does not issue a fine-grained token for someone else's repository, so a classic token with the public_repo scope is needed. The check status of a public repository is read without a separate scope."
+    }
   },
   "tokenCheck": {
     "running": {

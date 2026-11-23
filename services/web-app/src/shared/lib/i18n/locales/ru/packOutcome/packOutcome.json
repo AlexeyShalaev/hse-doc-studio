@@ -62,7 +62,7 @@
       "kind": "Вид работы",
       "staffing": "Число авторов",
       "supervisor": "Научный руководитель",
-      "co_supervisor": "Консультант",
+      "co_supervisor": "Соруководитель",
       "academic_supervisor": "Академический руководитель"
     },
     "values": {
@@ -242,7 +242,7 @@
     "role": {
       "author": "Автор",
       "supervisor": "Руководитель",
-      "co_supervisor": "Второй руководитель",
+      "co_supervisor": "Соруководитель",
       "academic_supervisor": "Академический руководитель"
     },
     "org": {
@@ -314,7 +314,7 @@
       "staffing": "состав",
       "lang": "язык",
       "supervisor": "руководитель",
-      "co_supervisor": "второй руководитель",
+      "co_supervisor": "соруководитель",
       "academic_supervisor": "академический руководитель"
     },
     "values": {

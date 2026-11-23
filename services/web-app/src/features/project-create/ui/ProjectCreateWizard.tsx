@@ -760,7 +760,7 @@ const StepName = () => {
   const { t } = useTranslation("projectCreate");
   const { title, ownerOrgSlug, setField } = useCreateWizard();
   const user = useBootstrap().data?.user ?? null;
-  // Организацией можно владеть, только если ты в ней владелец или администратор.
+  // Организацией можно владеть, только если вы в ней владелец или администратор.
   const orgs = (user?.org_roles ?? []).filter((org) =>
     OWNER_ORG_ROLES.has(org.role),
   );

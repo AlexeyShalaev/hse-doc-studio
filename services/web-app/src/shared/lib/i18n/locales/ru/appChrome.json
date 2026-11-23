@@ -58,7 +58,7 @@
     "commands": "команды"
   },
   "dockerBanner": {
-    "defaultDetail": "Сборка LaTeX не запустится. Запусти Docker Desktop.",
+    "defaultDetail": "Сборка LaTeX не запустится. Запустите Docker Desktop.",
     "unavailable": "Docker не доступен",
     "openSettings": "Открыть настройки"
   },

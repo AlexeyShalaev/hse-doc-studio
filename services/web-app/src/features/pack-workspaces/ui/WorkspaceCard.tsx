@@ -117,13 +117,10 @@ const SourceLine = ({ workspace }: { workspace: PackWorkspace }) => {
   if (workspace.kind === "folder") {
     return <>{workspace.folder ?? ""}</>;
   }
+  // Имя ветки методисту ничего не говорит: в строке его нет, оно в подсказке к ней (sourceTitle).
   const parts = [
     workspace.official ? t("workspaces.sourceOfficial") : null,
     shortUrl(workspace.url ?? ""),
-    // Основная ветка нужна, когда пространство уже работает: у неудачного её нет смысла показывать.
-    workspace.state === "ready" && workspace.base_branch
-      ? t("workspaces.baseBranch", { branch: workspace.base_branch })
-      : null,
   ];
   return <>{parts.filter(Boolean).join(" · ")}</>;
 };
@@ -148,6 +145,15 @@ export const WorkspaceCard = ({
   const failed = workspace.state === "failed";
   const git = workspace.kind === "git";
   const source = workspace.kind === "git" ? (workspace.url ?? "") : "";
+  // Технические подробности источника для тех, кому они нужны: адрес и ветка в git.
+  const sourceTitle = [
+    source,
+    ready && workspace.base_branch
+      ? t("workspaces.tech.baseBranch", { branch: workspace.base_branch })
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   const closeAccess = () => {
     setChecking(false);
@@ -179,7 +185,7 @@ export const WorkspaceCard = ({
           </button>
           <WorkspaceStatusBadges status={status} />
         </div>
-        <div className="sp-ws-meta" title={source || undefined}>
+        <div className="sp-ws-meta" title={sourceTitle || undefined}>
           <SourceLine workspace={workspace} />
         </div>
         {workspace.error && (

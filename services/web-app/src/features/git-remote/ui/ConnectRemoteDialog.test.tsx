@@ -179,7 +179,7 @@ describe("ConnectRemoteDialog: шаг «Репозиторий»", () => {
     mount();
     await typeUrl(user, "git://github.com/hse/paper.git");
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Используй https или ssh",
+      "Используйте https или ssh",
     );
     await user.clear(urlInput());
     await user.type(urlInput(), "что-то не то");
@@ -319,7 +319,7 @@ describe("ConnectRemoteDialog: профиль автора", () => {
     mount();
     expect(await screen.findByLabelText("Имя")).toBeInTheDocument();
     expect(screen.queryByLabelText("Адрес репозитория")).toBeNull();
-    expect(screen.getByText(/Сначала представься/)).toBeInTheDocument();
+    expect(screen.getByText(/Сначала представьтесь/)).toBeInTheDocument();
 
     await user.type(screen.getByLabelText("Имя"), "Иван Смирнов");
     await user.type(screen.getByLabelText("E-mail"), "ivan@edu.hse.ru");
@@ -882,7 +882,7 @@ describe("ConnectRemoteDialog: шаг «Проверка»", () => {
     expect(useSyncUiStore.getState().connectDialog).not.toBeNull();
   });
 
-  it("profile_required при подключении возвращает к «Представься»", async () => {
+  it("profile_required при подключении возвращает к «Представьтесь»", async () => {
     const { connect } = setup();
     connect.mockRejectedValue(
       new ApiError("Нужен автор", "profile_required", 409),
@@ -1674,7 +1674,7 @@ describe("ConnectRemoteDialog: тип сервера и ответы прове�
     const card = await screen.findByTestId("probe-result-ready-empty");
     expect(card).toHaveTextContent("GitLab 17.3");
     expect(card).toHaveTextContent("anna.petrova");
-    expect(card).toHaveTextContent("добавь write_repository");
+    expect(card).toHaveTextContent("добавьте write_repository");
     expect(card).toHaveTextContent("перестанет действовать через 3 дня");
   });
 

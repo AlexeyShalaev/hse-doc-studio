@@ -144,7 +144,7 @@ export const tlsIssueFor = (
   return {
     code: "tls_untrusted_ca",
     detail:
-      "Сертификат сервера выдан неизвестным центром. Добавь его сертификат или подтверди отпечаток.",
+      "Сертификат сервера выдан неизвестным центром. Добавьте его сертификат или подтвердите отпечаток.",
     certificate,
     expected: null,
   };
@@ -247,7 +247,7 @@ export const checkCredentialOutcome = (
       ok: false,
       status: 502,
       code: "token_expired",
-      detail: "Срок действия токена истёк. Выпусти новый.",
+      detail: "Срок действия токена истёк. Выпустите новый.",
       extra: {},
     };
   }
