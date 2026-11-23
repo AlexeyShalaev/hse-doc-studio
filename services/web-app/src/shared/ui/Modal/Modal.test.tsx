@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import { useState } from "react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import "@shared/lib/i18n";
@@ -27,6 +28,23 @@ const Harness = ({ onClose = () => undefined }: { onClose?: () => void }) => (
     <input aria-label="Name" />
   </Modal>
 );
+
+/** Окно открывается своей кнопкой, без `Dialog.Trigger`: так их открывает приложение. */
+const Opener = () => {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)}>
+        More conditions
+      </button>
+      {open ? (
+        <Modal isOpen onClose={() => setOpen(false)} title="All conditions">
+          <button type="button">Value</button>
+        </Modal>
+      ) : null}
+    </>
+  );
+};
 
 describe("Modal", () => {
   let viewport: Viewport | undefined;
@@ -73,5 +91,23 @@ describe("Modal", () => {
     );
     await userEvent.setup().keyboard("{Escape}");
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("returns focus to the button that opened it after Escape", async () => {
+    viewport = installViewport(1360);
+    const user = userEvent.setup();
+    render(<Opener />);
+    const opener = screen.getByRole("button", { name: "More conditions" });
+    await user.click(opener);
+    expect(screen.getByRole("dialog").contains(document.activeElement)).toBe(
+      true,
+    );
+    await user.keyboard("{Escape}");
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).toBeNull();
+    });
+    await waitFor(() => {
+      expect(opener).toHaveFocus();
+    });
   });
 });
