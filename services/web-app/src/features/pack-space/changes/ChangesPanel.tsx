@@ -38,10 +38,33 @@ import type { ChangesData } from "./useChangesStatus";
 export type ChangesAction =
   "diff" | "checks" | "save" | "branch" | "take" | "access" | "reset";
 
+/** Ключ версии для `otherDocNames`. */
+export const versionKeyOf = (ref: PackVersionRef): string =>
+  `${ref.pack}/${ref.template}/${ref.version}`;
+
+/** Названия документов версии `ref`: открытой из модели контейнера, остальных из `other`. */
+const namesOf = (
+  ref: PackVersionRef | null,
+  open: PackVersionRef,
+  docNames: Readonly<Record<string, string>>,
+  other: ChangesPanelProps["otherDocNames"],
+): Readonly<Record<string, string>> => {
+  if (ref === null) return {};
+  const key = versionKeyOf(ref);
+  return key === versionKeyOf(open) ? docNames : (other?.[key] ?? {});
+};
+
 export type ChangesPanelProps = {
   data: ChangesData;
   /** Названия документов открытой версии по идентификатору (из модели версии). */
   docNames: Readonly<Record<string, string>>;
+  /**
+   * Названия документов других изменённых версий: ключ `пак/шаблон/версия` (`versionKeyOf`). Нет
+   * версии в списке: её документы называются идентификатором.
+   */
+  otherDocNames?:
+    | Readonly<Record<string, Readonly<Record<string, string>>>>
+    | undefined;
   /** Название шаблона для заголовка группы. */
   templateName: (ref: PackVersionRef) => string;
   /** Идёт операция git: действия выключены. */
@@ -145,12 +168,18 @@ const ChangeRow = ({
 const WhatChanged = ({
   data,
   docNames,
+  otherDocNames,
   templateName,
   onOpenFile,
   onAction,
 }: Pick<
   ChangesPanelProps,
-  "data" | "docNames" | "templateName" | "onOpenFile" | "onAction"
+  | "data"
+  | "docNames"
+  | "otherDocNames"
+  | "templateName"
+  | "onOpenFile"
+  | "onAction"
 >) => {
   const { t } = useTranslation("packSpace");
   const { raw } = data;
@@ -182,9 +211,13 @@ const WhatChanged = ({
           </div>
           <ul className="sp-ch-list">
             {group.items.map((item) => {
-              // Документы других версий называем по идентификатору: имён их модель не читалась.
-              const names =
-                group.version?.version === raw.open.version ? docNames : {};
+              // Имена документов своей версии группы; не пришли: идентификатор.
+              const names = namesOf(
+                group.version,
+                raw.open,
+                docNames,
+                otherDocNames,
+              );
               const label = itemLabel(t, item.kind, item.doc, names);
               const path = item.path;
               return (
@@ -241,10 +274,14 @@ const findingsOf = (data: ChangesData) => {
 const Checks = ({
   data,
   docNames,
+  otherDocNames,
   notesAction,
   onOpenFile,
   onGoCheck,
-}: Pick<ChangesPanelProps, "data" | "docNames" | "notesAction"> & {
+}: Pick<
+  ChangesPanelProps,
+  "data" | "docNames" | "otherDocNames" | "notesAction"
+> & {
   onOpenFile: ChangesPanelProps["onOpenFile"];
   onGoCheck: () => void;
 }) => {
@@ -260,7 +297,7 @@ const Checks = ({
       return t("changes.checks.whereVersion", { version: raw.open.version });
     }
     const info = describePath(finding.path);
-    const names = info.version?.version === raw.open.version ? docNames : {};
+    const names = namesOf(info.version, raw.open, docNames, otherDocNames);
     return itemLabel(t, info.kind, info.doc, names);
   };
   const line = (finding: PackDiagnostic): string =>
@@ -499,6 +536,7 @@ const Message = ({
 export const ChangesPanel = ({
   data,
   docNames,
+  otherDocNames,
   templateName,
   busy,
   onClose,
@@ -687,6 +725,7 @@ export const ChangesPanel = ({
           <WhatChanged
             data={data}
             docNames={docNames}
+            otherDocNames={otherDocNames}
             templateName={templateName}
             onOpenFile={onOpenFile}
             onAction={onAction}
@@ -697,6 +736,7 @@ export const ChangesPanel = ({
           <Checks
             data={data}
             docNames={docNames}
+            otherDocNames={otherDocNames}
             notesAction={notesAction}
             onOpenFile={onOpenFile}
             onGoCheck={onGoCheck}

@@ -263,6 +263,38 @@ describe("панель «Изменения»", () => {
     );
   });
 
+  it("правки в другой версии: её документы тоже названы словами, а не идентификаторами", async () => {
+    const OTHER = "hse-cs-sse/templates/coursework/versions/2026.1.2";
+    const changed: PackFileChange[] = [
+      ...FILES,
+      {
+        path: `${OTHER}/files/technical_specification/doc.yaml`,
+        status: "modified",
+      },
+    ];
+    const { spies } = mount({ git: gitOf({ changed, uncommitted: changed }) });
+    const root = await panel();
+    const what = await within(root).findByTestId("sp-ch-what");
+    await waitFor(() => {
+      expect(
+        within(what)
+          .getAllByTestId("sp-ch-item")
+          .map((item) => item.textContent),
+      ).toEqual([
+        "Описание версии",
+        "Техническое задание: условия",
+        "Текст программы: текст",
+        "Техническое задание: условия",
+      ]);
+    });
+    expect(what).not.toHaveTextContent("technical_specification");
+    // Модель другой версии читается отдельно, по её адресу.
+    expect(spies.model).toHaveBeenCalledWith(
+      GALLERY_WORKSPACE.id,
+      expect.objectContaining({ version: "2026.1.2" }),
+    );
+  });
+
   it("ошибка ведёт к файлу, заметки это шаг, а не ошибка", async () => {
     mount({
       lint: lintOf([
