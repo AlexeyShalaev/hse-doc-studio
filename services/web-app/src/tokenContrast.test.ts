@@ -23,8 +23,8 @@ const themeBlock = (selector: string): string => {
 
 const readVars = (block: string): Record<string, string> => {
   const vars: Record<string, string> = {};
-  for (const m of block.matchAll(/--([\w-]+):\s*([^;]+);/g)) {
-    vars[m[1]] = m[2].trim();
+  for (const [, name, value] of block.matchAll(/--([\w-]+):\s*([^;]+);/g)) {
+    if (name && value) vars[name] = value.trim();
   }
   return vars;
 };
@@ -71,7 +71,7 @@ const parseColor = (raw: string): Rgba => {
   const v = raw.trim();
   let m = /^#([0-9a-f]{6})$/i.exec(v);
   if (m) {
-    const n = parseInt(m[1], 16);
+    const n = parseInt(m[1] ?? "", 16);
     return {
       r: ((n >> 16) & 255) / 255,
       g: ((n >> 8) & 255) / 255,
