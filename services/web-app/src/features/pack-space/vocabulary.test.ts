@@ -152,6 +152,36 @@ const readLocale = (lng: string, file: string): unknown =>
 /** Без подстановок `{{id}}`: имя переменной не видно человеку. */
 const visible = (text: string): string => text.replace(/\{\{[^}]*\}\}/g, "");
 
+// Экраны Студии шаблонов вне packSpace (список пространств, окно официальных шаблонов и подсказка
+// по токену): те же правила «жаргон», но только для ключей из `surfaces.scopes`.
+const surfaces = banned.surfaces as { scopes: FormScope[] };
+
+describe("словарь списка пространств и окна официальных шаблонов", () => {
+  it.each(LANGS)("(%s) нет запрещённых слов", (lng) => {
+    const rules = banned[lng] as Rule[];
+    const hits: string[] = [];
+    let checked = 0;
+    for (const scope of surfaces.scopes) {
+      for (const [key, text] of leaves(readLocale(lng, scope.file))) {
+        if (IS_TECH.test(key)) continue;
+        if (!scope.prefixes.some((p) => key === p || key.startsWith(`${p}.`))) {
+          continue;
+        }
+        checked += 1;
+        for (const rule of rules) {
+          if (new RegExp(rule.pattern, "iu").test(visible(text))) {
+            hits.push(
+              `${scope.file}: ${key}: «${text}» (${rule.id}; вместо этого: ${rule.use})`,
+            );
+          }
+        }
+      }
+    }
+    expect(checked).toBeGreaterThan(20);
+    expect(hits).toEqual([]);
+  });
+});
+
 describe("словарь форм «Содержимого»", () => {
   it("ru и en: те же ключи в проверяемых областях", () => {
     for (const scope of formsVocabulary.scopes) {

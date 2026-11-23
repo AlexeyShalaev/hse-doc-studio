@@ -115,7 +115,17 @@ describe("TokenLinkCard", () => {
     const card = screen.getByTestId("token-link-card");
     expect(card).toHaveTextContent("public_repo");
     expect(card).not.toHaveTextContent(/\brepo \(/);
-    expect(screen.getByTestId("github-fork-note")).toHaveTextContent("форк");
+    // Простые слова: копия репозитория и запрос на слияние; «форк, ветка, PR» только под «Подробнее».
+    expect(screen.getByTestId("github-fork-note")).toHaveTextContent(
+      "копию этого репозитория",
+    );
+    expect(screen.getByTestId("github-fork-note")).not.toHaveTextContent(
+      /форк|ветк|PR/,
+    );
+    expect(screen.getByTestId("token-link-card")).not.toHaveTextContent(
+      /форк, ветка/,
+    );
+    expect(screen.getByTestId("github-fork-details")).toHaveTextContent("форк");
     expect(screen.queryByTestId("github-repo-note")).toBeNull();
     expect(screen.queryByTestId("token-broad-warning")).toBeNull();
     const fineGrained = hrefOf(/Точный токен только на этот репозиторий/);

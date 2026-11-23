@@ -90,10 +90,7 @@ const jsonFiles = (dir: string): string[] =>
     return name.endsWith(".json") ? [path] : [];
   });
 
-const strings = (
-  value: unknown,
-  key = "",
-): Array<{ key: string; text: string }> => {
+const strings = (value: unknown, key = ""): { key: string; text: string }[] => {
   if (typeof value === "string") return [{ key, text: value }];
   if (value !== null && typeof value === "object") {
     return Object.entries(value as Record<string, unknown>).flatMap(

@@ -6,7 +6,7 @@
   },
   "workspaces": {
     "state": {
-      "cloning": "Cloning",
+      "cloning": "Connecting",
       "failed": "Failed",
       "fetching": "Updating",
       "ready": "Ready"
@@ -35,7 +35,9 @@
     "cloningHint": "usually up to a couple of minutes",
     "failedHint": "Check the address and access.",
     "sourceOfficial": "Official HSE templates",
-    "baseBranch": "main branch {{branch}}",
+    "tech": {
+      "baseBranch": "Git branch: {{branch}}"
+    },
     "continue": "Continue",
     "checkAccess": "Check access",
     "retryConnect": "Retry connecting",
@@ -328,12 +330,12 @@
     "dialogLead": "The Studio downloads only the templates folder and opens a space. Changes are sent only with your own GitHub account.",
     "submit": "Connect official templates",
     "token": {
-      "hint": "Changes go to your own copy of the repository (a fork) on GitHub, the merge request is opened from your account.",
+      "hint": "Your edits go to your own copy of the repository on GitHub, and the merge request is opened under your name.",
       "added": "The token is checked and selected: you can connect the official templates now.",
       "another": "Add another GitHub token"
     },
     "none": {
-      "lead": "To propose changes you need your own GitHub token. Create it with the link below and paste it into the field: Studio checks the token, saves it under Git access and selects it right away.",
+      "lead": "To send your edits for review you need your own GitHub token. Create it with the link below and paste it into the field: Studio checks the token, saves it under Git access and selects it right away.",
       "settings": "Open Git access",
       "settingsLead": "Saved tokens are listed in Settings."
     }

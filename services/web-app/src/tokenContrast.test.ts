@@ -117,8 +117,9 @@ const luminance = ({ r, g, b }: Rgba): number => {
 };
 
 const contrast = (fg: Rgba, bg: Rgba): number => {
-  const [hi, lo] = [luminance(fg), luminance(bg)].sort((x, y) => y - x);
-  return (hi + 0.05) / (lo + 0.05);
+  const a = luminance(fg);
+  const b = luminance(bg);
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 };
 
 const color = (vars: Record<string, string>, name: string): Rgba =>
