@@ -107,7 +107,11 @@ describe("explainToSentences", () => {
       trace({
         kind: "supported_kinds",
         terms: [
-          { op: "in", subject: "supervisor", expected: ["university", "company"] },
+          {
+            op: "in",
+            subject: "supervisor",
+            expected: ["university", "company"],
+          },
         ],
         actual: { supervisor: "university" },
       }),

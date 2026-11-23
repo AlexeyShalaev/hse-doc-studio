@@ -339,7 +339,9 @@ describe("отправка в панели «Изменения»", () => {
     "нет доступа к репозиторию (%s): под ошибкой кнопка «Доступ к репозиторию», а не только «Повторить»",
     async (code) => {
       const stubs = stubWrite();
-      stubs.propose.mockRejectedValueOnce(new ApiError("нет доступа", code, 409));
+      stubs.propose.mockRejectedValueOnce(
+        new ApiError("нет доступа", code, 409),
+      );
       mount();
       await userEvent.click(await ready());
       const failed = await screen.findByTestId("sp-sb-failure", undefined, {

@@ -32,15 +32,12 @@ import {
   type ChangeItem,
 } from "./describeChanges";
 import { itemLabel } from "./itemLabel";
+import { versionKeyOf } from "./versionKey";
 import type { ChangesData } from "./useChangesStatus";
 
 /** Действия панели: диалоги и операции, которыми управляет контейнер. */
 export type ChangesAction =
   "diff" | "checks" | "save" | "branch" | "take" | "access" | "reset";
-
-/** Ключ версии для `otherDocNames`. */
-export const versionKeyOf = (ref: PackVersionRef): string =>
-  `${ref.pack}/${ref.template}/${ref.version}`;
 
 /** Названия документов версии `ref`: открытой из модели контейнера, остальных из `other`. */
 const namesOf = (
@@ -63,8 +60,7 @@ export type ChangesPanelProps = {
    * версии в списке: её документы называются идентификатором.
    */
   otherDocNames?:
-    | Readonly<Record<string, Readonly<Record<string, string>>>>
-    | undefined;
+    Readonly<Record<string, Readonly<Record<string, string>>>> | undefined;
   /** Название шаблона для заголовка группы. */
   templateName: (ref: PackVersionRef) => string;
   /** Идёт операция git: действия выключены. */

@@ -28,17 +28,14 @@ import { useSpaceNav } from "../context/useSpaceNav";
 import { SubmitPrimary } from "../next-step/SubmitPrimary";
 import { SubmitSection } from "../next-step/SubmitSection";
 import { useSubmit } from "../next-step/useSubmit";
-import {
-  ChangesPanel,
-  versionKeyOf,
-  type ChangesAction,
-} from "./ChangesPanel";
+import { ChangesPanel, type ChangesAction } from "./ChangesPanel";
 import { changedOf } from "./deriveChangesStatus";
 import { MoveEditsNotice } from "./MoveEditsNotice";
 import { describeChanges, describePath } from "./describeChanges";
 import { ImpactSlot, type ImpactReport } from "./impact/ImpactSlot";
 import { impactVersions } from "./impact/impactVersions";
 import { useChangesData } from "./useChangesStatus";
+import { versionKeyOf } from "./versionKey";
 import "./space-changes.css";
 
 type Dialog = "commit" | "branch" | "diff" | "checks" | "access" | "reset";

@@ -11,7 +11,8 @@ const sources = import.meta.glob<string>("../../**/*.tsx", {
 
 const USES_COMPARE_CLASSES =
   /className=\{?[^}>]*?["'`][^"'`]*\b(cmp(-[a-z-]+)?|po-(notice|skeleton|chain|fact|filter-select|link|mono|note)[a-z-]*)\b/;
-const IMPORTS_STYLES = /import\s+["'][./]*(check\/)?compare\/styles["'];|import\s+["']\.\/styles["'];/;
+const IMPORTS_STYLES =
+  /import\s+["'][./]*(check\/)?compare\/styles["'];|import\s+["']\.\/styles["'];/;
 
 describe("стили сравнения", () => {
   const users = Object.entries(sources).filter(
