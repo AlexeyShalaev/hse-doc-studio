@@ -74,6 +74,59 @@ describe("SpaceShell", () => {
     expect(close).toHaveBeenCalledTimes(2);
   });
 
+  it("Esc закрывает шторку, даже когда фокус остался на строке в центре; окно поверх закрывается первым", () => {
+    const close = vi.fn();
+    const { rerender } = render(
+      <SpaceShell
+        {...slots({
+          phone: true,
+          detailsOpen: true,
+          onSideClose: close,
+          main: (
+            <>
+              <button>строка</button>
+              <div role="dialog" data-state="open">
+                <button>в окне</button>
+              </div>
+            </>
+          ),
+        })}
+      />,
+    );
+    // Окно поверх открыто: Esc его, не шторки.
+    fireEvent.keyDown(screen.getByText("строка"), { key: "Escape" });
+    fireEvent.keyDown(screen.getByText("в окне"), { key: "Escape" });
+    expect(close).not.toHaveBeenCalled();
+
+    rerender(
+      <SpaceShell
+        {...slots({
+          phone: true,
+          detailsOpen: true,
+          onSideClose: close,
+          main: <button>строка</button>,
+        })}
+      />,
+    );
+    fireEvent.keyDown(screen.getByText("строка"), { key: "Escape" });
+    expect(close).toHaveBeenCalledTimes(1);
+    // Внутри панели Esc ловит сама панель: второй раз не закрываем.
+    fireEvent.keyDown(screen.getByText("details"), { key: "Escape" });
+    expect(close).toHaveBeenCalledTimes(2);
+
+    rerender(
+      <SpaceShell
+        {...slots({
+          phone: true,
+          onSideClose: close,
+          main: <button>строка</button>,
+        })}
+      />,
+    );
+    fireEvent.keyDown(screen.getByText("строка"), { key: "Escape" });
+    expect(close).toHaveBeenCalledTimes(2);
+  });
+
   it("панель «Изменения» занимает место подробностей, без крестика каркаса", () => {
     render(
       <SpaceShell {...slots({ changesOpen: true, onSideClose: vi.fn() })} />,

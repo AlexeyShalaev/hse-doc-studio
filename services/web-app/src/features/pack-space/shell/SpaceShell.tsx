@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useRef,
   type KeyboardEvent,
   type MouseEvent,
@@ -8,6 +9,13 @@ import { X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { SpacePhoneContext } from "./phoneContext";
 import "./space-shell.css";
+
+/** Esc в этих местах принадлежит им (окно, меню, список, редактор), а не панели. */
+const OWN_ESCAPE =
+  '[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"], .cm-editor';
+/** Открытый поверх слой: первый Esc закрывает его, панель остаётся. */
+const OPEN_LAYER =
+  '[role="dialog"][data-state="open"], [role="alertdialog"][data-state="open"], [role="menu"][data-state="open"]';
 
 export type SpaceShellProps = {
   /** Левая часть верхней полосы. */
@@ -62,6 +70,24 @@ export const SpaceShell = ({
   const onKeyDown = (event: KeyboardEvent) => {
     if (event.key === "Escape" && sideOpen) onSideClose?.();
   };
+  const side$ = useRef<HTMLElement>(null);
+  // Esc закрывает выехавшую панель и шторку, где бы ни был фокус (5.11): после касания строки фокус
+  // остаётся на ней, в центре, и Esc внутри панели до него не доходит.
+  useEffect(() => {
+    if (!sideOpen || !onSideClose) return;
+    const onDocumentKey = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      const target = event.target instanceof Element ? event.target : null;
+      if (target && side$.current?.contains(target)) return;
+      if (target?.closest(OWN_ESCAPE)) return;
+      if (document.querySelector(OPEN_LAYER)) return;
+      onSideClose();
+    };
+    document.addEventListener("keydown", onDocumentKey);
+    return () => {
+      document.removeEventListener("keydown", onDocumentKey);
+    };
+  }, [sideOpen, onSideClose]);
   const main$ = useRef<HTMLDivElement>(null);
   // «Пропустить к содержимому»: фокус сразу в центр, мимо шапки и левой навигации. Своей записи в
   // истории переход не делает (это не адрес), поэтому ссылка без href-перехода.
@@ -131,6 +157,7 @@ export const SpaceShell = ({
             ) : null}
             {side ? (
               <aside
+                ref={side$}
                 className="sp-side"
                 data-testid="sp-side"
                 data-open={sideOpen}
