@@ -13,3 +13,6 @@ releases:
   2026.1.2:
     digest: sha256:a013904d440b8a948b15ad782e4de924a10d46658a7b5e51d402b531c6c85c2e
     kind: patch
+  2026.1.3:
+    digest: sha256:a41a4f9131a5ad8a46f94896fe6ee638d818551b93a6e618dedba61d015556d5
+    kind: patch

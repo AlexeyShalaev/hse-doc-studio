@@ -1,0 +1,148 @@
+% !TeX program = xelatex
+% ============================================================
+% interim_report/interim_report.tex (EN) — "Interim report" of the research
+% course project, SE programme — the CP1 deliverable.
+%
+% Structure per §2.3.2.4 of the Practice Programme (CP1 reporting for a
+% research project): title page (with UDC) → contents → key terms,
+% definitions and abbreviations → introduction (relevance, object and
+% subject, methods, aim and objectives; novelty and validity of the
+% expected results, their theoretical significance and practical value) →
+% review and analysis of sources, selection of methods/algorithms/models →
+% list of references (GOST) → Appendix — work schedule with dates.
+%
+% This is NOT the final Report (GOST 7.32-2017): no abstract, experimental
+% part or conclusion here — those belong to the "Report" document for the
+% defence (CP3). Submitted at CP1 without signatures (pass/fail). The
+% interim report is not resubmitted at CP2 (CP2 = source-code link +
+% updated project description).
+%
+% How to use: replace the yellow \hseFill{…} stubs with your text; set your
+% personal data, supervisor, group, year and UDC in the project settings.
+% ============================================================
+\documentclass[12pt,a4paper]{extreport}
+\input{preamble}
+\begin{document}
+\input{title}
+
+% ── Contents ──
+\tableofcontents
+\clearpage
+
+% ============================================================
+\chapter*{KEY TERMS, DEFINITIONS AND ABBREVIATIONS}
+\addcontentsline{toc}{chapter}{Key terms, definitions and abbreviations}
+% ============================================================
+The following terms, definitions and abbreviations are used in this report.
+
+\begin{description}[leftmargin=0pt, labelindent=0pt, font=\bfseries, style=nextline]
+  \item[\hseFill{Term 1}] \hseFill{definition}.
+  \item[\hseFill{Term 2}] \hseFill{definition}.
+  \item[\hseFill{ABBR}] \hseFill{expansion of the abbreviation}.
+\end{description}
+
+\clearpage
+% ============================================================
+\chapter*{INTRODUCTION}
+\addcontentsline{toc}{chapter}{Introduction}
+% ============================================================
+% §2.3.2.4: relevance, object and subject, methods, aim and objectives;
+% novelty and validity of the expected results, their significance.
+\textbf{Relevance.} \hseFill{what problem is being solved, who it affects and
+why the existing approaches are insufficient}~\cite{gost732}.
+
+\textbf{Object of research} — \hseFill{what is studied as a whole}.
+
+\textbf{Subject of research} — \hseFill{the specific aspect of the object}.
+
+\textbf{Research methods:} \hseFill{which methods will be used to solve the
+objectives (literature analysis, mathematical modelling, computational
+experiment, empirical evaluation, etc.)}.
+
+\textbf{Aim of the work} — \hseFill{a single statement of the scientific
+result to be achieved}.
+
+\textbf{Objectives:}
+\begin{enumerate}[label=\arabic*), leftmargin=1.25cm]
+  \item \hseFill{review the existing approaches};
+  \item \hseFill{propose and formalise a method (model, algorithm)};
+  \item \hseFill{implement a software tool and run an experiment};
+  \item \hseFill{analyse the results and draw conclusions}.
+\end{enumerate}
+
+\textbf{Novelty and validity of the expected results.}
+\hseFill{what is novel about the expected results and how their validity
+will be ensured (theoretical justification, reproducible experiment,
+comparison with baseline methods)}.
+
+\textbf{Theoretical significance and practical value.}
+\hseFill{what the expected results contribute to theory and where they can
+be applied in practice}.
+
+\clearpage
+% ============================================================
+\chapter{REVIEW AND ANALYSIS OF SOURCES, SELECTION OF METHODS}
+% ============================================================
+\section{Review and analysis of sources}
+Give an analytical review of the domain and the existing approaches with
+citations~\cite{article, webresource}. Every source in the reference list
+must be cited in the text.
+
+\section{Comparative analysis of existing approaches}
+Compare the known methods against meaningful criteria; the comparison is
+given in Table~\ref{tab:approaches}.
+
+\begin{table}[H]
+\caption{Comparison of existing approaches}
+\label{tab:approaches}
+\centering
+\begin{tabular}{|>{\raggedright\arraybackslash}p{5cm}|c|c|c|}
+\hline
+\textbf{Criterion} & \textbf{Approach~A} & \textbf{Approach~B} & \textbf{Proposed} \\
+\hline
+Criterion~1 & \cmpplus  & \cmpminus  & \cmpplus \\
+\hline
+Criterion~2 & \cmpminus & \cmpplanned & \cmpplus \\
+\hline
+\end{tabular}
+\end{table}
+
+\section{Selection of methods, algorithms and models}
+Justify the selection of methods, algorithms and models for solving the
+stated objectives: \hseFill{which methods are selected and why they fit
+this particular problem}.
+
+\clearpage
+% ── References. The Practice Programme requires the reference list of any
+%    interim documentation to follow the GOST bibliographic standards
+%    (GOST R 7.0.100-2018 / 7.0.5-2008); IEEE-style citations apply to the
+%    English-language final texts, not to this GOST-formatted list. ──
+\phantomsection
+\addcontentsline{toc}{chapter}{References}
+\renewcommand{\bibname}{References}
+\begin{thebibliography}{99}
+  \bibitem{article}
+  Surname, N.~P. Title of the article / N.~P.~Surname // Journal Title. --- 2024. --- No.~1. --- P.~10--20.
+  \bibitem{webresource}
+  Resource title [Electronic resource]. --- URL: \url{https://example.org} (accessed: 01.01.2026).
+  \bibitem{gost732}
+  GOST 7.32--2017. The research report. Structure and rules of presentation. --- Moscow: Standartinform, 2017. --- 27~p.
+\end{thebibliography}
+
+\clearpage
+% ── Appendix — work schedule with dates (§2.3.2.4) ──
+\appendix
+\titleformat{\chapter}[hang]
+  {\normalfont\large\bfseries\centering}{Appendix~\thechapter}{1ex}{}
+\chapter{Work schedule}
+\begin{longtable}{|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}p{5.2cm}|>{\raggedright\arraybackslash}p{3.6cm}|>{\raggedright\arraybackslash}p{2.6cm}|}
+\hline
+\textbf{Stage} & \textbf{Work description} & \textbf{Expected result} & \textbf{Dates} \\ \hline
+\endhead
+\hseFill{stage 1} & \hseFill{what is done} & \hseFill{result} & \hseFill{DD.MM--DD.MM} \\ \hline
+\hseFill{stage 2} & \hseFill{what is done} & \hseFill{result} & \hseFill{DD.MM--DD.MM} \\ \hline
+\hseFill{stage 3} & \hseFill{what is done} & \hseFill{result} & \hseFill{DD.MM--DD.MM} \\ \hline
+\end{longtable}
+
+
+\end{document}
