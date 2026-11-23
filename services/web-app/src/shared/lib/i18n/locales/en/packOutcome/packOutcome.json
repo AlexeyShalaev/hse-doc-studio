@@ -359,7 +359,7 @@
       "supported_langs": "Document languages",
       "document_scope": "Document scope",
       "variant_langs": "Variant languages",
-      "builtin_gate": "Engine rule",
+      "builtin_gate": "Studio rule",
       "field_kinds": "Field work kinds",
       "visible_if": "Field visibility condition",
       "required_at": "When the field is required",
@@ -369,8 +369,8 @@
       "extra_kinds": "Extra file work kinds",
       "skip_if_nda": "Skipped under NDA",
       "item_document": "Item document",
-      "slot_when": "Signature slot condition",
-      "slot_optional": "Slot is optional",
+      "slot_when": "When the signature is needed",
+      "slot_optional": "Signature is optional",
       "route_order": "Signing order",
       "check_applies": "Check rule applies",
       "check_disabled": "Check rule disabled"
@@ -385,13 +385,13 @@
     "joinAll": ", and ",
     "joinAny": ", or ",
     "noTerms": "No conditions: the rule sets an order.",
-    "inEngine": "in the engine",
+    "inEngine": "built into the Studio",
     "builtin": {
-      "nda_gate": "The NDA rule is built into the engine: a document is switched off when the project has an NDA. It can be moved to the manifest later.",
-      "manuals_gate": "The manuals rule is built into the engine: it reads the text of the \"Manuals\" field. It can be moved to the manifest later.",
-      "presentation_variant": "The presentation variant choice is built into the engine. It can be moved to the manifest later.",
+      "nda_gate": "This rule is built into the Studio: under an NDA the document is turned off.",
+      "manuals_gate": "This rule is built into the Studio: it reads the “Manuals” field.",
+      "presentation_variant": "This rule is built into the Studio: it picks the presentation variant.",
       "builtin_route": "The built-in signing order: neither the version nor the point set its own.",
-      "other": "The rule is built into the engine and has no file."
+      "other": "This rule is built into the Studio and cannot be changed here."
     },
     "openRule": "Open rule"
   },
