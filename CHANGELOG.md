@@ -6,6 +6,15 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.40.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.40.0...v0.40.1) (2026-11-23)
+
+
+### Bug Fixes
+
+* «Обновить базу» без ветки и предел ожидания тулов MCP ([5d17be9](https://github.com/AlexeyShalaev/hse-doc-studio/commit/5d17be990f9d32407d87cb1e6bea5d47241b6f67))
+* **mcp:** ожидание в одном вызове тула не дольше 50 с ([777f51d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/777f51d49b7222ebbe7e4ebb6641b1f5d18c0dbd))
+* **pack-studio:** «Обновить» перематывает пространство без ветки на свежую базу ([a51e227](https://github.com/AlexeyShalaev/hse-doc-studio/commit/a51e227e6d25095b5bbf640fa309d3ae45e2dc3c))
+
 ## [0.40.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.39.0...v0.40.0) - 2026-11-23
 
 - Access tokens: the permissions of an existing token can be changed. In the account settings a token has an Edit permissions button: the same checkboxes as on creation and a summary of what is added and removed. The token itself stays the same and the new permissions apply from the next request; after changing MCP permissions, reconnect the AI client so it sees the new tools. Permissions can only be changed from a browser session, a token cannot raise its own rights, and every change is written to the audit log.
