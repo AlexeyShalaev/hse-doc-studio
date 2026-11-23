@@ -20,6 +20,7 @@ import {
   useRevokeOtherSessions,
   useRevokeSession,
   useRevokeToken,
+  useUpdateTokenScopes,
   useStartLink,
   useUnlinkIdentity,
   useUpdateAccount,
@@ -69,6 +70,7 @@ export const AccountSection = () => {
   const tokens = useAccountTokens();
   const createToken = useCreateToken();
   const revokeToken = useRevokeToken();
+  const updateTokenScopes = useUpdateTokenScopes();
   // Значение токена живёт только здесь: в кэш запросов оно не попадает.
   const [created, setCreated] = useState<{
     token: string;
@@ -384,6 +386,25 @@ export const AccountSection = () => {
           onDismissCreated={() => {
             setCreated(null);
             createToken.reset();
+          }}
+          updatingScopes={updateTokenScopes.isPending}
+          updateFailure={
+            updateTokenScopes.isError
+              ? asFailure(updateTokenScopes.error)
+              : null
+          }
+          onUpdateScopes={(id, scopes, done) => {
+            updateTokenScopes.mutate(
+              { id, scopes },
+              {
+                onSuccess: () => {
+                  done();
+                },
+              },
+            );
+          }}
+          onUpdateClosed={() => {
+            updateTokenScopes.reset();
           }}
         />
 
