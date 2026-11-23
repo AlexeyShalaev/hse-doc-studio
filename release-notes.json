@@ -1,6 +1,32 @@
 {
   "releases": [
     {
+      "version": "0.40.0",
+      "date": "2026-11-23",
+      "notes": [
+        {
+          "ru": "Токены доступа: у существующего токена можно изменить права. В настройках аккаунта у токена есть кнопка «Изменить права»: те же галочки, что при создании, и сводка, что добавится и что уберётся. Сам токен не меняется, новые права действуют со следующего запроса; после смены прав MCP переподключите клиента ИИ, чтобы он увидел новые инструменты. Права меняются только из входа в браузере, сам токен поднять себе права не может, каждое изменение пишется в журнал аудита.",
+          "en": "Access tokens: the permissions of an existing token can be changed. In the account settings a token has an Edit permissions button: the same checkboxes as on creation and a summary of what is added and removed. The token itself stays the same and the new permissions apply from the next request; after changing MCP permissions, reconnect the AI client so it sees the new tools. Permissions can only be changed from a browser session, a token cannot raise its own rights, and every change is written to the audit log."
+        },
+        {
+          "ru": "Паки: места подписей стоят на строках шаблона. В hse-cs-se ВКР 2026.1.3 и курсовой 2026.1.3 места подписей привязаны к строкам «(подпись)» на листах утверждения, титулах и формах ПДП, раньше рамки могли попасть на текст или друг на друга. В hse-cs-sse курсовой 2026.1.7 появилось место подписи и даты научного руководителя на титуле отчёта. Текст документов не изменился.",
+          "en": "Packs: signature places sit on the template's signature lines. In hse-cs-se VKR 2026.1.3 and coursework 2026.1.3 signature places are bound to the signature lines of the approval sheets, title pages and PDP forms; before, boxes could land on text or on each other. hse-cs-sse coursework 2026.1.7 adds the supervisor's signature and date place on the report title page. The text of the documents is unchanged."
+        },
+        {
+          "ru": "Студия паков, правки после сквозной проверки: сравнение версий всегда открывается со стилями; «Почему так» и «Не вошло» называют условия так же, как полоса «Для какого студента»; «Что изменено» показывает названия документов, а не их идентификаторы; плашка «что изменилось» считает строки, которые видны на экране; число изменённых файлов и число замечаний одинаковые на всех экранах; при отказе в доступе отправка предлагает «Доступ к репозиторию»; в «Проверке», окне официальных шаблонов и списке пространств меньше технических слов. На телефоне Esc закрывает шторку подробностей, кнопка отправки в «Изменениях» не сжимается.",
+          "en": "Pack Studio fixes after an end-to-end check: version comparison always opens with its styles; Why and Not included name conditions the same way as the For which student strip; What changed shows document names instead of ids; the what-changed line counts the rows visible on screen; the number of changed files and of remarks is the same on every screen; when access is refused, sending offers Repository access; Check, the official templates dialog and the workspace list use fewer technical words. On phones Esc closes the details sheet and the send button in Changes is no longer squeezed."
+        },
+        {
+          "ru": "Интерфейс: везде обращение на «вы», соруководитель везде называется одинаково, цветные метки читаются по нормам контраста WCAG AA в светлой и тёмной теме, на сенсорных экранах все кнопки не меньше 44 px, уведомления не закрывают кнопки окон и боковых панелей, после закрытия окна фокус возвращается на кнопку, которой его открыли.",
+          "en": "Interface: the app consistently addresses the user formally in Russian, the co-supervisor has one name everywhere, coloured labels meet WCAG AA contrast in the light and dark themes, on touch screens every button is at least 44 px, notifications no longer cover the buttons of dialogs and side panels, and closing a dialog returns focus to the button that opened it."
+        },
+        {
+          "ru": "MCP: проверка мест подписей не принимает пропуск даты «« __ » ____ г.» за строку подписи, предлагает место, даже если чистого нет, а строку, которую шаблон не печатает для этих данных, отмечает подсказкой, а не ошибкой.",
+          "en": "MCP: the signature place check no longer mistakes a date blank for a signature line, suggests a place even when no clean one exists, and marks a line the template does not print for this data as a hint rather than an error."
+        }
+      ]
+    },
+    {
       "version": "0.39.0",
       "date": "2026-11-22",
       "notes": [
