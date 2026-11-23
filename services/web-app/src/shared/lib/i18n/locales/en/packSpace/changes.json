@@ -80,8 +80,7 @@
     "warnings_few": "{{count}} formatting remarks. They do not block sending.",
     "warnings_many": "{{count}} formatting remarks. They do not block sending.",
     "warnings_other": "{{count}} formatting remarks. They do not block sending.",
-    "show": "Show",
-    "hide": "Hide",
+    "openCheck": "Open “Check”",
     "notes": "Describe what changed for students and supervisors: the version cannot be released without it. This is a normal step, not an error."
   },
   "request": {

@@ -9,12 +9,13 @@ import {
   TriangleAlert,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 import {
   PACK_STUDIO_PATH,
   PackErrorText,
+  usePackOutcomeLint,
   type PackCiStatus,
   type PackDiagnostic,
   type PackVersionRef,
@@ -220,22 +221,37 @@ const WhatChanged = ({
   );
 };
 
-/** Находки проверки для списка: ошибки без заметок (они отдельным шагом) и замечания. */
-const findingsOf = (data: ChangesData) => {
+/** Ошибки проверки для списка, без заметок (они отдельным шагом). */
+const errorsOf = (data: ChangesData): PackDiagnostic[] => {
   const errors: PackDiagnostic[] = [];
-  const warnings: PackDiagnostic[] = [];
   for (const report of data.raw.lint) {
     for (const finding of report.findings) {
-      if (finding.severity === "warning") warnings.push(finding);
-      else if (
-        report.released ||
-        !(isNotesFinding(finding) || isNumberFinding(finding))
+      if (
+        finding.severity === "error" &&
+        (report.released ||
+          !(isNotesFinding(finding) || isNumberFinding(finding)))
       ) {
         errors.push(finding);
       }
     }
   }
-  return { errors, warnings };
+  return errors;
+};
+
+/**
+ * Замечания открытой версии: то же число, что в «Проверке» (группа «Замечания»), из того же
+ * запроса и кэша. Подсказки не считаются. Подробности и переход к месту живут в «Проверке»
+ * (pack-studio-ux.md, 12.20).
+ */
+const useRemarks = (data: ChangesData): number => {
+  const { raw, status } = data;
+  const lint = usePackOutcomeLint(
+    raw.workspace.id,
+    raw.open,
+    { state: "work_tree" },
+    raw.workspace.kind === "git" && status.changedInVersion > 0,
+  );
+  return status.changedInVersion > 0 ? (lint.data?.warnings ?? 0) : 0;
 };
 
 const Checks = ({
@@ -249,9 +265,9 @@ const Checks = ({
   onGoCheck: () => void;
 }) => {
   const { t } = useTranslation("packSpace");
-  const [warningsOpen, setWarningsOpen] = useState(false);
   const { status, raw } = data;
-  const { errors, warnings } = useMemo(() => findingsOf(data), [data]);
+  const errors = useMemo(() => errorsOf(data), [data]);
+  const remarks = useRemarks(data);
   const waiting =
     raw.lint.length < lintTargets(changedOf(raw), raw.open).length;
 
@@ -326,48 +342,16 @@ const Checks = ({
           {notesAction ?? <span />}
         </div>
       )}
-      {warnings.length > 0 && (
-        <>
-          <div className="sp-ch-row" data-testid="sp-ch-warnings">
-            <Mark tone="warn" />
-            <div className="sp-ch-row-text">
-              {t("changes.checks.warnings", { count: warnings.length })}
-            </div>
-            <Button
-              size="xs"
-              variant="ghost"
-              aria-expanded={warningsOpen}
-              onClick={() => {
-                setWarningsOpen((open) => !open);
-              }}
-            >
-              {warningsOpen
-                ? t("changes.checks.hide")
-                : t("changes.checks.show")}
-            </Button>
+      {remarks > 0 && (
+        <div className="sp-ch-row" data-testid="sp-ch-warnings">
+          <Mark tone="warn" />
+          <div className="sp-ch-row-text">
+            {t("changes.checks.warnings", { count: remarks })}
           </div>
-          {warningsOpen &&
-            warnings.map((finding, index) => (
-              <div
-                className="sp-ch-row"
-                key={`${finding.path ?? ""}:${String(finding.line)}:${String(index)}`}
-              >
-                <span />
-                <div className="sp-ch-row-text sp-ch-muted">
-                  {line(finding)}
-                </div>
-                <Button
-                  size="xs"
-                  variant="ghost"
-                  onClick={() => {
-                    go(finding);
-                  }}
-                >
-                  {t("changes.checks.go")}
-                </Button>
-              </div>
-            ))}
-        </>
+          <Button size="xs" variant="ghost" onClick={onGoCheck}>
+            {t("changes.checks.openCheck")}
+          </Button>
+        </div>
       )}
     </section>
   );

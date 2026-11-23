@@ -57,7 +57,7 @@ describe("ContextBar: где я и куда перейти", () => {
     await user.click(screen.getByTestId("sp-crumb-version"));
     const draft = await screen.findByTestId("sp-crumb-version-item-2026.1.3");
     const released = screen.getByTestId("sp-crumb-version-item-2026.1.2");
-    expect(draft).toHaveTextContent("3 изменения");
+    expect(draft).toHaveTextContent("3 файла изменено");
     expect(draft).toHaveTextContent("черновик");
     expect(released).toHaveTextContent("по умолчанию");
     expect(released).toHaveTextContent("выпущена");

@@ -16,6 +16,7 @@ import {
   type MyChange,
 } from "./pickDefaultVersion";
 import { refForPack, refForTemplate } from "./targets";
+import { useMyChangedPaths } from "../changes/useChangesStatus";
 import { useChangedPaths } from "./useChangedPaths";
 
 // «Где я» для полос пространства и шторки «Куда перейти»: названия, списки пака, шаблона и версии,
@@ -73,12 +74,15 @@ export const useWhere = (): Where => {
   const { i18n } = useTranslation();
   const { workspace, tree, versionRef, pack, template } = useSpace();
   const nav = useSpaceNav();
+  // Куда вести (версия с моей работой, в том числе свежая копия) решают файлы git как есть, а
+  // числа «N файлов изменено» берутся из того же источника, что у панели «Изменения».
   const changed = useChangedPaths();
+  const mineChanged = useMyChangedPaths();
   const lang = i18n.language;
   const wsId = workspace.id;
 
   return useMemo<Where>(() => {
-    const counts = countByVersion(changed);
+    const counts = countByVersion(mineChanged);
     const lastOf = (p: string, t: string) => readLastVersion(wsId, p, t);
     const go = (ref: PackVersionRef | null) => {
       if (ref) nav.go({ ref });
@@ -87,7 +91,7 @@ export const useWhere = (): Where => {
       tree.packs
         .find((p) => p.id === ref.pack)
         ?.templates.find((t) => t.id === ref.template);
-    const mine = myChanges(tree, changed).map<MineRow>((item) => {
+    const mine = myChanges(tree, mineChanged).map<MineRow>((item) => {
       const found = templateOf(item.ref);
       return {
         ...item,
@@ -142,5 +146,5 @@ export const useWhere = (): Where => {
         nav.go({ ref });
       },
     };
-  }, [changed, lang, nav, pack, template, tree, versionRef, wsId]);
+  }, [changed, mineChanged, lang, nav, pack, template, tree, versionRef, wsId]);
 };

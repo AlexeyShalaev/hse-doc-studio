@@ -30,10 +30,10 @@
     "draft": "черновик",
     "released": "выпущена"
   },
-  "edited_one": "{{count}} изменение",
-  "edited_few": "{{count}} изменения",
-  "edited_many": "{{count}} изменений",
-  "edited_other": "{{count}} изменения",
+  "edited_one": "{{count}} файл изменён",
+  "edited_few": "{{count}} файла изменено",
+  "edited_many": "{{count}} файлов изменено",
+  "edited_other": "{{count}} файла изменено",
   "where": {
     "title": "Куда перейти",
     "place": "{{template}} · {{version}}",

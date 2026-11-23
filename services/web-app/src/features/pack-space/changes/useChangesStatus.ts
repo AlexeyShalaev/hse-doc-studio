@@ -156,6 +156,23 @@ export const useChangesData = (): ChangesData => {
 };
 
 /**
+ * Изменённые файлы пространства так, как их считает панель «Изменения» (`changedOf`): список git
+ * без файлов свежей копии открытой версии, совпавших с основой. Один источник для числа на кнопке,
+ * в панели и в «Куда перейти»; запросы и кэш те же, что у панели, лишних нет.
+ */
+export const useMyChangedPaths = (): readonly string[] => {
+  const { workspace, versionRef } = useSpace();
+  const live = workspace.kind === "git" && workspace.state === "ready";
+  const git = usePackGit(workspace.id, live);
+  const gitChanged = useMemo(() => git.data?.changed ?? [], [git.data]);
+  const copy = useCopyScan(workspace.id, gitChanged, versionRef, live);
+  return useMemo(
+    () => mineOf(gitChanged, copy?.same ?? null).map((change) => change.path),
+    [gitChanged, copy],
+  );
+};
+
+/**
  * Состояние изменений пространства (pack-studio-ux.md, 4.3): один объект `ChangesStatus` для
  * кнопки «Изменения», панели и главной кнопки (S4). Правила сборки: `deriveChangesStatus`.
  */
