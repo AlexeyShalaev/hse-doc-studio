@@ -153,3 +153,5 @@ The Audit section keeps sign-in events (including passkey sign-ins with the refu
 ## Access tokens
 
 Users issue personal tokens in account settings for the CLI and scripts. A token is shown once, only its hash is stored. A token cannot manage tokens and is exempt from the CSRF check.
+
+The owner changes the permissions (scopes) of an existing token with “Edit permissions” in the token list: the token value stays the same, and the new permissions apply from the next request ([Token permissions](../workbench/mcp.md#scopes)). Permissions can be changed only from a browser session, never with a token. The rules are the same as when issuing a token: only an instance administrator gets “MCP: administration”, a device token stays a git token. An expired token cannot be changed. Every change goes to the audit log (`pat.scopes_update`, what was added and removed); like issuing a token, it sends no email.
