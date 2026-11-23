@@ -10,6 +10,8 @@ vi.mock("pdfjs-dist", () => ({
 import { PdfPage } from "./PdfPage";
 
 // Страница рисуется лениво (по IntersectionObserver), а слой меток сразу: его и проверяем.
+// Заглушка документа: слою меток PDF не нужен (настоящий класс в тесте не создать).
+// eslint-disable-next-line @typescript-eslint/no-unsafe-class-instance-assignment
 const fakePdf = {} as pdfjsLib.PDFDocumentProxy;
 const PX_PER_MM = 72 / 25.4;
 
