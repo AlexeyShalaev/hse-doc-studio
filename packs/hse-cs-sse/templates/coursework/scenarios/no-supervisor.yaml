@@ -5,7 +5,7 @@ name:
 description:
   ru: "Крайний случай: в проекте указан только автор, шаг руководителя остаётся без человека."
   en: "An edge case: the project has only the author, the supervisor step stays without a person."
-versions: ["2026.1.*"]
+versions: ["2026.1.*", "2026.2.*"]
 inputs:
   supervisor: none
   co_supervisor: "no"

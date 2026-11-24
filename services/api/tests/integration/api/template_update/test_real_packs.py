@@ -5,9 +5,11 @@ from __future__ import annotations
 import shutil
 import subprocess
 from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml
+from hse_doc_studio.core.template_versions import parse_version_key
 from httpx import AsyncClient
 
 from tests.factories import project_api_payload
@@ -17,13 +19,35 @@ pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git binary 
 _PACKS = Path(__file__).resolve().parents[6] / "packs"
 
 
-def _default_version(pack_id: str, template_id: str) -> str:
-    """Версия по умолчанию из манифеста шаблона: обновление рекомендует её; тест не правят на каждом выпуске."""
-    manifest = _PACKS / pack_id / "templates" / template_id / "template.yaml"
-    return str(yaml.safe_load(manifest.read_text(encoding="utf-8"))["default_version"])
+def _key(version: str) -> tuple[int, int, int]:
+    key = parse_version_key(version)
+    assert key is not None, version
+    return key
 
 
-SSE_LATEST = _default_version("hse-cs-sse", "coursework")
+def _released(pack_id: str, template_id: str) -> list[str]:
+    """Выпущенные версии шаблона из `releases.yaml`, по возрастанию."""
+    path = _PACKS / pack_id / "templates" / template_id / "releases.yaml"
+    releases = yaml.safe_load(path.read_text(encoding="utf-8"))["releases"]
+    return sorted((str(version) for version in releases), key=_key)
+
+
+def _assert_offers_patch_of_its_line(status: dict[str, Any], pack_id: str, template_id: str, current: str) -> None:
+    """Проекту рекомендуют последний patch его линии `YYYY.MINOR`; новые линии (minor, major) лежат в `available`.
+
+    Ожидание считается по `releases.yaml`, а не по `default_version`: версией по умолчанию может стать minor
+    (`hse-cs-sse/coursework` 2026.2.0), а patch-обновление внутри линии на неё не ведёт. Тест не правят на выпусках.
+    """
+    newer = [v for v in _released(pack_id, template_id) if _key(v) > _key(current)]
+    line = _key(current)[:2]
+    same_line = [v for v in newer if _key(v)[:2] == line]
+    offered = {u["version"]["version"]: u["update_class"] for u in status["available"]}
+
+    assert status["recommended"]["version"]["version"] == same_line[-1]
+    assert status["recommended"]["update_class"] == "patch"
+    assert set(newer) <= set(offered)
+    assert {offered[v] for v in same_line} == {"patch"}
+    assert all(offered[v] in {"minor", "major"} for v in newer if _key(v)[:2] != line), offered
 
 
 @pytest.mark.parametrize(("template_id", "lang"), [("vkr", "ru"), ("coursework", "ru"), ("pp", "en")])
@@ -86,8 +110,7 @@ async def test__real_coursework__existing_project_is_offered_the_patch_2026_1_1(
 
     status = (await test_app.get(base)).json()
     assert status["current_version"] == "2026.1"
-    assert status["recommended"]["version"]["version"] == SSE_LATEST
-    assert status["recommended"]["update_class"] == "patch"
+    _assert_offers_patch_of_its_line(status, "hse-cs-sse", "coursework", "2026.1")
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.1"})).json()
     changed = {f["path"] for f in plan["files"] if f["action"] != "unchanged"}
@@ -114,8 +137,7 @@ async def test__real_coursework__2026_1_1_project_is_offered_the_patch_2026_1_2(
 
     status = (await test_app.get(base)).json()
     assert status["current_version"] == "2026.1.1"
-    assert status["recommended"]["version"]["version"] == SSE_LATEST
-    assert status["recommended"]["update_class"] == "patch"
+    _assert_offers_patch_of_its_line(status, "hse-cs-sse", "coursework", "2026.1.1")
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.2"})).json()
     changed = {f["path"] for f in plan["files"] if f["action"] != "unchanged"}
@@ -148,8 +170,7 @@ async def test__real_coursework__2026_1_2_project_gets_sign_methods_in_patch_202
 
     status = (await test_app.get(base)).json()
     assert status["current_version"] == "2026.1.2"
-    assert status["recommended"]["version"]["version"] == SSE_LATEST
-    assert status["recommended"]["update_class"] == "patch"
+    _assert_offers_patch_of_its_line(status, "hse-cs-sse", "coursework", "2026.1.2")
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.3"})).json()
     assert {f["path"] for f in plan["files"] if f["action"] != "unchanged"} == set()
@@ -194,8 +215,7 @@ async def test__real_coursework__2026_1_3_project_gets_form_fixes_in_patch_2026_
 
     status = (await test_app.get(base)).json()
     assert status["current_version"] == "2026.1.3"
-    assert status["recommended"]["version"]["version"] == SSE_LATEST
-    assert status["recommended"]["update_class"] == "patch"
+    _assert_offers_patch_of_its_line(status, "hse-cs-sse", "coursework", "2026.1.3")
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.4"})).json()
     changed = {f["path"] for f in plan["files"] if f["action"] != "unchanged"}
@@ -233,8 +253,7 @@ async def test__real_coursework__2026_1_4_project_gets_anchors_and_presets_in_pa
 
     status = (await test_app.get(base)).json()
     assert status["current_version"] == "2026.1.4"
-    assert status["recommended"]["version"]["version"] == SSE_LATEST
-    assert status["recommended"]["update_class"] == "patch"
+    _assert_offers_patch_of_its_line(status, "hse-cs-sse", "coursework", "2026.1.4")
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": "2026.1.5"})).json()
     changed = {f["path"] for f in plan["files"] if f["action"] != "unchanged"}
@@ -290,8 +309,7 @@ async def test__real_template__quoted_texts_patch_changes_no_project_files(
     base = f"/api/v1/projects/{created.json()['id']}/template-update"
 
     status = (await test_app.get(base)).json()
-    assert status["recommended"]["version"]["version"] == _default_version(pack_id, template_id)
-    assert status["recommended"]["update_class"] == "patch"
+    _assert_offers_patch_of_its_line(status, pack_id, template_id, current)
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": patched})).json()
     assert {f["path"] for f in plan["files"] if f["action"] != "unchanged"} == set()
@@ -345,8 +363,7 @@ async def test__real_template__signature_anchors_patch_changes_only_anchor_lines
     base = f"/api/v1/projects/{created.json()['id']}/template-update"
 
     status = (await test_app.get(base)).json()
-    assert status["recommended"]["version"]["version"] == _default_version(pack_id, template_id)
-    assert status["recommended"]["update_class"] == "patch"
+    _assert_offers_patch_of_its_line(status, pack_id, template_id, current)
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": patched})).json()
     assert {f["path"] for f in plan["files"] if f["action"] != "unchanged"} == changed

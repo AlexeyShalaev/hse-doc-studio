@@ -16,6 +16,7 @@ import pytest
 import yaml
 from hse_doc_studio.core.enums import TemplateUpdateClass
 from hse_doc_studio.core.template_diff import ChangeReport, classify_change
+from hse_doc_studio.core.template_versions import parse_version_key
 from hse_doc_studio.infra.template.releases import load_releases
 
 PACKS = Path(__file__).resolve().parents[6] / "packs"
@@ -124,8 +125,13 @@ def test__sse_2026_1_5__released_as_a_patch_of_2026_1_4() -> None:
 
     assert load_releases(SSE)["2026.1.5"].kind is PATCH
     assert manifest["release"] == {"kind": "patch"}
-    # По умолчанию последняя patch-версия 2026.1.8 (места подписей на титуле отчёта), пресеты 2026.1.5 в ней те же.
-    assert template["default_version"] == "2026.1.8"
+    # Новые проекты создаются на выпущенной версии не старше 2026.1.5, то есть с пресетами маршрутов. Номер версии
+    # по умолчанию не фиксируем, чтобы тест не правили на каждом выпуске.
+    default = str(template["default_version"])
+    default_key = parse_version_key(default)
+    assert default in load_releases(SSE)
+    assert default_key is not None
+    assert default_key >= (2026, 1, 5)
 
 
 def test__sse_2026_1_5__manifest_differs_only_in_signing_presets_and_deadline_hints() -> None:
