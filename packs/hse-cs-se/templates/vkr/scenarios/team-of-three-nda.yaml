@@ -88,5 +88,5 @@ snapshot:
     - { section: forms, fingerprint: baa9eaef9a4a, count: 2 }
     - { section: participants, fingerprint: 69e9b6580a38, count: 5 }
     - { section: points, fingerprint: 1786883de2a9, count: 37 }
-    - { section: route, fingerprint: 97940c525c89, count: 77 }
+    - { section: route, fingerprint: a75a64b08c2e, count: 77 }
     - { section: checks, fingerprint: 4f53cda18c2b, count: 0 }
