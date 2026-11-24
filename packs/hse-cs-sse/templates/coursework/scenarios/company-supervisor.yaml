@@ -5,7 +5,7 @@ name:
 description:
   ru: Заявка уходит на подпись автору, научруку с консультантом и академическому руководителю.
   en: The application goes to the author, the supervisor with the co-supervisor and the academic supervisor.
-versions: ["2026.1.*"]
+versions: ["2026.1.*", "2026.2.*"]
 inputs:
   supervisor: company
   co_supervisor: "yes"

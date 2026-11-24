@@ -5,7 +5,7 @@ name:
 description:
   ru: "Заявка уходит на подпись автору и научруку; академический руководитель в маршрут не попадает."
   en: "The application goes to the author and the supervisor; the academic supervisor is not in the route."
-versions: ["2026.1.*"]
+versions: ["2026.1.*", "2026.2.*"]
 inputs:
   supervisor: university
   co_supervisor: "no"
