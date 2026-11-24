@@ -26,7 +26,7 @@ from hse_doc_studio.core.services import (
     SubmissionProfileService,
     expand_slot_ids_for_doc,
 )
-from hse_doc_studio.core.signatures.pack_places import anchor_ref, is_from_pack
+from hse_doc_studio.core.signatures.pack_places import anchor_ref, is_from_pack, pair_anchors
 from hse_doc_studio.core.signatures.plan import (
     DocFacts,
     DocPlan,
@@ -309,7 +309,7 @@ async def _anchor_missing(  # noqa: PLR0913 — входы одного доку
     src = await doc_anchors(ts, project, version, state, doc)
     missing: set[str] = set()
     for slot in anchored:
-        ref = anchor_ref(slot.slot_def, doc.def_id, src)
+        ref = anchor_ref(slot.slot_def, doc.def_id, pair_anchors(src, project, doc, slot.id))
         placement = state.placements.get(doc.id, {}).get(slot.id)
         manual = placement is not None and placement.enabled and not is_from_pack(placement)
         if ref is not None and ref.state is AnchorState.missing and not manual:

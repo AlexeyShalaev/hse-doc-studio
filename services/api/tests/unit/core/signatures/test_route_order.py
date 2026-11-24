@@ -211,8 +211,11 @@ def _profile_of(version: TemplateVersion, profile_id: str) -> SubmissionProfile:
 
 def test__real_packs__builtin_order_places_every_slot(templates: YamlTemplateRepository) -> None:
     """Ни один слот выпущенной версии не уходит в хвост встроенного порядка; порядок точки, если пак его задаёт
-    (`hse-cs-sse` 2026.1.5, пресет 15.10), ставит каждый слот точки и её слоты сверх точки и совпадает со встроенным."""
+    (`hse-cs-sse` 2026.1.5, пресет 15.10), ставит каждый слот точки и её слоты сверх точки и не спорит со встроенным:
+    шаги идут в том же порядке, параллельный шаг встроенного пак может разбить на последовательные (`hse-cs-se/vkr`
+    2026.1.5: соруководитель раньше научного руководителя)."""
     builtin = {slot_id for step in BUILTIN_ROUTE for slot_id in step}
+    rank = {slot_id: index for index, step in enumerate(BUILTIN_ROUTE) for slot_id in step}
     for pack in templates.list_packs():
         for template in pack.templates:
             for version_id in templates.list_versions(pack.id, template.id):
@@ -227,8 +230,13 @@ def test__real_packs__builtin_order_places_every_slot(templates: YamlTemplateRep
                     used = {s for item in profile.items for s in item.signatures}
                     used |= {preset.slot_id for preset in profile.signing_slots}
                     assert used <= placed, (where, profile.id)
-                    builtin_steps = [set(step) & placed for step in BUILTIN_ROUTE]
-                    assert [set(step) for step in profile.signing_route] == [s for s in builtin_steps if s], where
+                    assert placed <= builtin, (where, profile.id)
+                    flat = [slot_id for step in profile.signing_route for slot_id in step]
+                    assert len(flat) == len(placed), (where, profile.id, "слот стоит на двух шагах")
+                    # Шаг пака лежит внутри одного шага встроенного порядка, номера этих шагов не убывают.
+                    ranks = [{rank[slot_id] for slot_id in step} for step in profile.signing_route]
+                    assert all(len(r) == 1 for r in ranks), (where, profile.id)
+                    assert [min(r) for r in ranks] == sorted(min(r) for r in ranks), (where, profile.id)
 
 
 def test__sse_topic_approval__author_then_supervisor(templates: YamlTemplateRepository) -> None:

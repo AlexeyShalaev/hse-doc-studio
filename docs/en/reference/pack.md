@@ -137,7 +137,7 @@ A preset does not set the signing method: the signer picks it from the methods t
 
 The Studio applies the preset when the author first prepares the checkpoint's route, and leaves places the author set or moved alone. Presets can ship as a patch version: it differs from the previous one only in these keys and in `signatures.route` and `signing_route`, with the same template files and requirements. The exception for files is `common/anchors.tex` and anchor calls that do not change the PDF (below, "Reproducible build"). Anything else makes it a minor.
 
-Check before releasing: `hse-doc-studio pack lint <version directory>` (the commands are below, in [The `hse-doc-studio pack` command](#pack-cli)). The linter reports as errors a box past the edge of the sheet, a place or marks on a document outside the slot's `applies_to` or outside the version's documents, a `signing_slots` entry whose document is not in the checkpoint or whose slot is unknown or does not apply, a repeated pair, `when` on a signature the checkpoint already requires, and `optional: true` on a slot with `required: true`. It warns when a signature beyond the checkpoint is missing from the route order (it will go as the last step), when a `per_author` slot has a place on a shared document of a team template, and when a place is narrower than the detached e-signature plate where the checkpoint allows one (the box will widen leftwards to 70 mm). Whether a box lands on the right line the linter cannot know: build the documents and look at the boxes on the Signatures tab.
+Check before releasing: `hse-doc-studio pack lint <version directory>` (the commands are below, in [The `hse-doc-studio pack` command](#pack-cli)). The linter reports as errors a box past the edge of the sheet, a place or marks on a document outside the slot's `applies_to` or outside the version's documents, a `signing_slots` entry whose document is not in the checkpoint or whose slot is unknown or does not apply, a repeated pair, `when` on a signature the checkpoint already requires, and `optional: true` on a slot with `required: true`. It warns when a signature beyond the checkpoint is missing from the route order (it will go as the last step), when a `per_author` slot has a place on a shared document of a team template and the template does not put an anchor on every author (below, "Team project: a line for every author"), and when a place is narrower than the detached e-signature plate where the checkpoint allows one (the box will widen leftwards to 70 mm). Whether a box lands on the right line the linter cannot know: build the documents and look at the boxes on the Signatures tab.
 
 You do not have to retype coordinates. Place the boxes and date marks on a built document of a live project, then open the "⋯" menu on the Signatures tab and choose "Copy as template preset". The Studio copies a `signatures.slots` fragment with `placements` and `default_dates` of this document or of every project document: document and slot ids as in the pack (a team member's document `report--ivanov` becomes `report`), coordinates rounded to 1 mm. Custom project signatures, disabled places and boxes the pack loader would reject stay out of the fragment, and the dialog lists them as warnings. The fragment carries no names of people and no project name.
 
@@ -217,6 +217,29 @@ A template usually draws its signature lines with its own macro, and the anchor 
 
 List the wrapper names in `signatures.anchor_macros` (without the backslash): the linter counts a `\hseSignField[supervisor]` call as the `supervisor` anchor and takes a wrapper's date parts from its definition in the document files or in `common/` (for `\signdateblank[supervisor]` these are `supervisor.day` and `supervisor.month_word`). If the same line is on both the Russian and the English page of one file, move it into its own macro, like `\hseSupervisorSign` above: otherwise the anchor appears twice in the file and the linter warns about the repeat.
 
+#### Team project: a line for every author
+
+In a team the `per_author` slot is copied per author (`author--<slug>`), and a shared document (`scope: shared`, the shared technical specification for example) is signed by every author. If the template puts the same `author` anchor on each author's line, the Studio sees one anchor, so it does not set the pack place on the shared document: every author would land in the same box.
+
+To place each author on their own line, put an anchor with the author's slug on that line: the slot name, two underscores and `{{ a.slug }}` in the loop over the authors. The ESPD approval sheet, the "Executors" block in `common/meta.tex.j2`:
+
+```latex
+((* for a in project.authors *))
+студент группы {{ a.group | default('') | texesc }}
+
+\hseSignAnchor[7cm]{author__{{ a.slug }}}\rule{7cm}{0.4pt} {{ a.name | texesc }}
+
+\signdateblank
+((* endfor *))
+```
+
+- Nothing changes in `version.yaml`: the entry stays `anchor: author`, and the Studio takes each author's own `author__<slug>` line. A date mark on the `author.day` anchor takes `\hseDateAnchor[8mm]{author__{{ a.slug }}}{day}` the same way.
+- A wrapper from `anchor_macros` works too: `\authorsignatureline[author__{{ a.slug }}]{7cm}`, if the wrapper takes the anchor name as its first optional argument.
+- Personal documents and solo projects keep the `author` anchor: lines per author are only needed where a page has more than one author.
+- A double underscore in an anchor name is reserved for this separator; the whole name is at most 40 characters (a slug made from a surname fits).
+- Older pack versions with one `author` anchor work as before: the team places the boxes on the shared document, and the linter warns. Once the sources of the shared document (or `common/`) put an anchor on every author, the warning goes away.
+- In the Pack Studio the slot box on such a build sits on the first author's line: there is one entry for everyone, move it and every author's place moves. `pack_signature_check` and `pack_signature_render` show a box for every author (`author--<slug>`).
+
 #### Fallback place
 
 The `page`, `x_mm`, `y_mm` fields together with `width_mm` on an anchored entry are the fallback place: the Studio puts the box there while the build lines are unknown. That happens if the document is not built yet, if a runner older than 0.27.0 built it, or if the PDF was uploaded to the server from the local Studio. The fallback place works in Studios before 0.27.0 too: they read an entry with it as a plain place in mm, and drop an anchored entry without millimetres in favour of `default_placement`.
@@ -234,7 +257,7 @@ To keep the PDF the same between builds too, the Studio calls latexmk with `-lat
 
 You do not need to place boxes by millimetres by hand: build a document with anchors, drag the box on the Signatures tab and choose "Copy as template preset" in the "⋯" menu. An anchored template place goes into the fragment as the pack entry as is, and a manual place is written relative to the slot anchor on the same page (`align: left`, `dx_mm`, `dy_mm`) with a `# by the build:` comment and the millimetres of this build. If the build has no anchors, the place is written in mm with a `# no anchor` comment.
 
-The linter checks that every anchored entry has an anchor call or a call of a wrapper from `anchor_macros` with that name in the document files or in `common/`, that `common/anchors.tex` exists and the document loads it, and that an anchored `default_placement` has its fallback place. It warns when an anchor name in the sources is not a catalog slot id (a typo) and when one name appears twice in a file (the place follows the first one). The linter does not see an `\if` around an anchor: build the document with every combination of the data and check the boxes on the Signatures tab.
+The linter checks that every anchored entry has an anchor call or a call of a wrapper from `anchor_macros` with that name in the document files or in `common/`, that `common/anchors.tex` exists and the document loads it, and that an anchored `default_placement` has its fallback place. An author anchor `author__{{ a.slug }}` covers an entry on the `author` anchor. It warns when an anchor name in the sources is not a catalog slot id (a typo) and when one name appears twice in a file (the place follows the first one). The linter does not see an `\if` around an anchor: build the document with every combination of the data and check the boxes on the Signatures tab.
 
 ## For pack authors: the class of a new version
 

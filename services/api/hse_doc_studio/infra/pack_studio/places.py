@@ -11,6 +11,8 @@
 - новое место документа встаёт на строку шаблона, если в сборке есть якорь подписи с id слота на той же странице
   (`align: left`, запасное место это рамка сейчас); иначе место в мм;
 - метка даты на якоре двигается относительно линии так же; новая метка на строку ставится только явно (`anchor`);
+- у слота `per_author` на сборке со строками на каждого автора (`author__<слаг>`) рамка и линия это строка первого
+  автора: запись одна на всех, смещение от строки у всех авторов общее (`slot_anchors`);
 - координаты округляются до 1 мм, как у «Скопировать как пресет шаблона» (раздел 13); ширина места от 10 мм;
 - запись пишется одной строкой `{ ... }` в порядке ключей справки; запись, которой больше нет, уходит вместе с
   опустевшим `placements` или `default_dates`.
@@ -160,7 +162,17 @@ def _frame(
     )
 
 
-def _slot_view(raw: dict[str, Any], document: str | None, src: SourceAnchors) -> SlotPlaces | None:
+def slot_anchors(anchors: BuildAnchors | None, per_author: bool) -> BuildAnchors | None:
+    """Якоря сборки для слота: у слота `per_author`, когда сборка ставит строку на каждого автора (общий документ
+    команды, `author__<слаг>`, signing-route.md, 15.17.20), глазами первого автора в порядке чтения. Запись пака одна
+    на всех авторов, поэтому рамка первого автора и есть её смещение от строки: правка рамки двигает места всех."""
+    if anchors is None or not per_author:
+        return anchors
+    keys = anchors.author_keys()
+    return anchors.for_author(keys[0]) if keys else anchors
+
+
+def _slot_view(raw: dict[str, Any], document: str | None, anchors: BuildAnchors | None) -> SlotPlaces | None:
     try:
         slot = parse_signature_slot(raw)
     except _PARSE_ERRORS:
@@ -168,6 +180,7 @@ def _slot_view(raw: dict[str, Any], document: str | None, src: SourceAnchors) ->
     dates = _raw_dates(raw)
     frame = None
     if document is not None and document in slot.applies_to:
+        src = SourceAnchors(slot_anchors(anchors, slot.per_author))
         frame = _frame(slot, dict(dates).get(document, ()), document, src)
     return SlotPlaces(
         id=slot.id,
@@ -419,7 +432,7 @@ def _target(text: str, slot_id: str, anchors: BuildAnchors | None) -> _Target:
                 slot = parse_signature_slot(raw)
             except _PARSE_ERRORS as exc:
                 raise PlaceEditError(f"slot {slot_id!r} cannot be read: {exc}") from None
-            return _Target(text, index, raw, slot, _documents(data), anchors)
+            return _Target(text, index, raw, slot, _documents(data), slot_anchors(anchors, slot.per_author))
     raise PlaceEditError(f"slot {slot_id!r} is not in the catalog of this version")
 
 
@@ -610,8 +623,7 @@ class PackPlacesEditor:
 
     def describe(self, text: str, *, document: str | None, anchors: BuildAnchors | None) -> VersionPlaces:
         data = _load(text)
-        src = SourceAnchors(anchors)
-        views = (_slot_view(raw, document, src) for _, raw in _raw_slots(data))
+        views = (_slot_view(raw, document, anchors) for _, raw in _raw_slots(data))
         return VersionPlaces(
             documents=_documents(data),
             slots=tuple(view for view in views if view is not None),

@@ -486,7 +486,8 @@ def check_places(  # noqa: C901, PLR0912, PLR0915 — правила разде�
         share = ink.get(index)
         if share is not None and share > BUSY_INK and not hidden:
             add(Code.busy_area, ink=round(share, 3))
-        own = anchors.get(place.slot)
+        # Линия якоря места: по якорю записи (у автора команды `author__<слаг>`, 15.17.20), иначе по id слота.
+        own = (anchors.get(place.anchor) if place.anchor is not None else None) or anchors.get(place.slot)
         line_page, line = own if own is not None else (place.page, _pick_line(place, layout, claims))
         anchor_line = own is not None
         point = own is not None and own[1].width < _POINT_ANCHOR_MM
