@@ -17,8 +17,8 @@ pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git binary 
 SSE_LATEST = "2026.1.7"
 LATEST = {
     ("hse-cs-sse", "coursework"): SSE_LATEST,
-    ("hse-cs-se", "coursework"): "2026.1.3",
-    ("hse-cs-se", "vkr"): "2026.1.3",
+    ("hse-cs-se", "coursework"): "2026.1.4",
+    ("hse-cs-se", "vkr"): "2026.1.4",
     ("hse-cs-se", "pp"): "2026.1.1",
 }
 
@@ -258,6 +258,9 @@ async def test__real_coursework__2026_1_4_project_gets_anchors_and_presets_in_pa
         ("hse-cs-sse", "coursework", "2026.1.5", "2026.1.6", "ru"),
         ("hse-cs-se", "coursework", "2026.1.1", "2026.1.2", "ru"),
         ("hse-cs-se", "vkr", "2026.1.1", "2026.1.2", "ru"),
+        # 2026.1.4: английские подсказки полей и «Соруководитель», файлы шаблона те же, что в 2026.1.3.
+        ("hse-cs-se", "coursework", "2026.1.3", "2026.1.4", "ru"),
+        ("hse-cs-se", "vkr", "2026.1.3", "2026.1.4", "ru"),
         ("hse-cs-se", "pp", "2026.1", "2026.1.1", "en"),
     ],
 )
@@ -334,7 +337,7 @@ async def test__real_template__signature_anchors_patch_changes_only_anchor_lines
     base = f"/api/v1/projects/{created.json()['id']}/template-update"
 
     status = (await test_app.get(base)).json()
-    assert status["recommended"]["version"]["version"] == patched
+    assert status["recommended"]["version"]["version"] == LATEST[(pack_id, template_id)]
     assert status["recommended"]["update_class"] == "patch"
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": patched})).json()

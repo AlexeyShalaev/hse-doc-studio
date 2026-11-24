@@ -101,6 +101,8 @@ class PackStudioErrorCode(StrEnum):
     outcome_element_not_found = "outcome_element_not_found"
     # Срез O7: ответ «до и после» или матрицы больше предела размера (413, `limit` и `size` в байтах)
     outcome_too_large = "outcome_too_large"
+    # «Обновить» у пространства без ветки: база выбрана, а дерево не сдвинуто из-за несохранённых правок (карточка)
+    refresh_dirty = "refresh_dirty"
 
 
 _C = PackStudioErrorCode
@@ -391,6 +393,17 @@ _TABLE: dict[PackStudioErrorCode, tuple[int, str, str]] = {
         413,
         "Ответ слишком большой: выберите меньше сценариев.",
         "The response is too large: select fewer scenarios.",
+    ),
+    _C.refresh_dirty: (
+        409,
+        (
+            "Основная ветка выбрана, но файлы пространства остались прежними: есть несохранённые правки. Сохраните "
+            "версию и заберите новое из основной ветки или отмените правки, затем обновите снова."
+        ),
+        (
+            "The main branch was fetched, but the workspace files stayed as they were: there are unsaved edits. "
+            "Save a version and take the news from the main branch, or discard the edits, then refresh again."
+        ),
     ),
 }
 

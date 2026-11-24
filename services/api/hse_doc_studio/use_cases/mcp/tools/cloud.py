@@ -20,11 +20,11 @@ from hse_doc_studio.use_cases.git_sync.cloud_projects import (
     CloudServerNotConnectedError,
     parse_cloud_project_address,
 )
-from hse_doc_studio.use_cases.mcp.tools._base import McpTool, int_arg, json_result, optional_text
+from hse_doc_studio.use_cases.mcp.tools._base import MCP_MAX_WAIT_S, McpTool, json_result, optional_text, wait_arg
 
-# По умолчанию меньше таймаута запроса у клиентов MCP (60 с в SDK): иначе клиент оборвёт вызов раньше ответа.
+# Меньше таймаута запроса у клиентов MCP (60 с в SDK): иначе клиент оборвёт вызов раньше ответа. Больший `wait_s`
+# урезается до MCP_MAX_WAIT_S.
 DEFAULT_WAIT_S = 45
-MAX_WAIT_S = 240
 
 
 def _not_connected(host: str | None) -> str:
@@ -110,7 +110,9 @@ class CloneCloudProjectTool(McpTool):
             "проекта (https://<сервер>/projects/<id>/) или project_id, если сервер уже подключён; server нужен, "
             "только если подключено несколько серверов. Вход на сервер берётся сохранённый, токен не нужен. "
             "Проект попадает в стандартную папку и остаётся связан с сервером. Если проект уже на компьютере, "
-            "ничего не скачивается."
+            f"ничего не скачивается. Ждёт итог до wait_s секунд (не больше {MCP_MAX_WAIT_S}: больший урезается, "
+            "иначе клиент MCP оборвёт вызов по таймауту); если скачивание ещё идёт (status: running с "
+            "operation_id), повторный вызов с теми же аргументами ждёт ту же операцию, а не начинает новую."
         ),
         parameters={
             "type": "object",
@@ -124,7 +126,10 @@ class CloneCloudProjectTool(McpTool):
                 "wait_s": {
                     "type": "integer",
                     "default": DEFAULT_WAIT_S,
-                    "description": f"Сколько секунд ждать окончания скачивания (0..{MAX_WAIT_S})",
+                    "description": (
+                        f"Сколько секунд ждать окончания скачивания в этом вызове (0..{MCP_MAX_WAIT_S}, больше "
+                        "урезается); дольше: повторный вызов"
+                    ),
                 },
             },
         },
@@ -137,7 +142,7 @@ class CloneCloudProjectTool(McpTool):
             address = parse_cloud_project_address(
                 optional_text(args, "url"), optional_text(args, "project_id"), optional_text(args, "server")
             )
-            wait_s = int_arg(args, "wait_s", DEFAULT_WAIT_S, lo=0, hi=MAX_WAIT_S)
+            wait_s = wait_arg(args, DEFAULT_WAIT_S)
             outcome = await (await self._deps.get(CloneCloudProjectUC)).execute(address, wait_s=wait_s)
         except (CloudAddressError, CloudServerNotConnectedError, NotFoundError, StudioServerError, GitSyncError) as exc:
             return ToolResult.error(_refusal(exc))

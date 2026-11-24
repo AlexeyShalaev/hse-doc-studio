@@ -23,11 +23,10 @@ from hse_doc_studio.use_cases.git_sync.get_conflicts import GetConflictsInput, G
 from hse_doc_studio.use_cases.git_sync.operations import GetOperationUC
 from hse_doc_studio.use_cases.git_sync.start_sync import StartSyncInput, StartSyncUC
 from hse_doc_studio.use_cases.git_sync.status import GetGitStatusInput, GetGitStatusUC
-from hse_doc_studio.use_cases.mcp.tools._base import McpTool, int_arg, json_result, project_schema
+from hse_doc_studio.use_cases.mcp.tools._base import MCP_MAX_WAIT_S, McpTool, json_result, project_schema, wait_arg
 
-# Ожидание итога в одном вызове: по умолчанию меньше таймаута запроса у клиентов MCP (60 с в SDK).
+# Ожидание итога в одном вызове: меньше таймаута запроса у клиентов MCP (60 с в SDK), не дольше MCP_MAX_WAIT_S.
 SYNC_WAIT_S: Final = 45
-SYNC_MAX_WAIT_S: Final = 240
 _POLL_S = 0.5
 # Сколько путей файлов попадает в ответ; остальные видны числом.
 _MAX_LISTED: Final = 50
@@ -64,9 +63,12 @@ class GitSyncTool(McpTool):
         name="git_sync",
         description=(
             "Синхронизировать проект с git-remote, как кнопка синхронизации: сохранить снимок, забрать чужие "
-            "изменения (pull) и отправить свои (push). Ждёт итог до wait_s секунд; если не дождался, ответ "
-            "status: running, повторный вызов присоединится к той же синхронизации. Итог: outcome (up_to_date, "
-            "pushed, fast_forwarded, merged, conflicts), сколько версий получено и отправлено. При конфликтах "
+            f"изменения (pull) и отправить свои (push). Ждёт итог до wait_s секунд (не больше {MCP_MAX_WAIT_S}: "
+            "больший урезается, иначе клиент MCP оборвёт вызов по таймауту); если не дождался, ответ status: "
+            "running с operation_id, и повторный вызов присоединится к той же синхронизации, а не начнёт новую. "
+            "Долгую синхронизацию начните без ожидания (wait_s: 0) или с коротким и вызывайте снова. Итог: "
+            "outcome (up_to_date, pushed, fast_forwarded, merged, conflicts), сколько версий получено и отправлено. "
+            "При конфликтах "
             "отправка не делается, в ответе файлы с конфликтами; решаются они в Студии (кнопка «Разобрать»). "
             'Пример: {"project_id": "<uuid>", "wait_s": 45}.'
         ),
@@ -75,7 +77,10 @@ class GitSyncTool(McpTool):
                 "wait_s": {
                     "type": "integer",
                     "default": SYNC_WAIT_S,
-                    "description": f"Сколько секунд ждать итога (0..{SYNC_MAX_WAIT_S})",
+                    "description": (
+                        f"Сколько секунд ждать итога в этом вызове (0..{MCP_MAX_WAIT_S}, больше урезается); "
+                        "дольше: повторный вызов"
+                    ),
                 }
             }
         ),
@@ -83,7 +88,7 @@ class GitSyncTool(McpTool):
     kind = ToolKind.exec_
 
     async def handle(self, ctx: AgentToolContext, args: dict[str, object]) -> ToolResult:
-        wait_s = int_arg(args, "wait_s", SYNC_WAIT_S, lo=0, hi=SYNC_MAX_WAIT_S)
+        wait_s = wait_arg(args, SYNC_WAIT_S)
         try:
             operation_id, joined = await self._start(ctx)
         except GitSyncError as exc:

@@ -24,7 +24,8 @@
 - локальная команда, которая всё же упёрлась в недостающий объект («could not fetch <oid> from promisor remote»),
   догружает его тем же путём и повторяется. Так чинятся и пространства, созданные до этой правки;
 - состояние ветки (`status`) сравнивает с базой только идентификаторы объектов (`diff-index --raw`) и хэши файлов
-  рабочего дерева, а не текст.
+  рабочего дерева, а не текст. Сравнение идёт с точкой расхождения с базой (`merge-base`, как `base...HEAD`): файлы,
+  которые появились или изменились только в базе после клона, правками пространства не считаются.
 """
 
 from __future__ import annotations
@@ -376,7 +377,9 @@ class PackWorkspaceGit:
             target=target,
         )
         uncommitted = _parse_porcelain(porcelain, packs_path)
-        changed = {c.path: c for c in await self._changed_against(dirs, target, base, packs_path)}
+        # Свои отличия считаются от точки расхождения с базой: пространство, отставшее от базы, без правок чисто.
+        fork_point = await self._fork_point(dirs, base)
+        changed = {c.path: c for c in await self._changed_against(dirs, target, fork_point, packs_path)}
         for change in uncommitted:
             if change.status is ChangeStatus.added:
                 changed.setdefault(change.path, change)
@@ -503,6 +506,19 @@ class PackWorkspaceGit:
         await self._local(dirs, [*self._tree(dirs), "clean", "-fdq", "--", "."], target=target)
         return await self._head(dirs)
 
+    async def advance_to_base(self, dirs: WorkspaceDirs, target: RemoteTarget, *, base_branch: str) -> str:
+        base = remote_ref(_branch(base_branch))
+        # Без --force: правку на диске, которую checkout перезаписал бы, git не трогает и отказывает.
+        await self._runner.run(
+            [*self._tree(dirs), "checkout", "--quiet", "--detach", "--no-recurse-submodules", base],
+            op=GitOp.fetch,
+            git_dir=dirs.git,
+            target=target,
+            timeout_s=self._config.fetch_timeout_s,
+        )
+        await self._hydrate(dirs, target)
+        return await self._head(dirs)
+
     async def base_registries(
         self, dirs: WorkspaceDirs, target: RemoteTarget, *, base_branch: str, paths: Sequence[str]
     ) -> dict[str, str]:
@@ -530,8 +546,17 @@ class PackWorkspaceGit:
         names = [name for name in untracked.decode("utf-8", errors="replace").split("\0") if name]
         if names:
             await self._local(dirs, [*self._tree(dirs), "add", "--intent-to-add", "--", *names], target=target)
+        fork_point = await self._fork_point(dirs, base)
         result = await self._runner.run(
-            [*self._tree(dirs), "diff", "--no-color", "--no-ext-diff", "--no-textconv", base, *_scope(packs_path)],
+            [
+                *self._tree(dirs),
+                "diff",
+                "--no-color",
+                "--no-ext-diff",
+                "--no-textconv",
+                fork_point,
+                *_scope(packs_path),
+            ],
             op=GitOp.fetch,
             git_dir=dirs.git,
             target=target,
@@ -655,6 +680,13 @@ class PackWorkspaceGit:
             hashes = result.stdout.decode("ascii", errors="replace").split()
             same.update(e.path for e, oid in zip(batch, hashes, strict=False) if oid == e.base_oid)
         return same
+
+    async def _fork_point(self, dirs: WorkspaceDirs, base: str) -> str:
+        """Точка расхождения HEAD с базой (`git merge-base`), как левая сторона `base...HEAD`. Общей истории нет
+        (такого в клоне базы не бывает): сама база. Нужны только коммиты, блобы не читаются."""
+        result = await self._run_local(dirs, ["merge-base", base, "HEAD"], check=False)
+        sha = result.stdout.decode("ascii", errors="replace").strip()
+        return sha if result.returncode == 0 and _SHA.fullmatch(sha) else base
 
     @staticmethod
     def _tree(dirs: WorkspaceDirs) -> list[str]:

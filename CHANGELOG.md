@@ -6,6 +6,12 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.40.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.40.0...v0.40.1) - 2026-11-24
+
+- Pack Studio: Refresh base now also works in a space without a work branch. With no unsaved edits the space moves to the latest master by itself; with edits, the files are left alone and the space card shows a clear error with a hint. After a background refresh the interface reloads the files by itself instead of showing stale ones.
+- Pack Studio: the list of changed files is computed from the point where the space diverged from master, as in a GitHub PR. Files that merely appeared in the new master no longer look deleted, and the number of changes is the same on every screen and in MCP.
+- MCP: a single tool call waits at most 50 seconds (preview build, git sync, cloning a cloud project). For long operations start them and wait with repeated calls; a larger value is accepted and capped at 50 seconds.
+
 ## [0.40.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.39.0...v0.40.0) - 2026-11-23
 
 - Access tokens: the permissions of an existing token can be changed. In the account settings a token has an Edit permissions button: the same checkboxes as on creation and a summary of what is added and removed. The token itself stays the same and the new permissions apply from the next request; after changing MCP permissions, reconnect the AI client so it sees the new tools. Permissions can only be changed from a browser session, a token cannot raise its own rights, and every change is written to the audit log.

@@ -1,6 +1,24 @@
 {
   "releases": [
     {
+      "version": "0.40.1",
+      "date": "2026-11-24",
+      "notes": [
+        {
+          "ru": "Студия паков: «Обновить базу» теперь работает и в пространстве без рабочей ветки. Если несохранённых правок нет, пространство само переходит на свежий master; если правки есть, файлы не трогаются, а в карточке пространства показывается понятная ошибка с подсказкой. После фонового обновления интерфейс сам перечитывает файлы, раньше он показывал старые.",
+          "en": "Pack Studio: Refresh base now also works in a space without a work branch. With no unsaved edits the space moves to the latest master by itself; with edits, the files are left alone and the space card shows a clear error with a hint. After a background refresh the interface reloads the files by itself instead of showing stale ones."
+        },
+        {
+          "ru": "Студия паков: список изменённых файлов считается от точки, где пространство отошло от master, как в PR на GitHub. Файлы, которые просто появились в новом master, больше не выглядят удалёнными, а число изменений одинаково на всех экранах и в MCP.",
+          "en": "Pack Studio: the list of changed files is computed from the point where the space diverged from master, as in a GitHub PR. Files that merely appeared in the new master no longer look deleted, and the number of changes is the same on every screen and in MCP."
+        },
+        {
+          "ru": "MCP: один вызов тула ждёт не дольше 50 секунд (сборка превью, синхронизация git, клонирование облачного проекта). Для длинных операций запустите их и ждите повторными вызовами, больший срок принимается и урезается до 50 секунд.",
+          "en": "MCP: a single tool call waits at most 50 seconds (preview build, git sync, cloning a cloud project). For long operations start them and wait with repeated calls; a larger value is accepted and capped at 50 seconds."
+        }
+      ]
+    },
+    {
       "version": "0.40.0",
       "date": "2026-11-23",
       "notes": [

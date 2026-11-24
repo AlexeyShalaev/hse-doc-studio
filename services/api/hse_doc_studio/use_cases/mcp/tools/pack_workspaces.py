@@ -159,8 +159,9 @@ class PackWorkspaceRefreshTool(PackTool):
         description=(
             "Студия шаблонов: «Обновить базу»: выборка базовой ветки пространства над git и пересчёт выпущенных "
             "версий; у неудачного или прерванного клона клон заново. Идёт в фоне: проверяйте "
-            "pack_list_workspaces (busy). Ваши правки и ветка не меняются: влить базу в ветку делает "
-            "pack_git_merge_base."
+            "pack_list_workspaces (busy). Пространство без рабочей ветки и без правок переезжает на свежую базу; "
+            "с несохранёнными правками дерево не трогается, в error код refresh_dirty с подсказкой. Рабочая ветка "
+            "не меняется: влить базу в неё делает pack_git_merge_base."
         ),
         parameters=_schema({"workspace_id": _WORKSPACE_ID, "format": FORMAT_PROP}, ("workspace_id",)),
     )
