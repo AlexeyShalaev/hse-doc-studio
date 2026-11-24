@@ -62,6 +62,7 @@ from hse_doc_studio.use_cases.jobs.runner_disk import RunnerDiskUC
 from hse_doc_studio.use_cases.jobs.runners import RunnerRegistry
 from hse_doc_studio.use_cases.runner_install import (
     InstallJobStore,
+    RunnerFleetService,
     RunnerInstallService,
     SshInstallService,
     SshSessionStore,
@@ -156,6 +157,17 @@ class _Stack:
             poll_s=0.01,
             verify_timeout_s=0.1,
         )
+        self.fleet = RunnerFleetService(
+            self.registry,
+            self.install,
+            self.ssh,
+            self.settings,
+            users.audit,
+            NoopUow(),
+            studio_url="https://studio.example",
+            busy_poll_s=0.01,
+            job_poll_s=0.01,
+        )
         self.cluster = FakeClusterReader()
         self.background: set[asyncio.Task[None]] = set()
         self.isolation = RunnerIsolationSettings(
@@ -195,6 +207,10 @@ class _Provider(Provider):
     @provide
     def ssh_install(self) -> SshInstallService:
         return self.s.ssh
+
+    @provide
+    def runner_fleet(self) -> RunnerFleetService:
+        return self.s.fleet
 
     @provide
     def list_runners(self) -> ListRunnersUC:
@@ -372,6 +388,11 @@ _ROUTES: list[tuple[str, str, Any]] = [
     ("DELETE", "/api/admin/runner-install/local/docker/hse-runner-1", None),
     ("POST", "/api/admin/runner-install/local/docker/hse-runner-1/upgrade", None),
     ("GET", f"/api/admin/runner-install/jobs/{_ANY_ID}", None),
+    ("GET", "/api/admin/runner-install/fleet", None),
+    ("POST", "/api/admin/runner-install/fleet/upgrade", {"runner_ids": ["abc"]}),
+    ("POST", "/api/admin/runner-install/fleet/dismiss", {"version": "1.2.3"}),
+    ("GET", "/api/admin/runner-install/fleet/batches/abc", None),
+    ("POST", "/api/admin/runner-install/fleet/batches/abc/cancel", None),
     ("GET", "/api/admin/runner-install/ssh", None),
     (
         "POST",
@@ -1461,3 +1482,133 @@ async def test__runner_isolation__answers_carry_no_secrets(stack: _Stack) -> Non
         assert "hsrn_" not in text
         assert "hsrt_" not in text
         assert "token_hash" not in text
+
+
+# ---- Обновить все раннеры разом ----
+
+
+async def _fleet_batch(stack: _Stack, batch_id: str, headers: Any) -> dict[str, Any]:
+    for _ in range(300):
+        batch = (await stack.client.get(f"/api/admin/runner-install/fleet/batches/{batch_id}", headers=headers)).json()
+        if batch["state"] != "running":
+            return batch
+        await asyncio.sleep(0.01)
+    raise AssertionError("fleet batch did not finish")
+
+
+async def test__runner_fleet__plan_lists_outdated_runners_and_the_offer(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    runner_id = await _installed_runner(stack)
+    await _registered(stack, version="1.2.3", name="current")
+    await _registered(stack, version="0.9.0", name="by-hand")
+
+    response = await stack.client.get("/api/admin/runner-install/fleet", headers=boss)
+
+    body = response.json()
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-store"
+    assert (body["server_version"], body["offer"], body["dismissed_version"], body["batch"]) == (
+        "1.2.3",
+        True,
+        None,
+        None,
+    )
+    assert [(i["name"], i["kind"], i["version"], i["manual_reason"]) for i in body["items"]] == [
+        ("by-hand", "manual", "0.9.0", "unknown"),
+        ("hse-runner-abc123", "docker", "1.0.0", None),
+    ]
+    assert body["items"][1]["runner_id"] == runner_id
+    assert all(set(i) >= {"target_version", "status", "running_jobs"} for i in body["items"])
+
+
+async def test__runner_fleet__upgrade_updates_the_runners_and_writes_the_audit(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    runner_id = await _installed_runner(stack)
+    _comes_back(stack, runner_id)
+
+    started = await stack.client.post(
+        "/api/admin/runner-install/fleet/upgrade", json={"runner_ids": [runner_id]}, headers=boss
+    )
+    batch = await _fleet_batch(stack, started.json()["id"], boss)
+    after = (await stack.client.get("/api/admin/runner-install/fleet", headers=boss)).json()
+
+    assert started.status_code == 202
+    assert batch["state"] == "finished"
+    assert [(i["name"], i["state"], i["from_version"], i["to_version"]) for i in batch["items"]] == [
+        ("hse-runner-abc123", "succeeded", "1.0.0", "1.2.3")
+    ]
+    assert (after["offer"], after["items"], after["batch"]) == (False, [], None)
+    actions = [e.action for e in await stack.users.audit.list()]
+    assert {"runner_fleet.upgrade.start", "runner_fleet.upgrade.finished", "runner_install.local.upgrade"} <= set(
+        actions
+    )
+
+
+async def test__runner_fleet__manual_unknown_and_empty_selections_are_refused(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    manual = await _registered(stack, version="0.9.0", name="by-hand")
+
+    refused = await stack.client.post(
+        "/api/admin/runner-install/fleet/upgrade", json={"runner_ids": [manual]}, headers=boss
+    )
+    empty = await stack.client.post("/api/admin/runner-install/fleet/upgrade", json={"runner_ids": []}, headers=boss)
+
+    assert refused.status_code == 422
+    assert refused.json()["detail"] == {"code": "input_invalid", "field": "runner_ids", "runner_ids": [manual]}
+    assert empty.status_code == 422
+    assert "runner_fleet.upgrade.start" not in [e.action for e in await stack.users.audit.list()]
+
+
+async def test__runner_fleet__second_run_while_one_goes_is_a_conflict_and_cancel_stops_it(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    runner_id = await _installed_runner(stack)
+    stack.install_host.upgrade_gate = asyncio.Event()
+
+    started = await stack.client.post(
+        "/api/admin/runner-install/fleet/upgrade", json={"runner_ids": [runner_id]}, headers=boss
+    )
+    again = await stack.client.post(
+        "/api/admin/runner-install/fleet/upgrade", json={"runner_ids": [runner_id]}, headers=boss
+    )
+    plan = (await stack.client.get("/api/admin/runner-install/fleet", headers=boss)).json()
+    for _ in range(300):
+        if plan["batch"]["items"][0]["state"] == "running":
+            break
+        await asyncio.sleep(0.01)
+        plan = (await stack.client.get("/api/admin/runner-install/fleet", headers=boss)).json()
+    cancelled = await stack.client.post(
+        f"/api/admin/runner-install/fleet/batches/{started.json()['id']}/cancel", headers=boss
+    )
+    stack.install_host.upgrade_fail_with = InstallError("image_pull_failed")
+    stack.install_host.upgrade_gate.set()
+    batch = await _fleet_batch(stack, started.json()["id"], boss)
+
+    assert (again.status_code, again.json()["detail"]) == (409, {"code": "fleet_busy"})
+    assert (plan["offer"], plan["batch"]["id"]) == (True, started.json()["id"])
+    assert cancelled.json()["cancel_requested"] is True
+    assert [(i["state"], i["code"]) for i in batch["items"]] == [("failed", "image_pull_failed")]
+
+
+async def test__runner_fleet__dismiss_hides_the_offer_for_everyone(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+    other = await stack.users.add("other", admin=True)
+    await _installed_runner(stack)
+
+    dismissed = await stack.client.post(
+        "/api/admin/runner-install/fleet/dismiss", json={"version": "1.2.3"}, headers=boss
+    )
+    seen = (await stack.client.get("/api/admin/runner-install/fleet", headers=other)).json()
+
+    assert dismissed.status_code == 204
+    assert (seen["offer"], seen["dismissed_version"], len(seen["items"])) == (False, "1.2.3", 1)
+    entry = next(e for e in await stack.users.audit.list() if e.action == "runner_fleet.offer.dismiss")
+    assert entry.target == "1.2.3"
+
+
+async def test__runner_fleet__unknown_batch_is_not_found(stack: _Stack) -> None:
+    boss = await stack.users.add("boss", admin=True)
+
+    read = await stack.client.get("/api/admin/runner-install/fleet/batches/nope", headers=boss)
+    cancel = await stack.client.post("/api/admin/runner-install/fleet/batches/nope/cancel", headers=boss)
+
+    assert (read.status_code, cancel.status_code) == (404, 404)

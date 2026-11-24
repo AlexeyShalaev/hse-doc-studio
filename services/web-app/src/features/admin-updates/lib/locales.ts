@@ -4,4 +4,4 @@ import { loadAdminNamespaces } from "@shared/lib";
 // оболочка по маршруту раздела (pages/AdminPage/AdminApp.tsx); галерея разработчика и
 // тесты грузят весь набор раздела этой функцией.
 export const ensureAdminUpdatesLocales = (): Promise<void> =>
-  loadAdminNamespaces(["updates"]);
+  loadAdminNamespaces(["updates", "runnerInstall"]);

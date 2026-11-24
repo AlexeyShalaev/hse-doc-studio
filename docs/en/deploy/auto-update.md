@@ -49,6 +49,8 @@ For automatic installs you set: the largest step without a human (patches only, 
 
 Something went wrong in steps 4-5: the previous images come back automatically. If migrations already changed the database schema, the database is first restored from the snapshot (the old image does not start on a newer schema); no data is lost because the api was stopped. Administrators get a notification and the history shows the run log.
 
+**Runners after the update.** The updater updates the services of the stack (the api and the runner from compose). Runners installed separately (from the admin area, over SSH, with the chart, by hand) stay on their old version. When the server is already on the new version, the Updates page offers to update them all at once ([Update all runners at once](runners.md#runner-fleet-upgrade)): the runners the Studio updates itself go with one button, the rest are marked “Update manually” in the window.
+
 ## Manual rollback
 
 The "Roll back to X" button is available while the version of the last successful update is installed. If the update changed the database schema, the rollback restores the snapshot taken before it: **everything written after the update is lost**, so an explicit confirmation is required. Without a schema change the rollback only brings back the images.

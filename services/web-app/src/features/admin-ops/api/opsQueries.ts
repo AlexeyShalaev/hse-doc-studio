@@ -30,6 +30,9 @@ export const opsKeys = {
   installJob: (id: string) =>
     ["admin", "ops", "runner-install", "job", id] as const,
   installInstances: ["admin", "ops", "runner-install", "instances"] as const,
+  fleetPlan: ["admin", "ops", "runner-install", "fleet"] as const,
+  fleetBatch: (id: string) =>
+    ["admin", "ops", "runner-install", "fleet-batch", id] as const,
   sshCredentials: [
     "admin",
     "ops",
@@ -297,6 +300,58 @@ export const useLocalInstances = (enabled = true) =>
     refetchInterval: POLL_MS * 6,
   });
 
+const FLEET_POLL_MS = 2000;
+
+/**
+ * Устаревшие раннеры и предложение «Обновить все». Сервер для каждого опрашивает Docker или кластер, поэтому
+ * без нужды не опрашивается: план читается при открытии окна и при заходе на страницу.
+ */
+export const useFleetPlan = (enabled = true) =>
+  useQuery({
+    queryKey: opsKeys.fleetPlan,
+    queryFn: () => opsApi.fleetPlan(),
+    enabled,
+    staleTime: 15_000,
+    retry: false,
+  });
+
+/** Ход общего обновления: опрос раз в две секунды, пока запуск не закончится. */
+export const useFleetBatch = (id: string | null) =>
+  useQuery({
+    queryKey: opsKeys.fleetBatch(id ?? ""),
+    queryFn: () => opsApi.fleetBatch(id ?? ""),
+    enabled: id !== null,
+    staleTime: 0,
+    gcTime: 0,
+    refetchInterval: (query) =>
+      query.state.data?.state === "finished" ? false : FLEET_POLL_MS,
+  });
+
+export const useFleetUpgrade = () =>
+  useMutation({
+    mutationFn: (runnerIds: string[]) => opsApi.fleetUpgrade(runnerIds),
+    gcTime: 0,
+  });
+
+export const useFleetCancel = () => {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => opsApi.fleetCancel(id),
+    onSuccess: (batch) => {
+      client.setQueryData(opsKeys.fleetBatch(batch.id), batch);
+    },
+  });
+};
+
+/** Отказ от предложения для версии Студии: план перечитывается, `offer` гаснет. */
+export const useFleetDismiss = () => {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (version: string) => opsApi.fleetDismiss(version),
+    onSuccess: () => client.invalidateQueries({ queryKey: opsKeys.fleetPlan }),
+  });
+};
+
 /** Перечитать установки, раннеров и сводку: после обновления меняются версия и состояние. */
 export const useRefreshRunners = () => {
   const client = useQueryClient();
@@ -305,6 +360,7 @@ export const useRefreshRunners = () => {
       opsKeys.installInstances,
       opsKeys.runners,
       opsKeys.runnerSummary,
+      opsKeys.fleetPlan,
     ])
       void client.invalidateQueries({ queryKey });
   }, [client]);

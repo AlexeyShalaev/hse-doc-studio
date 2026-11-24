@@ -267,6 +267,10 @@ _AUDITED_ELSEWHERE: dict[tuple[str, str], str] = {
     ("POST", "/api/admin/runner-install/local/{id}"): "runner_install.local.start",
     ("DELETE", "/api/admin/runner-install/local/{id}/{id}"): "runner_install.local.remove",
     ("POST", "/api/admin/runner-install/local/{id}/{id}/upgrade"): "runner_install.local.upgrade",
+    # «Обновить все раннеры»: проверяют test_fleet и test_admin_ops_api
+    ("POST", "/api/admin/runner-install/fleet/upgrade"): "runner_fleet.upgrade.start",
+    ("POST", "/api/admin/runner-install/fleet/dismiss"): "runner_fleet.offer.dismiss",
+    ("POST", "/api/admin/runner-install/fleet/batches/{id}/cancel"): "runner_fleet.upgrade.cancel",
     ("POST", "/api/admin/runner-install/ssh/probe"): "runner_install.ssh.probe",
     ("POST", "/api/admin/runner-install/ssh/{id}/confirm"): "runner_install.ssh.confirm",
     ("POST", "/api/admin/runner-install/ssh/{id}/install"): "runner_install.ssh.start",

@@ -166,5 +166,67 @@
       "unexpected": "an unexpected error, see the Studio log for details."
     },
     "rolledBackOffline": "The runner is back on v{{version}} but has not come online: check the pod or container and the runner log."
+  },
+  "fleet": {
+    "title": "Update runners to v{{version}}",
+    "lead": "The Studio runs v{{version}}, and some runners are still on older versions. Update them all at once instead of one by one.",
+    "found_one": "{{count}} runner is out of date.",
+    "found_other": "{{count}} runners are out of date.",
+    "none": "All runners the Studio can update are already on the current version.",
+    "versions": "now v{{from}}, will be v{{to}}",
+    "kind": {
+      "docker": "Docker",
+      "kubernetes": "Kubernetes",
+      "ssh": "SSH"
+    },
+    "manualBadge": "Update manually",
+    "manual": {
+      "helm": "Deployed in the cluster not from the admin area (a Helm chart or your own manifest). The Studio does not touch it: update the image with helm upgrade or in your manifest.",
+      "container": "Started as a container not from the admin area (docker run or compose). Pull the image of the new version and recreate the container.",
+      "host": "Runs as a service on the machine. Run the runner install script on it again: it pulls the new image and restarts the service.",
+      "unknown": "The Studio does not know how this runner was installed and cannot update it. Update it the same way it was installed."
+    },
+    "busyNote": "A build is running ({{count}} jobs). The runner will be updated after it.",
+    "silentNote": "Offline, so not selected by default. If you select it, the Studio will try to update it but may not see it come back.",
+    "how": "Runners are updated one at a time, the others keep taking builds. A runner with a build in progress waits for it for up to 15 minutes and is then skipped: the Studio never cuts a build off. An error on one runner does not stop the others; if an update fails, the Studio puts the previous version back (runners installed over SSH are not rolled back).",
+    "restart": "Each runner restarts for the time of its update. This button does not touch the “Update manually” runners.",
+    "notNow": "Not now",
+    "startAll": "Update all",
+    "startSelected": "Update selected ({{count}})",
+    "running": "Updating: {{done}} of {{total}} done.",
+    "summary": "Done: {{done}} updated, {{skipped}} skipped, {{failed}} failed.",
+    "cancelRun": "Stop after the current one",
+    "cancelRequested": "Stopping",
+    "hide": "Hide",
+    "close": "Close",
+    "item": {
+      "pending": "waiting for its turn",
+      "waiting": "waiting for the build to finish",
+      "running": "updating",
+      "succeeded": "updated to v{{version}}",
+      "failed": "not updated",
+      "skipped": "skipped"
+    },
+    "reason": {
+      "busy": "The runner had a build and did not free up within 15 minutes. Update it later.",
+      "cancelled": "The run was stopped before this runner.",
+      "install_busy": "The host is busy with another update or install. Update the runner later.",
+      "install_unavailable": "Docker or the cluster is not available to the Studio right now.",
+      "job_timeout": "The update did not finish in 30 minutes. Check the runner.",
+      "ssh_disabled": "Installing over SSH is turned off.",
+      "studio_url_unknown": "The public address of the Studio is not set, and a runner updated over SSH has to be told it.",
+      "unknown": "The update failed. The audit log has the details."
+    },
+    "rolledBack": "The previous version was put back.",
+    "rollbackFailed": "Putting the previous version back failed too.",
+    "loadFailed": "Could not load the list of runners.",
+    "busy": "A fleet update is already running. Wait for it to finish.",
+    "invalid": "The list of runners has changed. Close the window and open it again.",
+    "startFailed": "Could not start the update.",
+    "banner": {
+      "title_one": "{{count}} runner can be updated at once",
+      "title_other": "{{count}} runners can be updated at once",
+      "action": "Update all runners"
+    }
   }
 }

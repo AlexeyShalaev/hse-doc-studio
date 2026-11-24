@@ -11,8 +11,10 @@ from hse_doc_studio.core.agent.entities import AgentToolContext, ToolResult, Too
 from hse_doc_studio.core.enums import ToolKind
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.identity.entities import AuditQuery, User, UserQuery
+from hse_doc_studio.core.jobs.errors import RunnerNotFoundError
 from hse_doc_studio.core.listing import Window
 from hse_doc_studio.core.mail.journal import TEMPLATE_MAX, MailLogQuery, MailStatus
+from hse_doc_studio.core.runner_install.fleet import FleetBatch, FleetPlan
 from hse_doc_studio.use_cases.admin.audit import ListAuditUC
 from hse_doc_studio.use_cases.admin.ops_queue import CancelJobUC, QueueSummaryUC
 from hse_doc_studio.use_cases.admin.ops_runners import RunnerSummaryUC
@@ -21,12 +23,14 @@ from hse_doc_studio.use_cases.mail.log import ListMailLogUC, MailLogView
 from hse_doc_studio.use_cases.mcp.tools._base import (
     ArgumentError,
     McpTool,
+    bool_arg,
     int_arg,
     json_result,
     optional_text,
     text_arg,
     uuid_arg,
 )
+from hse_doc_studio.use_cases.runner_install.fleet import FleetBusyError, FleetSelectionError, RunnerFleetService
 
 _USER_ID = {"type": "object", "properties": {"user_id": {"type": "string"}}, "required": ["user_id"]}
 
@@ -277,3 +281,140 @@ class AdminCancelJobTool(_AdminTool):
     async def handle(self, ctx: AgentToolContext, args: dict[str, object]) -> ToolResult:
         job_id: UUID = uuid_arg(args, "job_id")
         return json_result(await (await self._deps.get(CancelJobUC)).execute(require_actor(), job_id))
+
+
+def _fleet_batch(batch: FleetBatch) -> dict[str, object]:
+    return {
+        "id": batch.id,
+        "state": batch.state,
+        "target_version": batch.target_version,
+        "created_at": batch.created_at,
+        "finished_at": batch.finished_at,
+        "cancel_requested": batch.cancel_requested,
+        "runners": [
+            {
+                "runner_id": i.runner_id,
+                "name": i.name,
+                "kind": i.kind,
+                "from_version": i.from_version,
+                "to_version": i.to_version,
+                "state": i.state,
+                "code": i.code,
+                "rolled_back": i.rolled_back,
+            }
+            for i in batch.items
+        ],
+    }
+
+
+def _fleet_plan(plan: FleetPlan) -> dict[str, object]:
+    return {
+        "server_version": plan.server_version,
+        "offer": plan.offer,
+        "dismissed_version": plan.dismissed_version,
+        "runners": [
+            {
+                "runner_id": c.runner_id,
+                "name": c.name,
+                "kind": c.kind,
+                "version": c.version,
+                "target_version": c.target_version,
+                "status": c.status,
+                "running_jobs": c.running_jobs,
+                "manual_reason": c.manual_reason,
+            }
+            for c in plan.items
+        ],
+        "batch": _fleet_batch(plan.batch) if plan.batch is not None else None,
+    }
+
+
+class AdminRunnerFleetTool(_AdminTool):
+    spec = ToolSpec(
+        name="admin_runner_fleet",
+        description=(
+            "Админ: какие раннеры установки старше Студии и чем каждый обновляется (kind: docker, kubernetes, ssh "
+            "обновляются отсюда, manual только вручную, подсказка в manual_reason), сколько сборок идёт на раннере "
+            "(running_jobs). С batch_id возвращает ход и итог запуска «Обновить все раннеры» (state, по раннерам "
+            "state, code, rolled_back). Личные раннеры людей не показываются."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {"batch_id": {"type": "string", "description": "Запуск из admin_runner_fleet_upgrade"}},
+        },
+    )
+    kind = ToolKind.read
+
+    async def handle(self, ctx: AgentToolContext, args: dict[str, object]) -> ToolResult:
+        service = await self._deps.get(RunnerFleetService)
+        batch_id = optional_text(args, "batch_id")
+        if batch_id is not None:
+            batch = service.batch(require_actor(), batch_id)
+            if batch is None:
+                raise _bad("запуск не найден (память Студии помнит последние запуски)", "batch not found")
+            return json_result(_fleet_batch(batch))
+        return json_result(_fleet_plan(await service.plan(require_actor())))
+
+
+class AdminRunnerFleetUpgradeTool(_AdminTool):
+    spec = ToolSpec(
+        name="admin_runner_fleet_upgrade",
+        description=(
+            "Админ: обновить раннеры установки до версии Студии по одному («Обновить все раннеры»). Либо runner_ids "
+            "(из admin_runner_fleet), либо all=true: все, что можно обновить отсюда. Раннер с идущей сборкой "
+            "обновляется после неё, не освободился за 15 минут, пропускается (code busy); сбой одного раннера не "
+            "останавливает остальных. Возвращает запуск сразу, ход читать admin_runner_fleet с batch_id. Раннеры "
+            "перезапускаются, их незаконченные сборки начинаются заново."
+        ),
+        parameters={
+            "type": "object",
+            "properties": {
+                "runner_ids": {"type": "array", "items": {"type": "string"}},
+                "all": {"type": "boolean", "default": False},
+            },
+        },
+    )
+    kind = ToolKind.exec_
+
+    async def handle(self, ctx: AgentToolContext, args: dict[str, object]) -> ToolResult:
+        service = await self._deps.get(RunnerFleetService)
+        actor = require_actor()
+        raw = args.get("runner_ids")
+        ids = [i.strip() for i in raw if isinstance(i, str) and i.strip()] if isinstance(raw, list) else []
+        if bool_arg(args, "all", False):
+            ids = [c.runner_id for c in (await service.plan(actor)).upgradable]
+        if not ids:
+            raise _bad(
+                "укажите runner_ids или all=true (обновлять отсюда нечего, если список пуст)",
+                "specify runner_ids or all=true (nothing to update from here if the list is empty)",
+            )
+        try:
+            batch = await service.start(actor, ids)
+        except FleetBusyError:
+            raise _bad("общее обновление раннеров уже идёт", "a fleet update is already running") from None
+        except FleetSelectionError as exc:
+            raise _bad(
+                f"эти раннеры нельзя обновить отсюда или их нет среди устаревших: {', '.join(exc.runner_ids)}",
+                f"these runners cannot be updated from here or are not outdated: {', '.join(exc.runner_ids)}",
+            ) from None
+        return json_result(_fleet_batch(batch))
+
+
+class AdminRunnerFleetCancelTool(_AdminTool):
+    spec = ToolSpec(
+        name="admin_runner_fleet_cancel",
+        description=(
+            "Админ: остановить общее обновление раннеров после текущего раннера; остальные пропускаются "
+            "(code cancelled). Уже идущее обновление раннера доделывается."
+        ),
+        parameters={"type": "object", "properties": {"batch_id": {"type": "string"}}, "required": ["batch_id"]},
+    )
+    kind = ToolKind.exec_
+
+    async def handle(self, ctx: AgentToolContext, args: dict[str, object]) -> ToolResult:
+        service = await self._deps.get(RunnerFleetService)
+        try:
+            batch = await service.cancel(require_actor(), text_arg(args, "batch_id"))
+        except RunnerNotFoundError:
+            raise _bad("запуск не найден", "batch not found") from None
+        return json_result(_fleet_batch(batch))
