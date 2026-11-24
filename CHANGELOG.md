@@ -6,6 +6,16 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.41.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.40.1...v0.41.0) (2026-11-24)
+
+
+### Features
+
+* **packs:** hse-cs-se 2026.1.4, английская справка и «Соруководитель» ([94ef3ba](https://github.com/AlexeyShalaev/hse-doc-studio/commit/94ef3ba390eda116363283d028c3b20ba10a8440))
+* **packs:** hse-cs-se 2026.1.4, английская справка и «Соруководитель» ([d72da97](https://github.com/AlexeyShalaev/hse-doc-studio/commit/d72da97d74366f62d545be13ce401f3d27e45bcf))
+* **packs:** hse-cs-sse coursework 2026.1.8 ([20bc088](https://github.com/AlexeyShalaev/hse-doc-studio/commit/20bc088849368fb12cff1ca6ad9a4fb623c7891f))
+* **packs:** hse-cs-sse coursework 2026.1.8, места подписей на титуле и «Соруководитель» ([43a79a4](https://github.com/AlexeyShalaev/hse-doc-studio/commit/43a79a4bf0cf8fd35fcead7f81db0a3fc0b5b849))
+
 ## [0.40.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.40.0...v0.40.1) - 2026-11-24
 
 - Pack Studio: Refresh base now also works in a space without a work branch. With no unsaved edits the space moves to the latest master by itself; with edits, the files are left alone and the space card shows a clear error with a hint. After a background refresh the interface reloads the files by itself instead of showing stale ones.
