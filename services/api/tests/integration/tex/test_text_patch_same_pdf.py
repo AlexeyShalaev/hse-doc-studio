@@ -74,6 +74,9 @@ _CASES = [
     # Якоря подписи и даты научного руководителя на титуле отчёта.
     _Case("hse-cs-sse", "coursework", "2026.1.6", "2026.1.7", "ru", ProjectKind.project),
     _Case("hse-cs-sse", "coursework", "2026.1.6", "2026.1.7", "en", ProjectKind.project),
+    # Места подписей на титуле отчёта и «Соруководитель»: файлы шаблона те же, меняются только манифест и его тексты.
+    _Case("hse-cs-sse", "coursework", "2026.1.7", "2026.1.8", "ru", ProjectKind.project),
+    _Case("hse-cs-sse", "coursework", "2026.1.7", "2026.1.8", "en", ProjectKind.project),
 ]
 _ESPD_SETS = [
     _Case("hse-cs-se", "coursework", "2026.1.1", "2026.1.2", "ru", ProjectKind.project),

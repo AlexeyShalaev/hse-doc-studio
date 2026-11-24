@@ -14,7 +14,7 @@ from tests.factories import project_api_payload
 pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git binary not available")
 
 # Последние выпущенные версии шаблонов (`default_version`): обновление рекомендует их.
-SSE_LATEST = "2026.1.7"
+SSE_LATEST = "2026.1.8"
 LATEST = {
     ("hse-cs-sse", "coursework"): SSE_LATEST,
     ("hse-cs-se", "coursework"): "2026.1.4",
@@ -256,6 +256,8 @@ async def test__real_coursework__2026_1_4_project_gets_anchors_and_presets_in_pa
     ("pack_id", "template_id", "current", "patched", "lang"),
     [
         ("hse-cs-sse", "coursework", "2026.1.5", "2026.1.6", "ru"),
+        # 2026.1.8: места подписей на титуле отчёта и «Соруководитель», файлы шаблона те же, что в 2026.1.7.
+        ("hse-cs-sse", "coursework", "2026.1.7", "2026.1.8", "ru"),
         ("hse-cs-se", "coursework", "2026.1.1", "2026.1.2", "ru"),
         ("hse-cs-se", "vkr", "2026.1.1", "2026.1.2", "ru"),
         # 2026.1.4: английские подсказки полей и «Соруководитель», файлы шаблона те же, что в 2026.1.3.
