@@ -7,20 +7,23 @@ import subprocess
 from pathlib import Path
 
 import pytest
+import yaml
 from httpx import AsyncClient
 
 from tests.factories import project_api_payload
 
 pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git binary not available")
 
-# Последние выпущенные версии шаблонов (`default_version`): обновление рекомендует их.
-SSE_LATEST = "2026.1.8"
-LATEST = {
-    ("hse-cs-sse", "coursework"): SSE_LATEST,
-    ("hse-cs-se", "coursework"): "2026.1.4",
-    ("hse-cs-se", "vkr"): "2026.1.4",
-    ("hse-cs-se", "pp"): "2026.1.1",
-}
+_PACKS = Path(__file__).resolve().parents[6] / "packs"
+
+
+def _default_version(pack_id: str, template_id: str) -> str:
+    """Версия по умолчанию из манифеста шаблона: обновление рекомендует её; тест не правят на каждом выпуске."""
+    manifest = _PACKS / pack_id / "templates" / template_id / "template.yaml"
+    return str(yaml.safe_load(manifest.read_text(encoding="utf-8"))["default_version"])
+
+
+SSE_LATEST = _default_version("hse-cs-sse", "coursework")
 
 
 @pytest.mark.parametrize(("template_id", "lang"), [("vkr", "ru"), ("coursework", "ru"), ("pp", "en")])
@@ -263,6 +266,9 @@ async def test__real_coursework__2026_1_4_project_gets_anchors_and_presets_in_pa
         # 2026.1.4: английские подсказки полей и «Соруководитель», файлы шаблона те же, что в 2026.1.3.
         ("hse-cs-se", "coursework", "2026.1.3", "2026.1.4", "ru"),
         ("hse-cs-se", "vkr", "2026.1.3", "2026.1.4", "ru"),
+        # 2026.1.5: пресеты маршрутов подписания и места подписей, файлы шаблона те же, что в 2026.1.4.
+        ("hse-cs-se", "coursework", "2026.1.4", "2026.1.5", "ru"),
+        ("hse-cs-se", "vkr", "2026.1.4", "2026.1.5", "ru"),
         ("hse-cs-se", "pp", "2026.1", "2026.1.1", "en"),
     ],
 )
@@ -284,7 +290,7 @@ async def test__real_template__quoted_texts_patch_changes_no_project_files(
     base = f"/api/v1/projects/{created.json()['id']}/template-update"
 
     status = (await test_app.get(base)).json()
-    assert status["recommended"]["version"]["version"] == LATEST[(pack_id, template_id)]
+    assert status["recommended"]["version"]["version"] == _default_version(pack_id, template_id)
     assert status["recommended"]["update_class"] == "patch"
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": patched})).json()
@@ -339,7 +345,7 @@ async def test__real_template__signature_anchors_patch_changes_only_anchor_lines
     base = f"/api/v1/projects/{created.json()['id']}/template-update"
 
     status = (await test_app.get(base)).json()
-    assert status["recommended"]["version"]["version"] == LATEST[(pack_id, template_id)]
+    assert status["recommended"]["version"]["version"] == _default_version(pack_id, template_id)
     assert status["recommended"]["update_class"] == "patch"
 
     plan = (await test_app.post(f"{base}/plan", json={"to_version": patched})).json()

@@ -19,3 +19,6 @@ releases:
   2026.1.4:
     digest: sha256:c97bb3ac0047d6621210110010f3a0386506585c783a0cc8687d757f5d2f58f2
     kind: patch
+  2026.1.5:
+    digest: sha256:116a8ac526dbb53871bbbc079c2c8b58b572a3efe5237eaab35b9dd9847c7bb8
+    kind: patch
