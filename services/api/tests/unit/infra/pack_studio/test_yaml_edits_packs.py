@@ -186,6 +186,16 @@ def test_delete_touches_only_the_entry(pack_file: tuple[str, Node]) -> None:
         old = {line for _, i1, i2, _, _ in changed for line in range(i1, i2)}
         new = sum(j2 - j1 for *_, j1, j2 in changed)
         lines = _lines(key, text) | _lines(node)
+        # difflib неоднозначен при повторяющихся строках (`kind: patch` в releases.yaml): удалённый блок может
+        # сместиться на строку вверх. Тогда достаточно, что итог равен тексту без блока, в который входит ключ записи.
+        before, after = text.splitlines(), removed.splitlines()
+        size = len(before) - len(after)
+        if size > 0 and any(
+            before[:s] + before[s + size :] == after
+            for s in range(max(key.start_mark.line - size + 1, 0), key.start_mark.line + 1)
+        ):
+            assert new == 0, path
+            continue
         # Первый ключ словаря на строке с `-` уступает место следующему: эта строка переписывается, а не удаляется.
         assert old <= lines | {max(lines) + 1}, path
         assert new <= 1, path
