@@ -293,3 +293,74 @@ def test__lint__anchor_in_a_comment__not_seen(tmp_path: Path) -> None:
     errors = _anchor_errors(_write(tmp_path, _manifest(), sources={"topic_application/main.tex": application}))
 
     assert any("'author'" in e for e in errors)
+
+
+# --- якоря на каждого автора команды (15.17.20) ---
+
+
+def _team_manifest(**author_place: Any) -> dict[str, Any]:
+    """Командный шаблон: слот `author` размножается по авторам, «Заявление» общий документ (scope по умолчанию)."""
+    manifest = _manifest()
+    manifest["supported_staffing"] = ["solo", "team"]
+    author = manifest["signatures"]["slots"][0]
+    author["per_author"] = True
+    if author_place:
+        author["placements"]["topic_application"] = author_place
+    return manifest
+
+
+def _per_author_warnings(version_dir: Path) -> list[str]:
+    return [w for w in lint_version_dir(version_dir).warnings if "per_author" in w]
+
+
+_PER_AUTHOR_LINE = "\\hseSignAnchor[30mm]{author__{{ a.slug }}}"
+
+
+def test__lint__team_template_with_one_author_anchor__shared_place_warns(tmp_path: Path) -> None:
+    warnings = _per_author_warnings(_write(tmp_path, _team_manifest()))
+
+    assert len(warnings) == 1
+    assert "placements.topic_application" in warnings[0]
+    assert "\\hseSignAnchor{author__{{ a.slug }}}" in warnings[0]
+
+
+@pytest.mark.parametrize(
+    "line",
+    [
+        _PER_AUTHOR_LINE,
+        "\\hseSignField[author__{{ a.slug }}]{30mm}",
+        "\\hseSignAnchor[30mm]{author__{{a.slug}}}",
+    ],
+    ids=["anchor", "wrapper", "no_spaces"],
+)
+def test__lint__anchor_on_every_author__no_warning_no_error(tmp_path: Path, line: str) -> None:
+    loop = f"((* for a in project.authors *)){line}\\rule{{30mm}}{{0.4pt}}((* endfor *))"
+    application = _APPLICATION.replace("\\hseSignAnchor[30mm]{author}\\rule{30mm}{0.4pt}", loop)
+
+    report = lint_version_dir(_write(tmp_path, _team_manifest(), sources={"topic_application/main.tex": application}))
+
+    assert report.errors == []
+    assert [w for w in report.warnings if "per_author" in w or "якор" in w] == []
+
+
+def test__lint__anchor_on_every_author_but_place_in_mm__still_warns(tmp_path: Path) -> None:
+    application = _APPLICATION.replace("\\hseSignAnchor[30mm]{author}", _PER_AUTHOR_LINE)
+    manifest = _team_manifest(page=1, x_mm=135, y_mm=200, width_mm=30)
+
+    warnings = _per_author_warnings(_write(tmp_path, manifest, sources={"topic_application/main.tex": application}))
+
+    assert len(warnings) == 1
+
+
+def test__lint__date_anchor_on_every_author_covers_the_date_entry(tmp_path: Path) -> None:
+    manifest = _team_manifest()
+    manifest["signatures"]["slots"][0]["default_dates"] = {"topic_application": [{"anchor": "author.day"}]}
+    application = _APPLICATION.replace(
+        "\\hseSignAnchor[30mm]{author}",
+        _PER_AUTHOR_LINE + "\\hseDateAnchor[8mm]{author__{{ a.slug }}}{day}",
+    )
+
+    report = lint_version_dir(_write(tmp_path, manifest, sources={"topic_application/main.tex": application}))
+
+    assert report.errors == []
+    assert [w for w in report.warnings if "якор" in w or "per_author" in w] == []

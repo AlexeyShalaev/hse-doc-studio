@@ -17,7 +17,7 @@ from hse_doc_studio.core.repositories import (
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import ProjectTemplateService, RuntimeSlot, SignatureSlotService
-from hse_doc_studio.core.signatures.pack_places import pack_placement, stamp_from_pack
+from hse_doc_studio.core.signatures.pack_places import pack_placement, pair_anchors, stamp_from_pack
 from hse_doc_studio.core.value_objects import (
     SignaturePlacement,
     SignatureSlot,
@@ -110,6 +110,8 @@ class UploadSignaturePngUC:
         if self._template_service is None or not isinstance(rslot.slot_def.entry_for(doc.def_id), AnchorPlace):
             return None
         src = await doc_anchors(self._template_service, project, version, state, doc)
+        # Экземпляр автора на общем документе команды встаёт на свою строку, если шаблон ставит их (15.17.20).
+        src = pair_anchors(src, project, doc, rslot.id)
         placement = pack_placement(rslot.slot_def, doc.def_id, None, version.version, src)
         if placement is None:
             return None

@@ -15,6 +15,7 @@ from hse_doc_studio.core.agent.entities import ToolImage, ToolResult, ToolSpec
 from hse_doc_studio.core.enums import ToolKind
 from hse_doc_studio.core.i18n import current_interface_language
 from hse_doc_studio.core.pack_studio.sign_check import Code, Finding, Place, PlaceKind, Rect, SlotCheck, line_data
+from hse_doc_studio.core.team import OWNER_SEPARATOR
 from hse_doc_studio.use_cases.mcp.tools._base import bool_arg, int_arg, optional_text, uuid_arg
 from hse_doc_studio.use_cases.mcp.tools.pack_view import FORMAT_PROP, layout_arg, layout_result
 from hse_doc_studio.use_cases.mcp.tools.packs import _VERSION, _WORKSPACE_ID, PackTool, _pages, _schema, version_arg
@@ -96,7 +97,8 @@ def _say(finding: Finding) -> str:
 
 def _ops(check: SlotCheck, document: str) -> list[dict[str, Any]]:
     """Готовые операции для `pack_set_placement`: на якорь, если он есть, иначе предложенная рамка в мм."""
-    if check.slot.endswith(".date"):
+    if check.slot.endswith(".date") or OWNER_SEPARATOR in check.slot:
+        # Рамка автора команды (`author--<слаг>`): запись пака одна на всех авторов, её двигают по рамке слота.
         return []
     if check.bind_anchor:
         return [{"op": "bind_anchor", "slot": check.slot, "doc": document}]
@@ -203,8 +205,9 @@ class PackSignatureRenderTool(PackTool):
         description=(
             "Студия шаблонов: картинка страниц PDF сборки предпросмотра с местами подписей поверх, чтобы посмотреть "
             "глазами. Синие рамки подписи «слот: подпись», красные рамки с ошибкой проверки, зелёные метки даты, "
-            "оранжевый пунктир линии якорей, фиолетовые предложенные рамки (suggestions). По умолчанию страницы с "
-            "рамками и якорями, не больше 4; pages как «1» или «1,3». Текст ответа: легенда в мм. Порядок: "
+            "оранжевый пунктир линии якорей, фиолетовые предложенные рамки (suggestions). Слот per_author на общем "
+            "документе команды с якорями author__<слаг> рисуется рамкой на автора (author--<слаг>). По умолчанию "
+            "страницы с рамками и якорями, не больше 4; pages как «1» или «1,3». Текст ответа: легенда в мм. Порядок: "
             "pack_preview_build, pack_signature_render, pack_signature_check, pack_set_placement, снова render."
         ),
         parameters=_schema(
@@ -257,7 +260,9 @@ class PackSignatureCheckTool(PackTool):
             "документа: есть ли рамка, на той ли странице, не за краем и не у края листа, не закрывает ли текст и "
             "чужие рамки, нет ли под ней рисунка, стоит ли на своей строке подписи (якорь слота, линия, «____», "
             "подпись слота рядом). Находки с текстом и числами, предложенная рамка и готовые suggested_ops для "
-            "pack_set_placement (bind_anchor, если у слота есть якорь, иначе set_place). Только чтение."
+            "pack_set_placement (bind_anchor, если у слота есть якорь, иначе set_place). Слот per_author на общем "
+            "документе команды, где шаблон ставит строку на каждого автора (якорь author__<слаг>), проверяется рамкой "
+            "на автора: author--<слаг>. Только чтение."
         ),
         parameters=_schema(
             {"workspace_id": _WORKSPACE_ID, "version": _VERSION, "build_id": _BUILD, "format": FORMAT_PROP},

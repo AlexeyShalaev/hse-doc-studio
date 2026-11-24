@@ -447,3 +447,52 @@ def test__apply__real_pack_place_edit_touches_one_line() -> None:
     diff = [(a, b) for a, b in zip(text.splitlines(), new.splitlines(), strict=True) if a != b]
     entry = "        topic_application: { anchor: supervisor, align: right, width_mm: 28, page: 1, %s }"
     assert diff == [(entry % "x_mm: 168, y_mm: 177", entry % "x_mm: 150, y_mm: 170")]
+
+
+# --- слот per_author на сборке со строкой на каждого автора (signing-route.md, 15.17.20) ---
+
+PER_AUTHOR_TEXT = TEXT.replace(
+    "      applies_to:        [application, report]\n",
+    "      applies_to:        [application, report]\n      per_author: true\n",
+)
+# Общий документ команды: строки авторов одна под другой, вторая на 20 мм ниже.
+AUTHOR_LINES = BuildAnchors(
+    pdf_sha256="b" * 64,
+    anchors=(
+        BuildAnchor("author__ivanov", AnchorKind.sign, 1, 135.0, 212.0, 30.0),
+        BuildAnchor("author__petrov", AnchorKind.sign, 1, 135.0, 232.0, 30.0),
+        BuildAnchor("supervisor", AnchorKind.sign, 1, 60.0, 180.0, 40.0),
+    ),
+)
+
+
+def test__describe__per_author_slot_frame_on_the_first_author_line() -> None:
+    places = EDITOR.describe(PER_AUTHOR_TEXT, document="application", anchors=AUTHOR_LINES)
+
+    author = places.slots[0]
+    assert author.per_author
+    assert author.document is not None
+    assert author.document.box == SignatureDefaultPlacement(page=1, x_mm=135.0, y_mm=201.0, width_mm=30.0)
+    assert author.document.anchor is not None
+    assert author.document.anchor.state is AnchorState.found
+
+
+def test__describe__slot_without_per_author_does_not_see_author_lines() -> None:
+    places = EDITOR.describe(TEXT, document="application", anchors=AUTHOR_LINES)
+
+    author = places.slots[0].document
+    assert author is not None
+    assert author.box is None
+    assert author.anchor is not None
+    assert author.anchor.state is AnchorState.missing
+
+
+def test__set_place__per_author_slot_moves_relative_to_the_first_author_line() -> None:
+    new = EDITOR.apply(
+        PER_AUTHOR_TEXT,
+        (PlaceOp(PlaceOpKind.set_place, "author", "application", box=PlaceBox(1, 130.4, 199.6, 31)),),
+        document="application",
+        anchors=AUTHOR_LINES,
+    )
+
+    assert "{ anchor: author, align: right, dx_mm: -4, dy_mm: -12, width_mm: 31, page: 1, x_mm: 165, y_mm: 201 }" in new

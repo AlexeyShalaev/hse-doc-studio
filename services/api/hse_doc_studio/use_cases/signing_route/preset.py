@@ -11,7 +11,8 @@
 Что не трогается никогда: ручные места (место с `from_pack`, отпечаток которого разошёлся, и любое место без пометки,
 кроме затравки), документы под другим маршрутом (`HOLDING_STATUSES`), места на документах, над зафиксированным PDF
 которых уже есть ЭП (новое место устарило бы фиксацию и сбросило бы чужие подписи, как в 15.9), места слота
-`per_author` на общем документе команды (15.5) и отметки слотов, которые пак запрещает делать необязательными.
+`per_author` на общем документе команды, если шаблон не ставит строку на каждого автора (15.5, 15.17.20), и отметки
+слотов, которые пак запрещает делать необязательными.
 """
 
 from __future__ import annotations
@@ -22,7 +23,13 @@ from dataclasses import dataclass, replace
 from hse_doc_studio.core.catalog import AnchorPlace, SubmissionProfile, TemplateVersion
 from hse_doc_studio.core.enums import PlacementOrigin
 from hse_doc_studio.core.services import SignatureSlotService
-from hse_doc_studio.core.signatures.pack_places import NO_ANCHORS, SourceAnchors, pack_placement
+from hse_doc_studio.core.signatures.pack_places import (
+    NO_ANCHORS,
+    SourceAnchors,
+    author_lines,
+    pack_placement,
+    pair_anchors,
+)
 from hse_doc_studio.core.signatures.plan import SignMethod, VisibleMark, mark_of, method_of
 from hse_doc_studio.core.signatures.route_order import default_route
 from hse_doc_studio.core.signing_route.entities import DocSlot
@@ -144,8 +151,10 @@ class PresetApplied:
     unmarked: tuple[DocSlot, ...] = ()
 
 
-def _shared_per_author(point: RoutePoint, pair: DocSlot) -> bool:
-    """Слот `per_author` на общем документе команды: все авторы встали бы в одну рамку, место ставит команда."""
+def _shared_per_author(point: RoutePoint, pair: DocSlot, src: SourceAnchors) -> bool:
+    """Слот `per_author` на общем документе команды без строк на каждого автора в источнике: все авторы встали бы в
+    одну рамку, место ставит команда (15.5). Шаблон ставит якорь на каждого автора (`author__<слаг>`, 15.17.20), и
+    место каждого автора встаёт на его строку."""
     runtime = point.runtime.get(pair.slot_id)
     doc = point.documents.get(pair.doc_id)
     return (
@@ -154,6 +163,7 @@ def _shared_per_author(point: RoutePoint, pair: DocSlot) -> bool:
         and runtime.slot_def.per_author
         and doc is not None
         and (doc.owner is None)
+        and not author_lines(runtime.slot_def, doc.def_id, src)
     )
 
 
@@ -169,7 +179,7 @@ def apply_places(  # noqa: PLR0913 — что применить и к чему
 ) -> tuple[SignaturesState, tuple[DocSlot, ...]]:
     """Места и метки даты пресета у пар, где места нет или оно из `origins` (15.5); места включаются, если метка
     может появиться (`mark_may_show`). Ручные места, документы `skip_docs`, документы с ЭП над B и `per_author` на
-    общем документе команды не трогаются.
+    общем документе команды без строк на каждого автора не трогаются.
 
     Место на якоре считается по якорям источника подписи документа (`anchors`, 15.17.8). Нет места (якоря
     известны, а строки нет; свой PDF; якоря неизвестны без запасного места) или якоря неизвестны, а место уже
@@ -203,8 +213,9 @@ def _preset_place(  # noqa: PLR0913 — входы одной пары
     runtime = point.runtime.get(pair.slot_id)
     if doc is None or runtime is None:
         return None
-    if signed_over_frozen(state, pair.doc_id) or _shared_per_author(point, pair):
+    if signed_over_frozen(state, pair.doc_id) or _shared_per_author(point, pair, src):
         return None
+    src = pair_anchors(src, point.project, doc, pair.slot_id)
     existing = state.placements.get(pair.doc_id, {}).get(pair.slot_id)
     origin = places.info(pair.doc_id, pair.slot_id, existing).origin if existing is not None else None
     if origin not in origins:
