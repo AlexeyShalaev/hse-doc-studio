@@ -6,6 +6,12 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.41.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.40.1...v0.41.0) - 2026-11-24
+
+- Packs: hse-cs-sse coursework 2026.1.8. The author's and the supervisor's signature places on the report title page are moved so the boxes no longer cover the Full name and Grade captions. Checked by an agent on a real build: 0 errors and 0 warnings. The text of the documents is unchanged.
+- Packs: hse-cs-se VKR and coursework 2026.1.4. English hints for the title, short title, field of study, academic supervisor and document code fields (and UDC for VKR). The template files are the same as in 2026.1.3.
+- Packs: the Co-supervisor role has one name in hse-cs-se 2026.1.4 and hse-cs-sse 2026.1.8, in the settings and in the list of signatures. Released versions are unchanged.
+
 ## [0.40.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.40.0...v0.40.1) - 2026-11-24
 
 - Pack Studio: Refresh base now also works in a space without a work branch. With no unsaved edits the space moves to the latest master by itself; with edits, the files are left alone and the space card shows a clear error with a hint. After a background refresh the interface reloads the files by itself instead of showing stale ones.

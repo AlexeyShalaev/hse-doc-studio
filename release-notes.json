@@ -1,6 +1,24 @@
 {
   "releases": [
     {
+      "version": "0.41.0",
+      "date": "2026-11-24",
+      "notes": [
+        {
+          "ru": "Паки: hse-cs-sse курсовой 2026.1.8. Места подписей автора и научного руководителя на титуле отчёта сдвинуты так, чтобы рамки не закрывали подписи «И.О. Фамилия» и «Оценка». Проверено агентом по сборке: 0 ошибок и 0 замечаний. Текст документов не изменился.",
+          "en": "Packs: hse-cs-sse coursework 2026.1.8. The author's and the supervisor's signature places on the report title page are moved so the boxes no longer cover the Full name and Grade captions. Checked by an agent on a real build: 0 errors and 0 warnings. The text of the documents is unchanged."
+        },
+        {
+          "ru": "Паки: hse-cs-se ВКР и курсовой 2026.1.4. Английские подсказки у полей названия, краткого названия, кода направления, академического руководителя, обозначения документа (и УДК у ВКР). Файлы шаблона те же, что в 2026.1.3.",
+          "en": "Packs: hse-cs-se VKR and coursework 2026.1.4. English hints for the title, short title, field of study, academic supervisor and document code fields (and UDC for VKR). The template files are the same as in 2026.1.3."
+        },
+        {
+          "ru": "Паки: роль «Соруководитель» называется одинаково в hse-cs-se 2026.1.4 и hse-cs-sse 2026.1.8, в настройках и в списке подписей. Выпущенные версии не менялись.",
+          "en": "Packs: the Co-supervisor role has one name in hse-cs-se 2026.1.4 and hse-cs-sse 2026.1.8, in the settings and in the list of signatures. Released versions are unchanged."
+        }
+      ]
+    },
+    {
       "version": "0.40.1",
       "date": "2026-11-24",
       "notes": [
