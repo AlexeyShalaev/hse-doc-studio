@@ -1,0 +1,44 @@
+# Манифест документа (bundle-раскладка v2): всё про документ — в этой папке.
+# id = имя папки; языковые редакции — файлы-соседи <stem>.<код>.<ext>,
+# файл без кода — единственная форма для всех языков. Пути source_file —
+# в проектном пространстве (без суффиксов). Файл doc.yaml в проект не копируется.
+name:
+  ru: Техническое задание
+  en: Statement of Work
+code:
+  ru: ТЗ
+  en: SOW
+supported_kinds:
+- project
+gost_ref: gost-19.201-78
+required: true
+supported_langs:
+- ru
+- en
+scope: personal
+variants:
+- id: espd
+  label:
+    ru: ГОСТ 19 ЕСПД (ТЗ)
+    en: GOST 19 ESPD (ТЗ)
+  source_file: technical_specification/technical_specification.tex
+  output_file: technical_specification/technical_specification.pdf
+  output_name:
+    ru: Техническое задание.pdf
+    en: Statement of Work.pdf
+  engine: xelatex
+- id: srs-29148
+  # Англоязычная редакция стандарта — выбирается только в en-проектах
+  # (§2.5.3.1: софт-доки английской работы — перевод ГОСТ или ISO/IEEE).
+  supported_langs: [en]
+  label:
+    ru: ISO/IEC/IEEE 29148 (SRS)
+    en: ISO/IEC/IEEE 29148 (SRS)
+  source_file: technical_specification/srs_29148.tex
+  output_file: technical_specification/srs_29148.pdf
+  output_name:
+    ru: SRS (ISO 29148).pdf
+    en: SRS (ISO 29148).pdf
+  engine: xelatex
+# Визуальный блок навигации — дивайдер рисуется на смене группы.
+group: espd

@@ -85,6 +85,8 @@ _ESPD_SETS = [
     _Case("hse-cs-se", "coursework", "2026.1.2", "2026.1.3", "ru", ProjectKind.research),
     _Case("hse-cs-se", "vkr", "2026.1.2", "2026.1.3", "ru", ProjectKind.project),
     _Case("hse-cs-se", "vkr", "2026.1.2", "2026.1.3", "ru", ProjectKind.research),
+    _Case("hse-cs-se", "coursework", "2026.1.3", "2026.1.4", "ru", ProjectKind.project),
+    _Case("hse-cs-se", "vkr", "2026.1.3", "2026.1.4", "ru", ProjectKind.project),
 ]
 _HEAVY = pytest.mark.skipif(
     not os.environ.get("HSE_TEST_TEX_ALL_PATCHES"), reason="комплект ЕСПД собирается с HSE_TEST_TEX_ALL_PATCHES=1"
