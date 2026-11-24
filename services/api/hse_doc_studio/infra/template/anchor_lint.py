@@ -11,6 +11,11 @@ r"""Проверка мест подписей и меток даты на як�
   (`\input{../common/anchors}` в исходнике или преамбуле);
 - `default_placement` на якоре только вместе с полным запасным местом в мм;
 - предупреждения: имя якоря в исходнике не id слота каталога (опечатка), одно имя дважды в одном файле.
+
+Якорь автора в команде (15.17.20) пишется именем слота, двойным подчёркиванием и слагом из Jinja:
+`\hseSignAnchor[7cm]{author__{{ a.slug }}}`, `\hseDateAnchor{author__{{ a.slug }}}{day}`. Такой вызов закрывает
+запись пака на якоре `author` (`author.day`), а `author_anchor_names` говорит линтеру пака, что место `per_author`
+слота на общем документе встанет на строку каждого автора.
 """
 
 from __future__ import annotations
@@ -24,7 +29,7 @@ from typing import Any
 import yaml
 
 from hse_doc_studio.core.catalog import AnchorDate, AnchorPlace
-from hse_doc_studio.core.signatures.anchors import NAME_RE
+from hse_doc_studio.core.signatures.anchors import AUTHOR_SEPARATOR, NAME_RE, author_anchor_id, split_author_name
 from hse_doc_studio.infra.project_init.template_renderer import PACK_DOC_MANIFEST
 from hse_doc_studio.infra.template.yaml_template_repository import (
     parse_anchor_macros,
@@ -35,9 +40,14 @@ from hse_doc_studio.infra.template.yaml_template_repository import (
 )
 
 _NAME = NAME_RE.pattern
+# Имя якоря в вызове: обычное или якорь автора в команде, слаг из Jinja (`author__{{ a.slug }}`, 15.17.20).
+_JINJA_AUTHOR = rf"[a-z][a-z0-9_]*?{AUTHOR_SEPARATOR}\{{\{{[^{{}}]*\}}\}}"
+_ARG = rf"(?:{_JINJA_AUTHOR}|{_NAME})"
+# Любой слаг: якорь автора в команде записывается в найденных как `author__*`.
+_ANY_AUTHOR = "*"
 _OPT = r"(?:\[[^\]]*\])?"
-_SIGN_RE = re.compile(rf"\\hseSignAnchor\s*{_OPT}\s*\{{\s*({_NAME})\s*\}}")
-_DATE_RE = re.compile(rf"\\hseDateAnchor\s*{_OPT}\s*\{{\s*({_NAME})\s*\}}\s*\{{\s*({_NAME})\s*\}}")
+_SIGN_RE = re.compile(rf"\\hseSignAnchor\s*{_OPT}\s*\{{\s*({_ARG})\s*\}}")
+_DATE_RE = re.compile(rf"\\hseDateAnchor\s*{_OPT}\s*\{{\s*({_ARG})\s*\}}\s*\{{\s*({_NAME})\s*\}}")
 # Вызов якоря внутри определения обёртки: имя это параметр (`#1`).
 _SIGN_PARAM_RE = re.compile(rf"\\hseSignAnchor\s*{_OPT}\s*\{{\s*#\d\s*\}}")
 _DATE_PARAM_RE = re.compile(rf"\\hseDateAnchor\s*{_OPT}\s*\{{\s*#\d\s*\}}\s*\{{\s*({_NAME})\s*\}}")
@@ -100,17 +110,29 @@ def _definition(text: str, start: int) -> str:
     return text[start : following.start() if following else len(text)]
 
 
+def _name(arg: str) -> str:
+    """Имя якоря вызова; якорь автора в команде (`author__{{ a.slug }}` или `author__ivanov`) это `author__*`."""
+    jinja = arg.find("{{")
+    base, key = (arg[: jinja - len(AUTHOR_SEPARATOR)], _ANY_AUTHOR) if jinja >= 0 else split_author_name(arg)
+    return author_anchor_id(base, _ANY_AUTHOR) if key is not None else base
+
+
 def _calls(rel: str, text: str, wrappers: dict[str, _Wrapper]) -> list[str]:
     """id якорей, которые ставит файл: прямые вызовы и обёртки с `[имя]`."""
-    ids = [m.group(1) for m in _SIGN_RE.finditer(text)]
-    ids += [f"{m.group(1)}.{m.group(2)}" for m in _DATE_RE.finditer(text)]
+    ids = [_name(m.group(1)) for m in _SIGN_RE.finditer(text)]
+    ids += [f"{_name(m.group(1))}.{m.group(2)}" for m in _DATE_RE.finditer(text)]
     for macro, wrapper in wrappers.items():
-        for m in re.finditer(rf"\\{macro}\s*\[\s*({_NAME})\s*\]", text):
-            name = m.group(1)
+        for m in re.finditer(rf"\\{macro}\s*\[\s*({_ARG})\s*\]", text):
+            name = _name(m.group(1))
             if wrapper.sign:
                 ids.append(name)
             ids += [f"{name}.{part}" for part in wrapper.parts]
     return ids
+
+
+def _present(anchor_id: str, found: dict[str, set[str]]) -> bool:
+    """Якорь записи стоит в исходниках: сам или на каждого автора (`author__{{ a.slug }}`)."""
+    return anchor_id in found or author_anchor_id(anchor_id, _ANY_AUTHOR) in found
 
 
 def _scan(files_dir: Path, top: str, common: dict[str, str], wrappers: dict[str, _Wrapper]) -> _Sources:
@@ -217,16 +239,10 @@ def lint_anchors(version_dir: Path, manifest: dict[str, Any]) -> tuple[list[str]
         macros = ()
     entries = [entry for slot_id, slot in slots.items() for entry in _entries(slot_id, slot, errors)]
     files_dir = version_dir / "files"
-    common = {f.relative_to(files_dir).as_posix(): _text(f) for f in _tex_files(files_dir, "common")}
-    tops = _doc_tops(version_dir, manifest)
-    own = {top: _text_map(files_dir, top) for doc_tops in tops.values() for top in doc_tops}
-    wrappers = _wrappers({**common, **{k: v for texts in own.values() for k, v in texts.items()}}, macros)
     if entries and not (files_dir / ANCHORS_FILE).is_file():
         errors.append(f"signatures: места на якорях, но в версии нет {ANCHORS_FILE} (копия эталона Студии)")
-    scans = {
-        doc_id: [_scan(files_dir, top, common, wrappers) for top in sorted(doc_tops)]
-        for doc_id, doc_tops in tops.items()
-    }
+    sources = _sources(version_dir, manifest, macros)
+    scans, wrappers = sources.scans, sources.wrappers
     for doc_id in sorted({entry.doc_id for entry in entries}):
         doc_scans = scans.get(doc_id, [])
         if doc_scans and not any(scan.includes_macros for scan in doc_scans):
@@ -235,11 +251,49 @@ def lint_anchors(version_dir: Path, manifest: dict[str, Any]) -> tuple[list[str]
         f"{entry.where}: якоря {entry.anchor!r} нет в исходниках документа {entry.doc_id} и в common/ "
         f"(\\hseSignAnchor, \\hseDateAnchor или обёртка из anchor_macros)"
         for entry in entries
-        if not any(entry.anchor in scan.found for scan in scans.get(entry.doc_id, []))
+        if not any(_present(entry.anchor, scan.found) for scan in scans.get(entry.doc_id, []))
     )
-    rels = {*common, *(rel for texts in own.values() for rel in texts)}
-    warnings.extend(_source_warnings(files_dir, rels, wrappers, set(slots)))
+    warnings.extend(_source_warnings(files_dir, sources.rels, wrappers, set(slots)))
     return errors, warnings
+
+
+@dataclass(frozen=True)
+class _VersionSources:
+    """Вызовы якорей по документам версии, обёртки и все просмотренные файлы."""
+
+    scans: dict[str, list[_Sources]]
+    wrappers: dict[str, _Wrapper]
+    rels: set[str]
+
+
+def _sources(version_dir: Path, manifest: dict[str, Any], macros: tuple[str, ...]) -> _VersionSources:
+    files_dir = version_dir / "files"
+    common = {f.relative_to(files_dir).as_posix(): _text(f) for f in _tex_files(files_dir, "common")}
+    tops = _doc_tops(version_dir, manifest)
+    own = {top: _text_map(files_dir, top) for doc_tops in tops.values() for top in doc_tops}
+    wrappers = _wrappers({**common, **{k: v for texts in own.values() for k, v in texts.items()}}, macros)
+    scans = {
+        doc_id: [_scan(files_dir, top, common, wrappers) for top in sorted(doc_tops)]
+        for doc_id, doc_tops in tops.items()
+    }
+    rels = {*common, *(rel for texts in own.values() for rel in texts)}
+    return _VersionSources(scans, wrappers, rels)
+
+
+def author_anchor_names(version_dir: Path, manifest: dict[str, Any]) -> dict[str, set[str]]:
+    """id документа → имена якорей подписи, которые его исходники (или `common/`) ставят на каждого автора
+    (`\\hseSignAnchor{author__{{ a.slug }}}` или обёртка из `anchor_macros` с таким именем, 15.17.20)."""
+    signatures = manifest.get("signatures")
+    signatures = signatures if isinstance(signatures, dict) else {}
+    try:
+        macros = parse_anchor_macros(signatures.get("anchor_macros"))
+    except (TypeError, ValueError):
+        macros = ()
+    marker = author_anchor_id("", _ANY_AUTHOR)
+    return {
+        doc_id: {found[: -len(marker)] for scan in doc_scans for found in scan.found if found.endswith(marker)}
+        for doc_id, doc_scans in _sources(version_dir, manifest, macros).scans.items()
+    }
 
 
 def _text_map(files_dir: Path, top: str) -> dict[str, str]:
@@ -251,7 +305,7 @@ def _source_warnings(files_dir: Path, rels: set[str], wrappers: dict[str, _Wrapp
     warnings: list[str] = []
     for rel in sorted(rels):
         ids = _calls(rel, _text(files_dir / rel), wrappers)
-        names = sorted({anchor_id.partition(".")[0] for anchor_id in ids} - slot_ids)
+        names = sorted({split_author_name(anchor_id.partition(".")[0])[0] for anchor_id in ids} - slot_ids)
         warnings.extend(f"{rel}: якорь {name!r} не id слота каталога подписей (опечатка?)" for name in names)
         warnings.extend(
             f"{rel}: якорь {anchor_id!r} стоит в файле {count} раза, место встанет по первому"

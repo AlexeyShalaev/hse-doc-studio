@@ -31,7 +31,7 @@ from hse_doc_studio.core.repositories import (
     ITemplateRepository,
 )
 from hse_doc_studio.core.services import ProjectTemplateService, RuntimeSlot, SignatureSlotService
-from hse_doc_studio.core.signatures.pack_places import NO_ANCHORS, SourceAnchors, pack_placement
+from hse_doc_studio.core.signatures.pack_places import NO_ANCHORS, SourceAnchors, pack_placement, pair_anchors
 from hse_doc_studio.core.signatures.ports import ISignatureAudit
 from hse_doc_studio.core.signatures.stamps import date_mark_text
 from hse_doc_studio.core.signing_route.entities import RouteConflictError
@@ -115,7 +115,7 @@ class RestorePlacementUC:
 
         async def write(state: SignaturesState) -> SignaturesState:
             existing = state.placements.get(inp.doc_id, {}).get(inp.slot_id)
-            src = await self._anchors(project, version, state, doc)
+            src = pair_anchors(await self._anchors(project, version, state, doc), project, doc, inp.slot_id)
             placement = pack_placement(rslot.slot_def, doc.def_id, existing, version.version, src)
             if placement is None:
                 raise _no_place(src)

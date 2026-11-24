@@ -23,7 +23,14 @@ from hse_doc_studio.core.catalog import SignatureSlotDef, TemplateVersion
 from hse_doc_studio.core.entities import Document, Project
 from hse_doc_studio.core.repositories import IProjectRepository, ISignatureRepository, ITemplateRepository
 from hse_doc_studio.core.services import ProjectTemplateService
-from hse_doc_studio.core.signatures.pack_places import SourceAnchors, is_from_pack, pack_placement, placement_digest
+from hse_doc_studio.core.signatures.pack_places import (
+    SourceAnchors,
+    author_lines,
+    is_from_pack,
+    pack_placement,
+    pair_anchors,
+    placement_digest,
+)
 from hse_doc_studio.core.signatures.plan import VisibleMark, mark_of
 from hse_doc_studio.core.signatures.ports import IRouteDraftPlaces, NoRouteDraftPlaces
 from hse_doc_studio.core.signatures.stamps import widen_for_plate
@@ -35,18 +42,22 @@ from hse_doc_studio.use_cases.signatures.source_anchors import doc_anchors
 logger = structlog.get_logger()
 
 
-def _slot_def(version: TemplateVersion, project: Project, doc: Document, slot_id: str) -> SignatureSlotDef | None:
+def _slot_def(
+    version: TemplateVersion, project: Project, doc: Document, slot_id: str, src: SourceAnchors
+) -> SignatureSlotDef | None:
     """Слот каталога версии для рантайм-слота на документе; None, если пак место этой пары не ставит.
 
-    Экземпляр автора (`author--<слаг>`) на общем документе команды места из пака не получает (15.5).
+    Экземпляр автора (`author--<слаг>`) на общем документе команды получает место из пака, только если сборка ставит
+    строку на каждого автора (`author__<слаг>`, 15.17.20); у старого шаблона с одним якорем места нет (15.5).
     """
     base_id, owner = split_instance_id(slot_id)
     slot_def = next((s for s in version.signatures_config.slots if s.id == base_id), None)
     if slot_def is None or doc.def_id not in slot_def.applies_to:
         return None
-    if is_team(project) and slot_def.per_author and doc.owner is None:
-        return None
-    if owner is not None and doc.owner is None:
+    shared = (is_team(project) and slot_def.per_author and doc.owner is None) or (
+        owner is not None and doc.owner is None
+    )
+    if shared and (owner is None or not author_lines(slot_def, doc.def_id, src)):
         return None
     return slot_def
 
@@ -78,10 +89,11 @@ def rebuild_places(
     current = state.placements.get(doc.id, {})
     changed: dict[str, SignaturePlacement] = {}
     for slot_id, placement in current.items():
-        slot_def = _slot_def(version, project, doc, slot_id)
+        slot_def = _slot_def(version, project, doc, slot_id, src)
         if slot_def is None:
             continue
-        moved = rebuilt_place(slot_def, doc.def_id, placement, version.version, src)
+        pair_src = pair_anchors(src, project, doc, slot_id)
+        moved = rebuilt_place(slot_def, doc.def_id, placement, version.version, pair_src)
         if moved is not None and moved != placement:
             changed[slot_id] = moved
     if not changed:

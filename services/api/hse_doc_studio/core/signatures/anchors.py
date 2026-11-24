@@ -14,7 +14,7 @@ import json
 import math
 import re
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import StrEnum
 from typing import Any, Final
 
@@ -46,6 +46,9 @@ NAME_RE: Final = re.compile(r"[a-z][a-z0-9_]{0,39}")
 _INT_RE: Final = re.compile(r"-?\d{1,12}")
 _SHA256_RE: Final = re.compile(r"[0-9a-f]{64}")
 _SIGN_PART: Final = "-"
+# Якорь автора в команде (15.17.20): имя «<имя>__<слаг автора>», у даты «<имя>__<слаг>.<часть>». Двойное подчёркивание
+# в имени якоря пака зарезервировано под этот разделитель.
+AUTHOR_SEPARATOR: Final = "__"
 _HEADER: Final = "hsepos"
 _FIELDS: Final = 7
 _MAX_MM: Final = 10000.0
@@ -120,6 +123,42 @@ class BuildAnchors:
     def get(self, anchor_id: str) -> BuildAnchor | None:
         return next((anchor for anchor in self.anchors if anchor.id == anchor_id), None)
 
+    def author_names(self) -> frozenset[str]:
+        """Имена, у которых в сборке есть строки на каждого автора (`author` у строки `author__ivanov`, 15.17.20)."""
+        split = (split_author_name(_name_of(a.id)) for a in self.anchors)
+        return frozenset(base for base, key in split if key is not None)
+
+    def author_keys(self, anchor_id: str | None = None) -> tuple[str, ...]:
+        """Слаги авторов строк сборки в порядке чтения: у якоря `anchor_id` (`author`, `author.day`) или у всех."""
+        name, _, part = (anchor_id or "").partition(".")
+        keys: list[str] = []
+        for a in self.anchors:
+            a_name, _, a_part = a.id.partition(".")
+            base, key = split_author_name(a_name)
+            if key is None or (anchor_id is not None and (base != name or a_part != part)):
+                continue
+            if key not in keys:
+                keys.append(key)
+        return tuple(keys)
+
+    def for_author(self, slug: str) -> BuildAnchors:
+        """Якоря глазами автора `slug` (15.17.20): строка `<имя>__<slug>` видна под именем `<имя>`, строки других
+        авторов и общая строка того же имени скрыты. Без строк на каждого автора якоря как есть: старый шаблон с одним
+        якорем `author` ведёт себя как раньше."""
+        names = self.author_names()
+        if not names:
+            return self
+        kept: list[BuildAnchor] = []
+        for a in self.anchors:
+            name, dot, part = a.id.partition(".")
+            base, key = split_author_name(name)
+            if key is None:
+                if name not in names:
+                    kept.append(a)
+            elif key == slug:
+                kept.append(replace(a, id=f"{base}{dot}{part}"))
+        return replace(self, anchors=tuple(kept))
+
     def problem_codes(self) -> tuple[str, ...]:
         """Коды проблем без повторов в порядке первого появления."""
         return tuple(dict.fromkeys(problem.code for problem in self.problems))
@@ -145,6 +184,24 @@ class PositionsFormatError(ValueError):
 def anchor_id(kind: AnchorKind, name: str, part: str) -> str:
     """id якоря: имя у подписи, «имя.часть» у даты (`supervisor.day`)."""
     return name if kind is AnchorKind.sign else f"{name}.{part}"
+
+
+def _name_of(anchor_id: str) -> str:
+    return anchor_id.partition(".")[0]
+
+
+def split_author_name(name: str) -> tuple[str, str | None]:
+    """Имя якоря и слаг автора: (`author`, `ivanov`) у `author__ivanov`; у обычного имени (имя, None)."""
+    base, sep, key = name.partition(AUTHOR_SEPARATOR)
+    if not sep or not base or not key:
+        return name, None
+    return base, key
+
+
+def author_anchor_id(anchor_id: str, slug: str) -> str:
+    """id якоря автора в команде: `author` → `author__ivanov`, `author.day` → `author__ivanov.day` (15.17.20)."""
+    name, dot, part = anchor_id.partition(".")
+    return f"{name}{AUTHOR_SEPARATOR}{slug}{dot}{part}"
 
 
 def is_anchor_id(value: str, kind: AnchorKind | None = None) -> bool:

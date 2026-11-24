@@ -20,6 +20,7 @@ from hse_doc_studio.core.signatures.pack_places import (
     AnchorRef,
     SourceAnchors,
     anchor_ref,
+    pair_anchors,
     place_source,
     placement_origin,
     seed_places,
@@ -69,6 +70,8 @@ class PackPlaces:
         earlier: Sequence[TemplateVersion] = (),
         anchors: Mapping[str, SourceAnchors] | None = None,
     ) -> None:
+        self._project = project
+        self._documents = {doc.id: doc for doc in project.documents}
         self._docs = {doc.id: doc.def_id for doc in project.documents}
         self._versions = (version, *earlier)
         self._anchors = dict(anchors or {})
@@ -109,7 +112,8 @@ class PackPlaces:
         current = self._current(doc_id, slot_id)
         if current is None:
             return None
-        return anchor_ref(current[0], current[1], self._anchors.get(doc_id, NO_ANCHORS))
+        src = pair_anchors(self._anchors.get(doc_id, NO_ANCHORS), self._project, self._documents[doc_id], slot_id)
+        return anchor_ref(current[0], current[1], src)
 
     def info(self, doc_id: str, slot_id: str, placement: SignaturePlacement) -> PlaceInfo:
         def_id = self._docs.get(doc_id)

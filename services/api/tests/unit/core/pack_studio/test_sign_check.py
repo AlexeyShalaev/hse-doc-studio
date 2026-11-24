@@ -121,6 +121,22 @@ def test__place_on_its_anchor__no_hint_to_bind() -> None:
     assert check.bind_anchor is False
 
 
+def test__author_of_a_team__checked_against_his_own_line() -> None:
+    """Рамка автора команды (`author--<слаг>`) сверяется со строкой `author__<слаг>`, а не со строкой соседа
+    (signing-route.md, 15.17.20)."""
+    ivanov = Line(120, 170, 150, LineSource.anchor, anchor="author__ivanov")
+    petrov = Line(120, 170, 180, LineSource.anchor, anchor="author__petrov")
+    lines = {"author__ivanov": (1, ivanov), "author__petrov": (1, petrov)}
+    places = [
+        _place("author--ivanov", 125, 140, origin="anchor", anchor="author__ivanov"),
+        _place("author--petrov", 125, 170, origin="anchor", anchor="author__petrov"),
+    ]
+
+    checks = check_places(places, [], {1: _page()}, 1, {}, lines)
+
+    assert [(c.slot, c.findings) for c in checks] == [("author--ivanov", ()), ("author--petrov", ())]
+
+
 def test__underscores__become_a_line_under_the_run() -> None:
     words = words_of(_glyphs("Подпись ______ ", 25, 120))
     (line,) = underscore_lines(words)

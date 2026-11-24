@@ -36,9 +36,11 @@ from hse_doc_studio.core.catalog import (
     SignatureDefaultPlacement,
     SignatureSlotDef,
 )
+from hse_doc_studio.core.entities import Document, Project
 from hse_doc_studio.core.enums import AnchorState, DateMarkAlign, DateMarkFormat, PlacementOrigin, PlaceSource
 from hse_doc_studio.core.signatures.anchors import BuildAnchor, BuildAnchors
 from hse_doc_studio.core.signatures.dates import SHEET_HEIGHT_MM, SHEET_WIDTH_MM, frame_problem
+from hse_doc_studio.core.team import is_team, split_instance_id
 from hse_doc_studio.core.value_objects import DateMark, FromPack, SignaturePlacement
 
 # Точность сравнения мест и отпечатка: 0,1 мм. Сравнение с допуском половины шага, чтобы 80.04 и 80.0 совпадали.
@@ -64,8 +66,36 @@ class SourceAnchors:
     def line(self, anchor_id: str) -> BuildAnchor | None:
         return self.anchors.get(anchor_id) if self.anchors is not None and not self.own_pdf else None
 
+    def for_author(self, slug: str) -> SourceAnchors:
+        """Якоря глазами автора `slug` (15.17.20): его строка `author__<slug>` видна как `author`. Старая сборка с
+        одним якорем `author` остаётся как есть."""
+        return self if self.anchors is None else replace(self, anchors=self.anchors.for_author(slug))
+
+    def has_author_lines(self, anchor_id: str) -> bool:
+        """В источнике строки на каждого автора для имени якоря `anchor_id` (`author` или `author.day`)."""
+        return self.known and self.anchors is not None and anchor_id.partition(".")[0] in self.anchors.author_names()
+
 
 NO_ANCHORS = SourceAnchors()
+
+
+def shared_author(project: Project, doc: Document, slot_id: str) -> str | None:
+    """Слаг автора, если пара это экземпляр автора (`author--<слаг>`) на общем документе команды; иначе None."""
+    owner = split_instance_id(slot_id)[1]
+    return owner if owner is not None and is_team(project) and doc.owner is None else None
+
+
+def pair_anchors(src: SourceAnchors, project: Project, doc: Document, slot_id: str) -> SourceAnchors:
+    """Якоря источника для пары: у экземпляра автора на общем документе команды глазами этого автора (15.17.20)."""
+    author = shared_author(project, doc, slot_id)
+    return src.for_author(author) if author is not None else src
+
+
+def author_lines(slot_def: SignatureSlotDef, doc_def_id: str, src: SourceAnchors) -> bool:
+    """Место пака слота на документе стоит на якоре, и источник ставит такие строки на каждого автора (15.17.20):
+    только тогда экземпляр автора на общем документе команды получает место из пака."""
+    entry = slot_def.entry_for(doc_def_id)
+    return isinstance(entry, AnchorPlace) and src.has_author_lines(entry.anchor)
 
 
 @dataclass(frozen=True)

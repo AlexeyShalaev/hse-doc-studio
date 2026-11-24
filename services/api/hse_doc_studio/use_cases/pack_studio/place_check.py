@@ -14,10 +14,11 @@ from typing import Final
 from uuid import UUID
 
 from hse_doc_studio.core.access.entities import Actor
-from hse_doc_studio.core.catalog import AnchorPlace
+from hse_doc_studio.core.catalog import AnchorPlace, SignatureDefaultDate, SignatureDefaultPlacement
 from hse_doc_studio.core.enums import AnchorState
 from hse_doc_studio.core.i18n import current_interface_language, localized_error
 from hse_doc_studio.core.pack_studio.errors import PackStudioError, PackStudioErrorCode
+from hse_doc_studio.core.pack_studio.places import DocFrame, SlotPlaces
 from hse_doc_studio.core.pack_studio.protocols import IPdfPages, Mark, MarkKind
 from hse_doc_studio.core.pack_studio.sign_check import (
     Line,
@@ -32,7 +33,9 @@ from hse_doc_studio.core.pack_studio.sign_check import (
     label_words,
     sign_rect,
 )
-from hse_doc_studio.core.signatures.anchors import AnchorKind
+from hse_doc_studio.core.signatures.anchors import AnchorKind, BuildAnchors, author_anchor_id, split_author_name
+from hse_doc_studio.core.signatures.pack_places import SourceAnchors, resolve_mark, resolve_place
+from hse_doc_studio.core.team import OWNER_SEPARATOR, split_instance_id
 from hse_doc_studio.use_cases.pack_studio.places import PackPlacesService, PlacesView
 from hse_doc_studio.use_cases.pack_studio.preview import PackPreviewService, version_ref
 
@@ -67,6 +70,54 @@ def _pick(label: Mapping[str, str]) -> str:
     return label.get(lang) or label.get("ru") or next(iter(label.values()), "")
 
 
+@dataclass(frozen=True)
+class _SlotFrame:
+    """Рамка слота на сборке: у слота `per_author` со строками на каждого автора по рамке на автора (15.17.20)."""
+
+    slot: str
+    label: str
+    box: SignatureDefaultPlacement | None
+    anchor: str | None
+    anchor_state: AnchorState | None
+    dates: tuple[SignatureDefaultDate | None, ...]
+
+
+def _authors(slot: SlotPlaces, frame: DocFrame, anchors: BuildAnchors | None) -> list[_SlotFrame]:
+    """Рамки слота на документе сборки. Слот `per_author` на сборке, где шаблон ставит строку на каждого автора
+    (`author__<слаг>`, signing-route.md, 15.17.20), даёт рамку каждому автору: слот `author--<слаг>`, якорь
+    `author__<слаг>`, как место из пака встанет в командном проекте. Иначе одна рамка слота, как её посчитала модель
+    мест."""
+    label = _pick(slot.label)
+    entry = frame.entry
+    keys = anchors.author_keys(entry.anchor) if anchors is not None and isinstance(entry, AnchorPlace) else ()
+    if not slot.per_author or not keys or anchors is None or not isinstance(entry, AnchorPlace):
+        return [
+            _SlotFrame(
+                slot=slot.id,
+                label=label,
+                box=frame.box,
+                anchor=entry.anchor if isinstance(entry, AnchorPlace) else None,
+                anchor_state=frame.anchor.state if frame.anchor is not None else None,
+                dates=tuple(mark.box for mark in frame.dates),
+            )
+        ]
+    result: list[_SlotFrame] = []
+    for key in keys:
+        src = SourceAnchors(anchors.for_author(key))
+        box = resolve_place(entry, src)
+        result.append(
+            _SlotFrame(
+                slot=f"{slot.id}{OWNER_SEPARATOR}{key}",
+                label=f"{label} — {key}",
+                box=box,
+                anchor=author_anchor_id(entry.anchor, key),
+                anchor_state=AnchorState.found if src.line(entry.anchor) is not None else AnchorState.missing,
+                dates=tuple(resolve_mark(mark.entry, src) for mark in frame.dates),
+            )
+        )
+    return result
+
+
 class PackPlaceCheckService:
     def __init__(self, places: PackPlacesService, previews: PackPreviewService, pages: IPdfPages) -> None:
         self._places = places
@@ -95,43 +146,38 @@ class PackPlaceCheckService:
             frame = slot.document
             if frame is None:
                 continue
-            label = _pick(slot.label)
-            if frame.box is None:
-                if frame.anchor is not None and frame.anchor.state is AnchorState.missing:
-                    absent.append((slot.id, label, frame.anchor.id))
-                else:
-                    missing.append((slot.id, label))
-                continue
-            entry = frame.entry
-            origin = "mm" if not isinstance(entry, AnchorPlace) else "anchor" if anchors is not None else "fallback"
-            box = frame.box
-            places.append(
-                Place(
-                    slot=slot.id,
-                    label=label,
-                    page=box.page,
-                    rect=sign_rect(box.x_mm, box.y_mm, box.width_mm),
-                    origin=origin,
-                    anchor=entry.anchor if isinstance(entry, AnchorPlace) else None,
-                    words=label_words(*slot.label.values()),
+            for author in _authors(slot, frame, anchors):
+                if author.box is None:
+                    if author.anchor_state is AnchorState.missing and author.anchor is not None:
+                        absent.append((author.slot, author.label, author.anchor))
+                    else:
+                        missing.append((author.slot, author.label))
+                    continue
+                entry = frame.entry
+                origin = "mm" if not isinstance(entry, AnchorPlace) else "anchor" if anchors is not None else "fallback"
+                box = author.box
+                places.append(
+                    Place(
+                        slot=author.slot,
+                        label=author.label,
+                        page=box.page,
+                        rect=sign_rect(box.x_mm, box.y_mm, box.width_mm),
+                        origin=origin,
+                        anchor=author.anchor,
+                        words=label_words(*slot.label.values()),
+                    )
                 )
-            )
-            places.extend(
-                Place(
-                    slot=slot.id,
-                    label=label,
-                    page=mark.box.page,
-                    rect=Rect(
-                        mark.box.x_mm,
-                        mark.box.y_mm,
-                        mark.box.x_mm + mark.box.width_mm,
-                        mark.box.y_mm + mark.box.height_mm,
-                    ),
-                    kind=PlaceKind.date,
+                places.extend(
+                    Place(
+                        slot=author.slot,
+                        label=author.label,
+                        page=mark.page,
+                        rect=Rect(mark.x_mm, mark.y_mm, mark.x_mm + mark.width_mm, mark.y_mm + mark.height_mm),
+                        kind=PlaceKind.date,
+                    )
+                    for mark in author.dates
+                    if mark is not None
                 )
-                for mark in frame.dates
-                if mark.box is not None
-            )
         sign_lines: dict[str, tuple[int, Line]] = {}
         date_lines: list[tuple[int, Line]] = []
         for anchor in anchors.anchors if anchors is not None else ():
@@ -191,11 +237,21 @@ class PackPlaceCheckService:
         return inspection, rendered
 
 
+def _of_slot(place_slot: str, slot: str | None) -> bool:
+    """Рамка слота `slot` (без него любого): сам слот или его автор в команде (`author--<слаг>`, 15.17.20)."""
+    return slot is None or place_slot == slot or split_instance_id(place_slot)[0] == slot
+
+
+def _of_anchor(anchor_id: str, slot: str | None) -> bool:
+    """Якорь подписи слота `slot`: его имя или строка его автора (`author__<слаг>`)."""
+    return slot is None or anchor_id == slot or split_author_name(anchor_id)[0] == slot
+
+
 def default_pages(inspection: PlaceInspection, slot: str | None) -> list[int]:
     """Страницы с рамками и линиями якорей (одного слота, если он назван); без них первая."""
-    pages = {p.page for p in inspection.places if slot is None or p.slot == slot}
-    pages |= {page for sid, (page, _) in inspection.anchors.items() if slot is None or sid == slot}
-    pages |= {c.page for c in inspection.checks if c.page is not None and (slot is None or c.slot == slot)}
+    pages = {p.page for p in inspection.places if _of_slot(p.slot, slot)}
+    pages |= {page for sid, (page, _) in inspection.anchors.items() if _of_anchor(sid, slot)}
+    pages |= {c.page for c in inspection.checks if c.page is not None and _of_slot(c.slot, slot)}
     return sorted(pages) or [1]
 
 
@@ -204,11 +260,11 @@ def page_marks(  # noqa: C901 — якоря, места и предложени
 ) -> list[Mark]:
     marks: list[Mark] = []
     for sid, (anchor_page, line) in inspection.anchors.items():
-        if anchor_page == page and (slot is None or sid == slot):
+        if anchor_page == page and _of_anchor(sid, slot):
             marks.append(Mark(MarkKind.anchor, line.rect(), f"⚓ {sid}"))
     bad = {c.slot for c in inspection.checks if c.status is not None and c.status.value == "error"}
     for place in inspection.places:
-        if place.page != page or (slot is not None and place.slot != slot):
+        if place.page != page or not _of_slot(place.slot, slot):
             continue
         if place.kind is PlaceKind.date:
             marks.append(Mark(MarkKind.date, place.rect, f"{place.slot}: {localized_error('дата', 'date')}"))
@@ -219,6 +275,6 @@ def page_marks(  # noqa: C901 — якоря, места и предложени
         marks.extend(
             Mark(MarkKind.suggested, check.suggested, f"→ {check.slot}")
             for check in inspection.checks
-            if check.suggested is not None and check.line_page == page and (slot is None or check.slot == slot)
+            if check.suggested is not None and check.line_page == page and _of_slot(check.slot, slot)
         )
     return marks

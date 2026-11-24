@@ -29,7 +29,8 @@ r"""Линтер пака (bundle-раскладка v2): превращает �
     каталога, без повторов, `when` только у слота сверх точки, `optional: true`
     не у слота с `required: true`; предупреждения: слот сверх точки не стоит в
     порядке маршрута, место `per_author` слота на общем документе командного
-    шаблона, узкое место под плашку открепленной ЭП;
+    шаблона без якоря на каждого автора (15.17.20), узкое место под плашку
+    открепленной ЭП;
   * места и метки даты на якорях шаблона (signing-route.md, 15.17.13, модуль
     `anchor_lint`): вызов якоря или обёртки из `anchor_macros` в исходнике
     документа или в `common/`, файл макросов `common/anchors.tex` подключён,
@@ -80,7 +81,7 @@ from hse_doc_studio.infra.project_init.template_renderer import (
     _split_lang_qualifier,
     collect_sources_suffixed,
 )
-from hse_doc_studio.infra.template.anchor_lint import lint_anchors
+from hse_doc_studio.infra.template.anchor_lint import author_anchor_names, lint_anchors
 from hse_doc_studio.infra.template.flow_text_lint import lint_flow_texts
 from hse_doc_studio.infra.template.jinja_sandbox import pack_environment
 from hse_doc_studio.infra.template.releases import RELEASES_FILE, load_releases
@@ -323,13 +324,18 @@ def _lint_slot_placements(version_dir: Path, manifest: dict[str, Any]) -> tuple[
 
     Лоадер битую запись документа отбрасывает молча (с записью в журнал), линтер делает это ошибкой. Место
     `per_author` слота на общем документе командного шаблона это предупреждение: в команде пресет такие места не
-    ставит, все авторы встали бы в одну рамку (15.5).
+    ставит, все авторы встали бы в одну рамку (15.5). Предупреждения нет, если место на якоре, а исходники документа
+    ставят этот якорь на каждого автора (`\\hseSignAnchor{author__{{ a.slug }}}`, 15.17.20): тогда место каждого
+    автора встаёт на его строку.
     """
     errors: list[str] = []
     warnings: list[str] = []
     scopes = _doc_scopes(version_dir, manifest)
     team = "team" in (manifest.get("supported_staffing") or ())
-    for slot_id, slot in _catalog(manifest).items():
+    catalog = _catalog(manifest)
+    per_author = team and any(slot.get("per_author") for slot in catalog.values())
+    per_author_lines = author_anchor_names(version_dir, manifest) if per_author else {}
+    for slot_id, slot in catalog.items():
         where = f"signatures.slots[{slot_id}]"
         try:
             entries = slot_placement_entries(slot.get("placements"))
@@ -341,12 +347,24 @@ def _lint_slot_placements(version_dir: Path, manifest: dict[str, Any]) -> tuple[
             problem = _placement_problem(doc_id, item, _applies(slot), scopes)
             if problem is not None:
                 errors.append(f"{where}: {problem}")
-            elif shared_warning and scopes.get(doc_id) == "shared":
+            elif (
+                shared_warning
+                and scopes.get(doc_id) == "shared"
+                and not _on_author_lines(doc_id, item, per_author_lines)
+            ):
                 warnings.append(
                     f"{where}: placements.{doc_id}: слот per_author на общем документе, в команде место из пака "
-                    f"не ставится (все авторы встали бы в одну рамку)"
+                    f"не ставится (все авторы встали бы в одну рамку); чтобы место встало на строку каждого "
+                    f"автора, поставьте в шаблоне якорь на каждого автора: "
+                    f"\\hseSignAnchor{{{slot_id}__{{{{ a.slug }}}}}} (signing-route.md, 15.17.20)"
                 )
     return errors, warnings
+
+
+def _on_author_lines(doc_id: str, item: Any, per_author_lines: dict[str, set[str]]) -> bool:
+    """Место документа на якоре, который исходники документа ставят на каждого автора (`author__{{ a.slug }}`)."""
+    place = parse_slot_placement(item, f"placements.{doc_id}")
+    return isinstance(place, AnchorPlace) and place.anchor in per_author_lines.get(doc_id, set())
 
 
 def _placement_problem(doc_id: str, item: Any, applies: set[str], scopes: dict[str, str]) -> str | None:
