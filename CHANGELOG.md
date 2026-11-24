@@ -6,14 +6,11 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.40.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.40.0...v0.40.1) (2026-11-23)
+## [0.40.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.40.0...v0.40.1) - 2026-11-24
 
-
-### Bug Fixes
-
-* «Обновить базу» без ветки и предел ожидания тулов MCP ([5d17be9](https://github.com/AlexeyShalaev/hse-doc-studio/commit/5d17be990f9d32407d87cb1e6bea5d47241b6f67))
-* **mcp:** ожидание в одном вызове тула не дольше 50 с ([777f51d](https://github.com/AlexeyShalaev/hse-doc-studio/commit/777f51d49b7222ebbe7e4ebb6641b1f5d18c0dbd))
-* **pack-studio:** «Обновить» перематывает пространство без ветки на свежую базу ([a51e227](https://github.com/AlexeyShalaev/hse-doc-studio/commit/a51e227e6d25095b5bbf640fa309d3ae45e2dc3c))
+- Pack Studio: Refresh base now also works in a space without a work branch. With no unsaved edits the space moves to the latest master by itself; with edits, the files are left alone and the space card shows a clear error with a hint. After a background refresh the interface reloads the files by itself instead of showing stale ones.
+- Pack Studio: the list of changed files is computed from the point where the space diverged from master, as in a GitHub PR. Files that merely appeared in the new master no longer look deleted, and the number of changes is the same on every screen and in MCP.
+- MCP: a single tool call waits at most 50 seconds (preview build, git sync, cloning a cloud project). For long operations start them and wait with repeated calls; a larger value is accepted and capped at 50 seconds.
 
 ## [0.40.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.39.0...v0.40.0) - 2026-11-23
 
