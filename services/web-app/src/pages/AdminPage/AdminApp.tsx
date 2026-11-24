@@ -344,7 +344,7 @@ export const AdminApp = () => {
         <Route
           path="updates"
           element={
-            <Page width="wide" ns={["updates", "diagnostics"]}>
+            <Page width="wide" ns={["updates", "diagnostics", "runnerInstall"]}>
               <AdminUpdatesPage />
             </Page>
           }

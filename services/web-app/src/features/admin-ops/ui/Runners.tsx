@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { failureCode } from "@shared/api";
 import { useServerList } from "@shared/lib";
-import { ConfirmByName } from "@shared/ui";
+import { Button, ConfirmByName } from "@shared/ui";
 import { RunnerDiskDialog } from "@entities/runner";
 import type {
   AdminRunner,
@@ -16,6 +16,7 @@ import {
   opsKeys,
   POLL_MS,
   useCreateToken,
+  useFleetPlan,
   useLocalInstances,
   useRefreshRunners,
   useQueueSummary,
@@ -42,7 +43,8 @@ import {
   RemoveInstallDialog,
   RunnerUpgradeDialog,
 } from "./LocalInstalls";
-import { FailureNotice } from "./parts";
+import { FleetUpgradeDialog } from "./FleetUpgradeDialog";
+import { Banner, FailureNotice } from "./parts";
 import { PersonalRunners } from "./PersonalRunners";
 import { RunnerDeploymentDialog } from "./RunnerDeploymentDialog";
 import { RunnersView } from "./RunnersView";
@@ -61,6 +63,7 @@ export const Runners = ({
   onOpenQueue?: () => void;
 }) => {
   const { t } = useTranslation("adminRunners");
+  const { t: tInstall } = useTranslation("adminRunnerInstall");
   const runnerState = useRunnerListState();
   const tokenState = useTokenListState();
   // Раннеры, токены и счётчики читаются с сервера страницей: поиск, фильтры
@@ -110,6 +113,11 @@ export const Runners = ({
     () => (instances.data ?? []).filter((item) => item.runner_id === null),
     [instances.data],
   );
+  // «Обновить все раннеры»: плашка остаётся и после отказа от предложения на странице «Обновления».
+  const fleet = useFleetPlan();
+  const fleetCount =
+    fleet.data?.items.filter((item) => item.kind !== "manual").length ?? 0;
+  const [fleetOpen, setFleetOpen] = useState(false);
   const [upgrading, setUpgrading] = useState<LocalInstance | null>(null);
   const [removingInstall, setRemovingInstall] = useState<LocalInstance | null>(
     null,
@@ -151,6 +159,27 @@ export const Runners = ({
       {notice && (
         <div style={{ marginBottom: "0.75rem" }}>
           <FailureNotice failure={notice} />
+        </div>
+      )}
+      {fleetCount > 0 && (
+        <div style={{ marginBottom: "0.75rem" }}>
+          <Banner
+            tone="info"
+            title={tInstall("fleet.banner.title", { count: fleetCount })}
+            testId="fleet-banner"
+            action={
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setFleetOpen(true);
+                }}
+                data-testid="fleet-open"
+              >
+                {tInstall("fleet.banner.action")}
+              </Button>
+            }
+          />
         </div>
       )}
       <RunnersView
@@ -212,6 +241,13 @@ export const Runners = ({
       <div style={{ marginTop: "1.25rem" }}>
         <PersonalRunners />
       </div>
+      {fleetOpen && (
+        <FleetUpgradeDialog
+          onClose={() => {
+            setFleetOpen(false);
+          }}
+        />
+      )}
       <RunnerDeploymentDialog
         runner={inspecting}
         install={inspecting ? (installs.get(inspecting.id) ?? null) : null}

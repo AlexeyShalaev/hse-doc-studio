@@ -326,6 +326,65 @@ export const LocalInstanceSchema = z.strictObject({
   studio_version: z.string(),
   outdated: z.boolean(),
 });
+
+/** Обновить все раннеры разом (api/schemas/runner_fleet.py): что устарело, как обновляется и ход запуска. */
+export const FleetKindSchema = z.enum([
+  "docker",
+  "kubernetes",
+  "ssh",
+  "manual",
+]);
+export const FleetManualReasonSchema = z.enum([
+  "helm",
+  "container",
+  "host",
+  "unknown",
+]);
+export const FleetRunnerSchema = z.strictObject({
+  runner_id: z.string(),
+  name: z.string(),
+  kind: FleetKindSchema,
+  version: z.string(),
+  target_version: z.string(),
+  status: z.string(),
+  running_jobs: z.number().int(),
+  manual_reason: FleetManualReasonSchema.nullable(),
+});
+export const FleetItemStateSchema = z.enum([
+  "pending",
+  "waiting",
+  "running",
+  "succeeded",
+  "failed",
+  "skipped",
+]);
+export const FleetItemSchema = z.strictObject({
+  runner_id: z.string(),
+  name: z.string(),
+  kind: FleetKindSchema,
+  from_version: z.string(),
+  to_version: z.string(),
+  state: FleetItemStateSchema,
+  code: z.string().nullable(),
+  detail: z.string(),
+  rolled_back: z.boolean().nullable(),
+});
+export const FleetBatchSchema = z.strictObject({
+  id: z.string(),
+  state: z.enum(["running", "finished"]),
+  target_version: z.string(),
+  created_at: iso,
+  finished_at: iso.nullable(),
+  cancel_requested: z.boolean(),
+  items: z.array(FleetItemSchema),
+});
+export const FleetPlanSchema = z.strictObject({
+  server_version: z.string(),
+  offer: z.boolean(),
+  dismissed_version: z.string().nullable(),
+  items: z.array(FleetRunnerSchema),
+  batch: FleetBatchSchema.nullable(),
+});
 const QUANTITY = /^[0-9]+(\.[0-9]+)?(m|Ki|Mi|Gi|Ti|k|K|M|G|T)?$/;
 const quantity = z.string().max(12).regex(QUANTITY);
 /** Лимиты раннера в кластере: пустое поле опускается и значит умолчание Helm; границы проверяет бэкенд. */
@@ -516,6 +575,10 @@ export type LocalInstallCapabilities = z.infer<
 >;
 export type InstallJob = z.infer<typeof InstallJobSchema>;
 export type LocalInstance = z.infer<typeof LocalInstanceSchema>;
+export type FleetRunner = z.infer<typeof FleetRunnerSchema>;
+export type FleetItem = z.infer<typeof FleetItemSchema>;
+export type FleetBatch = z.infer<typeof FleetBatchSchema>;
+export type FleetPlan = z.infer<typeof FleetPlanSchema>;
 export type StartLocalInstallRequest = z.infer<
   typeof StartLocalInstallRequestSchema
 >;

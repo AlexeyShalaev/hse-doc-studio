@@ -36,6 +36,7 @@ import { buildProgress, formatDuration } from "../lib/progress";
 import { useNow } from "../model/useNow";
 import { useOutage } from "../model/useOutage";
 import { AutoUpdateSection } from "./AutoUpdateSection";
+import { FleetOffer } from "./FleetOffer";
 import { HistoryTable } from "./HistoryTable";
 import { PolicyPanel } from "./PolicyPanel";
 import { RestartNotice } from "./RestartNotice";
@@ -732,6 +733,8 @@ const UpdatesContent = () => {
           )}
         </Modal>
       )}
+
+      {!active && !outage.down && <FleetOffer />}
 
       {openedRun && (
         <Modal

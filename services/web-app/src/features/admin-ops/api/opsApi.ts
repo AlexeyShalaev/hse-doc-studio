@@ -19,6 +19,8 @@ import {
   AdminStorageOwnerPageSchema,
   AdminStorageUsageSchema,
   AdminUserSchema,
+  FleetBatchSchema,
+  FleetPlanSchema,
   InstallJobSchema,
   LocalInstallCapabilitiesSchema,
   LocalInstanceSchema,
@@ -43,6 +45,8 @@ import {
   type AdminStorageOwnerRow,
   type AdminUser,
   type CreateAdminRunnerTokenRequest,
+  type FleetBatch,
+  type FleetPlan,
   type InstallJob,
   type LocalInstallCapabilities,
   type LocalInstance,
@@ -195,6 +199,28 @@ export const opsApi = {
     adminClient
       .post(`/runner-install/ssh/credentials/${enc(id)}/run`, { action }, quiet)
       .then(parseResp(InstallJobSchema)),
+  /** Устаревшие раннеры установки, способ обновить каждый и нужно ли предложение. */
+  fleetPlan: (): Promise<FleetPlan> =>
+    adminClient
+      .get("/runner-install/fleet", quiet)
+      .then(parseResp(FleetPlanSchema)),
+  /** Обновить выбранные раннеры по одному; ход читается fleetBatch. */
+  fleetUpgrade: (runnerIds: string[]): Promise<FleetBatch> =>
+    adminClient
+      .post("/runner-install/fleet/upgrade", { runner_ids: runnerIds }, quiet)
+      .then(parseResp(FleetBatchSchema)),
+  fleetBatch: (id: string): Promise<FleetBatch> =>
+    adminClient
+      .get(`/runner-install/fleet/batches/${enc(id)}`, quiet)
+      .then(parseResp(FleetBatchSchema)),
+  fleetCancel: (id: string): Promise<FleetBatch> =>
+    adminClient
+      .post(`/runner-install/fleet/batches/${enc(id)}/cancel`, {}, quiet)
+      .then(parseResp(FleetBatchSchema)),
+  /** Отказаться от предложения для этой версии Студии (для всех админов). */
+  fleetDismiss: async (version: string): Promise<void> => {
+    await adminClient.post("/runner-install/fleet/dismiss", { version }, quiet);
+  },
   /** Обновить раннер из админки на месте; ход читается тем же installJob. */
   upgradeLocalInstance: (
     target: "docker" | "kubernetes",

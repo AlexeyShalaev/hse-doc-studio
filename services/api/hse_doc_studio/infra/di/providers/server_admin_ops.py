@@ -116,6 +116,7 @@ from hse_doc_studio.use_cases.mail.log import GetMailLogEntryUC, ListMailLogUC, 
 from hse_doc_studio.use_cases.mail.resend import ResendGate, ResendMailBatchUC, ResendMailUC
 from hse_doc_studio.use_cases.runner_install import (
     InstallJobStore,
+    RunnerFleetService,
     RunnerInstallService,
     SshInstallService,
     SshSessionStore,
@@ -530,6 +531,20 @@ class ServerAdminOpsProvider(Provider):
             data_dir=cfg.data_dir,
             version=settings.get_app_version(),
             internal_urls={InstallTarget.kubernetes: cfg.kubernetes_studio_url} if cfg.kubernetes_studio_url else None,
+        )
+
+    @provide
+    def get_runner_fleet_service(
+        self,
+        registry: RunnerRegistry,
+        installs: RunnerInstallService,
+        ssh: SshInstallService,
+        repo: IInstanceSettingsRepository,
+        audit: IAuditLog,
+        uow: IUnitOfWork,
+    ) -> RunnerFleetService:
+        return RunnerFleetService(
+            registry, installs, ssh, repo, audit, uow, studio_url=(settings.auth.public_url or "").rstrip("/")
         )
 
     @provide

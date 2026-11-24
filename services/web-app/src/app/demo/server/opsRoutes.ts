@@ -686,6 +686,20 @@ export const createOpsRoutes = (
       handler: guarded(() => demoJson([])),
     },
     {
+      // В демо раннеров, которые Студия обновила бы сама, нет: предложения «Обновить все раннеры» не будет.
+      method: "GET",
+      pattern: "/runner-install/fleet",
+      handler: guarded(() =>
+        demoJson({
+          server_version: "0.0.0",
+          offer: false,
+          dismissed_version: null,
+          items: [],
+          batch: null,
+        }),
+      ),
+    },
+    {
       method: "POST",
       pattern: "/runner-install/local/:target",
       handler: guarded((req) => {
