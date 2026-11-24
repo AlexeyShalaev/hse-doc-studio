@@ -6,6 +6,14 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.42.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.41.0...v0.42.0) (2026-11-24)
+
+
+### Features
+
+* **admin:** предложение обновить все раннеры после обновления системы ([3096c90](https://github.com/AlexeyShalaev/hse-doc-studio/commit/3096c902d1be2147b631bfb869718f92ba541c81))
+* **admin:** предложение обновить все раннеры после обновления системы ([b48cdd2](https://github.com/AlexeyShalaev/hse-doc-studio/commit/b48cdd26f3b7cfd05f1a4c712e1a59858c121900))
+
 ## [0.41.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.40.1...v0.41.0) - 2026-11-24
 
 - Packs: hse-cs-sse coursework 2026.1.8. The author's and the supervisor's signature places on the report title page are moved so the boxes no longer cover the Full name and Grade captions. Checked by an agent on a real build: 0 errors and 0 warnings. The text of the documents is unchanged.
