@@ -6,13 +6,10 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.42.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.41.0...v0.42.0) (2026-11-24)
+## [0.42.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.41.0...v0.42.0) - 2026-11-24
 
-
-### Features
-
-* **admin:** предложение обновить все раннеры после обновления системы ([3096c90](https://github.com/AlexeyShalaev/hse-doc-studio/commit/3096c902d1be2147b631bfb869718f92ba541c81))
-* **admin:** предложение обновить все раннеры после обновления системы ([b48cdd2](https://github.com/AlexeyShalaev/hse-doc-studio/commit/b48cdd26f3b7cfd05f1a4c712e1a59858c121900))
+- Runners: after a system update the admin area offers to update all runners together. On Admin, Updates, once the server runs the new version, an Update runners to vX dialog opens with the outdated runners (name, kind, current and new version), checkboxes and an Update all or Update selected button. Runners are updated one at a time, idle ones first; a runner with a build in progress waits for it for up to 15 minutes, the build is never cut off, and if it does not finish the runner is skipped. Progress and the result are shown in the same dialog, one runner's failure does not stop the others, and a run can be stopped after the current runner. Runners Studio cannot safely update (Helm, docker run outside the admin area, a service without saved SSH) are listed as Update manually with a hint. After Not now the dialog does not come back for the same version, and the banner on the Runners page stays as the manual route.
+- MCP: tools admin_runner_fleet (outdated runners and the progress of a run), admin_runner_fleet_upgrade (update all or selected runners, dangerous) and admin_runner_fleet_cancel. Every action is written to the audit log.
 
 ## [0.41.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.40.1...v0.41.0) - 2026-11-24
 
