@@ -12,12 +12,14 @@ from hse_doc_studio.api.schemas.pack_studio_outcome import (
     PackOutcomeImpactResponse,
     PackOutcomeMatrixResponse,
 )
+from hse_doc_studio.core.pack_studio.outcome.scenarios import parse_scenario, version_matches
 from httpx import Response
 
 from tests.integration.api.pack_studio.conftest import Stand
 from tests.integration.api.pack_studio.outcome_support import (
     COURSEWORK,
     REAL_PACKS,
+    REAL_VERSIONS,
     VKR,
     copy_real_packs,
     outcome_url,
@@ -32,17 +34,29 @@ SLOT_AFTER = "when: { person: supervisor }"
 DRAFT_ANNOTATION = f"hse-cs-se/templates/vkr/versions/{DRAFT}/files/shared_annotation/doc.yaml"
 ANNOTATION_BEFORE = "supported_kinds:\n- research\n"
 ANNOTATION_AFTER = "supported_kinds:\n- research\n- project\n"
-TEMPLATES = (("hse-cs-se", "vkr"), ("hse-cs-sse", "coursework"))
 
 
-def real_scenario_files(templates: tuple[tuple[str, str], ...] = TEMPLATES) -> dict[str, bytes]:
-    """Стартовые сценарии паков: путь от папки паков -> содержимое."""
+def real_scenario_files(versions: tuple[tuple[str, str, str], ...] = REAL_VERSIONS) -> dict[str, bytes]:
+    """Стартовые сценарии паков для версий стенда: путь от папки паков -> содержимое.
+
+    У шаблона на стенде одна версия, поэтому берутся сценарии, которым она подходит по `versions`: сценарий другой
+    линии версий на ней не считается, а в папке без своей версии был бы ошибкой пака."""
     found: dict[str, bytes] = {}
-    for pack, template in templates:
+    for pack, template, version in versions:
         folder = REAL_PACKS / pack / "templates" / template / "scenarios"
         for path in sorted(folder.glob("*.yaml")):
-            found[f"{pack}/templates/{template}/scenarios/{path.name}"] = path.read_bytes()
+            data = path.read_bytes()
+            if version_matches(parse_scenario(data.decode("utf-8")).versions, version):
+                found[f"{pack}/templates/{template}/scenarios/{path.name}"] = data
     return found
+
+
+def starter_ids(ref: tuple[str, str, str]) -> list[str]:
+    """Id стартовых сценариев шаблона на стенде, по порядку (так их отдаёт список и считает матрица)."""
+    prefix = f"{ref[0]}/templates/{ref[1]}/scenarios/"
+    ids = sorted(Path(path).stem for path in real_scenario_files() if path.startswith(prefix))
+    assert ids, ref
+    return ids
 
 
 def draft_coursework_files() -> dict[str, bytes]:

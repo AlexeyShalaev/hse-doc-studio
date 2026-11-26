@@ -3,7 +3,12 @@
 Файлы лежат рядом с `examples/`, вне каталога версии, и работают как регрессионные тесты пака: после правки версии
 видно, какие сценарии «поехали». Тест падает, если файл не читается, записан не каноническим текстом (кнопка
 «Записать снимок» в Студии дала бы другие байты) или результат версии разошёлся с утверждениями и снимком; в этом
-случае сценарий обновляют сознательно (правкой утверждения или новым снимком)."""
+случае сценарий обновляют сознательно (правкой утверждения или новым снимком).
+
+Сценарий проверяется только на версиях из своего диапазона `versions`: у линии версий могут быть свои сценарии
+(например, снимок маршрута линии 2026.1 не подходит линии 2026.2). Вне диапазона прогон сценарий не выполняет и помечает
+`unchecked`; это не расхождение. Ни одной подходящей версии у сценария или ни одного подходящего сценария у новейшей
+версии это ошибка."""
 
 from __future__ import annotations
 
@@ -70,38 +75,57 @@ def test__real_packs__scenario_file_is_canonical_and_matches_a_real_version(path
     assert any(version_matches(scenario.versions, v) for v in _versions(path)), "ни одна версия шаблона не подходит"
 
 
+def _applicable(scenarios: dict[str, Scenario], version_id: str) -> set[str]:
+    return {name for name, scenario in scenarios.items() if version_matches(scenario.versions, version_id)}
+
+
 @pytest.mark.parametrize("template", sorted({_template(path) for path in _FILES}), ids=lambda t: "/".join(t))
-def test__real_packs__scenarios_pass_on_the_newest_version(
+def test__real_packs__scenarios_pass_on_the_newest_version_of_their_range(
     repo: YamlTemplateRepository, template: tuple[str, str]
 ) -> None:
     pack, name = template
     folder = _PACKS / pack / "templates" / name / "scenarios"
     files = sorted(folder.glob("*.yaml"))
-    scenarios: dict[str, Scenario | str] = {
-        path.stem: parse_scenario(path.read_text(encoding="utf-8")) for path in files
+    scenarios = {path.stem: parse_scenario(path.read_text(encoding="utf-8")) for path in files}
+    assert len(files) <= MAX_SCENARIOS
+    versions = _versions(files[0])
+    newest = versions[-1]
+    assert _applicable(scenarios, newest), f"версия {newest}: ни один сценарий шаблона ей не подходит"
+    # Новейшая версия шаблона и новейшая версия диапазона каждого сценария: старая линия версий держит свои сценарии.
+    targets = {newest} | {
+        max((v for v in versions if version_matches(s.versions, v)), key=versions.index, default=newest)
+        for s in scenarios.values()
     }
-    version_id = _versions(files[0])[-1]
-    version = repo.get_version(pack, name, version_id)
-    assert version is not None
+    checked: set[str] = set()
 
-    run = run_scenarios(version, tuple(auto_examples(version)), scenarios, TODAY)
+    for version_id in sorted(targets, key=versions.index):
+        version = repo.get_version(pack, name, version_id)
+        assert version is not None
+        applicable = _applicable(scenarios, version_id)
 
-    problems = {
-        r.scenario: (
-            r.status,
-            r.message,
-            [(f.kind, f.expected, f.actual) for f in r.failures],
-            [c.label for c in r.changes],
+        run = run_scenarios(version, tuple(auto_examples(version)), scenarios, TODAY)
+
+        problems = {
+            r.scenario: (
+                r.status,
+                r.message,
+                [(f.kind, f.expected, f.actual) for f in r.failures],
+                [c.label for c in r.changes],
+            )
+            for r in run.results
+            if r.scenario in applicable and r.status != "passed"
+        }
+        assert problems == {}, f"версия {version_id}: сценарии разошлись с результатом"
+        assert [r.scenario for r in run.results] == list(scenarios)
+        # Сценарий вне диапазона на этой версии не выполняется; других причин остаться без проверки у него нет.
+        assert {r.scenario for r in run.results if r.status == "unchecked"} == set(scenarios) - applicable
+        assert run.coverage.rules_total > 0
+        assert (
+            run.coverage.rules_covered + run.coverage.rules_half + run.coverage.rules_uncovered
+            == run.coverage.rules_total
         )
-        for r in run.results
-        if r.status != "passed"
-    }
-    assert problems == {}, f"версия {version_id}: сценарии разошлись с результатом"
-    assert len(run.results) == len(files) <= MAX_SCENARIOS
-    assert run.coverage.rules_total > 0
-    assert (
-        run.coverage.rules_covered + run.coverage.rules_half + run.coverage.rules_uncovered == run.coverage.rules_total
-    )
+        checked |= applicable
+    assert checked == set(scenarios), "сценарий не проверен ни на одной версии"
 
 
 def test__real_packs__scenarios_change_nothing_in_released_version_directories() -> None:

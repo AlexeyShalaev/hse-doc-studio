@@ -128,7 +128,9 @@ async def test__impact__nothing_edited__no_scenario_and_no_atlas_row_changes(
 
     got = parse_impact(await post_op(stand, ws, DRAFT_COURSEWORK, "impact"))
 
-    assert (got.summary.scenarios_total, got.summary.scenarios_changed, got.summary.scenarios_error) == (3, 0, 0)
+    starters = len(_starter("coursework"))
+    assert (got.summary.scenarios_total, got.summary.scenarios_changed, got.summary.scenarios_error) == (starters, 0, 0)
+    assert starters > 0
     assert got.summary.sections == []
     assert got.summary.atlas is not None
     assert got.summary.atlas.rows_changed == 0
@@ -277,7 +279,7 @@ async def test__impact__input_removed_by_the_edit_breaks_that_scenario_and_names
     assert english.status == "error"
     assert (english.message or "").startswith("work_tree: lang=")
     assert got.summary.scenarios_error == 1
-    assert got.summary.scenarios_total == 5
+    assert got.summary.scenarios_total == len(_starter("vkr")) + 1
 
 
 async def test__impact__a_scenario_that_exists_only_in_the_work_tree_is_compared_too(
@@ -291,7 +293,7 @@ async def test__impact__a_scenario_that_exists_only_in_the_work_tree_is_compared
 
     mine = next(s for s in got.scenarios if s.scenario == "mine")
     assert mine.status == "changed"
-    assert got.summary.scenarios_total == 4
+    assert got.summary.scenarios_total == len(_starter("coursework")) + 1
 
 
 # ── база отсутствует ─────────────────────────────────────────────────────────

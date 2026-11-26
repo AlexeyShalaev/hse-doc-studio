@@ -55,6 +55,7 @@ from tests.unit.use_cases.pack_studio.outcome.compare_support import (
     PRACTICE,
     TODAY,
     VKR,
+    applicable_scenarios_of,
     example_of,
     load,
     scenarios_of,
@@ -151,7 +152,7 @@ def test__compare__every_pair_of_starter_scenarios_matches_an_independent_resolv
     repo: YamlTemplateRepository, ref: tuple[str, str, str]
 ) -> None:
     version = load(repo, ref)
-    scenarios = scenarios_of(ref)
+    scenarios = applicable_scenarios_of(ref)
     assert len(scenarios) >= 2
     example = example_of(version)
 
@@ -302,12 +303,14 @@ def test__impact__slot_edit_changes_exactly_the_scenarios_it_should(
     impacts = scenario_impacts(side_of(coursework), side_of(edited), scenarios, TODAY)
 
     statuses = {i.scenario: i.status for i in impacts}
-    assert statuses == {
+    # Считаются сценарии, которым версия подходит по `versions`; сценарии другой линии версий в ответ не входят.
+    assert list(statuses) == list(applicable_scenarios_of(COURSEWORK))
+    assert {s: statuses[s] for s in ("company-supervisor", "no-supervisor", "university-supervisor")} == {
         "company-supervisor": "unchanged",
         "no-supervisor": "unchanged",
         "university-supervisor": "changed",
     }
-    changed = next(i for i in impacts if i.status == "changed")
+    changed = next(i for i in impacts if i.scenario == "university-supervisor")
     # Ручной расчёт: после правки слот академического руководителя нужен любому научруку, то есть у научрука из ВШЭ
     # шаг 3 появляется, пара появляется, пропуск исчезает.
     assert {(c.symbol, c.kind, c.id) for c in changed.changes} == {
@@ -370,8 +373,15 @@ def test__impact__document_condition_edit_in_vkr(tmp_path: Path, repo: YamlTempl
 
     impacts = {i.scenario: i for i in scenario_impacts(side_of(real), side_of(edited_vkr), scenarios, TODAY)}
 
-    # Общая аннотация команды теперь нужна и проектам: меняется только сценарий команды из трёх.
-    assert {s: i.status for s, i in impacts.items()} == {
+    assert list(impacts) == list(applicable_scenarios_of(VKR))
+    # Общая аннотация команды теперь нужна и проектам: из этих сценариев меняется только команда из трёх.
+    named = (
+        "nda-programmer-manual-only",
+        "research-company-supervisor",
+        "solo-university-supervisor",
+        "team-of-three-nda",
+    )
+    assert {s: impacts[s].status for s in named} == {
         "nda-programmer-manual-only": "unchanged",
         "research-company-supervisor": "unchanged",
         "solo-university-supervisor": "unchanged",
@@ -476,7 +486,9 @@ def test__impact__many_scenarios_are_all_calculated_and_summed(
 def test__matrix__starter_scenarios_match_their_expectations(coursework: TemplateVersion) -> None:
     rows = matrix_rows(side_of(coursework), scenarios_of(COURSEWORK), TODAY)
 
-    assert [r.scenario for r in rows] == ["company-supervisor", "no-supervisor", "university-supervisor"]
+    # Строка на сценарий, которому версия подходит по `versions`; сценарии другой линии версий в матрицу не входят.
+    assert [r.scenario for r in rows] == list(applicable_scenarios_of(COURSEWORK))
+    assert rows
     for row in rows:
         assert row.status == "passed"
         assert [c.section for c in row.cells] == [
@@ -494,9 +506,10 @@ def test__matrix__starter_scenarios_match_their_expectations(coursework: Templat
         assert by["checks"].count > 0
         assert all(c.changed is None for c in row.cells)
     # Сценарии, которые не различают раздел, дают клеткам один отпечаток.
-    documents = {r.scenario: next(c for c in r.cells if c.section == "documents").fingerprint for r in rows}
+    by_supervisor = [r for r in rows if r.scenario in ("company-supervisor", "no-supervisor", "university-supervisor")]
+    documents = {r.scenario: next(c for c in r.cells if c.section == "documents").fingerprint for r in by_supervisor}
     assert len(set(documents.values())) == 1
-    routes = {r.scenario: next(c for c in r.cells if c.section == "route").fingerprint for r in rows}
+    routes = {r.scenario: next(c for c in r.cells if c.section == "route").fingerprint for r in by_supervisor}
     # Маршрут без научрука и с научруком из ВШЭ у курсового проекта один (шаг научрука остаётся: вопрос 1 дизайна).
     assert len(set(routes.values())) == 2
     assert routes["no-supervisor"] == routes["university-supervisor"] != routes["company-supervisor"]
@@ -595,7 +608,7 @@ def test__bodies__compare_and_matrix_builders_agree_with_the_models(coursework: 
 
     assert (compare.left.state, compare.right.state) == ("head", "base")
     assert not compare.identical
-    assert len(matrix.rows) == 3
+    assert len(matrix.rows) == len(applicable_scenarios_of(COURSEWORK)) > 0
 
 
 def test__resolve_side__includes_the_checks_section(coursework: TemplateVersion) -> None:

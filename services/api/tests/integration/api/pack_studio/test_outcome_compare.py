@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from hse_doc_studio.core.pack_studio.outcome.scenarios import parse_scenario
+from hse_doc_studio.core.pack_studio.outcome.scenarios import MAX_SCENARIOS, parse_scenario
 from hse_doc_studio.core.pack_studio.preview import auto_examples
 from hse_doc_studio.infra.template.yaml_template_repository import YamlTemplateRepository
 from hse_doc_studio.use_cases.pack_studio.outcome.compare import (
@@ -37,6 +37,7 @@ from .outcome_compare_support import (
     parse_compare,
     parse_matrix,
     post_op,
+    starter_ids,
 )
 from .outcome_support import post_outcome
 from .scenario_support import COURSEWORK_TEMPLATE, put_scenario, scenario_body, scenarios_url, tree_digest
@@ -299,7 +300,7 @@ async def test__matrix__work_tree__strict_model_and_equal_to_a_direct_calculatio
         "revision": got.revision,
         **direct,
     }
-    assert [r.scenario for r in got.rows] == ["company-supervisor", "no-supervisor", "university-supervisor"]
+    assert [r.scenario for r in got.rows] == starter_ids(COURSEWORK)
     assert all(r.status == "passed" for r in got.rows)
     assert all(c.changed is None for r in got.rows for c in r.cells)
 
@@ -358,24 +359,25 @@ async def test__matrix__against_base_in_a_folder__diff_base_unavailable(
 async def test__matrix__200_scenarios_one_per_row_within_the_size_limit(
     stand: Stand, services: PackCompareService
 ) -> None:
+    starters = len(starter_ids(COURSEWORK))
     many = {
         f"hse-cs-sse/templates/coursework/scenarios/many-{i:03d}.yaml": (
             f"format: 1\nname:\n  ru: Сценарий {i}\ninputs:\n  supervisor: {('university', 'company', 'none')[i % 3]}\n"
         ).encode()
-        for i in range(197)
+        for i in range(MAX_SCENARIOS - starters)
     }
-    ws, _ = await folder_with_scenarios(stand, many)  # 197 новых и 3 стартовых: ровно 200 файлов
+    ws, _ = await folder_with_scenarios(stand, many)  # новые и стартовые: ровно 200 файлов, предел папки сценариев
     started = time.perf_counter()
 
     resp = await post_op(stand, ws, COURSEWORK, "matrix")
 
     elapsed = time.perf_counter() - started
     got = parse_matrix(resp)
-    assert len(got.rows) == 200
+    assert len(got.rows) == MAX_SCENARIOS == 200
     assert len(resp.content) < 8 * 1024 * 1024
     assert elapsed < 20, elapsed
     # Все сценарии без ожидания, кроме стартовых, помечены `unchecked`.
-    assert sum(1 for r in got.rows if r.status == "unchecked") == 197
+    assert sum(1 for r in got.rows if r.status == "unchecked") == len(many) > 0
 
 
 # ── права, чтение, пределы ───────────────────────────────────────────────────
@@ -402,11 +404,7 @@ async def test__all_three__only_read__the_tree_is_untouched(stand: Stand, servic
 
     assert tree_digest(root) == before
     listing = await stand.client.get(scenarios_url(ws, COURSEWORK_TEMPLATE))
-    assert [e["id"] for e in listing.json()["scenarios"]] == [
-        "company-supervisor",
-        "no-supervisor",
-        "university-supervisor",
-    ]
+    assert [e["id"] for e in listing.json()["scenarios"]] == starter_ids(COURSEWORK)
 
 
 async def test__matrix__over_the_time_limit__503_outcome_busy_with_retry_after(
