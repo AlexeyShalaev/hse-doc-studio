@@ -854,6 +854,19 @@ class PackSignatureSlot(StrictModel):
     document: PackSlotFrame | None
 
 
+class PackAnchorView(StrictModel):
+    """Якорь сборки словами: `slot` слот, чью строку он отмечает (имя якоря без слага автора), `part` часть даты у
+    якоря даты. У строки автора команды (`author__ivanov`) `author` слаг и `author_name` имя автора из набора
+    данных сборки (null: сборка сделана до того, как стала запоминать авторов)."""
+
+    id: str
+    kind: Literal["sign", "date"]
+    slot: str
+    part: str | None
+    author: str | None
+    author_name: str | None
+
+
 class PackSignaturesBuild(StrictModel):
     id: str
     document: str
@@ -861,6 +874,8 @@ class PackSignaturesBuild(StrictModel):
     anchors_known: bool
     sign_anchors: list[str]
     date_anchors: list[str]
+    # Те же якоря словами, сначала подписи, затем даты: сырой id `author__<слаг>` рядом со слотом и именем автора.
+    anchor_views: list[PackAnchorView] = Field(default_factory=list)
 
 
 class PackSignaturesResponse(StrictModel):

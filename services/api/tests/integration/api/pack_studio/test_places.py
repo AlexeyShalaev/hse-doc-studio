@@ -214,6 +214,7 @@ async def test__get__frames_of_the_build_document(stand: Stand, fake_docker: Fak
         "anchors_known": False,
         "sign_anchors": [],
         "date_anchors": [],
+        "anchor_views": [],
     }
     frame = _supervisor(body)["document"]
     assert frame["kind"] == "default"

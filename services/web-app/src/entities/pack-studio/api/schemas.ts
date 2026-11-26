@@ -818,6 +818,19 @@ export const PackSignaturesSchema = z.strictObject({
       anchors_known: z.boolean(),
       sign_anchors: z.array(z.string()),
       date_anchors: z.array(z.string()),
+      // Те же якоря словами: слот, часть даты, а у строки автора команды (`author__<слаг>`) слаг и имя автора.
+      anchor_views: z
+        .array(
+          z.strictObject({
+            id: z.string(),
+            kind: z.enum(["sign", "date"]),
+            slot: z.string(),
+            part: z.string().nullable(),
+            author: z.string().nullable(),
+            author_name: z.string().nullable(),
+          }),
+        )
+        .optional(),
     })
     .nullable(),
   slots: z.array(PackSignatureSlotSchema),

@@ -6,22 +6,31 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
 import yaml
+from hse_doc_studio.api.routers.v1.pack_studio_places import places_response
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.file_version import file_etag
 from hse_doc_studio.core.pack_studio.errors import PackStudioError, PackStudioErrorCode
 from hse_doc_studio.core.pack_studio.paths import VersionRef
-from hse_doc_studio.core.pack_studio.places import MAX_PLACE_OPS, PlaceBox, PlaceOp, PlaceOpKind
-from hse_doc_studio.core.pack_studio.preview import PreviewBuild, PreviewStatus
+from hse_doc_studio.core.pack_studio.places import (
+    MAX_PLACE_OPS,
+    AnchorView,
+    PlaceBox,
+    PlaceOp,
+    PlaceOpKind,
+    anchor_views,
+)
+from hse_doc_studio.core.pack_studio.preview import PreviewAuthor, PreviewBuild, PreviewStatus
 from hse_doc_studio.core.signatures.anchors import AnchorKind, BuildAnchor, BuildAnchors
 from hse_doc_studio.infra.pack_studio.places import PackPlacesEditor
 from hse_doc_studio.use_cases.pack_studio.files import PackFile, WrittenFile
-from hse_doc_studio.use_cases.pack_studio.places import PackPlacesService
+from hse_doc_studio.use_cases.pack_studio.places import PackPlacesService, PlacesView
 
 ACTOR = Actor.local()
 WS = uuid4()
@@ -77,13 +86,14 @@ class FakePreviews:
             created_at=datetime.now(UTC),
             has_anchors=True,
         )
+        self.anchors = ANCHORS
 
     async def places_source(
         self, actor: Actor, workspace_id: UUID, build_id: UUID, ref: VersionRef
     ) -> tuple[PreviewBuild, BuildAnchors | None]:
         assert build_id == self.build.id
         assert (ref.pack, ref.template, ref.version) == ("p", "t", "1.0.1")
-        return self.build, ANCHORS
+        return self.build, self.anchors
 
 
 def _service(document: str = "report") -> tuple[PackPlacesService, FakeFiles, FakePreviews]:
@@ -106,6 +116,72 @@ async def test__get__frames_by_the_anchors_of_the_build() -> None:
     assert view.places.document == "report"
     assert view.places.anchors_known is True
     assert view.places.slots[0].document is not None
+
+
+TEAM_ANCHORS = BuildAnchors(
+    pdf_sha256="c" * 64,
+    anchors=(
+        BuildAnchor("author__ivanov", AnchorKind.sign, 1, 104.0, 230.0, 70.0),
+        BuildAnchor("author__ivanov.day", AnchorKind.date, 1, 106.0, 238.0, 8.0),
+        BuildAnchor("author__petrova", AnchorKind.sign, 1, 104.0, 252.0, 70.0),
+        BuildAnchor("supervisor", AnchorKind.sign, 1, 60.0, 180.0, 40.0),
+    ),
+)
+TEAM = (PreviewAuthor("ivanov", "Иванов Иван Иванович"), PreviewAuthor("petrova", "Петрова Мария Сергеевна"))
+
+
+async def test__get__team_build__author_anchors_read_as_the_slot_and_the_author_name() -> None:
+    service, _, previews = _service()
+    previews.build = replace(previews.build, authors=TEAM)
+    previews.anchors = TEAM_ANCHORS
+
+    places = (await service.get(ACTOR, WS, "p", "t", "1.0.1", previews.build.id)).places
+
+    # Сырые id остаются как были: по ним места привязаны в шаблоне.
+    assert places.sign_anchors == ("author__ivanov", "author__petrova", "supervisor")
+    assert places.date_anchors == ("author__ivanov.day",)
+    assert places.anchor_views == (
+        AnchorView("author__ivanov", AnchorKind.sign, "author", None, "ivanov", "Иванов Иван Иванович"),
+        AnchorView("author__petrova", AnchorKind.sign, "author", None, "petrova", "Петрова Мария Сергеевна"),
+        AnchorView("supervisor", AnchorKind.sign, "supervisor"),
+        AnchorView("author__ivanov.day", AnchorKind.date, "author", "day", "ivanov", "Иванов Иван Иванович"),
+    )
+    build = places_response(WS, PlacesView(VersionRef("p", "t", "1.0.1"), PATH, '"e"', None, previews.build, places))
+    assert build.build is not None
+    assert [(a.id, a.kind, a.slot, a.part, a.author, a.author_name) for a in build.build.anchor_views] == [
+        ("author__ivanov", "sign", "author", None, "ivanov", "Иванов Иван Иванович"),
+        ("author__petrova", "sign", "author", None, "petrova", "Петрова Мария Сергеевна"),
+        ("supervisor", "sign", "supervisor", None, None, None),
+        ("author__ivanov.day", "date", "author", "day", "ivanov", "Иванов Иван Иванович"),
+    ]
+
+
+async def test__get__build_that_does_not_know_its_authors__slug_without_a_name() -> None:
+    service, _, previews = _service()
+    previews.anchors = TEAM_ANCHORS
+
+    places = (await service.get(ACTOR, WS, "p", "t", "1.0.1", previews.build.id)).places
+
+    assert places.anchor_views[0] == AnchorView("author__ivanov", AnchorKind.sign, "author", None, "ivanov", None)
+
+
+async def test__get__without_a_build__no_anchor_views() -> None:
+    service, _, _ = _service()
+
+    places = (await service.get(ACTOR, WS, "p", "t", "1.0.1", None)).places
+
+    assert (places.sign_anchors, places.anchor_views) == ((), ())
+
+
+def test__anchor_views__malformed_author_names_stay_plain_slots() -> None:
+    views = anchor_views(["author__", "__ivanov", "co_author"], ["supervisor.month_word"], {"ivanov": "Иванов"})
+
+    assert [(v.slot, v.author, v.part) for v in views] == [
+        ("author__", None, None),
+        ("__ivanov", None, None),
+        ("co_author", None, None),
+        ("supervisor", None, "month_word"),
+    ]
 
 
 async def test__edit__new_place_lands_on_the_line_of_the_build() -> None:

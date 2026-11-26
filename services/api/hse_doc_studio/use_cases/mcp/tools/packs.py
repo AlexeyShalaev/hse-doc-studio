@@ -992,7 +992,10 @@ class PackSetPlacementTool(PackTool):
             "make_default, bind_anchor и unbind_anchor (нужна сборка build_id с якорями), add_date (mark в мм или "
             "anchor «слот.часть»), set_date и remove_date по index. Координаты округляются до 1 мм. Пример: "
             '{"op": "set_place", "slot": "supervisor", "doc": "report", '
-            '"box": {"page": 1, "x_mm": 80, "y_mm": 139, "width_mm": 40}}. Без ops отдаёт текущий каталог мест.'
+            '"box": {"page": 1, "x_mm": 80, "y_mm": 139, "width_mm": 40}}. Без ops отдаёт текущий каталог мест. '
+            "С build_id в ответе якоря сборки: sign_anchors и date_anchors (id как в шаблоне) и anchor_views, те же "
+            "якоря словами: slot, часть даты part, а у строки автора команды author__<слаг> ещё author (слаг) и "
+            "author_name (имя автора из набора данных сборки)."
         ),
         parameters=_schema(
             {
