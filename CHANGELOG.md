@@ -6,6 +6,16 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.43.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.42.0...v0.43.0) (2026-11-26)
+
+
+### Features
+
+* **packs:** hse-cs-se vkr и coursework 2026.1.5 — маршруты подписания, места подписей ([267df28](https://github.com/AlexeyShalaev/hse-doc-studio/commit/267df28ea144c19f90fc5b92fd0bc107b917803d))
+* **packs:** hse-cs-sse coursework 2026.2.0 — групповой курсовой проект ([18133b8](https://github.com/AlexeyShalaev/hse-doc-studio/commit/18133b8229da1fec0c4ef87c36cfadc359bcc547))
+* **signatures:** якоря подписи на каждого автора команды ([c20aab4](https://github.com/AlexeyShalaev/hse-doc-studio/commit/c20aab49bfbe9e5aa81c1ad448df60ec03ae3999))
+* **signatures:** якоря подписи на каждого автора команды ([bf328d8](https://github.com/AlexeyShalaev/hse-doc-studio/commit/bf328d88bcccdfe8b05b910e45757fe5e193efb3))
+
 ## [0.42.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.41.0...v0.42.0) - 2026-11-24
 
 - Runners: after a system update the admin area offers to update all runners together. On Admin, Updates, once the server runs the new version, an Update runners to vX dialog opens with the outdated runners (name, kind, current and new version), checkboxes and an Update all or Update selected button. Runners are updated one at a time, idle ones first; a runner with a build in progress waits for it for up to 15 minutes, the build is never cut off, and if it does not finish the runner is skipped. Progress and the result are shown in the same dialog, one runner's failure does not stop the others, and a run can be stopped after the current runner. Runners Studio cannot safely update (Helm, docker run outside the admin area, a service without saved SSH) are listed as Update manually with a hint. After Not now the dialog does not come back for the same version, and the banner on the Runners page stays as the manual route.
