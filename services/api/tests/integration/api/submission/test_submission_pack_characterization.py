@@ -324,6 +324,26 @@ async def test__api__create_submission__team_author_scope_and_surname_suffix(
         assert re.fullmatch(rf"{_CHECKPOINT_3}-{slug}-{_STAMP_RE}", Path(record["output_dir"]).name)
 
 
+async def test__api__create_submission__team_in_english__suffix_is_the_surname_not_the_given_name(
+    test_app: AsyncClient, tmp_path: Path
+) -> None:
+    authors = [
+        {"name": "Ivan Ivanov", "slug": "ivanov", "group": "БПИ221", "topic": "Server"},
+        {"name": "Petr I. Petrov", "slug": "petrov", "group": "БПИ221", "topic": "Client"},
+    ]
+    project = await _create_project(
+        test_app, tmp_path / "proj", kind="project", staffing="team", lang="en", authors=authors
+    )
+    await _write_outputs(test_app, project)
+
+    for slug, surname in (("ivanov", "Ivanov"), ("petrov", "Petrov")):
+        files = _archive(await _create(test_app, project, _CHECKPOINT_3, author_slug=slug))
+
+        personal = [name for name in files if " — " in name]
+        assert personal
+        assert {name.rsplit(" — ", 1)[1].rsplit(".", 1)[0] for name in personal} == {surname}
+
+
 @pytest.mark.parametrize(
     ("author_slug", "interface_lang", "detail"),
     [

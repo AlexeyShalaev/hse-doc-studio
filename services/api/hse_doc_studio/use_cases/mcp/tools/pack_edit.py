@@ -40,6 +40,7 @@ from hse_doc_studio.use_cases.mcp.tools._base import (
     uuid_arg,
 )
 from hse_doc_studio.use_cases.mcp.tools.pack_outcome_view import loc
+from hse_doc_studio.use_cases.mcp.tools.pack_submission_view import routes_lines, submission_lines
 from hse_doc_studio.use_cases.mcp.tools.pack_view import (
     CONFIRM_PROP,
     FORMAT_PROP,
@@ -57,6 +58,8 @@ from hse_doc_studio.use_cases.pack_studio.submission import PackSubmissionServic
 
 _MAX_FILES: Final = 200
 _MAX_SUBMISSION_OPS: Final = 50
+# Текст профилей сдачи с маршрутами: записанный порядок каждой точки и «Маршрут в этой комбинации» по шагам.
+_SUBMISSION_CHARS: Final = 16_000
 _OPS = ("set", "remove", "insert", "move")
 _POINTER_NOTE: Final = (
     "pointer: JSON Pointer по узлам YAML («/meta_fields/0/label/ru», «~1» это «/», «~0» это «~»); числовое звено "
@@ -677,8 +680,7 @@ async def _submission_reply(tool: PackTool, actor: Actor, args: dict[str, object
         head = f"{view.path} etag {view.etag}" + (f" [{view.read_only}]" if view.read_only else "")
     sub = view.submission
     lines = [head, f"Документы: {', '.join(sub.documents)}", f"Слоты: {', '.join(s.id for s in sub.slots)}"]
-    for number, profile in enumerate(sub.profiles):
-        lines.append(f"  профиль {number}: {profile.id}")
+    lines += submission_lines(sub, current_interface_language().value)
     data: dict[str, Any] = {
         "path": view.path,
         "etag": view.etag,
@@ -697,8 +699,8 @@ async def _submission_reply(tool: PackTool, actor: Actor, args: dict[str, object
             {str(k): str(v) for k, v in combo.items()} if isinstance(combo, Mapping) else None,
         )
         data["routes"] = jsonable(routes)
-        lines.append(f"Маршруты в комбинации ({routes.example}): профилей {len(routes.profiles)}")
-    text, cut = clip_text("\n".join(lines), 6_000)
+        lines += routes_lines(routes)
+    text, cut = clip_text("\n".join(lines), _SUBMISSION_CHARS)
     return layout_result(layout_arg(args), text, data, truncated=cut)
 
 
@@ -708,8 +710,11 @@ class PackSubmissionTool(PackTool):
         description=(
             "Студия шаблонов: профили сдачи версии (точки контроля: пункты документов, лишние файлы, слоты "
             "подписей, порядок маршрута), слоты и анкеты каталога, etag version.yaml для pack_submission_edit. "
-            "routes: true (с example и combination) показывает маршрут каждого профиля в комбинации. Итог для "
-            "вводных смотрите pack_outcome. Только чтение."
+            "Текст показывает записанный маршрут каждой точки: порядок по шагам (signing_route, иначе порядок "
+            "версии или встроенный), подписи пунктов, слоты сверх точки с условием when и отметкой "
+            "«необязательна». routes: true (с example и combination) добавляет маршрут каждого профиля в "
+            "комбинации: шаги людьми, кто какую подпись ставит, что условие не пропустило. Итог для вводных "
+            "смотрите pack_outcome. Только чтение."
         ),
         parameters=_schema(
             {

@@ -255,6 +255,8 @@ export const PackGitSchema = z.strictObject({
 
 export const PackBranchRequestSchema = z.strictObject({
   name: z.string().min(1).max(200).nullish(),
+  // Новая ветка от свежей базовой, а не от текущей вершины (после слияния PR): дерево чистое, имя свободно.
+  from_base: z.boolean().optional(),
 });
 
 export const PackCommitRequestSchema = z.strictObject({
@@ -492,6 +494,8 @@ export const StartPackPreviewRequestSchema = z.strictObject({
   variant: z.string().max(255).nullish(),
   // Сценарий пака (срез O9): вводные и набор данных берутся из него, `combination` ложится поверх.
   scenario: z.string().max(64).nullish(),
+  // Автор команды, чьи личные документы собирать: слаг или номер с единицы; нет: первый автор.
+  author: z.string().min(1).max(64).nullish(),
 });
 
 export const PackPreviewCheckSchema = z.strictObject({
@@ -531,6 +535,11 @@ export const PackPreviewBuildSchema = z.strictObject({
   file_name: z.string().nullish(),
   scenario: z.string().nullish(),
   scenario_inputs: z.record(z.string(), z.string()).optional(),
+  // Чей личный документ команды собран (null: общий документ или одиночная работа) и авторы команды сборки.
+  author: z.string().nullish(),
+  authors: z
+    .array(z.strictObject({ slug: z.string(), name: z.string() }))
+    .optional(),
 });
 
 export const PackPreviewStartSchema = z.strictObject({
@@ -809,6 +818,19 @@ export const PackSignaturesSchema = z.strictObject({
       anchors_known: z.boolean(),
       sign_anchors: z.array(z.string()),
       date_anchors: z.array(z.string()),
+      // Те же якоря словами: слот, часть даты, а у строки автора команды (`author__<слаг>`) слаг и имя автора.
+      anchor_views: z
+        .array(
+          z.strictObject({
+            id: z.string(),
+            kind: z.enum(["sign", "date"]),
+            slot: z.string(),
+            part: z.string().nullable(),
+            author: z.string().nullable(),
+            author_name: z.string().nullable(),
+          }),
+        )
+        .optional(),
     })
     .nullable(),
   slots: z.array(PackSignatureSlotSchema),

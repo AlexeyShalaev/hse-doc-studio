@@ -88,13 +88,25 @@ class PackGitBranchTool(PackTool):
             "Студия шаблонов: создать рабочую ветку или перейти на прежнюю (локальную или с сервера). Без name "
             "ветку называет Студия (pack-studio/<автор>/<версия>-<дата>), правки остаются на диске. С name: новая "
             "ветка от текущей вершины с правками, либо переход на существующую: дерево должно быть чистым "
-            "(workspace_dirty: сначала pack_git_commit). Базовая ветка рабочей быть не может. Пример: "
-            '{"workspace_id": "<uuid>", "name": "feature/new-points"}.'
+            "(workspace_dirty: сначала pack_git_commit). Базовая ветка рабочей быть не может. from_base: true "
+            "создаёт новую ветку от свежей базовой, а не от текущей вершины: так начинают следующую работу после "
+            "слияния PR, без перехода на старую ветку и pack_git_merge_base. Студия выбирает базу с сервера и "
+            "переносит дерево на её вершину; дерево должно быть чистым (workspace_dirty), имя свободным "
+            "(branch_exists), прежняя ветка остаётся. Пример: "
+            '{"workspace_id": "<uuid>", "name": "feature/new-points", "from_base": true}.'
         ),
         parameters=_schema(
             {
                 "workspace_id": _WORKSPACE_ID,
                 "name": {"type": "string", "description": "Имя ветки; пусто: имя даст Студия"},
+                "from_base": {
+                    "type": "boolean",
+                    "default": False,
+                    "description": (
+                        "true: новая ветка от свежей базовой ветки (дерево чистое); false: от текущей вершины "
+                        "или переход на существующую"
+                    ),
+                },
                 "format": FORMAT_PROP,
             },
             ("workspace_id",),
@@ -103,10 +115,12 @@ class PackGitBranchTool(PackTool):
     kind = ToolKind.write
 
     async def run(self, actor: Actor, args: dict[str, object]) -> ToolResult:
+        from_base = bool_arg(args, "from_base", False)
         view = await (await self._deps.get(PackGitService)).switch(
-            actor, uuid_arg(args, "workspace_id"), optional_text(args, "name")
+            actor, uuid_arg(args, "workspace_id"), optional_text(args, "name"), from_base=from_base
         )
-        return layout_result(layout_arg(args), _git_text(view, "Ветка выбрана."), _git(view))
+        head = "Новая ветка создана от свежей базовой." if from_base else "Ветка выбрана."
+        return layout_result(layout_arg(args), _git_text(view, head), _git(view))
 
 
 class PackGitCommitTool(PackTool):

@@ -106,7 +106,10 @@ FLOW_RU: Final = (
         "1. pack_list_workspaces: найдите пространство (или pack_workspace_create / pack_official_open; доступ git "
         "берётся из pack_list_credentials, токены через MCP не передаются)."
     ),
-    "2. pack_git_branch: создайте рабочую ветку (name или без имени).",
+    (
+        "2. pack_git_branch: создайте рабочую ветку (name или без имени). Следующую работу после слияния PR "
+        "начинайте с from_base: true: новая ветка от свежей базовой, а не от текущей вершины."
+    ),
     (
         "3. pack_create (новый пак) или pack_new_template (шаблон в паке); pack_scaffold_options покажет варианты. "
         "Выпущенную версию править нельзя: pack_new_version создаёт черновик."
@@ -133,7 +136,8 @@ FLOW_RU: Final = (
     "9. pack_git_checks: ошибки перед предложением; pack_git_merge_base: влить свежую базу.",
     (
         "10. pack_propose (опасный, выключен по умолчанию): сначала confirm false (сводка), затем confirm true. "
-        "После слияния PR: pack_git_start_over."
+        "После слияния PR: pack_git_branch с from_base: true (сразу новая ветка от свежей базы) или "
+        "pack_git_start_over (дерево на базу без ветки)."
     ),
 )
 FLOW_EN: Final = (
@@ -141,7 +145,10 @@ FLOW_EN: Final = (
         "1. pack_list_workspaces: find the workspace (or pack_workspace_create / pack_official_open; git access comes "
         "from pack_list_credentials, tokens are never passed through MCP)."
     ),
-    "2. pack_git_branch: create a work branch (name or none).",
+    (
+        "2. pack_git_branch: create a work branch (name or none). Start the next piece of work after a merged PR "
+        "with from_base: true: a new branch from the fresh base branch, not from the current head."
+    ),
     (
         "3. pack_create (new pack) or pack_new_template (template in a pack); pack_scaffold_options lists options. A "
         "released version is immutable: pack_new_version creates a draft."
@@ -169,7 +176,8 @@ FLOW_EN: Final = (
     "9. pack_git_checks: errors before proposing; pack_git_merge_base: merge the fresh base.",
     (
         "10. pack_propose (dangerous, off by default): confirm false first (summary), then confirm true. After the PR "
-        "is merged: pack_git_start_over."
+        "is merged: pack_git_branch with from_base: true (a new branch from the fresh base right away) or "
+        "pack_git_start_over (the tree on the base with no branch)."
     ),
 )
 _SENTENCE = re.compile(r"^(?:Студия шаблонов:\s*)?(.+?[.:;])(?:\s|$)", re.S)

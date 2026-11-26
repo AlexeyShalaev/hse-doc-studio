@@ -30,6 +30,7 @@ from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.catalog import DocumentDefinition, TemplateVersion
 from hse_doc_studio.core.compile.errors import CompileSetupError
 from hse_doc_studio.core.compile.failure import PDF_MISSING, CompileFailure, failure_log_block
+from hse_doc_studio.core.entities import Document
 from hse_doc_studio.core.enums import CheckEngine, CompileStatus, EngineType
 from hse_doc_studio.core.i18n import current_interface_language
 from hse_doc_studio.core.jobs.entities import CheckPlan, CompileJobPayload, CompileResult, JobResult, JobSpec, job_tags
@@ -80,10 +81,12 @@ from hse_doc_studio.core.pack_studio.preview import (
     document_digest,
     example_label,
     parse_example,
+    pick_author,
     preview_cache_key,
     resolve_combination,
     switches_for,
     synthetic_project,
+    team_authors,
 )
 from hse_doc_studio.core.pack_studio.protocols import (
     IPackPreviewRenderer,
@@ -95,7 +98,7 @@ from hse_doc_studio.core.services import CheckResolutionService, ProjectTemplate
 from hse_doc_studio.core.signatures.anchors import BuildAnchors, decode_anchors
 from hse_doc_studio.core.signatures.dates import DISPLAY_ZONE
 from hse_doc_studio.core.uow import spawn_detached
-from hse_doc_studio.core.value_objects import CheckResult, ChecksOverride
+from hse_doc_studio.core.value_objects import Author, CheckResult, ChecksOverride
 from hse_doc_studio.use_cases.compile.compile_job_hooks import compile_failure
 from hse_doc_studio.use_cases.pack_studio.synthetic_project import synthetic_core_project
 from hse_doc_studio.use_cases.pack_studio.workspaces import PackWorkspaceService, owner_of
@@ -144,6 +147,8 @@ class StartPreviewInput:
     variant: str | None = None
     # Сценарий пака (`scenarios/<id>.yaml`): вводные и набор данных берутся из него, `combination` ложится поверх.
     scenario: str | None = None
+    # Автор команды, чьи личные документы собирать: слаг или номер с единицы; None: первый автор.
+    author: str | None = None
 
 
 @dataclass(frozen=True)
@@ -165,11 +170,16 @@ class _Resolved:
 
 @dataclass(frozen=True)
 class DocumentTarget:
-    """Что собирается: определение документа, выбранный вариант (None: вариантов нет) и итоговое имя в пакете."""
+    """Что собирается: определение документа, выбранный вариант (None: вариантов нет) и итоговое имя в пакете.
+
+    `owner` слаг автора, чей это экземпляр (None: общий документ или одиночная работа); `first` ложно, если выбран
+    экземпляр не первого автора: тогда автор входит в ключ кэша, а сборка по умолчанию делит ключ с прежними."""
 
     doc_def: DocumentDefinition
     variant: str | None
     file_name: str | None
+    owner: str | None = None
+    first: bool = True
 
 
 def _now() -> datetime:
@@ -282,7 +292,7 @@ class PackPreviewService:
             if inp.variant is not None and len(documents) != 1:
                 raise PreviewInputError("variant", inp.variant, "needs exactly one document")
             resolved = self._resolve(desc, inp, scenario)
-            targets = document_targets(desc, documents, resolved.project, resolved.variants, inp.variant)
+            targets = document_targets(desc, documents, resolved.project, resolved.variants, inp.variant, inp.author)
         except PreviewInputError as exc:
             raise _invalid(exc) from exc
         example, combo, project = resolved.example, resolved.combo, resolved.project
@@ -297,6 +307,7 @@ class PackPreviewService:
                 engine=desc.version.engine_config.default.value,
                 checks=inp.checks,
                 variant=target.variant,
+                author=None if target.first else target.owner,
             )
             draft = PreviewBuild(
                 id=uuid4(),
@@ -317,11 +328,20 @@ class PackPreviewService:
                 file_name=target.file_name,
                 scenario=inp.scenario,
                 scenario_inputs=dict(resolved.scenario.inputs) if resolved.scenario is not None else {},
+                author=target.owner,
+                authors=team_authors(project),
             )
             planned = await self._plan(
                 draft,
                 MaterializeRequest(
-                    desc.pack_id, desc.template_id, desc.version.version, doc_def.id, project, draft.id, target.variant
+                    desc.pack_id,
+                    desc.template_id,
+                    desc.version.version,
+                    doc_def.id,
+                    project,
+                    draft.id,
+                    target.variant,
+                    target.owner,
                 ),
             )
             if planned.request is not None:
@@ -759,29 +779,47 @@ def _scenario_inputs(
         raise PreviewInputError("scenario", inp.scenario or "", f"{exc.field}={exc.value!r}: {exc.reason}") from None
 
 
+def _instance_of(instances: Sequence[Document], wanted: Author | None, doc_id: str) -> Document:
+    """Экземпляр документа для сборки: у личного документа команды экземпляр автора `wanted`, иначе первый."""
+    personal = any(d.owner is not None for d in instances)
+    if wanted is None or wanted.slug is None or not personal:
+        return instances[0]
+    mine = next((d for d in instances if d.owner == wanted.slug), None)
+    if mine is None:
+        raise PreviewInputError("author", wanted.slug, f"this author has no document {doc_id!r}")
+    return mine
+
+
 def document_targets(
     desc: VersionDescription,
     documents: Sequence[str],
     project: SyntheticProject,
     variants: Mapping[str, str],
     variant: str | None = None,
+    author: str | None = None,
 ) -> list[DocumentTarget]:
     """Документы запроса в проекте комбинации: есть ли документ, какой вариант и как называется файл.
 
     Документ есть, если движок создал его экземпляр (`_build_documents`, тот же проект, что у результата и у
     сборки). Вариант из запроса (`variant`) проверяется на язык проекта, иначе берётся вводная сценария (`variants`:
     документ -> вариант) и затем первый вариант, как `variants_of` результата. Имя файла считает общая функция
-    результата (`document_file_name`). Нет документа или вариант не подходит: `PreviewInputError`."""
+    результата (`document_file_name`). Нет документа или вариант не подходит: `PreviewInputError`.
+
+    У личного документа команды экземпляр на каждого автора: без `author` собирается первый (первого автора), с
+    `author` (слаг или номер с единицы, `pick_author`) экземпляр этого автора. Общему документу и одиночной работе
+    выбор автора безразличен."""
     core = synthetic_core_project(desc.pack_id, desc.template_id, desc.version, project)
     templates = ProjectTemplateService()
+    wanted = pick_author(project, author) if author is not None else None
     targets: list[DocumentTarget] = []
     for doc_id in documents:
         doc_def = next((d for d in desc.version.documents if d.id == doc_id), None)
         if doc_def is None:
             raise PreviewInputError("document", doc_id, "unknown document")
-        instance = next((d for d in core.documents if d.def_id == doc_id), None)
-        if instance is None:
+        instances = [d for d in core.documents if d.def_id == doc_id]
+        if not instances:
             raise PreviewInputError("document", doc_id, "not in this combination")
+        instance = _instance_of(instances, wanted, doc_id)
         chosen: str | None = None
         if variant is not None:
             check_variant(doc_def, variant, project.lang.value)
@@ -790,5 +828,5 @@ def document_targets(
             chosen = variants.get(doc_id) or doc_def.variants[0].id
         instance.chosen_variant = chosen
         name = document_file_name(core, doc_def, instance, project.lang.value, templates)
-        targets.append(DocumentTarget(doc_def, chosen, name))
+        targets.append(DocumentTarget(doc_def, chosen, name, instance.owner, instance is instances[0]))
     return targets

@@ -42,6 +42,7 @@ export const PACK_STUDIO_ERROR_CODES = [
   "version_unreadable",
   "workspace_dirty",
   "branch_name_invalid",
+  "branch_exists",
   "merge_conflict",
   "nothing_to_propose",
   "service_access_missing",

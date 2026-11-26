@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -169,6 +170,80 @@ async def test__branch__named_then_switch_needs_a_clean_tree_and_fetches_remote_
     assert bad.status_code == 400
     assert bad.json()["code"] == "branch_name_invalid"
     assert base.json()["code"] == "branch_name_invalid"
+
+
+async def _merged_proposal(stand: Stand, remote: BareRemote, ws_id: str) -> str:
+    """Правка предложена и слита в базу на сервере, после слияния база ушла ещё на коммит; возвращает старую ветку."""
+    await _put(stand, ws_id, _DRAFT_TEX, b"\\documentclass{article}\n% merged\n")
+    proposed = await stand.client.post(_git_url(ws_id, "/propose"), json={})
+    assert proposed.status_code == 200, proposed.text
+    branch = str(proposed.json()["git"]["branch"])
+    run_git("push", "--quiet", remote.url, f"refs/heads/{branch}:refs/heads/main", git_dir=remote.path)
+    seed_remote(remote, {"packs/demo/notes.md": "новое в базе\n"}, message="base moved after the merge")
+    return branch
+
+
+async def test__branch__from_base__starts_a_new_branch_at_the_fresh_base_after_a_merge(stand: Stand) -> None:
+    remote, ws_id = await _ready(stand)
+    old = await _merged_proposal(stand, remote, ws_id)
+
+    body = {"name": "pack-studio/anna/next", "from_base": True}
+    resp = await stand.client.post(_git_url(ws_id, "/branch"), json=body)
+
+    assert resp.status_code == 200, resp.text
+    git = resp.json()
+    assert git["branch"] == "pack-studio/anna/next"
+    assert git["head_sha"] == remote.head("main")
+    assert (git["ahead"], git["behind"]) == (0, 0)
+    assert git["changed"] == []
+    assert git["dirty"] is False
+    assert git["workspace"]["work_branch"] == "pack-studio/anna/next"
+    assert git["workspace"]["base_sha"] == remote.head("main")
+    # PR и отправленная вершина принадлежали прежней ветке.
+    assert git["workspace"]["pushed_sha"] is None
+    assert git["workspace"]["pr_url"] is None
+    tree = _store(stand, ws_id) / "tree" / "packs"
+    assert (tree / "demo" / "notes.md").read_text(encoding="utf-8") == "новое в базе\n"
+    assert (tree / _DRAFT_TEX).read_bytes() == b"\\documentclass{article}\n% merged\n"
+    # Прежняя ветка остаётся как была.
+    git_dir = _store(stand, ws_id) / "git"
+    assert old in run_git("for-each-ref", "--format=%(refname:short)", "refs/heads/", git_dir=git_dir).splitlines()
+
+
+async def test__branch__from_base__without_a_name__the_studio_names_it_by_time(stand: Stand) -> None:
+    remote, ws_id = await _ready(stand)
+    old = await _merged_proposal(stand, remote, ws_id)
+
+    resp = await stand.client.post(_git_url(ws_id, "/branch"), json={"from_base": True})
+
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["branch"] != old
+    assert re.fullmatch(r"pack-studio/anna/\d{8}-\d{4}", body["branch"])
+    assert body["head_sha"] == remote.head("main")
+
+
+async def test__branch__from_base__needs_a_clean_tree_and_a_free_name(stand: Stand) -> None:
+    remote, ws_id = await _ready(stand)
+    old = await _merged_proposal(stand, remote, ws_id)
+    run_git("push", "--quiet", remote.url, "refs/heads/main:refs/heads/someone/else", git_dir=remote.path)
+    before = await _git(stand, ws_id)
+
+    taken_local = await stand.client.post(_git_url(ws_id, "/branch"), json={"name": old, "from_base": True})
+    taken_server = await stand.client.post(_git_url(ws_id, "/branch"), json={"name": "someone/else", "from_base": True})
+    base = await stand.client.post(_git_url(ws_id, "/branch"), json={"name": "main", "from_base": True})
+    await _put(stand, ws_id, _DRAFT_TEX, b"dirty\n")
+    dirty = await stand.client.post(_git_url(ws_id, "/branch"), json={"name": "fresh/one", "from_base": True})
+    after = await _git(stand, ws_id)
+
+    assert taken_local.status_code == 409, taken_local.text
+    assert (taken_local.json()["code"], taken_local.json()["branch"]) == ("branch_exists", old)
+    assert (taken_server.status_code, taken_server.json()["code"]) == (409, "branch_exists")
+    assert (base.status_code, base.json()["code"]) == (400, "branch_name_invalid")
+    assert (dirty.status_code, dirty.json()["code"]) == (409, "workspace_dirty")
+    # Отказ ничего не двигает: ветка и вершина прежние, правка на диске цела.
+    assert (after["branch"], after["head_sha"]) == (before["branch"], before["head_sha"])
+    assert (_store(stand, ws_id) / "tree" / "packs" / _DRAFT_TEX).read_bytes() == b"dirty\n"
 
 
 async def test__merge_base__brings_new_base_commits_into_the_work_branch(stand: Stand) -> None:

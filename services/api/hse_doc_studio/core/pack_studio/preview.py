@@ -622,6 +622,38 @@ def check_variant(doc: DocumentDefinition, variant: str, lang: str) -> None:
         raise PreviewInputError("variant", variant, "not available for this language")
 
 
+@dataclass(frozen=True)
+class PreviewAuthor:
+    """Автор команды синтетического проекта: слаг (папка автора, якорь `author__<слаг>`) и имя из набора данных."""
+
+    slug: str
+    name: str
+
+
+def team_authors(project: SyntheticProject) -> tuple[PreviewAuthor, ...]:
+    """Авторы команды синтетического проекта по порядку; у одиночной работы пусто (у автора нет слага)."""
+    return tuple(PreviewAuthor(a.slug, a.name) for a in project.authors if a.slug)
+
+
+def pick_author(project: SyntheticProject, author: str) -> Author:
+    """Автор проекта комбинации, чьи личные документы собирать: по слагу или по номеру с единицы (`2`: второй автор).
+
+    Слаг начинается с буквы, поэтому число всегда номер. Автора нет: `PreviewInputError` с полем `author`, в причине
+    авторы этой комбинации."""
+    authors = project.authors
+    wanted = author.strip()
+    if wanted.isascii() and wanted.isdecimal():
+        index = int(wanted)
+        if not 1 <= index <= len(authors):
+            raise PreviewInputError("author", author, f"the combination has authors 1..{len(authors)}")
+        return authors[index - 1]
+    found = next((a for a in authors if a.slug is not None and a.slug == wanted), None)
+    if found is None:
+        known = ", ".join(a.slug for a in authors if a.slug) or "none, a solo work has author 1 only"
+        raise PreviewInputError("author", author, f"unknown author; authors of this combination: {known}")
+    return found
+
+
 # ── Ключ кэша ──────────────────────────────────────────────────────────────
 
 
@@ -656,6 +688,7 @@ def preview_cache_key(
     engine: str,
     checks: bool = False,
     variant: str | None = None,
+    author: str | None = None,
 ) -> str:
     """Ключ кэша сборки: вход документа, сам документ, синтетический проект (набор и комбинация) и движок.
 
@@ -664,7 +697,9 @@ def preview_cache_key(
     лежат в каталоге версии (`checks/*.yaml`, `checks_version`), их правка и так меняет вход документа.
     Выбранный вариант документа это другой исходник и другой PDF, поэтому входит в ключ (O9). Сценарий в ключ не
     входит сам: он действует через то, что из него вышло, то есть через проект и вариант; два сценария с тем же
-    итогом делят один PDF.
+    итогом делят один PDF. `author` это слаг автора команды, чей личный документ собран вместо документа первого
+    автора: другой исходник и другой PDF. У сборки по умолчанию (первый автор, общий документ, одиночная работа) его
+    нет, и ключ прежний.
     """
     body: dict[str, Any] = {
         "salt": PREVIEW_RENDER_SALT,
@@ -677,6 +712,8 @@ def preview_cache_key(
         body["checks"] = True
     if variant is not None:
         body["variant"] = variant
+    if author is not None:
+        body["author"] = author
     return hashlib.sha256(json.dumps(body, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
 
 
@@ -737,6 +774,10 @@ class PreviewBuild:
     # Сценарий, по которому собрана комбинация, и его вводные как в файле (до наложения запроса); без сценария пусто.
     scenario: str | None = None
     scenario_inputs: Mapping[str, str] = field(default_factory=dict)
+    # Чей личный документ команды собран: слаг автора (None: общий документ или одиночная работа), и авторы команды
+    # синтетического проекта сборки по порядку (по ним якорь `author__<слаг>` получает имя).
+    author: str | None = None
+    authors: tuple[PreviewAuthor, ...] = ()
 
     @property
     def slot(self) -> tuple[str, ...]:
@@ -752,6 +793,7 @@ class PreviewBuild:
             "checks" if self.with_checks else "",
             self.variant or "",
             self.scenario or "",
+            self.author or "",
         )
 
 
@@ -801,6 +843,8 @@ class MaterializeRequest:
     build_id: UUID
     # Вариант документа `def_id`; None: первый (как у проекта без выбора).
     variant: str | None = None
+    # Слаг автора команды, чей экземпляр личного документа собирать; None: первый экземпляр документа.
+    author: str | None = None
 
 
 @dataclass(frozen=True)

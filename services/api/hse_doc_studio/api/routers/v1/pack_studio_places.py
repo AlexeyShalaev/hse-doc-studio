@@ -17,6 +17,7 @@ from hse_doc_studio.api.dishka_route import SafeDishkaRoute
 from hse_doc_studio.api.routers.v1.pack_studio import pack_studio_guard
 from hse_doc_studio.api.routers.v1.signatures import pack_date_response, pack_place_response
 from hse_doc_studio.api.schemas.pack_studio import (
+    PackAnchorView,
     PackFrameDate,
     PackIndexedDate,
     PackMarkBox,
@@ -128,6 +129,17 @@ def places_response(workspace_id: UUID, view: PlacesView) -> PackSignaturesRespo
             anchors_known=places.anchors_known,
             sign_anchors=list(places.sign_anchors),
             date_anchors=list(places.date_anchors),
+            anchor_views=[
+                PackAnchorView(
+                    id=a.id,
+                    kind=a.kind.value,
+                    slot=a.slot,
+                    part=a.part,
+                    author=a.author,
+                    author_name=a.author_name,
+                )
+                for a in places.anchor_views
+            ],
         )
         if build is not None
         else None,
