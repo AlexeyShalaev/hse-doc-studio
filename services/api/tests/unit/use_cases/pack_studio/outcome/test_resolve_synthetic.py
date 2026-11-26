@@ -165,6 +165,13 @@ def test__documents__team_staffing__personal_documents_per_author_and_shared_one
     assert _doc(run(PROJECT), "report").instances[0].owner is None
 
 
+def test__documents__team_in_english__file_name_carries_the_surname_not_the_given_name(run: Any) -> None:
+    report = _doc(run({**PROJECT, "staffing": "team2", "lang": "en"}), "report")
+
+    assert [i.owner_name for i in report.instances] == ["Ivan Ivanov", "Maria Petrova"]
+    assert [(i.file_name or "").rsplit(" — ", 1)[1] for i in report.instances] == ["Ivanov.pdf", "Petrova.pdf"]
+
+
 def test__documents__language__changes_file_names_and_language_state_only(run: Any) -> None:
     ru, en = run(PROJECT), run({**PROJECT, "lang": "en"})
 

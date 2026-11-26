@@ -72,7 +72,7 @@ def document_file_name(
     owner = author_by_slug(project, doc.owner)
     return with_owner_suffix(
         output_arcname(names, lang, output_file),
-        owner_short_name(owner.name, owner.slug) if owner is not None else None,
+        owner_short_name(owner.name, owner.slug, lang) if owner is not None else None,
     )
 
 

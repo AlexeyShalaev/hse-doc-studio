@@ -164,10 +164,27 @@ def output_arcname(names: Mapping[str, str], lang: str, output_file: str) -> str
     return names.get(lang, names.get("ru", output_file))
 
 
-def owner_short_name(full_name: str, slug: str | None) -> str:
-    """Короткое имя владельца личного документа команды: первое слово ФИО (фамилия), без имени слаг."""
+def _is_initial(word: str) -> bool:
+    """«I.», «A.D.» или одна буква: инициал, а не фамилия."""
+    return "." in word or len(word) == 1
+
+
+def owner_short_name(full_name: str, slug: str | None, lang: str = "ru") -> str:
+    """Короткое имя владельца личного документа команды: фамилия из ФИО, без имени слаг.
+
+    В русском проекте ФИО пишут «Фамилия Имя Отчество»: фамилия это первое слово. В английском проекте имя пишут
+    «Given Surname» (как автонаборы предпросмотра, «Ivan Ivanov»): фамилия это последнее слово, инициалы не в счёт
+    («Ivan I. Ivanov», «Ivanov I.»); «Surname, Given» читается по запятой. ФИО кириллицей в английском проекте
+    записано по-русски, фамилия в нём первая."""
     parts = full_name.split()
-    return parts[0] if parts else (slug or "")
+    if not parts:
+        return slug or ""
+    if lang != "en" or any("а" <= ch.lower() <= "я" or ch.lower() == "ё" for ch in full_name):
+        return parts[0]
+    if parts[0].endswith(",") and len(parts[0]) > 1:
+        return parts[0].rstrip(",")
+    words = [word for word in parts if not _is_initial(word)]
+    return words[-1] if words else parts[0]
 
 
 def with_owner_suffix(arcname: str, owner_name: str | None) -> str:

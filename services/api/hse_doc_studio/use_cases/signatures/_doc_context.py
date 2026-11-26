@@ -11,6 +11,7 @@ from hse_doc_studio.core.catalog import TemplateVersion
 from hse_doc_studio.core.entities import Document, Project
 from hse_doc_studio.core.errors import NotFoundError
 from hse_doc_studio.core.i18n import localized_error
+from hse_doc_studio.core.pack_studio.outcome.predicates import owner_short_name
 from hse_doc_studio.core.repositories import ITemplateRepository
 from hse_doc_studio.core.services import ProjectTemplateService
 from hse_doc_studio.core.team import author_by_slug
@@ -68,7 +69,7 @@ async def load_doc_context(
     stem = name.rsplit(".", 1)[0] if "." in name else name
     owner = author_by_slug(project, doc.owner)
     if owner is not None:
-        stem = f"{stem} — {owner.name.split()[0] if owner.name.split() else owner.slug}"
+        stem = f"{stem} — {owner_short_name(owner.name, owner.slug, lang)}"
     return DocContext(
         project=project,
         version=version,

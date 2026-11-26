@@ -389,7 +389,7 @@ class _Run:
             return None
         owner = author_by_slug(project, doc.owner)
         if owner is not None:
-            owner_name = owner_short_name(owner.name, owner.slug)
+            owner_name = owner_short_name(owner.name, owner.slug, self.lang)
         if doc.custom_file is not None:
             custom = self._resolve_custom_doc_target(doc)
             output_file, is_pdf = custom
