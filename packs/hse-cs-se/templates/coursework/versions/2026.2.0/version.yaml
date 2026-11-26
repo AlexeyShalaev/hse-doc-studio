@@ -18,10 +18,11 @@
 # Документы, поля, формы, слоты подписей и профили сдачи те же, что в 2026.1.5.
 
 id: "2026.2.0"
-released_at: 2026-11-26
-status: beta
+released_at: 2026-11-27
+status: stable
 release:
   note: 'minor: якоря подписи на каждого автора на общих документах (author__<slug>), плотный лист утверждения команды, английские редакции без русских слов; манифест без изменений.'
+  kind: minor
 summary:
   ru: Шаблон курсового проекта ОП ПИ. Полный комплект ЕСПД (ТЗ, ПЗ, ПМИ, ТП, РП, РО) + презентация защиты. От ВКР отличается документом «Пояснительная записка» (ГОСТ 19.404-79) вместо ВКР.
   en: Course project template. Full ESPD set (SoW, Explanatory Note, TPM, Source Listing, PM, OM) plus defence slides. Differs from the thesis template by the Explanatory Note (GOST 19.404-79) instead of the thesis document.
