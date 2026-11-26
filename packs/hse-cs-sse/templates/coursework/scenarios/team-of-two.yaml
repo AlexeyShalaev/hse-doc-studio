@@ -1,0 +1,70 @@
+format: 1
+name:
+  ru: Групповой КП из двух магистрантов
+  en: Group course project by two students
+description:
+  ru: "Групповой курсовой проект: общих документов нет, у каждого участника свои заявка, заявление, отчёт и презентация, каждый подписывает только своё."
+  en: "A group course project: there are no shared documents, every member has their own proposal, application, report and slides and signs only their own."
+versions: ["2026.2.*"]
+inputs:
+  staffing: team2
+  supervisor: university
+  co_supervisor: "no"
+assertions:
+  - { kind: participant_present, persona: author2, present: true }
+  - { kind: participant_present, persona: author3, present: false }
+  - { kind: document_state, doc: topic_application, state: active }
+  - { kind: document_state, doc: report, state: active }
+snapshot:
+  documents:
+    project_proposal: active
+    topic_application: active
+    report: active
+    presentation: active
+  participants: [author1, author2, supervisor, academic_supervisor]
+  meta_visible:
+    - year
+    - name_en
+    - name_ru
+    - proposal_stage
+    - specialization
+    - program_code
+    - department
+    - supervisor_department
+    - faculty
+    - city
+    - city_en
+    - form_year
+    - udc
+    - report_margins
+    - font_main
+    - font_sans
+    - font_mono
+    - supervisor
+    - co_supervisor
+    - academic_supervisor
+  points:
+    - id: topic-approval
+      items: [project_proposal, topic_application]
+      steps: [[author1, author2], [supervisor]]
+      pairs: 4
+    - id: extended-proposal
+      items: [project_proposal, presentation]
+      steps: []
+      pairs: 0
+    - id: pre-defence
+      items: [report, presentation]
+      steps: []
+      pairs: 0
+    - id: final
+      items: [report, presentation, project_proposal]
+      steps: [[author1, author2]]
+      pairs: 2
+  sections:
+    - { section: documents, fingerprint: 9e585ea2b234, count: 4 }
+    - { section: meta, fingerprint: fbefb4d5dc5a, count: 20 }
+    - { section: forms, fingerprint: 7765ca4eb1da, count: 1 }
+    - { section: participants, fingerprint: 8236e8a95540, count: 4 }
+    - { section: points, fingerprint: 7d3e860abf2e, count: 9 }
+    - { section: route, fingerprint: 8dc392d47370, count: 6 }
+    - { section: checks, fingerprint: 4f53cda18c2b, count: 0 }

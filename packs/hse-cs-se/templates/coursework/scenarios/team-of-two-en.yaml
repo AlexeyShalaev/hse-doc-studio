@@ -1,0 +1,75 @@
+format: 1
+name:
+  ru: Команда из двух, проект на английском
+  en: Team of two, project in English
+description:
+  ru: "Английский курсовой проект двух авторов без соруководителя: общие документы подписывают оба автора."
+  en: "An English course project by two authors without a co-supervisor: both authors sign the shared documents."
+versions: ["2026.2.*"]
+inputs:
+  lang: en
+  kind: project
+  staffing: team2
+  co_supervisor: "no"
+assertions:
+  - { kind: participant_present, persona: author2, present: true }
+  - { kind: participant_present, persona: co_supervisor, present: false }
+  - { kind: document_state, doc: shared_technical_specification, state: active }
+  - { kind: route_steps, point: final, steps: [[author1, author2]] }
+  - { kind: route_pair, point: final, doc: shared_technical_specification, slot: author, persona: author1, present: true }
+snapshot:
+  documents:
+    technical_specification: active
+    shared_technical_specification: active
+    test_program_and_methodology: active
+    shared_test_program_and_methodology: active
+    source_listing: active
+    programmer_manual: active
+    operator_manual: active
+    project_description: active
+    interim_report: absent
+    presentation: active
+    explanatory_note: active
+    report: absent
+    nda: inactive
+  participants: [author1, author2, supervisor, academic_supervisor]
+  meta_visible:
+    - year
+    - specialization
+    - manuals
+    - name_en
+    - name_short
+    - faculty
+    - city
+    - city_en
+    - program_code
+    - course
+    - academic_supervisor
+    - doc_code_base
+    - font_main
+    - font_sans
+    - font_mono
+    - nda
+    - supervisor
+    - co_supervisor
+  points:
+    - id: checkpoint-1
+      items: [technical_specification, shared_technical_specification, project_description]
+      steps: []
+      pairs: 0
+    - id: checkpoint-2
+      items: [source_listing, project_description]
+      steps: []
+      pairs: 0
+    - id: final
+      items: [technical_specification, shared_technical_specification, explanatory_note, test_program_and_methodology, shared_test_program_and_methodology, source_listing, programmer_manual, operator_manual, presentation]
+      steps: [[author1, author2]]
+      pairs: 16
+  sections:
+    - { section: documents, fingerprint: e496d646d5e8, count: 10 }
+    - { section: meta, fingerprint: d9710863ef2a, count: 18 }
+    - { section: forms, fingerprint: baa9eaef9a4a, count: 2 }
+    - { section: participants, fingerprint: 8236e8a95540, count: 4 }
+    - { section: points, fingerprint: 58d003d999b2, count: 14 }
+    - { section: route, fingerprint: 8bdd0870a3ad, count: 16 }
+    - { section: checks, fingerprint: 4f53cda18c2b, count: 0 }
