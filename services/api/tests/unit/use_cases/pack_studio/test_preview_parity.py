@@ -13,7 +13,7 @@ import pytest
 from hse_doc_studio.core.catalog import TemplateVersion
 from hse_doc_studio.core.pack_studio.outcome.inputs import VARIANT_PREFIX, input_specs, variant_inputs
 from hse_doc_studio.core.pack_studio.outcome.model import DocumentOutcome, Outcome
-from hse_doc_studio.core.pack_studio.outcome.scenarios import parse_scenario
+from hse_doc_studio.core.pack_studio.outcome.scenarios import Scenario, parse_scenario, version_matches
 from hse_doc_studio.core.pack_studio.preview import (
     PreviewExample,
     PreviewInputError,
@@ -24,6 +24,7 @@ from hse_doc_studio.core.pack_studio.preview import (
     switches_for,
     synthetic_project,
 )
+from hse_doc_studio.core.template_versions import parse_version_key
 from hse_doc_studio.infra.pack_studio.preview_store import FsPreviewStore
 from hse_doc_studio.infra.pack_studio.workspace_files import LocalPackWorkspaceFiles
 from hse_doc_studio.infra.template.yaml_template_repository import YamlTemplateRepository
@@ -48,7 +49,7 @@ from tests.unit.use_cases.pack_studio.test_preview_service import (
 _PACKS = Path(__file__).resolve().parents[6] / "packs"
 TODAY = date(2026, 11, 16)
 
-# Новейшая версия каждого шаблона реальных паков.
+# Опорная версия каждого шаблона реальных паков (закреплена: перебор комбинаций не растёт с выпуском новых версий).
 TEMPLATES = [
     ("hse-cs-se", "vkr", "2026.1.2"),
     ("hse-cs-se", "coursework", "2026.1.2"),
@@ -203,22 +204,35 @@ def _service(tmp_path: Path, version: TemplateVersion) -> tuple[PackPreviewServi
     return service, renderer
 
 
-def _scenario_ids(ref: tuple[str, str, str]) -> list[str]:
+def _scenarios(ref: tuple[str, str, str]) -> dict[str, Scenario]:
     folder = _PACKS / ref[0] / "templates" / ref[1] / "scenarios"
-    return sorted(path.stem for path in folder.glob("*.yaml"))
+    return {path.stem: parse_scenario(path.read_text("utf-8")) for path in sorted(folder.glob("*.yaml"))}
 
 
-_SCENARIO_CASES = [(ref, name) for ref in TEMPLATES for name in _scenario_ids(ref)]
+def _scenario_ref(ref: tuple[str, str, str], scenario: Scenario) -> tuple[str, str, str]:
+    """Версия, на которой сценарий проверяется: опорная, если она в его диапазоне `versions`, иначе старшая версия
+    шаблона из диапазона (сценарий другой линии версий может нести вводные, которых в опорной версии нет). Сценарий,
+    которому не подходит ни одна версия, остаётся на опорной, и тест падает на проверке диапазона."""
+    if version_matches(scenario.versions, ref[2]):
+        return ref
+    folder = _PACKS / ref[0] / "templates" / ref[1] / "versions"
+    matching = [d.name for d in folder.iterdir() if d.is_dir() and version_matches(scenario.versions, d.name)]
+    newest = max(matching, key=lambda v: parse_version_key(v) or (0, 0, 0), default=ref[2])
+    return (ref[0], ref[1], newest)
 
 
-@pytest.mark.parametrize(("ref", "name"), _SCENARIO_CASES, ids=lambda p: p if isinstance(p, str) else p[1])
+_SCENARIO_CASES = [
+    (_scenario_ref(ref, scenario), name) for ref in TEMPLATES for name, scenario in _scenarios(ref).items()
+]
+
+
+@pytest.mark.parametrize(("ref", "name"), _SCENARIO_CASES, ids=lambda p: p if isinstance(p, str) else "/".join(p))
 async def test__parity__a_real_scenario_builds_the_documents_of_its_core_result(
     repo: YamlTemplateRepository, tmp_path: Path, ref: tuple[str, str, str], name: str
 ) -> None:
     version = _load(repo, ref)
-    scenario = parse_scenario(
-        (_PACKS / ref[0] / "templates" / ref[1] / "scenarios" / f"{name}.yaml").read_text("utf-8")
-    )
+    scenario = _scenarios(ref)[name]
+    assert version_matches(scenario.versions, ref[2]), "сценарию не подходит ни одна версия шаблона"
     outcome = resolve_scenario(version, tuple(auto_examples(version)), scenario, TODAY, trace=False)
     present = _present(outcome)
     service, renderer = _service(tmp_path, version)

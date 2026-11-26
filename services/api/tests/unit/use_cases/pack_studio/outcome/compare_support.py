@@ -14,7 +14,7 @@ from typing import Any
 from hse_doc_studio.core.catalog import TemplateVersion
 from hse_doc_studio.core.pack_studio.outcome.inputs import input_specs, normalize_inputs
 from hse_doc_studio.core.pack_studio.outcome.payload import to_json
-from hse_doc_studio.core.pack_studio.outcome.scenarios import Scenario, parse_scenario
+from hse_doc_studio.core.pack_studio.outcome.scenarios import Scenario, parse_scenario, version_matches
 from hse_doc_studio.core.pack_studio.preview import PreviewExample, auto_examples
 from hse_doc_studio.infra.template.yaml_template_repository import YamlTemplateRepository
 from hse_doc_studio.use_cases.pack_studio.outcome.atlas import build_atlas, example_defaults
@@ -59,9 +59,15 @@ def load(repo: YamlTemplateRepository, ref: tuple[str, str, str]) -> TemplateVer
 
 
 def scenarios_of(ref: tuple[str, str, str]) -> dict[str, Scenario]:
-    """Стартовые сценарии пака для шаблона версии."""
+    """Стартовые сценарии шаблона: все файлы папки, как их читает служба, в том числе для других линий версий."""
     folder = PACKS / ref[0] / "templates" / ref[1] / "scenarios"
     return {path.stem: parse_scenario(path.read_text(encoding="utf-8")) for path in sorted(folder.glob("*.yaml"))}
+
+
+def applicable_scenarios_of(ref: tuple[str, str, str]) -> dict[str, Scenario]:
+    """Стартовые сценарии, которым версия подходит по `versions`: только они на ней и считаются (сценарий другой
+    линии версий может нести вводные, которых в этой версии нет)."""
+    return {name: s for name, s in scenarios_of(ref).items() if version_matches(s.versions, ref[2])}
 
 
 def side_of(version: TemplateVersion) -> VersionSide:

@@ -1,0 +1,94 @@
+format: 1
+name:
+  ru: Команда из двух с соруководителем, работа на английском
+  en: Team of two with a co-supervisor, thesis in English
+description:
+  ru: "Английская ВКР команды: оба автора подписывают общие документы, соруководитель подписывает после авторов и до руководителя, его подпись на отзыве о ПДП необязательная."
+  en: "An English team thesis: both authors sign the shared documents, the co-supervisor signs after the authors and before the supervisor, and their signature on the practice review is optional."
+versions: ["2026.2.*"]
+inputs:
+  lang: en
+  kind: project
+  staffing: team2
+  co_supervisor: "yes"
+assertions:
+  - { kind: participant_present, persona: author2, present: true }
+  - { kind: participant_present, persona: co_supervisor, present: true }
+  - { kind: document_state, doc: shared_technical_specification, state: active }
+  - { kind: route_steps, point: final, steps: [[author1, author2], [co_supervisor], [supervisor]] }
+  - { kind: route_pair, point: final, doc: pdp_review, slot: co_supervisor, persona: co_supervisor, present: true }
+  - { kind: route_pair, point: gia, doc: shared_technical_specification, slot: author, persona: author2, present: true }
+snapshot:
+  documents:
+    technical_specification: active
+    shared_technical_specification: active
+    test_program_and_methodology: active
+    shared_test_program_and_methodology: active
+    source_listing: active
+    programmer_manual: active
+    operator_manual: active
+    annotation: absent
+    shared_annotation: absent
+    interim_report: absent
+    pdp_assignment: active
+    pdp_work_plan: active
+    pdp_report_title: active
+    pdp_review: active
+    topic_presentation: active
+    presentation: active
+    thesis: active
+    nda: inactive
+  participants: [author1, author2, supervisor, co_supervisor, academic_supervisor]
+  meta_visible:
+    - year
+    - specialization
+    - manuals
+    - name_en
+    - name_short
+    - faculty
+    - city
+    - city_en
+    - udc
+    - program_code
+    - course
+    - academic_supervisor
+    - doc_code_base
+    - font_main
+    - font_sans
+    - font_mono
+    - nda
+    - supervisor
+    - co_supervisor
+  points:
+    - id: checkpoint-1
+      items: [topic_presentation, technical_specification, shared_technical_specification]
+      steps: []
+      pairs: 0
+    - id: checkpoint-2
+      items: [topic_presentation, technical_specification, shared_technical_specification, thesis]
+      steps: []
+      pairs: 0
+    - id: checkpoint-3
+      items: [technical_specification, shared_technical_specification, thesis, test_program_and_methodology, shared_test_program_and_methodology, source_listing, presentation]
+      steps: []
+      pairs: 0
+    - id: pdp-application
+      items: [pdp_assignment, pdp_work_plan]
+      steps: [[author1, author2], [co_supervisor], [supervisor]]
+      pairs: 8
+    - id: final
+      items: [technical_specification, shared_technical_specification, thesis, test_program_and_methodology, shared_test_program_and_methodology, source_listing, programmer_manual, operator_manual, presentation, pdp_report_title, pdp_review]
+      steps: [[author1, author2], [co_supervisor], [supervisor]]
+      pairs: 38
+    - id: gia
+      items: [thesis, technical_specification, shared_technical_specification, test_program_and_methodology, shared_test_program_and_methodology, source_listing, programmer_manual, operator_manual]
+      steps: [[author1, author2], [co_supervisor], [supervisor]]
+      pairs: 32
+  sections:
+    - { section: documents, fingerprint: 3e583c0b10fd, count: 14 }
+    - { section: meta, fingerprint: a1ffc64a0704, count: 19 }
+    - { section: forms, fingerprint: baa9eaef9a4a, count: 2 }
+    - { section: participants, fingerprint: 3777e03d9ab4, count: 5 }
+    - { section: points, fingerprint: 3a6e58778f9a, count: 35 }
+    - { section: route, fingerprint: 7a51b693f85f, count: 78 }
+    - { section: checks, fingerprint: 4f53cda18c2b, count: 0 }

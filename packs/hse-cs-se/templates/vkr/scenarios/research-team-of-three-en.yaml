@@ -1,0 +1,93 @@
+format: 1
+name:
+  ru: Исследовательская ВКР команды из трёх на английском
+  en: Research thesis by a team of three, in English
+description:
+  ru: Общую аннотацию на КТ1 подписывают все три автора, каждый на своей строке титула, затем руководитель.
+  en: All three authors sign the shared annotation at CP1, each on their own line of the title page, then the supervisor.
+versions: ["2026.2.*"]
+inputs:
+  lang: en
+  kind: research
+  staffing: team3
+  co_supervisor: "no"
+assertions:
+  - { kind: participant_present, persona: author3, present: true }
+  - { kind: document_state, doc: shared_annotation, state: active }
+  - { kind: document_state, doc: shared_technical_specification, state: absent }
+  - { kind: item_active, point: checkpoint-1, doc: shared_annotation, active: true }
+  - { kind: route_steps, point: checkpoint-1, steps: [[author1, author2, author3], [supervisor]] }
+  - { kind: route_pair, point: checkpoint-1, doc: shared_annotation, slot: author, persona: author3, present: true }
+snapshot:
+  documents:
+    technical_specification: absent
+    shared_technical_specification: absent
+    test_program_and_methodology: absent
+    shared_test_program_and_methodology: absent
+    source_listing: absent
+    programmer_manual: absent
+    operator_manual: absent
+    annotation: active
+    shared_annotation: active
+    interim_report: active
+    pdp_assignment: active
+    pdp_work_plan: active
+    pdp_report_title: active
+    pdp_review: active
+    topic_presentation: active
+    presentation: active
+    thesis: active
+    nda: inactive
+  participants: [author1, author2, author3, supervisor, academic_supervisor]
+  meta_visible:
+    - year
+    - specialization
+    - name_en
+    - name_short
+    - faculty
+    - city
+    - city_en
+    - udc
+    - program_code
+    - course
+    - academic_supervisor
+    - doc_code_base
+    - font_main
+    - font_sans
+    - font_mono
+    - nda
+    - supervisor
+    - co_supervisor
+  points:
+    - id: checkpoint-1
+      items: [topic_presentation, annotation, shared_annotation]
+      steps: [[author1, author2, author3], [supervisor]]
+      pairs: 8
+    - id: checkpoint-2
+      items: [topic_presentation, interim_report]
+      steps: [[author1, author2, author3], [supervisor]]
+      pairs: 4
+    - id: checkpoint-3
+      items: [interim_report, presentation]
+      steps: []
+      pairs: 0
+    - id: pdp-application
+      items: [pdp_assignment, pdp_work_plan]
+      steps: [[author1, author2, author3], [supervisor]]
+      pairs: 8
+    - id: final
+      items: [thesis, presentation, pdp_report_title, pdp_review]
+      steps: [[author1, author2, author3], [supervisor]]
+      pairs: 9
+    - id: gia
+      items: [thesis]
+      steps: [[author1, author2, author3], [supervisor]]
+      pairs: 4
+  sections:
+    - { section: documents, fingerprint: b7ff794f9866, count: 10 }
+    - { section: meta, fingerprint: a2b376148c8c, count: 18 }
+    - { section: forms, fingerprint: baa9eaef9a4a, count: 2 }
+    - { section: participants, fingerprint: 69e9b6580a38, count: 5 }
+    - { section: points, fingerprint: 3eedeb538056, count: 14 }
+    - { section: route, fingerprint: 63f43bedbd77, count: 33 }
+    - { section: checks, fingerprint: 4f53cda18c2b, count: 0 }

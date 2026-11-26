@@ -5,7 +5,7 @@ name:
 description:
   ru: NDA сдаётся на КТ2 и в финале.
   en: The NDA is handed in at CP2 and in the final.
-versions: ["2026.1.*"]
+versions: ["2026.1.*", "2026.2.*"]
 inputs:
   staffing: team3
   meta.nda: "yes"

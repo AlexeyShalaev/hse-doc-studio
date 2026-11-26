@@ -5,7 +5,7 @@ name:
 description:
   ru: "Общие ТЗ и программа испытаний команды; в финале подписывают оба автора."
   en: "The shared SoW and test programme of the team; both authors sign in the final."
-versions: ["2026.1.*"]
+versions: ["2026.1.*", "2026.2.*"]
 inputs:
   staffing: team2
   supervisor: company
