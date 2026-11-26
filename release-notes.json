@@ -1,6 +1,24 @@
 {
   "releases": [
     {
+      "version": "0.43.0",
+      "date": "2026-11-26",
+      "notes": [
+        {
+          "ru": "Паки: маршруты подписания в ВКР и курсовом бакалавриата «Программная инженерия» (hse-cs-se 2026.1.5). В каждой точке сдачи с подписями «Отправить на подписание» сразу предлагает готовый порядок: студент, затем соруководитель (только если он указан), затем научный руководитель от ВШЭ; академический руководитель не подписывает. В курсовом подписывает только автор на финальной загрузке. В командном проекте первый шаг подписывают все авторы. Места подписей на титулах ВКР, аннотации, отчёта ВКР, отчёта курсового и листах утверждения больше не закрывают подписи под строками, в русской и английской вёрстке.",
+          "en": "Packs: signing routes in the BSc Software Engineering thesis and course project (hse-cs-se 2026.1.5). At every submission point with signatures, Send for signing offers a ready order right away: the student, then the co-supervisor (only when set), then the HSE supervisor; the academic supervisor does not sign. In the course project only the author signs, at the final upload. In a team project all authors sign the first step. Signature places on the title pages of the thesis, annotation, thesis report, course project report and on the approval sheets no longer cover the captions under the lines, in the Russian and English layouts."
+        },
+        {
+          "ru": "Паки: групповой курсовой проект магистратуры «Системная и программная инженерия» (hse-cs-sse 2026.2.0). У каждого участника группы свои заявка, заявление о теме, отчёт и презентация, а также своя тема и УДК; заявка, заявление и введение отчёта называют групповой проект и других участников, во введении есть место для личного вклада. Маршрут «Заявки на тему»: все авторы подписывают свои заявления, затем научный руководитель и соруководитель, затем академический руководитель (если научный руководитель не из ВШЭ). На титуле отчёта рамки подписей больше не заходят на дату. Существующие проекты на новую версию сами не переходят, обновление шаблона предлагается как обычно.",
+          "en": "Packs: a group course project in the MSc System and Software Engineering (hse-cs-sse 2026.2.0). Each group member has their own project proposal, topic application, report and slides, as well as their own title and UDC; the proposal, the application and the report introduction name the group project and the other members, and the introduction has a place for the personal contribution. The Topic application route: all authors sign their applications, then the supervisor and the co-supervisor, then the academic supervisor (when the supervisor is not from HSE). On the report title page the signature boxes no longer overlap the date. Existing projects do not move to the new version by themselves; the template update is offered as usual."
+        },
+        {
+          "ru": "Подписи в команде: на общих документах (например, общее ТЗ или ПМИ) у каждого автора может быть своё место подписи и даты. Для этого шаблон ставит на строку автора якорь author__<slug>; места из пака, маршрут, пересборка, «Вернуть место из шаблона», а в MCP pack_signature_check и pack_signature_render работают с местом каждого автора. Старые шаблоны ведут себя как раньше. Как включить это в своём паке, описано в справке по формату пака, раздел «Командный проект: строка каждого автора».",
+          "en": "Team signatures: on shared documents (for example a shared SoW or test program) each author can have their own signature and date place. The template puts an author__<slug> anchor on the author's line; pack places, the route, rebuilds, Restore the template place and, in MCP, pack_signature_check and pack_signature_render work with each author's place. Older templates behave as before. How to turn it on in your pack is described in the pack format reference, section Team project: a line for every author."
+        }
+      ]
+    },
+    {
       "version": "0.42.0",
       "date": "2026-11-24",
       "notes": [

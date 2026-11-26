@@ -6,15 +6,11 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.43.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.42.0...v0.43.0) (2026-11-26)
+## [0.43.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.42.0...v0.43.0) - 2026-11-26
 
-
-### Features
-
-* **packs:** hse-cs-se vkr и coursework 2026.1.5 — маршруты подписания, места подписей ([267df28](https://github.com/AlexeyShalaev/hse-doc-studio/commit/267df28ea144c19f90fc5b92fd0bc107b917803d))
-* **packs:** hse-cs-sse coursework 2026.2.0 — групповой курсовой проект ([18133b8](https://github.com/AlexeyShalaev/hse-doc-studio/commit/18133b8229da1fec0c4ef87c36cfadc359bcc547))
-* **signatures:** якоря подписи на каждого автора команды ([c20aab4](https://github.com/AlexeyShalaev/hse-doc-studio/commit/c20aab49bfbe9e5aa81c1ad448df60ec03ae3999))
-* **signatures:** якоря подписи на каждого автора команды ([bf328d8](https://github.com/AlexeyShalaev/hse-doc-studio/commit/bf328d88bcccdfe8b05b910e45757fe5e193efb3))
+- Packs: signing routes in the BSc Software Engineering thesis and course project (hse-cs-se 2026.1.5). At every submission point with signatures, Send for signing offers a ready order right away: the student, then the co-supervisor (only when set), then the HSE supervisor; the academic supervisor does not sign. In the course project only the author signs, at the final upload. In a team project all authors sign the first step. Signature places on the title pages of the thesis, annotation, thesis report, course project report and on the approval sheets no longer cover the captions under the lines, in the Russian and English layouts.
+- Packs: a group course project in the MSc System and Software Engineering (hse-cs-sse 2026.2.0). Each group member has their own project proposal, topic application, report and slides, as well as their own title and UDC; the proposal, the application and the report introduction name the group project and the other members, and the introduction has a place for the personal contribution. The Topic application route: all authors sign their applications, then the supervisor and the co-supervisor, then the academic supervisor (when the supervisor is not from HSE). On the report title page the signature boxes no longer overlap the date. Existing projects do not move to the new version by themselves; the template update is offered as usual.
+- Team signatures: on shared documents (for example a shared SoW or test program) each author can have their own signature and date place. The template puts an author__<slug> anchor on the author's line; pack places, the route, rebuilds, Restore the template place and, in MCP, pack_signature_check and pack_signature_render work with each author's place. Older templates behave as before. How to turn it on in your pack is described in the pack format reference, section Team project: a line for every author.
 
 ## [0.42.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.41.0...v0.42.0) - 2026-11-24
 
