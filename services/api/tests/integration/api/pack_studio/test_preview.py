@@ -205,6 +205,38 @@ async def test__preview__team_example_renders_personal_base(stand: Stand, fake_d
     assert done["combination"]["staffing"] == "team2"
 
 
+async def test__preview__team_author__builds_the_personal_document_of_the_chosen_author(
+    stand: Stand, fake_docker: FakeDocker
+) -> None:
+    await stand.enable()
+    personal = _DRAFT_YAML.replace(
+        "output_file: report/report.pdf\n", "output_file: report/report.pdf\n    scope: personal\n"
+    )
+    root = write_pack(stand.root / "packs", {**PREVIEW_FILES, f"{VERSION_DIR}/version.yaml": personal})
+    ws = str((await stand.folder_workspace(root.parent, packs_path=root.name))["id"])
+    team = {"documents": ["report"], "example": "auto:normal", "combination": {"staffing": "team2"}}
+
+    _, [default] = await _start(stand, ws, team)
+    first = await _settled(stand, ws, default["id"])
+    _, [chosen] = await _start(stand, ws, {**team, "author": "2"})
+    second = await _settled(stand, ws, chosen["id"])
+    outside = await stand.client.post(_preview_url(ws), json={**team, "author": "3"})
+
+    # Без выбора автора собирается документ первого автора, как раньше.
+    assert first["status"] == "succeeded", first["error"]
+    assert (first["author"], first["source_file"]) == ("ivanov", "ivanov/report/report.tex")
+    assert second["status"] == "succeeded", second["error"]
+    assert (second["author"], second["source_file"]) == ("petrova", "petrova/report/report.tex")
+    assert second["key"] != first["key"]
+    assert second["authors"] == [
+        {"slug": "ivanov", "name": "Иванов Иван Иванович"},
+        {"slug": "petrova", "name": "Петрова Мария Сергеевна"},
+    ]
+    assert outside.status_code == 400, outside.text
+    assert (outside.json()["code"], outside.json()["field"]) == ("preview_invalid", "author")
+    assert outside.json()["reason"] == "the combination has authors 1..2"
+
+
 async def test__preview__invalid_requests_are_rejected(stand: Stand) -> None:
     ws = await _workspace(stand)
     url = _preview_url(ws)

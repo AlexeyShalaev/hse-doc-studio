@@ -29,7 +29,7 @@ from mcp.client.client import Client
 from mcp.client.streamable_http import streamable_http_client
 
 from tests.fixtures.app import create_test_app, create_test_container
-from tests.fixtures.git_remote import BareRemote
+from tests.fixtures.git_remote import BareRemote, seed_remote
 from tests.integration.api.pack_studio.conftest import Stand
 from tests.integration.api.pack_studio.outcome_support import DRAFT, DRAFT_MANIFEST, DRAFT_VKR
 from tests.integration.api.pack_studio.test_outcome_git import _PROFILE, _packs_remote
@@ -390,7 +390,14 @@ async def test__edit__model_action_hints_library_and_submission(studio: Studio) 
     assert hints["meta_fields"]
     assert library["documents"]
     assert submission["submission"]["profiles"]
-    assert "Маршруты" in routes
+    # Текст показывает маршрут каждой точки: записанный порядок и шаги людьми в комбинации, не только счётчик.
+    assert "Маршруты в комбинации (набор auto:normal; " in routes
+    assert "Порядок версии" in routes
+    for profile in submission["submission"]["profiles"]:
+        assert f"  профиль {profile['index']}: {profile['id']}" in routes
+        assert f"\n  {profile['id']}: " in routes
+    assert "    шаг 1: author Иванов Иван Иванович" in routes
+    assert "    подписи " in routes
     assert edited["etag"] != submission["etag"]
     assert edited["submission"]["profiles"][0]["name"]["ru"] == "Новое имя"
     assert bad["code"] in {"submission_invalid", "version_released"}
@@ -519,6 +526,51 @@ async def test__outcome__atlas_pin_limit_and_explain_with_counterfactuals(studio
 
 
 # ── git по шагам и полный цикл ───────────────────────────────────────────────
+
+
+async def test__git__branch_from_base__starts_the_next_work_at_the_fresh_base(studio: Studio) -> None:
+    tex = f"{_DRAFT_DIR}/files/report/new.tex"
+    async with _client(studio) as client:
+        remote, ws = await _connect(studio, client)
+        await _json(client, "pack_write_file", {"workspace_id": ws, "path": tex, "content": "\\relax\n"})
+        await _json(client, "pack_git_branch", {"workspace_id": ws, "name": "feature/first"})
+        committed = await _json(client, "pack_git_commit", {"workspace_id": ws, "message": "feat(packs): первая"})
+        # База ушла вперёд без нашей ветки: новая ветка должна встать на неё, а не на вершину feature/first.
+        seed_remote(remote, {"packs/hse-cs-se/notes.md": "новое в базе\n"}, message="base moved")
+        await _json(client, "pack_write_file", {"workspace_id": ws, "path": tex, "content": "\\relax\n% 2\n"})
+        fresh = {"workspace_id": ws, "name": "feature/next", "from_base": True}
+        dirty = await _refused(client, "pack_git_branch", fresh)
+        await _json(client, "pack_git_commit", {"workspace_id": ws, "message": "feat(packs): вторая"})
+        taken = await _refused(
+            client, "pack_git_branch", {"workspace_id": ws, "name": "feature/first", "from_base": True}
+        )
+        text = await _text(client, "pack_git_branch", fresh)
+        status = await _json(client, "pack_git_status", {"workspace_id": ws})
+        branches = await _json(client, "pack_git_branches", {"workspace_id": ws})
+        gone = await _refused(client, "pack_read_file", {"workspace_id": ws, "path": tex})
+        notes = await _json(client, "pack_read_file", {"workspace_id": ws, "path": "hse-cs-se/notes.md"})
+        help_flow = await _text(client, "pack_help", {"topic": "flow"})
+        tools = {t.name: t for t in (await client.list_tools()).tools}
+
+    assert committed["committed"] is True
+    assert dirty["code"] == "workspace_dirty"
+    assert "pack_git_commit" in dirty["hint"]
+    assert (taken["code"], taken["branch"]) == ("branch_exists", "feature/first")
+    assert "pack_git_branches" in taken["hint"]
+    assert text.startswith("Новая ветка создана от свежей базовой.")
+    assert "Ветка: feature/next; база: main; впереди базы: 0, позади: 0" in text
+    assert status["branch"] == "feature/next"
+    assert status["head_sha"] == remote.head("main")
+    assert status["changed"] == []
+    assert branches["current"] == "feature/next"
+    assert {"feature/first", "feature/next"} <= set(branches["local"])
+    # Дерево на базе: правок прежней ветки в нём нет, новое из базы есть.
+    assert gone["code"] == "file_not_found"
+    assert notes["content"] == "новое в базе\n"
+    assert "from_base: true" in help_flow
+    schema = tools["pack_git_branch"].input_schema["properties"]["from_base"]
+    assert (schema["type"], schema["default"]) == ("boolean", False)
+    assert "from_base" in (tools["pack_git_branch"].description or "")
 
 
 async def test__git__branch_commit_diff_checks_merge_and_start_over(studio: Studio) -> None:

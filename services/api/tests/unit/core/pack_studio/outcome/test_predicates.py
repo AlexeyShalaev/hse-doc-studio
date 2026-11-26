@@ -181,3 +181,31 @@ def test__owner_suffix__surname_goes_before_the_extension() -> None:
     assert with_owner_suffix("ТЗ", "Иванов") == "ТЗ — Иванов"
     assert with_owner_suffix("ТЗ.pdf", None) == "ТЗ.pdf"
     assert with_owner_suffix("ТЗ.pdf", "") == "ТЗ.pdf"
+
+
+@pytest.mark.parametrize(
+    ("full_name", "lang", "surname"),
+    [
+        # Русский проект: фамилия первое слово, как было.
+        ("Иванов Иван Иванович", "ru", "Иванов"),
+        ("Иванов И. И.", "ru", "Иванов"),
+        ("Ivan Ivanov", "ru", "Ivan"),
+        # Английский проект: «Given Surname», инициалы не фамилия.
+        ("Ivan Ivanov", "en", "Ivanov"),
+        ("Maria S. Petrova", "en", "Petrova"),
+        ("I. I. Ivanov", "en", "Ivanov"),
+        ("Ivanov I.I.", "en", "Ivanov"),
+        ("Ivanov, Ivan", "en", "Ivanov"),
+        ("Ivanov", "en", "Ivanov"),
+        ("I. I.", "en", "I."),
+        # ФИО кириллицей в английском проекте записано по-русски.
+        ("Иванов Иван Иванович", "en", "Иванов"),
+    ],
+)
+def test__owner_short_name__surname_by_project_language(full_name: str, lang: str, surname: str) -> None:
+    assert owner_short_name(full_name, "slug", lang) == surname
+
+
+def test__owner_short_name__no_name__falls_back_to_the_slug_in_any_language() -> None:
+    assert owner_short_name("", "ivanov", "en") == "ivanov"
+    assert owner_short_name("  ", None, "en") == ""

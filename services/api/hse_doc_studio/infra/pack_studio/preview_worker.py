@@ -255,7 +255,9 @@ def _materialize(
         raise ValueError("version.yaml не разобран: проверьте манифест линтером")
     project = _project(request, version, repo, dest)
     warnings = _render(project, version, repo)
-    doc = next((d for d in project.documents if d.def_id == request.def_id), None)
+    instances = [d for d in project.documents if d.def_id == request.def_id]
+    # Личный документ команды имеет экземпляр на автора: без выбора собирается первый, как раньше.
+    doc = next((d for d in instances if request.author is None or d.owner == request.author), None)
     if doc is None:
         raise ValueError(f"документа {request.def_id!r} нет в проекте этой комбинации")
     if request.variant is not None:

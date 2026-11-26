@@ -312,6 +312,9 @@ class PackBranchRequest(StrictModel):
     """Создать или перейти на рабочую ветку; без имени Студия называет её сама (`pack-studio/<человек>/...`)."""
 
     name: str | None = Field(default=None, min_length=1, max_length=200)
+    # Новая ветка от свежей базовой, а не от текущей вершины (после слияния PR): дерево чистое (`workspace_dirty`),
+    # имя свободно (`branch_exists`). По умолчанию ветка создаётся на текущей вершине, как раньше.
+    from_base: bool = False
 
 
 class PackCommitRequest(StrictModel):
@@ -571,6 +574,10 @@ class StartPackPreviewRequest(StrictModel):
     # Сценарий пака (срез O9): вводные и набор данных берёт из него (набор запроса главнее), `combination` ложится
     # поверх. Нет файла: `scenario_not_found`, файл не по формату: `scenario_invalid`.
     scenario: str | None = Field(default=None, max_length=64)
+    # Автор команды, чьи личные документы собирать: слаг автора синтетического проекта (`authors` сборки) или номер
+    # с единицы («2»: второй автор). Нет: первый автор. Общему документу и одиночной работе выбор безразличен;
+    # автора с таким слагом или номером нет в комбинации: `preview_invalid` с полем `author`.
+    author: str | None = Field(default=None, min_length=1, max_length=64)
 
 
 class PackPreviewErrorBody(StrictModel):
@@ -588,6 +595,13 @@ class PackPreviewCheck(StrictModel):
     message: str
     file: str | None
     line: int | None
+
+
+class PackPreviewAuthor(StrictModel):
+    """Автор команды синтетического проекта сборки: слаг (папка автора, якорь `author__<слаг>`) и имя из набора."""
+
+    slug: str
+    name: str
 
 
 class PackPreviewBuildResponse(StrictModel):
@@ -622,6 +636,10 @@ class PackPreviewBuildResponse(StrictModel):
     file_name: str | None = None
     scenario: str | None = None
     scenario_inputs: dict[str, str] = Field(default_factory=dict)
+    # Чей личный документ команды собран: слаг автора (null: общий документ или одиночная работа) и авторы команды
+    # синтетического проекта по порядку: любого из них можно назвать в `author` следующего запроса.
+    author: str | None = None
+    authors: list[PackPreviewAuthor] = Field(default_factory=list)
 
 
 class PackPreviewStartResponse(StrictModel):
@@ -836,6 +854,19 @@ class PackSignatureSlot(StrictModel):
     document: PackSlotFrame | None
 
 
+class PackAnchorView(StrictModel):
+    """Якорь сборки словами: `slot` слот, чью строку он отмечает (имя якоря без слага автора), `part` часть даты у
+    якоря даты. У строки автора команды (`author__ivanov`) `author` слаг и `author_name` имя автора из набора
+    данных сборки (null: сборка сделана до того, как стала запоминать авторов)."""
+
+    id: str
+    kind: Literal["sign", "date"]
+    slot: str
+    part: str | None
+    author: str | None
+    author_name: str | None
+
+
 class PackSignaturesBuild(StrictModel):
     id: str
     document: str
@@ -843,6 +874,8 @@ class PackSignaturesBuild(StrictModel):
     anchors_known: bool
     sign_anchors: list[str]
     date_anchors: list[str]
+    # Те же якоря словами, сначала подписи, затем даты: сырой id `author__<слаг>` рядом со слотом и именем автора.
+    anchor_views: list[PackAnchorView] = Field(default_factory=list)
 
 
 class PackSignaturesResponse(StrictModel):

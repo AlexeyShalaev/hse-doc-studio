@@ -15,11 +15,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
 
 from hse_doc_studio.core.catalog import PackDate, PackPlace, SignatureDefaultDate, SignatureDefaultPlacement
 from hse_doc_studio.core.enums import AnchorState, DateMarkAlign, DateMarkFormat
+from hse_doc_studio.core.signatures.anchors import AnchorKind, split_author_name
 
 # Набор правок за один запрос: столько рамок автор не двигает и за час.
 MAX_PLACE_OPS = 50
@@ -138,8 +140,52 @@ class SlotPlaces:
 
 
 @dataclass(frozen=True)
+class AnchorView:
+    """Якорь сборки словами: чей он слот и чья это строка в команде.
+
+    Общий документ команды ставит строку на каждого автора (signing-route.md, 15.17.20), её якорь это
+    `author__ivanov`: `slot` имя без слага (`author`, якорь называют по слоту), `author` слаг, `author_name` имя
+    автора из набора данных сборки (None: сборка авторов не запомнила). У обычной строки `slot` это имя якоря, автора
+    нет. `part` часть даты (`day`) у якоря даты. Рамку такого автора `pack_signature_check` и
+    `pack_signature_render` называют `<slot>--<author>`.
+    """
+
+    id: str
+    kind: AnchorKind
+    slot: str
+    part: str | None = None
+    author: str | None = None
+    author_name: str | None = None
+
+
+def anchor_views(
+    sign_anchors: Sequence[str], date_anchors: Sequence[str], authors: Mapping[str, str]
+) -> tuple[AnchorView, ...]:
+    """Якоря подписи, затем якоря даты, в порядке сборки; `authors` это слаг -> имя автора команды сборки."""
+    views: list[AnchorView] = []
+    for kind, ids in ((AnchorKind.sign, sign_anchors), (AnchorKind.date, date_anchors)):
+        for anchor_id in ids:
+            name, _, part = anchor_id.partition(".")
+            slot, author = split_author_name(name)
+            views.append(
+                AnchorView(
+                    id=anchor_id,
+                    kind=kind,
+                    slot=slot,
+                    part=part or None,
+                    author=author,
+                    author_name=authors.get(author) if author is not None else None,
+                )
+            )
+    return tuple(views)
+
+
+@dataclass(frozen=True)
 class VersionPlaces:
-    """Каталог слотов версии и якоря сборки документа (`document`), если сборка передана."""
+    """Каталог слотов версии и якоря сборки документа (`document`), если сборка передана.
+
+    `sign_anchors` и `date_anchors` это id якорей как в `anchors.json` сборки; `anchor_views` те же якоря словами
+    (слот и автор команды у строки `author__<слаг>`), их дописывает сценарий: имена авторов знает сборка."""
 
     documents: tuple[str, ...]
     slots: tuple[SlotPlaces, ...]
@@ -147,3 +193,4 @@ class VersionPlaces:
     anchors_known: bool
     sign_anchors: tuple[str, ...]
     date_anchors: tuple[str, ...]
+    anchor_views: tuple[AnchorView, ...] = ()

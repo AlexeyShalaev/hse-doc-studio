@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import time
 from datetime import UTC, datetime
@@ -9,7 +10,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import pytest
-from hse_doc_studio.core.pack_studio.preview import PreviewBuild, PreviewError, PreviewStatus
+from hse_doc_studio.core.pack_studio.preview import PreviewAuthor, PreviewBuild, PreviewError, PreviewStatus
 from hse_doc_studio.infra.pack_studio.preview_store import FsPreviewStore
 
 
@@ -49,6 +50,28 @@ def test__save_load__round_trip(tmp_path: Path) -> None:
     store.save(build)
 
     assert store.load(build.id) == build
+
+
+def test__save_load__keeps_the_author_and_the_team_and_reads_records_without_them(tmp_path: Path) -> None:
+    store = FsPreviewStore(tmp_path, max_cache_entries=5, max_age_s=3600)
+    team = (PreviewAuthor("ivanov", "Иванов Иван Иванович"), PreviewAuthor("petrova", "Петрова Мария Сергеевна"))
+    build = _build("cd" * 32, author="petrova", authors=team)
+    old = _build("ef" * 32)
+
+    store.save(build)
+    store.save(old)
+    # Запись, сделанная до появления выбора автора: ключей нет.
+    record = next(p for p in tmp_path.rglob("*.json") if str(old.id) in p.name)
+    data = json.loads(record.read_text(encoding="utf-8"))
+    del data["author"], data["authors"]
+    record.write_text(json.dumps(data), encoding="utf-8")
+
+    loaded = store.load(build.id)
+    assert loaded is not None
+    assert (loaded.author, loaded.authors) == ("petrova", team)
+    legacy = store.load(old.id)
+    assert legacy is not None
+    assert (legacy.author, legacy.authors) == (None, ())
 
 
 def test__read_log__cache_hit_reads_the_log_of_the_build_that_made_the_pdf(tmp_path: Path) -> None:

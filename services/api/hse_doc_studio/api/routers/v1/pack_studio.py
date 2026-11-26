@@ -61,6 +61,7 @@ from hse_doc_studio.api.schemas.pack_studio import (
     PackMoveEditsRequest,
     PackOfficialRepo,
     PackOfficialResponse,
+    PackPreviewAuthor,
     PackPreviewBuildResponse,
     PackPreviewCheck,
     PackPreviewDocument,
@@ -544,8 +545,9 @@ async def get_git_diff(workspace_id: UUID, git: FromDishka[PackGitService], resp
 async def switch_branch(
     workspace_id: UUID, body: PackBranchRequest, git: FromDishka[PackGitService]
 ) -> PackGitResponse:
-    """Создать рабочую ветку (правки остаются) или перейти на свою прежнюю, локальную или с сервера (дерево чистое)."""
-    return git_response(await git.switch(require_actor(), workspace_id, body.name))
+    """Создать рабочую ветку (правки остаются) или перейти на свою прежнюю, локальную или с сервера (дерево чистое).
+    `from_base`: новая ветка от свежей базовой, дерево чистое."""
+    return git_response(await git.switch(require_actor(), workspace_id, body.name, from_base=body.from_base))
 
 
 @router.post("/pack-studio/workspaces/{workspace_id}/git/commit", response_model=PackCommitResponse)
@@ -723,6 +725,8 @@ def preview_build_response(build: PreviewBuild) -> PackPreviewBuildResponse:
         file_name=build.file_name,
         scenario=build.scenario,
         scenario_inputs=dict(build.scenario_inputs),
+        author=build.author,
+        authors=[PackPreviewAuthor(slug=a.slug, name=a.name) for a in build.authors],
     )
 
 
@@ -765,6 +769,7 @@ async def start_preview(  # noqa: PLR0913 — путь версии и тело
             checks=body.checks,
             variant=body.variant,
             scenario=body.scenario,
+            author=body.author,
         ),
     )
     if all(build.status.is_terminal for build in builds):

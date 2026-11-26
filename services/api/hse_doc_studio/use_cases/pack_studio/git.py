@@ -233,11 +233,13 @@ class PackGitService:
 
     # ── ветка и коммит ───────────────────────────────────────────────────────
 
-    async def switch(self, actor: Actor, workspace_id: UUID, name: str | None) -> GitView:
+    async def switch(self, actor: Actor, workspace_id: UUID, name: str | None, *, from_base: bool = False) -> GitView:
+        """Рабочая ветка: новая на текущей вершине или переход на прежнюю; `from_base` новая от свежей базы."""
         ws = await self._workspaces.git_ready(actor, workspace_id)
 
         async def work() -> GitView:
-            return await self._view(await self._switch(ws, name))
+            moved = await (self._branch_from_base(ws, name) if from_base else self._switch(ws, name))
+            return await self._view(moved)
 
         return await self._locked(ws, work)
 
@@ -321,6 +323,29 @@ class PackGitService:
             await self._git.create_branch(dirs, name=wanted)
         # PR и статус проверок принадлежат ветке: на другой ветке их ищут заново при предложении.
         moved = replace(ws, work_branch=wanted, pr_url=None, pr_number=None, ci_status=None, pushed_sha=None)
+        return await self._workspaces.save(moved)
+
+    async def _branch_from_base(self, ws: PackWorkspace, name: str | None) -> PackWorkspace:
+        """Новая рабочая ветка от свежей базовой (после слияния PR): база выбирается с сервера, дерево переезжает
+        на её вершину, ветка создаётся там. Дерево должно быть чистым (`workspace_dirty`), имя свободным локально и
+        на сервере (`branch_exists`): прежняя ветка и её коммиты остаются как были."""
+        dirs = self._workspaces.dirs_of(ws)
+        status = await self._status(ws)
+        if status.dirty:
+            raise PackStudioError(PackStudioErrorCode.workspace_dirty)
+        wanted = _branch_name(name) if name else None
+        if wanted is not None and wanted == ws.base_branch:
+            raise PackStudioError(PackStudioErrorCode.branch_name_invalid)
+        taken = (*await self._git.local_branches(dirs), *await self._server_branches(ws))
+        if wanted is None:
+            # На свежей базе своих правок ещё нет: имя с меткой времени, а не по версиям прежней ветки.
+            wanted = self._auto_branch(replace(status, changed=()), taken)
+        elif wanted in taken:
+            raise PackStudioError(PackStudioErrorCode.branch_exists, branch=wanted)
+        fresh = await self._workspaces.fetch_base(ws)
+        await self._git.advance_to_base(dirs, self._workspaces.target_of(fresh), base_branch=fresh.base_branch or "")
+        await self._git.create_branch(dirs, name=wanted)
+        moved = replace(fresh, work_branch=wanted, pr_url=None, pr_number=None, ci_status=None, pushed_sha=None)
         return await self._workspaces.save(moved)
 
     async def _commit(self, ws: PackWorkspace, message: str | None) -> tuple[PackWorkspace, str | None]:

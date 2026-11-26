@@ -10,14 +10,20 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from uuid import UUID
 
 from hse_doc_studio.core.access.entities import Actor
 from hse_doc_studio.core.file_version import file_etag
 from hse_doc_studio.core.pack_studio.errors import PackStudioError, PackStudioErrorCode
 from hse_doc_studio.core.pack_studio.paths import VERSION_MANIFEST, VersionRef
-from hse_doc_studio.core.pack_studio.places import MAX_PLACE_OPS, PlaceEditError, PlaceOp, VersionPlaces
+from hse_doc_studio.core.pack_studio.places import (
+    MAX_PLACE_OPS,
+    PlaceEditError,
+    PlaceOp,
+    VersionPlaces,
+    anchor_views,
+)
 from hse_doc_studio.core.pack_studio.preview import PreviewBuild
 from hse_doc_studio.core.pack_studio.protocols import IPackPlaces
 from hse_doc_studio.core.signatures.anchors import BuildAnchors
@@ -94,9 +100,12 @@ class PackPlacesService:
 
     def _describe(self, text: str, build: PreviewBuild | None, anchors: BuildAnchors | None) -> VersionPlaces:
         try:
-            return self._places.describe(text, document=build.document if build else None, anchors=anchors)
+            places = self._places.describe(text, document=build.document if build else None, anchors=anchors)
         except (TypeError, ValueError) as exc:
             raise PackStudioError(PackStudioErrorCode.version_unreadable, reason=str(exc)[:300]) from None
+        # Якорь строки автора команды (`author__<слаг>`) получает слот и имя автора: авторов помнит сборка.
+        authors = {a.slug: a.name for a in build.authors} if build is not None else {}
+        return replace(places, anchor_views=anchor_views(places.sign_anchors, places.date_anchors, authors))
 
 
 def _manifest(ref: VersionRef) -> str:

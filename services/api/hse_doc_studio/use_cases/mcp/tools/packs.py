@@ -35,7 +35,7 @@ from hse_doc_studio.core.pack_studio.entities import DiagnosticSeverity, PackWor
 from hse_doc_studio.core.pack_studio.errors import PackStudioError
 from hse_doc_studio.core.pack_studio.paths import TEMPLATES_DIR, VERSIONS_DIR, VersionRef, version_ref_of
 from hse_doc_studio.core.pack_studio.places import MarkBox, PlaceBox, PlaceOp, PlaceOpKind
-from hse_doc_studio.core.pack_studio.preview import PreviewBuild
+from hse_doc_studio.core.pack_studio.preview import STAFFING_SOLO, STAFFING_TEAMS, SWITCH_STAFFING, PreviewBuild
 from hse_doc_studio.core.pack_studio.protocols import IPdfTextReader
 from hse_doc_studio.core.pack_studio.scaffold import (
     Maintainer,
@@ -176,6 +176,16 @@ _HINTS: Final[dict[str, tuple[str, str]]] = {
     "branch_name_invalid": (
         "Допустимое имя ветки: латиница, цифры, «-», «_», «/»; базовую ветку рабочей делать нельзя.",
         "Use Latin letters, digits, '-', '_' and '/'; the base branch cannot be the work branch.",
+    ),
+    "branch_exists": (
+        (
+            "Ветка с таким именем уже есть (pack_git_branches). Для новой ветки от базы дайте свободное имя или "
+            "уберите name: имя даст Студия. Перейти на существующую: pack_git_branch без from_base."
+        ),
+        (
+            "This branch already exists (pack_git_branches). For a new branch from the base pass a free name or "
+            "drop name: the Studio names it. To switch to the existing one call pack_git_branch without from_base."
+        ),
     ),
     "credentials_missing": (
         (
@@ -360,7 +370,8 @@ class PackReadTool(PackTool):
             "Студия шаблонов: без version дерево пространства (паки, шаблоны, версии со статусом; released: "
             "выпущена и только для чтения). С version разобранная модель версии: документы, поля анкеты, слоты "
             "подписей, точки сдачи, анкеты, языки, файлы версии и preview: что можно собрать в pack_preview_build "
-            "(документы, переключатели combination с допустимыми значениями, наборы данных, умолчания). Пример: "
+            "(документы, переключатели combination с допустимыми значениями, наборы данных, умолчания, author: "
+            "сколько авторов даёт каждый staffing и какие документы личные). Пример: "
             '{"workspace_id": "<uuid>", "version": "hse-cs-sse/coursework/2026.1.7"}.'
         ),
         parameters=_schema({"workspace_id": _WORKSPACE_ID, "version": _VERSION}, ("workspace_id",)),
@@ -414,6 +425,31 @@ def _preview_options(options: PreviewOptions) -> dict[str, Any]:
         "default_example": options.default_example,
         "combination": dict(options.combination),
         "languages": {doc: list(langs) for doc, langs in options.languages.items()},
+        "author": _preview_author(options),
+    }
+
+
+def _preview_author(options: PreviewOptions) -> dict[str, Any]:
+    """Выбор автора для личных документов команды (`author` у `pack_preview_build`): сколько авторов даёт каждое
+    значение `staffing` и что собирается по умолчанию. Слаги зависят от набора данных и языка: их отдаёт сборка."""
+    staffing = next((s for s in options.switches if s.id == SWITCH_STAFFING), None)
+    values = staffing.values if staffing is not None else (STAFFING_SOLO,)
+    return {
+        "default": 1,
+        "count_by_staffing": {value: STAFFING_TEAMS.get(value, 1) for value in values},
+        "personal_documents": [d.id for d in options.documents if d.scope == "personal"],
+        "hint": localized_error(
+            (
+                "pack_preview_build с author собирает личные документы этого автора команды: номер с единицы "
+                "(до count_by_staffing выбранного staffing) или слаг из authors ответа сборки. Без author "
+                "собирается документ первого автора."
+            ),
+            (
+                "pack_preview_build with author builds the personal documents of that team author: a number "
+                "from 1 (up to count_by_staffing of the chosen staffing) or a slug from authors of a build "
+                "reply. Without author the first author's document is built."
+            ),
+        ),
     }
 
 
@@ -668,6 +704,9 @@ def _build(build: PreviewBuild) -> dict[str, object]:
         "variant": build.variant,
         "file_name": build.file_name,
         "scenario": build.scenario,
+        # Чей личный документ команды собран (null: общий документ или одиночная работа) и кого можно назвать в author.
+        "author": build.author,
+        "authors": [{"number": n, "slug": a.slug, "name": a.name} for n, a in enumerate(build.authors, start=1)],
         "status": build.status,
         "cached": build.cached,
         "pages": build.pages,
@@ -697,6 +736,14 @@ def _strings(args: Mapping[str, object], key: str) -> list[str]:
     raise ArgumentError(localized_error(f"{key}: ожидается список строк", f"{key}: a list of strings is expected"))
 
 
+def _author_arg(args: Mapping[str, object]) -> str | None:
+    """`author` строкой: агент вправе прислать номер автора числом (`2`), слаг приходит строкой."""
+    raw = args.get("author")
+    if raw is None or isinstance(raw, bool):
+        return None
+    return str(raw).strip() or None
+
+
 class PackPreviewBuildTool(PackTool):
     spec = ToolSpec(
         name="pack_preview_build",
@@ -708,8 +755,11 @@ class PackPreviewBuildTool(PackTool):
             "умолчанию первый: файл examples/*.yaml или auto:normal; ещё auto:long и auto:empty), combination: "
             'переключатели {"lang": "en", "staffing": "team2", "supervisor": "company", "meta.<поле>": "..."}. '
             "variant: вариант документа (у запроса с одним документом, например beamer у презентации), scenario: "
-            "id сценария пака (вводные и набор данных берутся из него, combination ложится поверх). Варианты, "
-            "документы и наборы "
+            "id сценария пака (вводные и набор данных берутся из него, combination ложится поверх). author: чьи "
+            "личные документы собирать в командной комбинации (staffing team2, team3): номер автора с единицы "
+            "или его слаг из authors ответа; по умолчанию первый автор. Общий документ команды от author не "
+            "зависит, автора вне комбинации отклоняет preview_invalid. В ответе author (чей документ собран) и "
+            "authors (авторы комбинации: number, slug, name). Варианты, документы и наборы "
             "видны в pack_read с version (блок preview). С build_id тул только ждёт уже начатую сборку, с build_id "
             "и cancel: true останавливает её. "
             "Текст PDF и журнал сборки читает pack_preview_read."
@@ -723,6 +773,13 @@ class PackPreviewBuildTool(PackTool):
                 "combination": {"type": "object", "description": "Переключатели комбинации"},
                 "variant": {"type": "string", "description": "Вариант документа (один документ в запросе)"},
                 "scenario": {"type": "string", "description": "Id сценария пака"},
+                "author": {
+                    "type": "string",
+                    "description": (
+                        "Автор команды, чьи личные документы собирать: номер с единицы («2») или слаг; по "
+                        "умолчанию первый автор"
+                    ),
+                },
                 "build_id": {"type": "string", "description": "Ждать уже начатую сборку"},
                 "cancel": {"type": "boolean", "default": False, "description": "С build_id: остановить сборку"},
                 "wait_s": {
@@ -766,6 +823,7 @@ class PackPreviewBuildTool(PackTool):
                     combination=_combination(args),
                     variant=optional_text(args, "variant"),
                     scenario=optional_text(args, "scenario"),
+                    author=_author_arg(args),
                 ),
             )
         deadline = time.monotonic() + wait_s
@@ -934,7 +992,10 @@ class PackSetPlacementTool(PackTool):
             "make_default, bind_anchor и unbind_anchor (нужна сборка build_id с якорями), add_date (mark в мм или "
             "anchor «слот.часть»), set_date и remove_date по index. Координаты округляются до 1 мм. Пример: "
             '{"op": "set_place", "slot": "supervisor", "doc": "report", '
-            '"box": {"page": 1, "x_mm": 80, "y_mm": 139, "width_mm": 40}}. Без ops отдаёт текущий каталог мест.'
+            '"box": {"page": 1, "x_mm": 80, "y_mm": 139, "width_mm": 40}}. Без ops отдаёт текущий каталог мест. '
+            "С build_id в ответе якоря сборки: sign_anchors и date_anchors (id как в шаблоне) и anchor_views, те же "
+            "якоря словами: slot, часть даты part, а у строки автора команды author__<слаг> ещё author (слаг) и "
+            "author_name (имя автора из набора данных сборки)."
         ),
         parameters=_schema(
             {
