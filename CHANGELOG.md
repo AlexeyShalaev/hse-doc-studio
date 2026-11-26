@@ -6,25 +6,11 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.44.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.43.0...v0.44.0) (2026-11-26)
+## [0.44.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.43.0...v0.44.0) - 2026-11-26
 
-
-### Features
-
-* **hse-cs-se:** выпуск vkr 2026.2.0 и coursework 2026.2.0 (версии по умолчанию) ([7e0bb40](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7e0bb406b0b293e43898bebcb719e2359be0e1e9))
-* **hse-cs-se:** заметки и заголовки версий 2026.2.0, сценарии командных проектов (se vkr, se coursework, sse coursework) ([4101a5e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/4101a5e53c6ffeb5e137935429e724ed09d53221))
-* **hse-cs-se:** плотный лист утверждения команды, строка соруководителя в отзыве о ПДП, титул общей аннотации по авторам, сценарии vkr 2026.2 ([5102c7e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/5102c7eda58c308b9d01ea91094790670fb735d4))
-* **hse-cs-se:** черновики vkr и coursework 2026.2.0, подпись каждого автора на общих документах (vkr), английская вёрстка без русских слов ([629dbc8](https://github.com/AlexeyShalaev/hse-doc-studio/commit/629dbc81bf4195fdb233c4212295d4a73d8d2751))
-* **pack-studio:** новая рабочая ветка от свежей базовой ([6cb6898](https://github.com/AlexeyShalaev/hse-doc-studio/commit/6cb68981c3d7e285ad2a37eea6ba6be6f1da3560))
-* **pack-studio:** предпросмотр личных документов любого автора команды ([03607a4](https://github.com/AlexeyShalaev/hse-doc-studio/commit/03607a4e4f61344cc829aed06ea70db3c11f4c57))
-
-
-### Bug Fixes
-
-* **mcp:** pack_submission показывает маршруты подписания в тексте ([cde4b63](https://github.com/AlexeyShalaev/hse-doc-studio/commit/cde4b6317740b11e190cde91eae73a84d282ec07))
-* **pack-studio:** мелкие ошибки Студии паков и её MCP ([17a434a](https://github.com/AlexeyShalaev/hse-doc-studio/commit/17a434a3ece5cbd0b4e9ec1432a801b2d381a044))
-* **pack-studio:** якоря авторов команды в модели мест подписей читаются словами ([3519e9e](https://github.com/AlexeyShalaev/hse-doc-studio/commit/3519e9ef34a139fb70f6836c2a03b2bdf677678b))
-* **submission:** фамилия автора в имени файла личного документа в английском проекте ([809b3b4](https://github.com/AlexeyShalaev/hse-doc-studio/commit/809b3b4ba9412413e8fe495c1a4c8ddfca69888d))
+- Packs: team projects in the BSc Software Engineering thesis and course project (hse-cs-se 2026.2.0). On the team's shared documents (shared SoW, shared test program and methodology, shared annotation) each author has their own line and their own signature place. The approval sheet of a shared document fits on one page with three authors and with two authors and a co-supervisor. The practice supervisor's review has a co-supervisor line when a co-supervisor is set in the project; their signature in the route is optional and can be skipped. English documents no longer print Russian words on the approval sheet, the thesis and annotation title pages, in the hints of the shared SoW and in the list of manuals. A typo on the practice report title page is fixed. Existing projects do not move to the new version by themselves; the template update is offered as usual.
+- File names in English projects: an author's personal document is now named after the surname, as in Russian projects (it used to carry the first name). The same rule applies to the submission package, the result in Pack Studio and detached signature files. Russian projects are unchanged.
+- Pack Studio over MCP: pack_git_branch with from_base: true creates the working branch from the fresh base branch, which is handy after the previous proposal is merged; pack_preview_build with the author parameter builds the personal documents of any team member, not only the first one; pack_submission shows the signing routes in the text view too; in the signature places model the author__<slug> anchor comes with its slot and the author's name.
 
 ## [0.43.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.42.0...v0.43.0) - 2026-11-26
 
