@@ -4,6 +4,13 @@
 \pagenumbering{Roman}
 \thispagestyle{approval}
 \enlargethispage{3cm}
+% Отступы листа: \hseFormGap и \hseApprovalTight из common/meta. В общем
+% документе команды (три автора и больше или два автора с соруководителем)
+% лист набирается плотнее, чтобы строки подписей всех авторов остались на
+% одной странице с грифами; в остальных случаях отступы прежние. Группа
+% закрывается после листа: титульный лист ниже набирается как обычно.
+\begingroup
+\hseApprovalTight
 
 \noindent
 \raisebox{-25cm}[0pt][0pt]{%
@@ -31,7 +38,7 @@ INSTITUTION FOR HIGHER EDUCATION}
 \textbf{NATIONAL RESEARCH UNIVERSITY\\
 HIGHER SCHOOL OF ECONOMICS}
 
-\vspace{0.2cm}
+\hseFormGap{0.2cm}
 
 \small
 Faculty of Computer Science
@@ -39,7 +46,7 @@ Faculty of Computer Science
 Educational programme \enquote{Software Engineering}
 \end{center}
 
-\vspace{0.3cm}
+\hseFormGap{0.3cm}
 
 \begin{center}
 \begin{minipage}[t]{0.42\textwidth}
@@ -95,34 +102,36 @@ Educational programme \enquote{Software Engineering}
 \end{minipage}
 \end{center}
 
-\vspace{0.6cm}
+\hseFormGap{0.6cm}
 
 \begin{center}
 \textbf{\LARGE \projectname}
 
-\vspace{0.3cm}
+\hseFormGap{0.3cm}
 
 \textbf{\docname}
 
-\vspace{0.1cm}
+\hseFormGap{0.1cm}
 
 \textbf{APPROVAL SHEET}
 
-\vspace{0.1cm}
+\hseFormGap{0.1cm}
 
 \textbf{\doccodelu}
 \end{center}
 
-\vspace{0.3cm}
+\hseFormGap{0.3cm}
 
 % Исполнитель(и): генерённый в common/meta.tex блок — solo/личная база
 % печатает одного владельца (та же вёрстка, что раньше), shared-база
-% командного проекта — строку подписи на каждого автора.
+% командного проекта — строку подписи на каждого автора со своим якорем
+% места подписи (author__<slug автора>). Подписи блока на языке проекта.
 \begin{flushright}
 \hseExecutorsBlock
 \end{flushright}
 
 \clearpage
+\endgroup
 
 % ============================================
 % ТИТУЛЬНЫЙ ЛИСТ

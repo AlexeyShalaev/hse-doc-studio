@@ -13,6 +13,7 @@
 % ((# нужна, чтобы избежать последовательности «{{{» — её Jinja     #))
 % ((# принял бы за открытие выражения.                              #))
 % ((# ============================================================ #))
+((* set hse_en = project.lang == 'en' *))
 
 % ── Проект ──────────────────────────────────────────────────
 % В командном проекте каждая база (папка автора / shared) получает СВОЙ
@@ -27,11 +28,11 @@
 % ── Наименования программы: английское и краткое ────────────
 % Задаются метой name_en / name_short. Пустое значение → жёлтый
 % \hseFill-плейсхолдер прямо в PDF: сразу видно, что поле нужно
-% заполнить в настройках проекта.
+% заполнить в настройках проекта. Текст плейсхолдера на языке проекта.
 \newcommand{\hseProjectNameEn}{%
-((* if project.meta.name_en *)){{ project.meta.name_en | texesc }}((* else *))\hseFill{укажите название на английском в настройках проекта}((* endif *))}
+((* if project.meta.name_en *)){{ project.meta.name_en | texesc }}((* elif hse_en *))\hseFill{set the English title in the project settings}((* else *))\hseFill{укажите название на английском в настройках проекта}((* endif *))}
 \newcommand{\hseProjectNameShort}{%
-((* if project.meta.name_short *)){{ project.meta.name_short | texesc }}((* else *))\hseFill{укажите краткое наименование в настройках проекта}((* endif *))}
+((* if project.meta.name_short *)){{ project.meta.name_short | texesc }}((* elif hse_en *))\hseFill{set the short program name in the project settings}((* else *))\hseFill{укажите краткое наименование в настройках проекта}((* endif *))}
 
 % ── Автор (владелец базы) ───────────────────────────────────
 % Solo и личная база team — владелец комплекта; shared-база — первый автор
@@ -103,6 +104,13 @@
 {{ project.academic_supervisor.name | default('Н. А. Павлочев') | texesc }}}
 \newcommand{\hseAcademicSupervisorTitle}{%
 {{ project.academic_supervisor.title | default('Академический руководитель образовательной программы «Программная инженерия», старший преподаватель департамента программной инженерии') | texesc }}}
+% Английские страницы (титулы *.en.tex, ЛУ): академический руководитель,
+% заданный в настройках, печатается как введён; значение по умолчанию
+% дано по-английски, чтобы на английском листе не было русских слов.
+\newcommand{\hseAcademicSupervisorNameEn}{%
+((* if project.academic_supervisor.name *)){{ project.academic_supervisor.name | texesc }}((* else *))N. A. Pavlochev((* endif *))}
+\newcommand{\hseAcademicSupervisorTitleEn}{%
+((* if project.academic_supervisor.title *)){{ project.academic_supervisor.title | texesc }}((* else *))Academic Supervisor of the Educational Programme ``Software Engineering'', Senior Lecturer at the School of Software Engineering((* endif *))}
 
 % ── Базовый код документа ЕСПД (ГОСТ 19.103-77) ─────────────
 % Каждый документ ЕСПД добавляет к нему свой суффикс, например:
@@ -115,13 +123,16 @@
 % / «Только оператора») задаёт, какие руководства входят в комплект автора.
 % Макрос раскрывается в \item'ы для перечня в ТЗ. По умолчанию — оба. В
 % team-проекте meta.tex перегенерируется per-автор, поэтому у каждого свой
-% набор. Значение подставляется как есть (фиксированная опция), сопоставление
-% — по подстроке.
+% набор. Значение подставляется как есть (это не пользовательский текст, а
+% фиксированная опция), сопоставление — по подстроке. Пункты печатаются на
+% языке проекта.
 \newcommand{\hseManualDocItems}{%
 ((* set _man = (project.meta.manuals | default('Программиста и оператора', true)) | lower *))
-((* if 'программиста' in _man *))\item «\projectname». Руководство программиста (ГОСТ~19.504-79).
+((* if hse_en *))((* if 'программиста' in _man *))\item ``\projectname''. Programmer's Manual (GOST~19.504-79).
+((* endif *))((* if 'оператора' in _man *))\item ``\projectname''. Operator's Manual (GOST~19.505-79).
+((* endif *))((* else *))((* if 'программиста' in _man *))\item «\projectname». Руководство программиста (ГОСТ~19.504-79).
 ((* endif *))((* if 'оператора' in _man *))\item «\projectname». Руководство оператора (ГОСТ~19.505-79).
-((* endif *))}
+((* endif *))((* endif *))}
 
 % ── Плейсхолдер «заполните сами» ────────────────────────────
 % Жёлтая подсветка мест, которые студент заменяет своим содержимым:
@@ -172,28 +183,68 @@
 \newif\ifhseSharedDoc
 ((* if team.is_shared_base *))\hseSharedDoctrue((* else *))\hseSharedDocfalse((* endif *))
 
+% ── Плотный лист утверждения ────────────────────────────────
+% Общий документ команды печатает строку подписи на каждого автора. При
+% трёх и более авторах, а также при двух авторах с соруководителем лист
+% утверждения не вмещает весь состав, поэтому он набирается плотнее:
+%   \hseFormGap{<отступ>}  вертикальный отступ листа: в плотном листе вдвое
+%                          меньше, иначе как задан;
+%   \hseApprovalTight      в плотном листе убирает отступы между абзацами и
+%                          вокруг блоков center/flushright (title_template
+%                          вызывает его внутри группы листа утверждения).
+% В остальных случаях (solo, личные документы, два автора без
+% соруководителя) лист печатается как раньше.
+((* set hse_n_authors = project.authors | length *))
+((* set hse_compact = team.is_shared_base and (hse_n_authors >= 3 or (hse_n_authors >= 2 and project.co_supervisor.name)) *))
+\newcommand{\hseFormGap}[1]{%
+((* if hse_compact *))\vspace{\dimexpr(#1)/2\relax}((* else *))\vspace{#1}((* endif *))}
+\newcommand{\hseApprovalTight}{%
+((* if hse_compact *))\setlength{\parskip}{0pt}\setlength{\topsep}{0pt}\setlength{\partopsep}{0pt}((* endif *))}
+
 % ── Блок исполнителей для ЛУ ЕСПД-документов ────────────────
 % title_template.tex печатает его внутри flushright. Личная база / solo —
-% один исполнитель (владелец комплекта, токены идентичны прежней вёрстке);
-% shared-база — строка подписи на КАЖДОГО автора: общее ТЗ подписывает вся
-% команда.
+% один исполнитель (владелец комплекта, якорь подписи `author` стоит в
+% \authorsignatureline); shared-база — строка подписи на КАЖДОГО автора:
+% общий документ подписывает вся команда. У строки каждого автора свой
+% якорь подписи author__<slug автора> и свои якоря даты (день и месяц):
+% Студия ставит рамку подписи каждого автора на его линию. Строки одного
+% автора не разрываются между страницами (\nobreak): если лист не вмещает
+% весь состав, на следующую страницу уходит блок автора целиком.
+% Подписи блока печатаются на языке проекта.
+% \hseExecutorSignLine{<якорь>}, \hseExecutorDateLine{<якорь>}: линия подписи
+% 7 см и строка даты с якорями; без common/anchors печатаются без якорей.
+\newcommand{\hseExecutorSignLine}[1]{\ifdefined\hseSignAnchor\hseSignAnchor[7cm]{#1}\fi\rule{7cm}{0.4pt}}
+\newcommand{\hseExecutorDateLine}[1]{«\ifdefined\hseDateAnchor\hseDateAnchor[0.8cm]{#1}{day}\fi\rule{0.8cm}{0.4pt}» \ifdefined\hseDateAnchor\hseDateAnchor[2.5cm]{#1}{month_word}\fi\rule{2.5cm}{0.4pt} \hseYear((* if not hse_en *))~г.((* endif *))}
+% Отступы строк автора: A над линией подписи (место под рамку подписи, как
+% у одного исполнителя), B над строкой даты, C между авторами. В плотном
+% листе отступы между абзацами убраны, поэтому A больше, а B и C меньше.
+\newcommand{\hseExecutorGapA}{((* if hse_compact *))0.4cm((* else *))0.2cm((* endif *))}
+\newcommand{\hseExecutorGapB}{((* if hse_compact *))0.2cm((* else *))0.1cm((* endif *))}
+\newcommand{\hseExecutorGapC}{((* if hse_compact *))0.15cm((* else *))0.35cm((* endif *))}
+% \hseExecutorRow{<группа>}{<якорь>}{<ФИО>}: три строки одного автора.
+\newcommand{\hseExecutorRow}[3]{%
+((* if hse_en *))student of group((* else *))студент группы((* endif *)) #1\par\nobreak\vspace{\hseExecutorGapA}%
+\hseExecutorSignLine{#2} #3\par\nobreak\vspace{\hseExecutorGapB}%
+\hseExecutorDateLine{#2}\par}
+% \hseForEachAuthor{\макрос}: для каждого автора проекта вызывает
+% \макрос{<группа>}{<якорь подписи author__<slug>>}{<ФИО>}. Документ с
+% собственной вёрсткой строк авторов (титул общей аннотации) задаёт макрос
+% строки сам и получает якорь подписи и дат каждого автора.
+\newcommand{\hseForEachAuthor}[1]{%
+((* for a in project.authors *))#1{%
+{{ a.group | default('') | texesc }}}{author__{{ a.slug }}}{%
+{{ a.name | texesc }}}%
+((* endfor *))}
 \newcommand{\hseExecutorsBlock}{%
-((* if team.is_shared_base *))\textbf{Исполнители:}
+((* if team.is_shared_base *))((* if hse_compact *))\setlength{\parskip}{0pt}((* endif *))\textbf{((* if hse_en *))Authors:((* else *))Исполнители:((* endif *))}\par\nobreak
 ((* for a in project.authors *))
-студент группы {{ a.group | default('') | texesc }}
+((* if not loop.first *))\vspace{\hseExecutorGapC}((* endif *))%
+\hseExecutorRow{%
+{{ a.group | default('') | texesc }}}{author__{{ a.slug }}}{%
+{{ a.name | texesc }}}
+((* endfor *))((* else *))\textbf{((* if hse_en *))Author:((* else *))Исполнитель:((* endif *))}
 
-\vspace{0.2cm}
-
-\authorsignatureline{7cm} {{ a.name | texesc }}
-
-\vspace{0.1cm}
-
-\signdateblank
-((* if not loop.last *))
-\vspace{0.35cm}
-((* endif *))((* endfor *))((* else *))\textbf{Исполнитель:}
-
-студент группы \studentgroup
+((* if hse_en *))student of group((* else *))студент группы((* endif *)) \studentgroup
 
 \vspace{0.2cm}
 

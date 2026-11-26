@@ -219,13 +219,22 @@
 % у одного исполнителя), B над строкой даты, C между авторами. В плотном
 % листе отступы между абзацами убраны, поэтому A больше, а B и C меньше.
 \newcommand{\hseExecutorGapA}{((* if hse_compact *))0.4cm((* else *))0.2cm((* endif *))}
-\newcommand{\hseExecutorGapB}{((* if hse_compact *))0.07cm((* else *))0.1cm((* endif *))}
-\newcommand{\hseExecutorGapC}{((* if hse_compact *))0.07cm((* else *))0.35cm((* endif *))}
+\newcommand{\hseExecutorGapB}{((* if hse_compact *))0.2cm((* else *))0.1cm((* endif *))}
+\newcommand{\hseExecutorGapC}{((* if hse_compact *))0.15cm((* else *))0.35cm((* endif *))}
 % \hseExecutorRow{<группа>}{<якорь>}{<ФИО>}: три строки одного автора.
 \newcommand{\hseExecutorRow}[3]{%
 ((* if hse_en *))student of group((* else *))студент группы((* endif *)) #1\par\nobreak\vspace{\hseExecutorGapA}%
 \hseExecutorSignLine{#2} #3\par\nobreak\vspace{\hseExecutorGapB}%
 \hseExecutorDateLine{#2}\par}
+% \hseForEachAuthor{\макрос}: для каждого автора проекта вызывает
+% \макрос{<группа>}{<якорь подписи author__<slug>>}{<ФИО>}. Документ с
+% собственной вёрсткой строк авторов (титул общей аннотации) задаёт макрос
+% строки сам и получает якорь подписи и дат каждого автора.
+\newcommand{\hseForEachAuthor}[1]{%
+((* for a in project.authors *))#1{%
+{{ a.group | default('') | texesc }}}{author__{{ a.slug }}}{%
+{{ a.name | texesc }}}%
+((* endfor *))}
 \newcommand{\hseExecutorsBlock}{%
 ((* if team.is_shared_base *))((* if hse_compact *))\setlength{\parskip}{0pt}((* endif *))\textbf{((* if hse_en *))Authors:((* else *))Исполнители:((* endif *))}\par\nobreak
 ((* for a in project.authors *))

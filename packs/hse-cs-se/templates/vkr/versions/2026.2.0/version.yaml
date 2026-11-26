@@ -548,6 +548,7 @@ signatures:
         pdp_assignment:    { anchor: author, align: center, dy_mm: -10, width_mm: 28, page: 1, x_mm: 66, y_mm: 102 }
         pdp_work_plan:     { anchor: author, align: center, dy_mm: -10, width_mm: 28, page: 1, x_mm: 138, y_mm: 192 }
         pdp_report_title:  { anchor: author, align: right, dx_mm: 4, dy_mm: -10, width_mm: 22, page: 1, x_mm: 143, y_mm: 136 }
+        shared_annotation: { anchor: author, align: right, dy_mm: -5, width_mm: 22, page: 1, x_mm: 129, y_mm: 191, dx_mm: 6 }
 
     - id: supervisor
       label:             { ru: Научный руководитель, en: Supervisor }
@@ -591,6 +592,7 @@ signatures:
         pdp_assignment:    { anchor: co_supervisor, align: center, dy_mm: -10, width_mm: 28, page: 1, x_mm: 124, y_mm: 107 }
         pdp_work_plan:     { anchor: co_supervisor, align: center, dy_mm: -10, width_mm: 28, page: 2, x_mm: 138, y_mm: 39 }
         pdp_report_title:  { anchor: co_supervisor, align: center, dy_mm: -6.5, width_mm: 24, page: 1, x_mm: 95, y_mm: 198 }
+        pdp_review:        { anchor: co_supervisor, align: center, dy_mm: -6.5, width_mm: 25, page: 1, x_mm: 59, y_mm: 253 }
 
 # ── NDA ──
 # Расписка NDA теперь ПОЛНОЦЕННЫЙ документ (см. documents → id: nda), а не
@@ -812,6 +814,10 @@ pack_submission:
         - doc_id: pdp_report_title
           slot_id: co_supervisor
           when: { person: co_supervisor }
+        - doc_id: pdp_review
+          slot_id: co_supervisor
+          when: { person: co_supervisor }
+          optional: true
 
     # ── Финальная загрузка ВКР к ГИА (после ПДП; закрывает «терминальную»
     #    сдачу, которой раньше не было ни в одном профиле) ──

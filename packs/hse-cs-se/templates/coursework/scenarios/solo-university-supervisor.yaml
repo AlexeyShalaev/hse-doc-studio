@@ -5,7 +5,7 @@ name:
 description:
   ru: "Курсовой проект одного студента: общих документов команды нет."
   en: "A coursework project by one student: no shared team documents."
-versions: ["2026.1.*"]
+versions: ["2026.1.*", "2026.2.*"]
 inputs:
   staffing: solo
   supervisor: university
