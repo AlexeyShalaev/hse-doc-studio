@@ -26,7 +26,13 @@ from uuid import UUID
 
 import structlog
 
-from hse_doc_studio.core.pack_studio.preview import PreviewBuild, PreviewCheck, PreviewError, PreviewStatus
+from hse_doc_studio.core.pack_studio.preview import (
+    PreviewAuthor,
+    PreviewBuild,
+    PreviewCheck,
+    PreviewError,
+    PreviewStatus,
+)
 from hse_doc_studio.core.pack_studio.protocols import CachedPreview
 from hse_doc_studio.core.signatures.anchors import ANCHORS_SUFFIX
 from hse_doc_studio.infra.compile.pdf_archive import built_pdf_path, final_pdf_path
@@ -261,6 +267,8 @@ def _to_json(build: PreviewBuild) -> dict[str, Any]:
         "file_name": build.file_name,
         "scenario": build.scenario,
         "scenario_inputs": dict(build.scenario_inputs),
+        "author": build.author,
+        "authors": [{"slug": a.slug, "name": a.name} for a in build.authors],
     }
 
 
@@ -325,4 +333,10 @@ def _from_json(raw: dict[str, Any]) -> PreviewBuild:
         file_name=raw.get("file_name"),
         scenario=raw.get("scenario"),
         scenario_inputs={str(k): str(v) for k, v in dict(raw.get("scenario_inputs") or {}).items()},
+        author=raw.get("author"),
+        authors=tuple(
+            PreviewAuthor(str(item["slug"]), str(item.get("name") or ""))
+            for item in raw.get("authors") or ()
+            if isinstance(item, dict) and item.get("slug")
+        ),
     )

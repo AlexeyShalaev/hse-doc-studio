@@ -440,3 +440,7 @@ def test__cache_key__variant_is_part_of_the_key_and_none_keeps_the_old_key(packs
     assert preview_cache_key(**base, variant="espd") != old
     assert preview_cache_key(**base, variant="espd") != preview_cache_key(**base, variant="ieee")
     assert preview_cache_key(**base, variant="espd", checks=True) != preview_cache_key(**base, variant="espd")
+    # Сборка без выбора автора: ключ прежний; документ другого автора команды это другой PDF.
+    assert preview_cache_key(**base, author=None) == old
+    assert preview_cache_key(**base, author="petrova") != old
+    assert preview_cache_key(**base, author="petrova") != preview_cache_key(**base, author="sidorov")

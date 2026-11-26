@@ -494,6 +494,8 @@ export const StartPackPreviewRequestSchema = z.strictObject({
   variant: z.string().max(255).nullish(),
   // Сценарий пака (срез O9): вводные и набор данных берутся из него, `combination` ложится поверх.
   scenario: z.string().max(64).nullish(),
+  // Автор команды, чьи личные документы собирать: слаг или номер с единицы; нет: первый автор.
+  author: z.string().min(1).max(64).nullish(),
 });
 
 export const PackPreviewCheckSchema = z.strictObject({
@@ -533,6 +535,11 @@ export const PackPreviewBuildSchema = z.strictObject({
   file_name: z.string().nullish(),
   scenario: z.string().nullish(),
   scenario_inputs: z.record(z.string(), z.string()).optional(),
+  // Чей личный документ команды собран (null: общий документ или одиночная работа) и авторы команды сборки.
+  author: z.string().nullish(),
+  authors: z
+    .array(z.strictObject({ slug: z.string(), name: z.string() }))
+    .optional(),
 });
 
 export const PackPreviewStartSchema = z.strictObject({

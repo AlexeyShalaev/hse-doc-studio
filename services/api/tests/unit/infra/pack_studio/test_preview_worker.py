@@ -142,6 +142,36 @@ def test__materialize__team_personal_document_lives_in_author_base(tmp_path: Pat
     assert (dest / "shared" / "report" / "report.tex").is_file()
 
 
+def test__materialize__team_author__builds_the_personal_document_of_that_author(tmp_path: Path) -> None:
+    dirs = _pack(tmp_path / "packs")
+    request = _request(dirs, tmp_path, "personal", staffing="team2")
+    first, second = (a.slug for a in request.project.authors)
+    assert first is not None
+    assert second is not None
+
+    default = materialize_preview(dirs, str(tmp_path / "s0"), LIMITS, request, str(tmp_path / "w0"))
+    named = materialize_preview(
+        dirs, str(tmp_path / "s1"), LIMITS, replace(request, author=second), str(tmp_path / "w1")
+    )
+    same = materialize_preview(dirs, str(tmp_path / "s2"), LIMITS, replace(request, author=first), str(tmp_path / "w2"))
+
+    # Без выбора автора собирается документ первого автора, как раньше.
+    assert (default.doc_id, default.base_dir) == (f"personal--{first}", first)
+    assert (same.doc_id, same.source_file) == (default.doc_id, default.source_file)
+    assert (named.doc_id, named.base_dir) == (f"personal--{second}", second)
+    assert named.source_file == f"{second}/personal/personal.tex"
+    meta = (tmp_path / "w1" / second / "common" / "meta.tex").read_text(encoding="utf-8")
+    assert f"author={request.project.authors[1].name}" in meta
+
+
+def test__materialize__author_without_the_document__is_a_render_error(tmp_path: Path) -> None:
+    dirs = _pack(tmp_path / "packs")
+    request = replace(_request(dirs, tmp_path, "personal", staffing="team2"), author="nobody")
+
+    with pytest.raises(ValueError, match="personal"):
+        materialize_preview(dirs, str(tmp_path / "stage"), LIMITS, request, str(tmp_path / "work"))
+
+
 _DECK_VERSION = (
     _VERSION
     + """\

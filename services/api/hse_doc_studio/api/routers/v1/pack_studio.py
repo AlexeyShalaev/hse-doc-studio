@@ -61,6 +61,7 @@ from hse_doc_studio.api.schemas.pack_studio import (
     PackMoveEditsRequest,
     PackOfficialRepo,
     PackOfficialResponse,
+    PackPreviewAuthor,
     PackPreviewBuildResponse,
     PackPreviewCheck,
     PackPreviewDocument,
@@ -724,6 +725,8 @@ def preview_build_response(build: PreviewBuild) -> PackPreviewBuildResponse:
         file_name=build.file_name,
         scenario=build.scenario,
         scenario_inputs=dict(build.scenario_inputs),
+        author=build.author,
+        authors=[PackPreviewAuthor(slug=a.slug, name=a.name) for a in build.authors],
     )
 
 
@@ -766,6 +769,7 @@ async def start_preview(  # noqa: PLR0913 — путь версии и тело
             checks=body.checks,
             variant=body.variant,
             scenario=body.scenario,
+            author=body.author,
         ),
     )
     if all(build.status.is_terminal for build in builds):

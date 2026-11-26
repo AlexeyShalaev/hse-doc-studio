@@ -83,8 +83,20 @@ async def test__read_preview_block_and_new_version_dry_run(studio: Studio) -> No
             client, "pack_new_version", {"workspace_id": ws, "pack": "hse-cs-se", "template": "vkr", "dry_run": True}
         )
         tree = await _json(client, "pack_read", {"workspace_id": ws})
+        bad_author = await _refused(
+            client,
+            "pack_preview_build",
+            {"workspace_id": ws, "version": _DRAFT, "documents": model["preview"]["documents"][:1], "author": "9"},
+        )
 
     preview = model["preview"]
+    # Выбор автора личных документов команды: что по умолчанию и сколько авторов даёт каждый staffing.
+    assert preview["author"]["default"] == 1
+    assert set(preview["author"]["count_by_staffing"]) == set(
+        next(s["values"] for s in preview["switches"] if s["id"] == "staffing")
+    )
+    assert "pack_preview_build" in preview["author"]["hint"]
+    assert (bad_author["code"], bad_author["field"], bad_author["value"]) == ("preview_invalid", "author", "9")
     assert preview["documents"]
     assert preview["default_example"]
     assert {s["id"] for s in preview["switches"]} >= {"lang"}

@@ -1,0 +1,45 @@
+{
+  "id": "9b2e7d4c-5a61-4f0e-8c3b-2d1f6a7e9c07",
+  "workspace_id": "4f0c2a8e-1b7d-4c55-9a51-3b8d6f0e2c11",
+  "pack": "hse-cs-sse",
+  "template": "coursework",
+  "version": "2026.1.7",
+  "document": "report",
+  "example": "auto:normal",
+  "combination": {
+    "academic_supervisor": "yes",
+    "co_supervisor": "no",
+    "kind": "project",
+    "lang": "ru",
+    "meta.proposal_stage": "Предварительная",
+    "staffing": "team2",
+    "supervisor": "university"
+  },
+  "key": "5c1d5c1d5c1d5c1d5c1d5c1d5c1d5c1d5c1d5c1d5c1d5c1d5c1d5c1d5c1d5c1d",
+  "status": "succeeded",
+  "cached": false,
+  "created_at": "2026-11-15T09:30:00Z",
+  "started_at": "2026-11-15T09:30:02Z",
+  "finished_at": "2026-11-15T09:30:21Z",
+  "pages": 14,
+  "error": null,
+  "source_file": "petrova/report/report.tex",
+  "has_anchors": true,
+  "with_checks": false,
+  "checks": null,
+  "variant": null,
+  "file_name": "Отчёт — Петрова.pdf",
+  "scenario": null,
+  "scenario_inputs": {},
+  "author": "petrova",
+  "authors": [
+    {
+      "slug": "ivanov",
+      "name": "Иванов Иван Иванович"
+    },
+    {
+      "slug": "petrova",
+      "name": "Петрова Мария Сергеевна"
+    }
+  ]
+}

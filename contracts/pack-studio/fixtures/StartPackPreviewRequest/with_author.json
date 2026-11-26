@@ -1,0 +1,11 @@
+{
+  "documents": [
+    "report",
+    "shared_report"
+  ],
+  "example": "auto:normal",
+  "combination": {
+    "staffing": "team2"
+  },
+  "author": "2"
+}
