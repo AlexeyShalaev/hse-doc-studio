@@ -312,6 +312,9 @@ class PackBranchRequest(StrictModel):
     """Создать или перейти на рабочую ветку; без имени Студия называет её сама (`pack-studio/<человек>/...`)."""
 
     name: str | None = Field(default=None, min_length=1, max_length=200)
+    # Новая ветка от свежей базовой, а не от текущей вершины (после слияния PR): дерево чистое (`workspace_dirty`),
+    # имя свободно (`branch_exists`). По умолчанию ветка создаётся на текущей вершине, как раньше.
+    from_base: bool = False
 
 
 class PackCommitRequest(StrictModel):

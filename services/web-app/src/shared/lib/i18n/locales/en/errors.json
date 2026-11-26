@@ -274,6 +274,7 @@
     "version_unreadable": "The version description could not be read: see the issues under “Check”.",
     "workspace_dirty": "There are unsaved edits. Save a point first.",
     "branch_name_invalid": "This branch name does not fit: git rejects it or it is the base branch.",
+    "branch_exists": "A branch with this name already exists. Pick another name for a new branch from the main one.",
     "merge_conflict": "The base branch changes the same lines as yours. The merge was cancelled, your branch is unchanged.",
     "nothing_to_propose": "Nothing to send: the branch does not differ from the main branch.",
     "service_access_missing": "This repository is not connected to the service. The instance administrator can connect it.",

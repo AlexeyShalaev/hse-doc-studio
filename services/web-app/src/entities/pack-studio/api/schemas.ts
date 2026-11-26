@@ -255,6 +255,8 @@ export const PackGitSchema = z.strictObject({
 
 export const PackBranchRequestSchema = z.strictObject({
   name: z.string().min(1).max(200).nullish(),
+  // Новая ветка от свежей базовой, а не от текущей вершины (после слияния PR): дерево чистое, имя свободно.
+  from_base: z.boolean().optional(),
 });
 
 export const PackCommitRequestSchema = z.strictObject({

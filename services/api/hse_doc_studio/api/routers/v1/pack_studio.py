@@ -544,8 +544,9 @@ async def get_git_diff(workspace_id: UUID, git: FromDishka[PackGitService], resp
 async def switch_branch(
     workspace_id: UUID, body: PackBranchRequest, git: FromDishka[PackGitService]
 ) -> PackGitResponse:
-    """Создать рабочую ветку (правки остаются) или перейти на свою прежнюю, локальную или с сервера (дерево чистое)."""
-    return git_response(await git.switch(require_actor(), workspace_id, body.name))
+    """Создать рабочую ветку (правки остаются) или перейти на свою прежнюю, локальную или с сервера (дерево чистое).
+    `from_base`: новая ветка от свежей базовой, дерево чистое."""
+    return git_response(await git.switch(require_actor(), workspace_id, body.name, from_base=body.from_base))
 
 
 @router.post("/pack-studio/workspaces/{workspace_id}/git/commit", response_model=PackCommitResponse)

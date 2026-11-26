@@ -177,6 +177,16 @@ _HINTS: Final[dict[str, tuple[str, str]]] = {
         "Допустимое имя ветки: латиница, цифры, «-», «_», «/»; базовую ветку рабочей делать нельзя.",
         "Use Latin letters, digits, '-', '_' and '/'; the base branch cannot be the work branch.",
     ),
+    "branch_exists": (
+        (
+            "Ветка с таким именем уже есть (pack_git_branches). Для новой ветки от базы дайте свободное имя или "
+            "уберите name: имя даст Студия. Перейти на существующую: pack_git_branch без from_base."
+        ),
+        (
+            "This branch already exists (pack_git_branches). For a new branch from the base pass a free name or "
+            "drop name: the Studio names it. To switch to the existing one call pack_git_branch without from_base."
+        ),
+    ),
     "credentials_missing": (
         (
             "Такого сохранённого доступа нет: добавьте доступ git в интерфейсе (Настройки, Git) и возьмите его id из "

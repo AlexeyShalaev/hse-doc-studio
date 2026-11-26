@@ -59,6 +59,7 @@ class PackStudioErrorCode(StrEnum):
     # Срез T6: ветка, коммит, предложение изменений, служебный доступ репозитория
     workspace_dirty = "workspace_dirty"
     branch_name_invalid = "branch_name_invalid"
+    branch_exists = "branch_exists"
     merge_conflict = "merge_conflict"
     nothing_to_propose = "nothing_to_propose"
     service_access_missing = "service_access_missing"
@@ -259,6 +260,11 @@ _TABLE: dict[PackStudioErrorCode, tuple[int, str, str]] = {
         400,
         "Недопустимое имя ветки.",
         "Invalid branch name.",
+    ),
+    _C.branch_exists: (
+        409,
+        "Ветка с таким именем уже есть. Новая ветка от базовой требует свободного имени.",
+        "A branch with this name already exists. A new branch from the base branch needs a free name.",
     ),
     _C.merge_conflict: (
         409,
