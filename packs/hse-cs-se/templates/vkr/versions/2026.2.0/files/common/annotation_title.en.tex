@@ -1,0 +1,113 @@
+% English edition of common/annotation_title.tex: same layout, only the printed words are translated.
+% ============================================================
+% common/annotation_title.tex — титульный лист Аннотации ВКР ОП ПИ
+% по официальной форме «Титул Аннотация защита темы ВКР ПИ».
+%
+% Лёгкий титул БЕЗ штампа/рамки/листа утверждения: УДК, две колонки
+% СОГЛАСОВАНО (руководитель проекта) + УТВЕРЖДАЮ (академический
+% руководитель ОП), затем «Аннотация выпускной квалификационной
+% работы», тема, направление и блок «Выполнил» (в командной работе —
+% состав исполнителей через \hseExecutorsBlock).
+% ============================================================
+\begin{titlepage}
+\thispagestyle{empty}
+\singlespacing
+\footnotesize
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0pt}
+
+\begin{center}
+\textbf{THE GOVERNMENT OF THE RUSSIAN FEDERATION}\\
+\textbf{FEDERAL STATE AUTONOMOUS EDUCATIONAL}\\
+\textbf{INSTITUTION FOR HIGHER EDUCATION}\\
+\textbf{NATIONAL RESEARCH UNIVERSITY}\\
+\textbf{HIGHER SCHOOL OF ECONOMICS}
+
+\vspace{0.35cm}
+Faculty of Computer Science\\
+Educational programme ``Software Engineering''
+\end{center}
+
+\vspace{0.25cm}
+\noindent
+UDC~\hseUDC
+
+\vspace{0.4cm}
+\noindent
+\begin{minipage}[t]{0.46\textwidth}
+\raggedright
+\textbf{AGREED}\\
+Project supervisor
+
+\vspace{0.15cm}
+\strut\hseSupervisorTitle\\[-0.05cm]
+\rule{6cm}{0.4pt}\\[-0.05cm]
+{\scriptsize Position, place of work, academic degree}
+
+\vspace{0.12cm}
+\strut\hseSupervisorName\\[-0.05cm]
+\hseSignAnchor[6cm]{supervisor}\rule{6cm}{0.4pt}\\[-0.05cm]
+{\scriptsize Signature, initials and surname}
+
+\vspace{0.1cm}
+\signdateblank
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.46\textwidth}
+\raggedright
+\textbf{APPROVED BY}\\
+\strut\hseAcademicSupervisorTitleEn
+
+\vspace{0.35cm}
+\mbox{\rule{6cm}{0.4pt}}\\[-0.05cm]
+\hseAcademicSupervisorNameEn
+
+\vspace{0.12cm}
+«\rule{0.8cm}{0.4pt}» \rule{2.5cm}{0.4pt} \hseYear
+\end{minipage}
+
+\vspace{0.95cm}
+\begin{center}
+\textbf{\normalsize Annotation}
+
+\vspace{0.12cm}
+\textbf{\normalsize of the graduation qualification work}
+
+\vspace{0.35cm}
+on the topic
+\underline{\makebox[0.72\textwidth][c]{\hseProjectName}}
+
+\vspace{0.3cm}
+in the Bachelor's field of study \hseProgramCode\ ``Software Engineering''
+\end{center}
+
+\vspace{0.95cm}
+\noindent\hfill
+\begin{minipage}[t]{0.52\textwidth}
+\raggedright
+% Командная работа (shared-база) — состав исполнителей; solo/личная — один.
+\ifhseSharedDoc
+\hseExecutorsBlock
+\else
+Prepared by\\
+student of group \hseGroup\\
+of the educational programme\\
+\hseProgramCode\ ``Software Engineering''
+
+\vspace{0.25cm}
+\strut\hseAuthorName\\[-0.05cm]
+\rule{6cm}{0.4pt}\\[-0.05cm]
+{\scriptsize Initials and surname}
+
+\vspace{0.15cm}
+\hseSignAnchor[3.6cm]{author}\rule{3.6cm}{0.4pt}\quad\rule{2.2cm}{0.4pt}\\[-0.05cm]
+{\scriptsize Signature, date}
+\fi
+\end{minipage}
+
+\vfill
+\begin{center}
+\textbf{\hseCityEn{} \hseYear}
+\end{center}
+\end{titlepage}
+\clearpage
