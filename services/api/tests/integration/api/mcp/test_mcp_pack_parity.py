@@ -390,7 +390,14 @@ async def test__edit__model_action_hints_library_and_submission(studio: Studio) 
     assert hints["meta_fields"]
     assert library["documents"]
     assert submission["submission"]["profiles"]
-    assert "Маршруты" in routes
+    # Текст показывает маршрут каждой точки: записанный порядок и шаги людьми в комбинации, не только счётчик.
+    assert "Маршруты в комбинации (набор auto:normal; " in routes
+    assert "Порядок версии" in routes
+    for profile in submission["submission"]["profiles"]:
+        assert f"  профиль {profile['index']}: {profile['id']}" in routes
+        assert f"\n  {profile['id']}: " in routes
+    assert "    шаг 1: author Иванов Иван Иванович" in routes
+    assert "    подписи " in routes
     assert edited["etag"] != submission["etag"]
     assert edited["submission"]["profiles"][0]["name"]["ru"] == "Новое имя"
     assert bad["code"] in {"submission_invalid", "version_released"}
