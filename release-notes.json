@@ -1,6 +1,24 @@
 {
   "releases": [
     {
+      "version": "0.45.0",
+      "date": "2026-11-27",
+      "notes": [
+        {
+          "ru": "Паки: в курсовом бакалавриата «Программная инженерия» (hse-cs-se 2026.3.0) у строки соруководителя на листах утверждения появилось место подписи: личные и общие техническое задание и программа испытаний, пояснительная записка, текст программы, руководства программиста и оператора. Порядок подписания не изменился: в курсовом по-прежнему подписывают только авторы. Это новая линия версий, существующие проекты сами на неё не переходят.",
+          "en": "Packs: in the BSc Software Engineering course project (hse-cs-se 2026.3.0) the co-supervisor's line on the approval sheets now has a signature place: personal and shared statement of work and test program, explanatory note, source listing, programmer's and operator's manuals. The signing order is unchanged: only the authors sign in the course project. This is a new version line, existing projects do not move to it by themselves."
+        },
+        {
+          "ru": "Английская команда: папка и подписи автора теперь называются по фамилии (Ivan Ivanov даёт ivanov, а не ivan). Это касается новых проектов и новых участников; у существующих авторов имя папки не меняется.",
+          "en": "English teams: an author's folder and signatures are now named after the surname (Ivan Ivanov gives ivanov, not ivan). This applies to new projects and new members; existing authors keep their folder names."
+        },
+        {
+          "ru": "Студия паков через MCP: справка pack_help получила раздел про строку каждого автора в командном проекте; линтер больше не предупреждает о якорях авторов, поставленных через макросы; рамки подписей в проверке мест подписаны именем автора; pack_submission умеет показывать одну точку сдачи; обрезка списка файлов теперь названа; сценарии умеют проверять необязательность подписи и принимают полный номер версии; if_match принимается и без кавычек; разделение файла на языковые редакции больше не считается удалением.",
+          "en": "Pack Studio over MCP: pack_help has a section on a line for every author in a team project; the linter no longer warns about author anchors set through macros; signature boxes in the placement check carry the author's name; pack_submission can show a single submission point; a truncated file list now says so; scenarios can check that a signature is optional and accept the full version id; if_match is accepted without quotes; splitting a file into language editions no longer counts as a removal."
+        }
+      ]
+    },
+    {
       "version": "0.44.0",
       "date": "2026-11-26",
       "notes": [

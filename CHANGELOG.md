@@ -6,6 +6,12 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.45.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.44.0...v0.45.0) - 2026-11-27
+
+- Packs: in the BSc Software Engineering course project (hse-cs-se 2026.3.0) the co-supervisor's line on the approval sheets now has a signature place: personal and shared statement of work and test program, explanatory note, source listing, programmer's and operator's manuals. The signing order is unchanged: only the authors sign in the course project. This is a new version line, existing projects do not move to it by themselves.
+- English teams: an author's folder and signatures are now named after the surname (Ivan Ivanov gives ivanov, not ivan). This applies to new projects and new members; existing authors keep their folder names.
+- Pack Studio over MCP: pack_help has a section on a line for every author in a team project; the linter no longer warns about author anchors set through macros; signature boxes in the placement check carry the author's name; pack_submission can show a single submission point; a truncated file list now says so; scenarios can check that a signature is optional and accept the full version id; if_match is accepted without quotes; splitting a file into language editions no longer counts as a removal.
+
 ## [0.44.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.43.0...v0.44.0) - 2026-11-26
 
 - Packs: team projects in the BSc Software Engineering thesis and course project (hse-cs-se 2026.2.0). On the team's shared documents (shared SoW, shared test program and methodology, shared annotation) each author has their own line and their own signature place. The approval sheet of a shared document fits on one page with three authors and with two authors and a co-supervisor. The practice supervisor's review has a co-supervisor line when a co-supervisor is set in the project; their signature in the route is optional and can be skipped. English documents no longer print Russian words on the approval sheet, the thesis and annotation title pages, in the hints of the shared SoW and in the list of manuals. A typo on the practice report title page is fixed. Existing projects do not move to the new version by themselves; the template update is offered as usual.
