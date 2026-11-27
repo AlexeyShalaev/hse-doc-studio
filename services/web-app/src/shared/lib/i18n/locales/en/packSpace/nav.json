@@ -28,7 +28,8 @@
   },
   "state": {
     "draft": "draft",
-    "released": "released"
+    "released": "released",
+    "accepted": "accepted, refresh the workspace"
   },
   "edited_one": "{{count}} file changed",
   "edited_few": "{{count}} files changed",

@@ -3,7 +3,7 @@
 Находки линтера результата и главная кнопка «Изменений» называются так же, как их показывает интерфейс
 (`features/pack-space/plain/findings.ts`, `changes/` и `next-step/`): заголовок и «Как исправить» по коду правила,
 названия документов, подписей и точек сдачи из пака. Тексты лежат в `pack_plain_texts.json` (ru, en), тест сверяет
-их со строками интерфейса (`packSpace/plain.json`, `check.json`, `changes.json`).
+их со строками интерфейса (`packSpace/plain.json`, `check.json`, `changes.json`, состояние версии из `nav.json`).
 """
 
 from __future__ import annotations

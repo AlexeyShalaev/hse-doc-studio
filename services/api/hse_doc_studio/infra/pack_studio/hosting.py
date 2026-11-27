@@ -37,6 +37,7 @@ from hse_doc_studio.core.pack_studio.git_flow import (
     ForkRef,
     HostingAccount,
     HostingRepo,
+    PullRequestInfo,
     PullRequestRef,
     PullRequestState,
     RepoPermissions,
@@ -218,19 +219,21 @@ class HttpPackHosting:
             return await self._gitlab_pipeline(repo, target, sha, page) or unavailable
         return unavailable
 
-    async def pull_request_state(self, repo: HostingRepo, target: RemoteTarget, number: int) -> PullRequestState | None:
+    async def pull_request(self, repo: HostingRepo, target: RemoteTarget, number: int) -> PullRequestInfo | None:
         if repo.provider is not GitProvider.github or repo.api_base is None:
             return None
         reply = await self._call(repo, target, "GET", f"/repos/{repo.path}/pulls/{number}")
         body = reply.obj()
         if reply.status != _OK:
             return None
+        head = body.get("head")
+        sha = _text(head.get("sha")) if isinstance(head, dict) else None
         if body.get("merged") is True or _text(body.get("merged_at")):
-            return PullRequestState.merged
+            return PullRequestInfo(PullRequestState.merged, sha)
         state = body.get("state")
         if state == "open":
-            return PullRequestState.open
-        return PullRequestState.closed if state == "closed" else None
+            return PullRequestInfo(PullRequestState.open, sha)
+        return PullRequestInfo(PullRequestState.closed, sha) if state == "closed" else None
 
     async def account(self, repo: HostingRepo, target: RemoteTarget) -> HostingAccount | None:
         if repo.provider is not GitProvider.github or repo.api_base is None:

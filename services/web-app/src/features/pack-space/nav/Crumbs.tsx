@@ -38,7 +38,7 @@ export const Crumbs = ({
     ]
       .filter(Boolean)
       .join(" · "),
-    trail: <VersionState released={v.released} />,
+    trail: <VersionState released={v.released} accepted={v.accepted} />,
   }));
   const mine: CrumbAction[] = where.mineElsewhere.map((item) => ({
     id: `mine-${item.ref.pack}-${item.ref.template}-${item.ref.version}`,
@@ -104,7 +104,7 @@ export const Crumbs = ({
                 version: current?.version ?? "",
               })}
             </span>
-            <VersionState released={released} />
+            <VersionState released={released} accepted={current?.accepted} />
           </>
         }
         items={versions}

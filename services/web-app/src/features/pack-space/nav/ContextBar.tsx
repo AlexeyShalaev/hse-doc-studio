@@ -56,7 +56,10 @@ export const ContextBar = () => {
             version: versionRef.version,
           })}
         </span>
-        <VersionState released={released} />
+        <VersionState
+          released={released}
+          accepted={where.versions.find((v) => v.current)?.accepted}
+        />
         <ChevronDown size="0.75rem" aria-hidden="true" />
       </button>
       <WhereSheet

@@ -1,14 +1,63 @@
-import { cleanup, screen, within } from "@testing-library/react";
+import type { QueryClient } from "@tanstack/react-query";
+import { act, cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import {
+  notifyPackFilesSaved,
+  packStudioApi,
+  packStudioKeys,
+  type PackCiStatus,
+} from "@entities/pack-studio";
 import { loadPackSpaceNamespace } from "@shared/lib/i18n/packSpaceNamespace";
 import { readLastVersion } from "./lastVisited";
-import { BASE, EDITED, TREE } from "./fixtures";
+import { BASE, EDITED, TREE, WS, gitStatus } from "./fixtures";
 import { ContextBar } from "./ContextBar";
 import { DRAFT_URL, RELEASED_URL, renderNav } from "./navTestKit";
 
 const T = "/pack-studio/w/gallery-ws/t";
 const location = () => screen.getByTestId("location").textContent;
+
+const checksOf = (
+  accepted: string[],
+  pr_state: "merged" | "closed" = "merged",
+): PackCiStatus => ({
+  state: "success",
+  sha: gitStatus([]).head_sha,
+  checks: [],
+  available: true,
+  reason: null,
+  web_url: null,
+  pr_state,
+  accepted_versions: accepted,
+});
+
+/** Отправленный запрос пространства и ответ о нём: состояние и принятые версии. */
+const mergedRequest = (
+  client: QueryClient,
+  accepted: string[],
+  pr_state: "merged" | "closed" = "merged",
+) => {
+  const git = gitStatus([]);
+  const sha = git.head_sha;
+  act(() => {
+    client.setQueryData(
+      packStudioKeys.checks(WS, sha),
+      checksOf(accepted, pr_state),
+    );
+    client.setQueryData(packStudioKeys.git(WS), {
+      ...git,
+      workspace: { ...git.workspace, pr_number: 531, pushed_sha: sha },
+    });
+  });
+};
 
 describe("ContextBar: где я и куда перейти", () => {
   beforeAll(async () => {
@@ -42,6 +91,58 @@ describe("ContextBar: где я и куда перейти", () => {
       "выпущена",
     );
     expect(within(version).queryByTestId("sp-state-draft")).toBeNull();
+  });
+
+  it("запрос принят, пространство не обновляли: «принята», а не «черновик»", async () => {
+    const user = userEvent.setup();
+    const { client } = renderNav(<ContextBar />);
+    mergedRequest(client, [`${BASE}/2026.1.3`]);
+    const version = screen.getByTestId("sp-crumb-version");
+    expect(
+      await within(version).findByTestId("sp-state-accepted"),
+    ).toHaveTextContent("принята, обновите пространство");
+    expect(within(version).queryByTestId("sp-state-draft")).toBeNull();
+    expect(screen.getByTestId("sp-where")).toHaveTextContent(
+      "принята, обновите пространство",
+    );
+    await user.click(version);
+    expect(
+      await screen.findByTestId("sp-crumb-version-item-2026.1.3"),
+    ).toHaveTextContent("принята, обновите пространство");
+  });
+
+  it.each([
+    ["запрос закрыт без слияния", "closed"],
+    ["после слияния версию правили", "merged"],
+  ] as const)("%s: версия остаётся черновиком", async (_name, state) => {
+    const { client } = renderNav(<ContextBar />);
+    // Сервер принятой такую версию не называет.
+    mergedRequest(client, [], state);
+    const version = screen.getByTestId("sp-crumb-version");
+    expect(
+      await within(version).findByTestId("sp-state-draft"),
+    ).toHaveTextContent("черновик");
+    expect(within(version).queryByTestId("sp-state-accepted")).toBeNull();
+  });
+
+  it("правка после слияния перечитывает статус запроса и возвращает «черновик»", async () => {
+    const { client } = renderNav(<ContextBar />);
+    mergedRequest(client, [`${BASE}/2026.1.3`]);
+    const version = screen.getByTestId("sp-crumb-version");
+    await within(version).findByTestId("sp-state-accepted");
+    const spy = vi
+      .spyOn(packStudioApi, "checks")
+      .mockResolvedValue(checksOf([]));
+
+    act(() => {
+      notifyPackFilesSaved(WS);
+    });
+
+    expect(
+      await within(version).findByTestId("sp-state-draft"),
+    ).toBeInTheDocument();
+    expect(spy).toHaveBeenCalled();
+    spy.mockRestore();
   });
 
   it("вкладки ведут на тот же пак, шаблон и версию", async () => {

@@ -11,5 +11,6 @@
   ],
   "available": true,
   "reason": null,
-  "web_url": "https://gitlab.hse.ru/fcs/packs/-/pipelines/12"
+  "web_url": "https://gitlab.hse.ru/fcs/packs/-/pipelines/12",
+  "accepted_versions": []
 }

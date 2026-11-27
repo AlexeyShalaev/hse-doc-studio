@@ -4,5 +4,6 @@
   "checks": [],
   "available": false,
   "reason": "ci_status_unavailable",
-  "web_url": "https://gitlab.hse.ru/fcs/packs/-/pipelines?ref=pack-studio%2Fpetrova%2Fhse-cs-se-vkr-2026.1.2"
+  "web_url": "https://gitlab.hse.ru/fcs/packs/-/pipelines?ref=pack-studio%2Fpetrova%2Fhse-cs-se-vkr-2026.1.2",
+  "accepted_versions": []
 }

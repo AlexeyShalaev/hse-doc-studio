@@ -17,6 +17,7 @@ from pathlib import Path
 from urllib.parse import quote, urlsplit
 
 from hse_doc_studio.core.git_sync.providers import GitProvider
+from hse_doc_studio.core.pack_studio.entities import ReleasedVersions
 from hse_doc_studio.core.pack_studio.paths import TEMPLATES_DIR, VersionRef, version_ref_of
 
 BRANCH_PREFIX = "pack-studio"
@@ -166,6 +167,14 @@ class PullRequestState(StrEnum):
 
 
 @dataclass(frozen=True)
+class PullRequestInfo:
+    """Запрос на слияние у хостинга. `head_sha`: вершина его ветки, после слияния не меняется; None: не названа."""
+
+    state: PullRequestState
+    head_sha: str | None = None
+
+
+@dataclass(frozen=True)
 class HostingAccount:
     """Чей токен (проверка служебного доступа в админке): логин и области классического токена (`X-OAuth-Scopes`);
     `scopes` None: хостинг областей не назвал (точный токен GitHub, GitHub App, другой провайдер)."""
@@ -196,6 +205,8 @@ class CiReport:
     web_url: str | None = None
     # Срез T22: состояние PR у хостинга, если его удалось узнать (после слияния интерфейс говорит, когда ждать).
     pr_state: PullRequestState | None = None
+    # Каталоги версий слитого запроса, о выпуске которых пространство ещё не знает (`accepted_versions`).
+    accepted_versions: tuple[str, ...] = ()
 
 
 _FINAL_OK = frozenset({CheckState.success, CheckState.neutral, CheckState.skipped})
@@ -237,6 +248,29 @@ def changed_versions(changes: Iterable[FileChange]) -> tuple[VersionRef, ...]:
             bare = VersionRef(ref.pack, ref.template, ref.version)
             seen.setdefault(bare.dir, bare)
     return tuple(seen.values())
+
+
+def accepted_versions(
+    changed: Iterable[FileChange],
+    since_merge: Iterable[FileChange],
+    *,
+    released: ReleasedVersions,
+    registered: ReleasedVersions,
+) -> tuple[str, ...]:
+    """Версии слитого запроса, которые уже приняты, хотя пространство ещё считает их черновиками.
+
+    `released` это выпущенное по базе после последней выборки, `registered` реестры рабочего дерева. Принятая версия:
+    правилась в этом пространстве (`changed`), выпущена в самом запросе (есть в реестре ветки), в базе пространства
+    ещё не видна и не менялась после слитой вершины (`since_merge`). Черновик, слитый без выпуска, остаётся черновиком.
+    """
+    edited = {ref.dir.casefold() for ref in changed_versions(since_merge)}
+    return tuple(
+        ref.dir
+        for ref in changed_versions(changed)
+        if registered.is_released(ref.pack, ref.template, ref.version)
+        and not released.is_released(ref.pack, ref.template, ref.version)
+        and ref.dir.casefold() not in edited
+    )
 
 
 def touched_scopes(changes: Iterable[FileChange]) -> tuple[str, ...]:

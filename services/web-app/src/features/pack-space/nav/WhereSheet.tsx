@@ -150,7 +150,7 @@ export const WhereBody = ({
                   .join(" · ")}
               </span>
             </span>
-            <VersionState released={item.released} />
+            <VersionState released={item.released} accepted={item.accepted} />
           </button>
         ))}
       </section>

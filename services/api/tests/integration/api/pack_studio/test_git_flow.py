@@ -414,6 +414,7 @@ async def test__checks__before_any_push__report_none(stand: Stand) -> None:
         "reason": None,
         "web_url": None,
         "pr_state": None,
+        "accepted_versions": [],
     }
 
 

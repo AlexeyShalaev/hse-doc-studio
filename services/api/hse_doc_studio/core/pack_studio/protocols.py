@@ -31,12 +31,13 @@ from hse_doc_studio.core.pack_studio.git_flow import (
     HostingAccount,
     HostingRepo,
     MergeOutcome,
+    PullRequestInfo,
     PullRequestRef,
-    PullRequestState,
     PushOutcome,
     RepoPermissions,
     WorkGitStatus,
 )
+from hse_doc_studio.core.pack_studio.git_flow import FileChange as GitFileChange
 from hse_doc_studio.core.pack_studio.model import FileChange, LibraryDocument, ModelAction, VersionModel
 from hse_doc_studio.core.pack_studio.outcome.lint import LintFinding
 from hse_doc_studio.core.pack_studio.paths import VersionRef
@@ -253,6 +254,13 @@ class IPackWorkspaceGit(Protocol):
         self, dirs: WorkspaceDirs, target: RemoteTarget, *, base_branch: str, packs_path: str, max_bytes: int
     ) -> tuple[str, bool]:
         """Единый diff своих правок от точки расхождения с базой (коммиты и правки на диске) и признак обрезки."""
+        ...
+
+    async def changed_since(
+        self, dirs: WorkspaceDirs, target: RemoteTarget, *, sha: str, packs_path: str
+    ) -> tuple[GitFileChange, ...] | None:
+        """Отслеживаемые файлы под папкой паков, которые на диске отличаются от коммита `sha` (новые неотслеживаемые
+        видны в `status.uncommitted`); None: такого коммита в хранилище нет."""
         ...
 
     # ── срез T10: мастер «Новая версия» ──
@@ -478,7 +486,7 @@ class IPackHosting(Protocol):
 
     async def ci_status(self, repo: HostingRepo, target: RemoteTarget, *, sha: str, branch: str | None) -> CiReport: ...
 
-    async def pull_request_state(self, repo: HostingRepo, target: RemoteTarget, number: int) -> PullRequestState | None:
+    async def pull_request(self, repo: HostingRepo, target: RemoteTarget, number: int) -> PullRequestInfo | None:
         """Срез T22: открыт, слит или закрыт PR (GitHub); None, если хостинг не сказал."""
         ...
 

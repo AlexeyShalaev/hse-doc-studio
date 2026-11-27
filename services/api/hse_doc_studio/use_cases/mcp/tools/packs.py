@@ -31,7 +31,7 @@ from hse_doc_studio.core.enums import DateMarkAlign, DateMarkFormat, TemplateUpd
 from hse_doc_studio.core.git_sync.errors import GitSyncError
 from hse_doc_studio.core.i18n import localized_error
 from hse_doc_studio.core.mcp.entities import McpToolGroup, McpToolMeta
-from hse_doc_studio.core.pack_studio.entities import DiagnosticSeverity, PackWorkspace
+from hse_doc_studio.core.pack_studio.entities import DiagnosticSeverity, PackTree, PackWorkspace
 from hse_doc_studio.core.pack_studio.errors import PackStudioError
 from hse_doc_studio.core.pack_studio.paths import TEMPLATES_DIR, VERSIONS_DIR, VersionRef, version_ref_of
 from hse_doc_studio.core.pack_studio.places import MarkBox, PlaceBox, PlaceOp, PlaceOpKind
@@ -62,6 +62,7 @@ from hse_doc_studio.use_cases.mcp.tools._base import (
     uuid_arg,
     wait_arg,
 )
+from hse_doc_studio.use_cases.mcp.tools.pack_plain import say
 from hse_doc_studio.use_cases.pack_studio.access import PackStudioAccess
 from hse_doc_studio.use_cases.pack_studio.files import PackFilesService
 from hse_doc_studio.use_cases.pack_studio.git import ForkChoice, GitView, PackGitService, ProposeInput
@@ -278,6 +279,34 @@ class PackTool(McpTool):
     async def run(self, actor: Actor, args: dict[str, object]) -> ToolResult:
         raise NotImplementedError
 
+    async def accepted_dirs(self, actor: Actor, workspace_id: UUID) -> frozenset[str]:
+        """Каталоги принятых версий: запрос слит, пространство не обновляли (`PackGitService.accepted_versions`).
+        Спрашивает хостинг, поэтому звать только когда есть невыпущенная версия; у папки пусто."""
+        try:
+            return frozenset(await (await self._deps.get(PackGitService)).accepted_versions(actor, workspace_id))
+        except (PackStudioError, GitSyncError):
+            return frozenset()
+
+
+def accepted_fields(accepted: bool) -> dict[str, object]:
+    """Подпись принятой версии для ответа тула: у неё нет статуса «черновик», пока пространство не обновят."""
+    return {"accepted": True, "accepted_label": say("state.accepted")} if accepted else {"accepted": False}
+
+
+def packs_with_accepted(packs: object, accepted: frozenset[str]) -> Any:
+    """Дерево версий для JSON: у принятых версий `accepted` и подпись."""
+    data: Any = jsonable(packs)
+    for pack in data:
+        for template in pack["templates"]:
+            for version in template["versions"]:
+                if version["path"] in accepted:
+                    version.update(accepted_fields(True))
+    return data
+
+
+def has_unreleased(tree: PackTree) -> bool:
+    return any(not v.released for p in tree.packs for t in p.templates for v in t.versions)
+
 
 def version_arg(args: Mapping[str, object], key: str = "version") -> VersionRef:
     """`<пак>/<шаблон>/<версия>` или путь внутри каталога версии от папки паков."""
@@ -385,7 +414,9 @@ class PackReadTool(PackTool):
         name="pack_read",
         description=(
             "Студия шаблонов: без version дерево пространства (паки, шаблоны, версии со статусом; released: "
-            "выпущена и только для чтения). С version разобранная модель версии: документы, поля анкеты, слоты "
+            "выпущена и только для чтения; accepted: запрос с версией принят, а пространство не обновляли: это не "
+            "черновик, сделайте pack_workspace_refresh). С version разобранная модель версии: документы, поля "
+            "анкеты, слоты "
             "подписей, точки сдачи, анкеты, языки, файлы версии и preview: что можно собрать в pack_preview_build "
             "(документы, переключатели combination с допустимыми значениями, наборы данных, умолчания, author: "
             "сколько авторов даёт каждый staffing и какие документы личные). Пример: "
@@ -400,7 +431,10 @@ class PackReadTool(PackTool):
         files = await self._deps.get(PackFilesService)
         view = await files.tree(actor, workspace_id)
         if not optional_text(args, "version"):
-            return json_result({"packs": view.tree.packs, "truncated": view.tree.truncated})
+            accepted = await self.accepted_dirs(actor, workspace_id) if has_unreleased(view.tree) else frozenset()
+            return json_result(
+                {"packs": packs_with_accepted(view.tree.packs, accepted), "truncated": view.tree.truncated}
+            )
         ref = version_arg(args)
         previews = await self._deps.get(PackPreviewService)
         desc = await previews.describe(actor, workspace_id, ref.pack, ref.template, ref.version)
@@ -418,10 +452,12 @@ class PackReadTool(PackTool):
         )
         model = _model(desc.version)
         options = await previews.options(actor, workspace_id, ref.pack, ref.template, ref.version)
+        accepted = not released and ref.dir in await self.accepted_dirs(actor, workspace_id)
         model.update(
             {
                 "path": ref.dir,
                 "released": released,
+                **accepted_fields(accepted),
                 "examples": [e.id for e in desc.examples],
                 "preview": _preview_options(options),
                 "files": [{"path": f.path, "size": f.size, "read_only": f.read_only} for f in listed[:_MAX_LISTED]],
@@ -649,11 +685,12 @@ class PackLintTool(PackTool):
         )
 
 
-def _state(state: VersionState) -> dict[str, object]:
+def _state(state: VersionState, accepted: frozenset[str] = frozenset()) -> dict[str, object]:
     return {
         "version": state.ref.dir,
         "status": state.status,
         "released": state.released,
+        **accepted_fields(not state.released and state.ref.dir in accepted),
         "modified": state.modified,
         "registered": state.registered,
         "release_outdated": state.release_outdated,
@@ -694,7 +731,8 @@ class PackClassifyTool(PackTool):
         description=(
             "Студия шаблонов: класс черновика версии по изменениям (patch, minor, major) с причинами относительно "
             "предыдущей выпущенной, номер не мягче минимума (number_ok), номера по классам, заметки changes и их "
-            "черновик из отчёта. У выпущенной версии только признак правки мимо Студии (modified, move_to)."
+            "черновик из отчёта. У выпущенной версии только признак правки мимо Студии (modified, move_to). "
+            "accepted: запрос с версией уже принят, а пространство не обновляли (pack_workspace_refresh)."
         ),
         parameters=_schema({"workspace_id": _WORKSPACE_ID, "version": _VERSION}, ("workspace_id", "version")),
     )
@@ -702,10 +740,12 @@ class PackClassifyTool(PackTool):
 
     async def run(self, actor: Actor, args: dict[str, object]) -> ToolResult:
         ref = version_arg(args)
+        workspace_id = uuid_arg(args, "workspace_id")
         state = await (await self._deps.get(PackVersionService)).state(
-            actor, uuid_arg(args, "workspace_id"), ref.pack, ref.template, ref.version
+            actor, workspace_id, ref.pack, ref.template, ref.version
         )
-        return json_result(_state(state))
+        accepted = frozenset() if state.released else await self.accepted_dirs(actor, workspace_id)
+        return json_result(_state(state, accepted))
 
 
 # ── предпросмотр ────────────────────────────────────────────────────────────
@@ -1185,10 +1225,12 @@ class PackVersionNotesTool(PackTool):
             breaking_changes=_localized_list(args.get("breaking_changes"), "breaking_changes"),
             note=note if isinstance(note, str) else None,
         )
+        workspace_id = uuid_arg(args, "workspace_id")
         state = await (await self._deps.get(PackVersionService)).save_notes(
-            actor, uuid_arg(args, "workspace_id"), ref.pack, ref.template, ref.version, notes
+            actor, workspace_id, ref.pack, ref.template, ref.version, notes
         )
-        return json_result(_state(state))
+        accepted = frozenset() if state.released else await self.accepted_dirs(actor, workspace_id)
+        return json_result(_state(state, accepted))
 
 
 class PackReleaseTool(PackTool):

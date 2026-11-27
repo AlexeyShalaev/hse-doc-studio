@@ -30,6 +30,7 @@ from hse_doc_studio.core.pack_studio.git_flow import (
     CiState,
     FileChange,
     ForkRef,
+    PullRequestInfo,
     PullRequestRef,
     PullRequestState,
     PushOutcome,
@@ -149,6 +150,9 @@ class _Git:
     async def base_registries(self, *_args: Any, **_kwargs: Any) -> dict[str, str]:
         return {}
 
+    async def changed_since(self, *_args: Any, **_kwargs: Any) -> None:
+        return None
+
     async def push(self, _dirs: Any, target: RemoteTarget, *, branch: str, push_options: Any = ()) -> PushOutcome:
         self.pushes.append(target)
         return PushOutcome(sha="c" * 40, remote_output="")
@@ -176,8 +180,8 @@ class _Hosting:
     async def ci_status(self, _repo: Any, _target: Any, *, sha: str, branch: str | None) -> CiReport:
         return self.ci or CiReport(state=CiState.none, sha=sha)
 
-    async def pull_request_state(self, *_args: Any) -> PullRequestState | None:
-        return self.pr_state
+    async def pull_request(self, *_args: Any) -> PullRequestInfo | None:
+        return None if self.pr_state is None else PullRequestInfo(self.pr_state)
 
 
 class _Checker:

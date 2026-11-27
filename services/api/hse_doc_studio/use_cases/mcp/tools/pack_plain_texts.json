@@ -1,5 +1,8 @@
 {
  "ru": {
+  "state": {
+   "accepted": "принята, обновите пространство"
+  },
   "plain": {
    "finding": {
     "share": "Так бывает в {{n}} из {{total}} сочетаний условий.",
@@ -284,6 +287,9 @@
   }
  },
  "en": {
+  "state": {
+   "accepted": "accepted, refresh the workspace"
+  },
   "plain": {
    "finding": {
     "share": "This happens in {{n}} of {{total}} combinations of conditions.",

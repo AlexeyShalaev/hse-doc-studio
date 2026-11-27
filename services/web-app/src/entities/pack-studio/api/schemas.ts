@@ -360,6 +360,8 @@ export const PackCiStatusSchema = z.strictObject({
   web_url: z.string().nullable(),
   // Срез T22: открыт, слит или закрыт PR (null: PR нет или хостинг молчит).
   pr_state: z.enum(["open", "merged", "closed"]).nullish(),
+  // Каталоги версий слитого запроса, ещё не выпущенных в дереве пространства (до обновления).
+  accepted_versions: z.array(z.string()).optional(),
 });
 
 export const PackStartOverRequestSchema = z.strictObject({

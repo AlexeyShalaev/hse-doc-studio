@@ -10,6 +10,7 @@ docs/design/template-studio.md, 4.2 до 4.4 и раздел 12. Всё идёт
   рабочей ветки, PR GitHub через REST или MR GitLab через push options. Нет права push: форк (указанный или созданный
   токеном на GitHub) и ссылка compare, если API отказал.
 - Статус проверок хостинга по отправленной вершине; слияние свежей базы в рабочую ветку; «Начать заново от базы».
+- Принятые версии: запрос слит, а выборки базы после этого не было: версия ещё не «выпущена», но уже не черновик.
 """
 
 from __future__ import annotations
@@ -35,16 +36,19 @@ from hse_doc_studio.core.identity.protocols import IAuditLog
 from hse_doc_studio.core.pack_studio.entities import PackWorkspace
 from hse_doc_studio.core.pack_studio.errors import PackStudioError, PackStudioErrorCode
 from hse_doc_studio.core.pack_studio.git_flow import (
+    ChangeStatus,
     CheckSummary,
     CiReport,
     CiState,
     ForkRef,
     HostingRepo,
+    PullRequestInfo,
     PullRequestRef,
     PullRequestState,
     PushOutcome,
     VersionSummary,
     WorkGitStatus,
+    accepted_versions,
     changed_versions,
     compare_url,
     default_commit_message,
@@ -225,11 +229,29 @@ class PackGitService:
         repo = await self._hosting_repo(target)
         report = await self._hosting.ci_status(repo, target, sha=ws.pushed_sha, branch=ws.work_branch)
         if ws.pr_number is not None:
-            report = replace(report, pr_state=await self._pr_state(repo, target, ws.pr_number))
+            pull = await self._pr(repo, target, ws.pr_number)
+            report = replace(
+                report,
+                pr_state=pull.state if pull else None,
+                accepted_versions=await self._accepted(ws, pull),
+            )
         current = await self._workspaces.git_ready(actor, workspace_id)
         if current.pushed_sha == ws.pushed_sha and current.ci_status != report.state.value:
             await self._workspaces.save(replace(current, ci_status=report.state.value))
         return report
+
+    async def accepted_versions(self, actor: Actor, workspace_id: UUID) -> tuple[str, ...]:
+        """Каталоги версий слитого запроса, о выпуске которых пространство ещё не знает, без проверок CI. Это только
+        подпись состояния: недоступный хостинг или сбой git дают пустой ответ, а не ошибку чтения."""
+        ws = await self._workspaces.git_ready(actor, workspace_id)
+        if ws.pr_number is None or ws.pushed_sha is None:
+            return ()
+        try:
+            target = self._workspaces.target_of(ws)
+            pull = await self._pr(await self._hosting_repo(target), target, ws.pr_number)
+        except (GitSyncError, PackStudioError):
+            return ()
+        return await self._accepted(ws, pull)
 
     # ── ветка и коммит ───────────────────────────────────────────────────────
 
@@ -550,11 +572,33 @@ class PackGitService:
         if outside:
             raise PackStudioError(PackStudioErrorCode.paths_outside_packs, files=list(outside[:_FINDINGS_MAX]))
 
-    async def _pr_state(self, repo: HostingRepo, target: RemoteTarget, number: int) -> PullRequestState | None:
+    async def _pr(self, repo: HostingRepo, target: RemoteTarget, number: int) -> PullRequestInfo | None:
         try:
-            return await self._hosting.pull_request_state(repo, target, number)
+            return await self._hosting.pull_request(repo, target, number)
         except GitSyncError:
             return None
+
+    async def _accepted(self, ws: PackWorkspace, pull: PullRequestInfo | None) -> tuple[str, ...]:
+        """Правки после слияния ищутся от вершины запроса у хостинга: повторная отправка без права открыть PR
+        сдвигает `pushed_sha`, а номер остаётся прежним. Вершины запроса нет в хранилище (в его ветку дописали не из
+        Студии): сравнение с тем, что отправила она сама."""
+        if pull is None or pull.state is not PullRequestState.merged or ws.pushed_sha is None:
+            return ()
+        try:
+            status = await self._status(ws)
+            dirs, target = self._workspaces.dirs_of(ws), self._workspaces.target_of(ws)
+            since = None
+            for sha in (pull.head_sha, ws.pushed_sha):
+                if sha is not None and since is None:
+                    since = await self._git.changed_since(dirs, target, sha=sha, packs_path=ws.packs_path)
+            if since is None:
+                return ()
+            released, registered = await self._workspaces.releases(ws)
+        except (GitSyncError, PackStudioError) as exc:
+            logger.info("pack studio: accepted versions are unknown", workspace_id=str(ws.id), code=exc.code.value)
+            return ()
+        new = (change for change in status.uncommitted if change.status is ChangeStatus.added)
+        return accepted_versions(status.changed, (*since, *new), released=released, registered=registered)
 
     # ── служебное ────────────────────────────────────────────────────────────
 

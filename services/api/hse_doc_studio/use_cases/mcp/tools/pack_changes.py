@@ -34,7 +34,14 @@ from hse_doc_studio.core.pack_studio.paths import VERSION_MANIFEST, VersionRef, 
 from hse_doc_studio.use_cases.mcp.tools._base import optional_text, uuid_arg
 from hse_doc_studio.use_cases.mcp.tools.pack_plain import next_step_hint, next_step_label, say
 from hse_doc_studio.use_cases.mcp.tools.pack_view import FORMAT_PROP, layout_arg, layout_result
-from hse_doc_studio.use_cases.mcp.tools.packs import _VERSION, _WORKSPACE_ID, PackTool, _schema, version_arg
+from hse_doc_studio.use_cases.mcp.tools.packs import (
+    _VERSION,
+    _WORKSPACE_ID,
+    PackTool,
+    _schema,
+    accepted_fields,
+    version_arg,
+)
 from hse_doc_studio.use_cases.pack_studio.files import PackFilesService
 from hse_doc_studio.use_cases.pack_studio.git import PackGitService
 from hse_doc_studio.use_cases.pack_studio.insight import PackInsightService
@@ -126,12 +133,19 @@ def _step_view(step: NextStep | None) -> dict[str, Any] | None:
     }
 
 
-def _text(ref: VersionRef | None, status: ChangesStatus, step: dict[str, Any] | None, files: list[str]) -> str:
+def _state_mark(released: bool, accepted: bool) -> str:
+    """Пометка версии в первой строке: выпущена или принята; у черновика пусто."""
+    if released:
+        return " (выпущена)" if current_interface_language().value == "ru" else " (released)"
+    return f" ({say('state.accepted')})" if accepted else ""
+
+
+def _text(
+    ref: VersionRef | None, status: ChangesStatus, step: dict[str, Any] | None, files: list[str], *, accepted: bool
+) -> str:
     ru = current_interface_language().value == "ru"
     lines = [
-        ("Версия: " if ru else "Version: ")
-        + (ref.dir if ref else "-")
-        + (" (выпущена)" if ru and status.released else " (released)" if status.released else ""),
+        ("Версия: " if ru else "Version: ") + (ref.dir if ref else "-") + _state_mark(status.released, accepted),
         (
             f"Изменено файлов: {status.changed_files}, в этой версии: {status.changed_in_version}"
             if ru
@@ -169,7 +183,8 @@ class PackChangesTool(PackTool):
             "Студия шаблонов: что изменено и что делать дальше, как панель «Изменения» и главная кнопка интерфейса. "
             "Изменённые файлы и версии, ошибки и замечания проверки изменённых мест, нужны ли заметки, запрос на "
             "слияние и его проверки, отставание от основной ветки и next_step: подпись кнопки, подсказка и тулы, "
-            "которые делают шаг. version: открытая версия (по умолчанию самая новая изменённая). Только чтение."
+            "которые делают шаг. version: открытая версия (по умолчанию самая новая изменённая). accepted: запрос с "
+            "этой версией принят, а пространство не обновляли (pack_workspace_refresh). Только чтение."
         ),
         parameters=_schema(
             {"workspace_id": _WORKSPACE_ID, "version": _VERSION, "format": FORMAT_PROP},
@@ -241,6 +256,9 @@ class PackChangesTool(PackTool):
             behind=git_view.status.behind if git_view is not None else 0,
         )
         status = derive_status(raw)
+        accepted = (
+            open_ref is not None and not open_released and ci is not None and open_ref.dir in ci.accepted_versions
+        )
         step = _step_view(resolve_next_step(status))
         request = status.request
         listed = [f"{s[:1].upper()} {p}" for p, s in changed[:_MAX_FILES]]
@@ -251,6 +269,7 @@ class PackChangesTool(PackTool):
             "workspace_kind": status.workspace_kind,
             "load": status.load,
             "released": status.released,
+            **accepted_fields(accepted),
             "changed_files": status.changed_files,
             "changed_in_version": status.changed_in_version,
             "changed_elsewhere": status.changed_elsewhere.dir if status.changed_elsewhere else None,
@@ -271,5 +290,5 @@ class PackChangesTool(PackTool):
             "files": listed,
             "next_step": step,
         }
-        text = _text(open_ref, status, step, listed)
+        text = _text(open_ref, status, step, listed, accepted=accepted)
         return layout_result(layout_arg(args), text, data, truncated=len(changed) > _MAX_FILES)
