@@ -1,0 +1,72 @@
+format: 1
+name:
+  ru: Команда из трёх, проект под NDA (2026.1 и 2026.2)
+  en: Team of three, project under NDA (2026.1 and 2026.2)
+description:
+  ru: NDA сдаётся на КТ2 и в финале.
+  en: The NDA is handed in at CP2 and in the final.
+versions: ["2026.1.*", "2026.2.*"]
+inputs:
+  staffing: team3
+  meta.nda: "yes"
+assertions:
+  - { kind: participant_present, persona: author3, present: true }
+  - { kind: document_state, doc: nda, state: active }
+  - { kind: item_active, point: checkpoint-2, doc: nda, active: true }
+  - { kind: item_active, point: final, doc: nda, active: true }
+snapshot:
+  documents:
+    technical_specification: active
+    shared_technical_specification: active
+    test_program_and_methodology: active
+    shared_test_program_and_methodology: active
+    source_listing: active
+    programmer_manual: active
+    operator_manual: active
+    project_description: active
+    interim_report: absent
+    presentation: active
+    explanatory_note: active
+    report: absent
+    nda: active
+  participants: [author1, author2, author3, supervisor, academic_supervisor]
+  meta_visible:
+    - year
+    - specialization
+    - manuals
+    - name_en
+    - name_short
+    - faculty
+    - city
+    - city_en
+    - program_code
+    - course
+    - academic_supervisor
+    - doc_code_base
+    - font_main
+    - font_sans
+    - font_mono
+    - nda
+    - supervisor
+    - co_supervisor
+  points:
+    - id: checkpoint-1
+      items: [technical_specification, shared_technical_specification, project_description]
+      steps: []
+      pairs: 0
+    - id: checkpoint-2
+      items: [source_listing, project_description, nda]
+      steps: []
+      pairs: 0
+    - id: final
+      items: [technical_specification, shared_technical_specification, explanatory_note, test_program_and_methodology, shared_test_program_and_methodology, programmer_manual, operator_manual, presentation, nda]
+      steps: [[author1, author2, author3]]
+      pairs: 21
+  sections:
+    - { section: documents, fingerprint: d7cf5ee53c90, count: 11 }
+    - { section: meta, fingerprint: d9710863ef2a, count: 18 }
+    - { section: forms, fingerprint: baa9eaef9a4a, count: 2 }
+    - { section: participants, fingerprint: 69e9b6580a38, count: 5 }
+    - { section: points, fingerprint: 0fd87209aa2f, count: 15 }
+    - { section: route, fingerprint: 1f25ffe522dc, count: 21 }
+    - { section: checks, fingerprint: 4f53cda18c2b, count: 0 }

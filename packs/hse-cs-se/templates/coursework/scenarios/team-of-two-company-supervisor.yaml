@@ -5,7 +5,7 @@ name:
 description:
   ru: "Общие ТЗ и программа испытаний команды; в финале подписывают оба автора."
   en: "The shared SoW and test programme of the team; both authors sign in the final."
-versions: ["2026.1.*", "2026.2.*"]
+versions: ["2026.3.*"]
 inputs:
   staffing: team2
   supervisor: company
@@ -68,5 +68,5 @@ snapshot:
     - { section: forms, fingerprint: baa9eaef9a4a, count: 2 }
     - { section: participants, fingerprint: 8236e8a95540, count: 4 }
     - { section: points, fingerprint: 58d003d999b2, count: 14 }
-    - { section: route, fingerprint: 8bdd0870a3ad, count: 16 }
+    - { section: route, fingerprint: 359210c6a5bc, count: 16 }
     - { section: checks, fingerprint: 4f53cda18c2b, count: 0 }

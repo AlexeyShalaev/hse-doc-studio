@@ -1,0 +1,125 @@
+% !TeX program = xelatex
+% ============================================================
+% project_description/project_description.tex — «Детальное описание
+% проекта» к КТ1/КТ2 курсового проекта ОП «Программная инженерия».
+%
+% Обязательный деливерабл КТ1 (обновляется на КТ2) по Программе практики:
+%   • прикладной вид  — Приложение 6 (планы/этапы, тех.стек+обоснование,
+%     >=3 количественных критериев оценки, особые пометки);
+%   • исследовательский вид — Приложение 7 (цель, мотивация, объект,
+%     предмет, гипотеза, обзор, планы/этапы, >=3 критериев, пометки).
+% Структура ветвится по project.kind, язык — по project.lang.
+% Заполняйте жёлтые \hseFill{…}; данные о себе и проекте — в настройках.
+% ============================================================
+\documentclass[12pt,a4paper]{extarticle}
+\input{preamble}
+\begin{document}
+\sloppy
+
+% ── Шапка документа ──
+\begin{center}
+
+{\large\bfseries Detailed Project Description}\\[2pt]
+{\normalsize (Checkpoints 1--2, course project)}\\[6pt]
+
+\textbf{\projectname}\\[4pt]
+
+\hseAuthorName, group \hseGroup
+
+\end{center}
+\vspace{0.4cm}
+
+((* if project.kind == 'research' *))
+% ============================================================
+%  ПРИЛОЖЕНИЕ 7 — исследовательский проект
+% ============================================================
+
+\section{Main plans and stages of the project}
+\subsection{Project description}
+\textbf{Aim of the project:} \hseFill{one sentence — the scientific result to be achieved}.
+
+\textbf{Motivation} (why this project): \hseFill{why the topic is relevant and interesting}.
+
+\textbf{Object of study:} \hseFill{object}.
+
+\textbf{Subject of study:} \hseFill{subject}.
+
+\textbf{Hypothesis (brief):} \hseFill{the hypothesis to be tested}.
+
+\textbf{Domain overview:} \hseFill{a short overview of the domain and existing approaches}.
+
+\subsection{Plans and stages}
+\begin{longtable}{|>{\raggedright\arraybackslash}p{3cm}|>{\raggedright\arraybackslash}p{5cm}|>{\raggedright\arraybackslash}p{3.5cm}|>{\raggedright\arraybackslash}p{2cm}|}
+\hline
+\textbf{Stage} & \textbf{Description of work} & \textbf{Expected results} & \textbf{Due date} \\ \hline
+\endhead
+\hseFill{stage 1} & \hseFill{what is done} & \hseFill{result} & \hseFill{date} \\ \hline
+\hseFill{stage 2} & \hseFill{what is done} & \hseFill{result} & \hseFill{date} \\ \hline
+\end{longtable}
+
+\section{Evaluation criteria}
+Provide at least three quantitative criteria by which the project result will be assessed (e.g. novelty of the study, quality of the literature review, correctness of the model/algorithms, quality of the implementation, depth of the analysis of experimental results).
+\begin{longtable}{|>{\raggedright\arraybackslash}p{5cm}|>{\raggedright\arraybackslash}p{11cm}|}
+\hline
+\textbf{Criterion} & \textbf{Description} \\ \hline
+\endhead
+\hseFill{criterion 1} & \hseFill{how it is measured} \\ \hline
+\hseFill{criterion 2} & \hseFill{how it is measured} \\ \hline
+\hseFill{criterion 3} & \hseFill{how it is measured} \\ \hline
+\end{longtable}
+
+\section{Special notes}
+\hseFill{any risks, changes to the plans, and other important details for this stage}.
+
+((* else *))
+% ============================================================
+%  ПРИЛОЖЕНИЕ 6 — прикладной (программный) проект
+% ============================================================
+
+\section{Main plans and stages of the project}
+\subsection{Brief description of the project}
+\textbf{Project name:} \projectname.
+
+\textbf{Aim of the project:} \hseFill{one sentence — what is built}.
+
+\textbf{Brief description of the tasks:} \hseFill{the key tasks of the project}.
+
+\subsection{Plans and stages}
+\begin{longtable}{|>{\raggedright\arraybackslash}p{3cm}|>{\raggedright\arraybackslash}p{5cm}|>{\raggedright\arraybackslash}p{3.5cm}|>{\raggedright\arraybackslash}p{2cm}|}
+\hline
+\textbf{Stage} & \textbf{Description of work} & \textbf{Expected results} & \textbf{Due date} \\ \hline
+\endhead
+\hseFill{stage 1} & \hseFill{what is done} & \hseFill{result} & \hseFill{date} \\ \hline
+\hseFill{stage 2} & \hseFill{what is done} & \hseFill{result} & \hseFill{date} \\ \hline
+\end{longtable}
+
+\section{Technology stack and its justification}
+\subsection{List of technologies used}
+\begin{longtable}{|>{\raggedright\arraybackslash}p{4cm}|>{\raggedright\arraybackslash}p{5cm}|>{\raggedright\arraybackslash}p{7cm}|}
+\hline
+\textbf{Technology / tool} & \textbf{Description} & \textbf{Reasons for the choice} \\ \hline
+\endhead
+\hseFill{technology 1} & \hseFill{what it is} & \hseFill{why chosen} \\ \hline
+\hseFill{technology 2} & \hseFill{what it is} & \hseFill{why chosen} \\ \hline
+\end{longtable}
+
+\subsection{Justification of the chosen stack}
+\hseFill{why this stack was chosen, what advantages it has for this project, and how it helps achieve the project goals}.
+
+\section{Evaluation criteria}
+Provide at least three quantitative criteria by which the project result will be assessed (e.g. \% of functional requirements met, number of implemented functions, response time, test coverage \%, number of bugs per KLOC, cyclomatic complexity, number of supported platforms).
+\begin{longtable}{|>{\raggedright\arraybackslash}p{5cm}|>{\raggedright\arraybackslash}p{11cm}|}
+\hline
+\textbf{Criterion} & \textbf{Description} \\ \hline
+\endhead
+\hseFill{criterion 1} & \hseFill{how it is measured} \\ \hline
+\hseFill{criterion 2} & \hseFill{how it is measured} \\ \hline
+\hseFill{criterion 3} & \hseFill{how it is measured} \\ \hline
+\end{longtable}
+
+\section{Special notes}
+\hseFill{any risks, changes to the plans, and other important details for this stage}.
+
+((* endif *))
+
+\end{document}

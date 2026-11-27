@@ -5,7 +5,7 @@ name:
 description:
   ru: "Курсовой проект одного студента: общих документов команды нет."
   en: "A coursework project by one student: no shared team documents."
-versions: ["2026.1.*", "2026.2.*"]
+versions: ["2026.3.*"]
 inputs:
   staffing: solo
   supervisor: university
@@ -68,5 +68,5 @@ snapshot:
     - { section: forms, fingerprint: baa9eaef9a4a, count: 2 }
     - { section: participants, fingerprint: f1113ea43c16, count: 3 }
     - { section: points, fingerprint: 2d14b9e95d2c, count: 11 }
-    - { section: route, fingerprint: ffeb4ece47a5, count: 6 }
+    - { section: route, fingerprint: 99946cb83b85, count: 6 }
     - { section: checks, fingerprint: 4f53cda18c2b, count: 0 }
