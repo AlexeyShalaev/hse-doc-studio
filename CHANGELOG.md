@@ -6,6 +6,10 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.45.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.45.0...v0.45.1) - 2026-11-27
+
+- Pack Studio: a version from an already merged request is no longer called a draft while the workspace still sits on the old branch. It now reads "accepted, refresh the workspace", in the interface and in MCP answers. Versions edited after the merge, requests closed without a merge and drafts without a release are not counted as accepted. The label is available for GitHub repositories only.
+
 ## [0.45.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.44.0...v0.45.0) - 2026-11-27
 
 - Packs: in the BSc Software Engineering course project (hse-cs-se 2026.3.0) the co-supervisor's line on the approval sheets now has a signature place: personal and shared statement of work and test program, explanatory note, source listing, programmer's and operator's manuals. The signing order is unchanged: only the authors sign in the course project. This is a new version line, existing projects do not move to it by themselves.
