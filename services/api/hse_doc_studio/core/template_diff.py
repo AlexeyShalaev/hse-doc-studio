@@ -44,6 +44,8 @@ _MAJOR = TemplateUpdateClass.major
 
 DOC_MANIFEST = "doc.yaml"
 VERSION_MANIFEST = "version.yaml"
+# Язык версии без `langs:`, как у раскладки проекта (`DEFAULT_TEMPLATE_LANG`).
+_DEFAULT_LANG = "ru"
 # Мусор файловых менеджеров и интерпретатора: не содержимое версии (как в дайджесте выпуска).
 _JUNK_NAMES = frozenset({".DS_Store", "Thumbs.db", "desktop.ini"})
 _JUNK_DIRS = frozenset({"__pycache__"})
@@ -657,10 +659,27 @@ def _doc_dir(rel: str) -> str | None:
     return parts[1] if len(parts) > 2 and parts[0] == "files" else None  # noqa: PLR2004
 
 
+def _project_paths(snapshot: VersionSnapshot) -> set[str]:
+    """Пути файлов в проекте: `files/` без языковых суффиксов (при раскладке они срезаются)."""
+    langs = snapshot.langs or (_DEFAULT_LANG,)
+    return {_bare(rel, langs) for rel in snapshot.files if rel.startswith("files/")}
+
+
+def _removed_file(differ: _Differ, rel: str, path_kept: bool) -> None:
+    """Файла больше нет. `path_kept`: путь в проекте остался (файл разделён на языковые редакции, слит обратно или
+    убрана одна редакция), проекты соберутся и меняется только содержимое."""
+    if path_kept:
+        differ.add(_soft("file_changed", _PATCH), (rel,), "changed")
+    else:
+        differ.add(_soft("file_removed", _MINOR), (rel,), "removed")
+
+
 def _diff_files(differ: _Differ, base: VersionSnapshot, new: VersionSnapshot) -> None:
     added_docs = set(new.roster) - set(base.roster)
     removed_docs = set(base.roster) - set(new.roster)
     sources = _document_sources(new)
+    kept_paths = _project_paths(new)
+    base_langs = base.langs or (_DEFAULT_LANG,)
     for rel in sorted(set(base.files) | set(new.files)):
         segments = (rel,)
         if rel in base.files and rel in new.files:
@@ -673,7 +692,7 @@ def _diff_files(differ: _Differ, base: VersionSnapshot, new: VersionSnapshot) ->
             verdict = _hard("document_file_added", _MINOR) if is_source else _soft("file_added", _PATCH)
             differ.add(verdict, segments, "added")
         elif _doc_dir(rel) not in removed_docs:
-            differ.add(_soft("file_removed", _MINOR), segments, "removed")
+            _removed_file(differ, rel, _bare(rel, base_langs) in kept_paths)
 
 
 def _diff_roster(differ: _Differ, base: VersionSnapshot, new: VersionSnapshot) -> None:
