@@ -34,6 +34,15 @@ _DIFF_CHARS: Final = 20_000
 _DIFF_MAX: Final = 120_000
 _MAX_CHECKED_VERSIONS: Final = 10
 _MAX_FINDINGS: Final = 50
+_SHOWN_FILES: Final = 100
+_SHOWN_UNCOMMITTED: Final = 30
+
+
+def _cut_note(shown: int, total: int, where: str) -> str:
+    return localized_error(
+        f"Показаны первые {shown} из {total} файлов; весь список: {where}.",
+        f"The first {shown} of {total} files are shown; the whole list: {where}.",
+    )
 
 
 def _git_text(view: GitView, head: str) -> str:
@@ -47,7 +56,11 @@ def _git_text(view: GitView, head: str) -> str:
         ),
         f"Несохранённых правок: {len(st.uncommitted)}; отличий от базы: {len(st.changed)}",
     ]
-    lines += [f"  {c.status.value[:1].upper()} {c.path}" for c in st.uncommitted[:30]]
+    lines += [f"  {c.status.value[:1].upper()} {c.path}" for c in st.uncommitted[:_SHOWN_UNCOMMITTED]]
+    if len(st.uncommitted) > _SHOWN_UNCOMMITTED:
+        lines.append(
+            _cut_note(_SHOWN_UNCOMMITTED, len(st.uncommitted), "pack_git_diff, files_only: true, format: json")
+        )
     if ws.pr_url:
         lines.append(f"PR: {ws.pr_url}")
     elif view.compare_url:
@@ -162,7 +175,8 @@ class PackGitDiffTool(PackTool):
         description=(
             "Студия шаблонов: единый diff от базовой ветки: коммиты рабочей ветки и правки на диске, то, что "
             "уйдёт в предложение. Перед pack_propose покажите его человеку. files_only: true только список "
-            "файлов. max_chars обрезает текст (по умолчанию 20000)."
+            "файлов. max_chars обрезает текст (по умолчанию 20000). Текст показывает первые 100 файлов и называет "
+            "обрезку; в format: json список files полный, truncated говорит, обрезан ли diff."
         ),
         parameters=_schema(
             {
@@ -187,13 +201,21 @@ class PackGitDiffTool(PackTool):
             raw, server_cut = await git.diff(actor, workspace_id)
             body, cut = clip_text(raw, int_arg(args, "max_chars", _DIFF_CHARS, lo=1_000, hi=_DIFF_MAX))
             cut = cut or server_cut
-        text = f"Изменено файлов: {len(files)}\n" + "\n".join(files[:100])
+        text = f"Изменено файлов: {len(files)}\n" + "\n".join(files[:_SHOWN_FILES])
+        listed_cut = len(files) > _SHOWN_FILES
+        if listed_cut:
+            text += "\n" + _cut_note(_SHOWN_FILES, len(files), "format: json, поле files")
+        if cut:
+            text += "\n" + localized_error(
+                f"Diff обрезан, ниже только его начало (max_chars до {_DIFF_MAX}).",
+                f"The diff is cut, only its beginning follows (max_chars up to {_DIFF_MAX}).",
+            )
         if body:
             text += "\n\n" + body
         elif not files_only:
             text += "\n(отличий от базы нет)"
         data: dict[str, Any] = {"files": files, "changed_total": len(files), "diff": body, "truncated": cut}
-        return layout_result(layout_arg(args), text, data, truncated=cut)
+        return layout_result(layout_arg(args), text, data, truncated=cut or listed_cut)
 
 
 class PackGitChecksTool(PackTool):

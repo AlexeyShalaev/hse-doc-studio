@@ -53,6 +53,7 @@ from hse_doc_studio.use_cases.mcp.tools._base import (
     ArgumentError,
     McpTool,
     bool_arg,
+    etag_arg,
     int_arg,
     json_result,
     jsonable,
@@ -326,7 +327,23 @@ def _workspace_error(code: str, detail: str) -> dict[str, object]:
 def _git(view: GitView) -> dict[str, object]:
     status = view.status
     ws: PackWorkspace = view.workspace
+    total = max(len(status.changed), len(status.uncommitted))
+    cut = total > _MAX_LISTED
+    note: dict[str, object] = (
+        {
+            "files_note": localized_error(
+                f"Показаны первые {_MAX_LISTED} из {total} изменённых файлов. Весь список: pack_git_diff с "
+                "files_only: true и format: json.",
+                f"The first {_MAX_LISTED} of {total} changed files are listed. The whole list: pack_git_diff with "
+                "files_only: true and format: json.",
+            )
+        }
+        if cut
+        else {}
+    )
     return {
+        "files_truncated": cut,
+        **note,
         "branch": status.branch,
         "base_branch": ws.base_branch,
         "head_sha": status.head_sha,
@@ -594,7 +611,7 @@ class PackWriteFileTool(PackTool):
             uuid_arg(args, "workspace_id"),
             text_arg(args, "path"),
             content.encode("utf-8"),
-            optional_text(args, "if_match"),
+            etag_arg(args),
         )
         return json_result({"path": written.path, "etag": written.etag, "size": written.size})
 
@@ -1038,7 +1055,7 @@ class PackSetPlacementTool(PackTool):
                 raise ArgumentError(localized_error("ops: ожидается список", "ops: a list is expected"))
             ops = [_place_op(op) for op in raw_ops]
             view = await places.edit(
-                actor, workspace_id, ref.pack, ref.template, ref.version, build_id, ops, optional_text(args, "if_match")
+                actor, workspace_id, ref.pack, ref.template, ref.version, build_id, ops, etag_arg(args)
             )
         return json_result({"path": view.path, "etag": view.etag, "read_only": view.read_only, "places": view.places})
 
@@ -1291,6 +1308,7 @@ class PackProposeTool(PackTool):
             ),
         )
         report = proposed.report
+        git_state = _git(proposed.git)
         return json_result(
             {
                 "pushed_sha": proposed.pushed_sha,
@@ -1301,8 +1319,9 @@ class PackProposeTool(PackTool):
                 if proposed.pr_error is None
                 else {"code": proposed.pr_error.code.value, "detail": proposed.pr_error.detail},
                 "checks": {"errors": report.errors, "warnings": report.warnings},
-                "git": _git(proposed.git),
-            }
+                "git": git_state,
+            },
+            truncated=bool(git_state["files_truncated"]),
         )
 
     async def _summary(self, actor: Actor, workspace_id: UUID, git: PackGitService) -> ToolResult:
@@ -1325,7 +1344,7 @@ class PackProposeTool(PackTool):
                 ),
             }
         )
-        return json_result(summary)
+        return json_result(summary, truncated=bool(summary["files_truncated"]))
 
 
 # ── пак и шаблон с нуля (срез T15) ──────────────────────────────────────────

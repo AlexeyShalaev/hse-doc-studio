@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from typing import Any, Final
 
 import yaml
@@ -29,10 +30,12 @@ from hse_doc_studio.core.pack_studio.submission import (
     SubmissionList,
     SubmissionOp,
     SubmissionOpKind,
+    VersionSubmission,
 )
 from hse_doc_studio.use_cases.mcp.tools._base import (
     ArgumentError,
     bool_arg,
+    etag_arg,
     int_arg,
     jsonable,
     optional_text,
@@ -230,7 +233,7 @@ class PackPatchYamlTool(PackTool):
         if not is_yaml(path):
             raise PackStudioError(PackStudioErrorCode.not_yaml)
         files = await self._deps.get(PackFilesService)
-        if_match = optional_text(args, "if_match")
+        if_match = etag_arg(args)
         raw = args.get("ops")
         needs_text = isinstance(raw, list) and any(isinstance(o, Mapping) and o.get("op") == "insert" for o in raw)
         text: str | None = None
@@ -306,7 +309,7 @@ class PackDeleteFileTool(PackTool):
             )
             data = {"confirm_required": True, **info, "hint": hint}
             return layout_result(layout_arg(args), f"Удалить {path}? {hint}", data)
-        await files.delete(actor, workspace_id, path, optional_text(args, "if_match"))
+        await files.delete(actor, workspace_id, path, etag_arg(args))
         return layout_result(layout_arg(args), f"Удалено: {path}", {"deleted": True, "path": path})
 
 
@@ -337,7 +340,7 @@ class PackMoveFileTool(PackTool):
         src, dst = text_arg(args, "src").strip("/"), text_arg(args, "dst").strip("/")
         files = await self._deps.get(PackFilesService)
         found = await files.read(actor, workspace_id, src)
-        if optional_text(args, "if_match") not in {None, found.etag}:
+        if etag_arg(args) not in {None, found.etag}:
             raise PackStudioError(PackStudioErrorCode.stale_file, etag=found.etag)
         if not bool_arg(args, "overwrite", False):
             try:
@@ -548,13 +551,18 @@ class PackModelActionTool(PackTool):
             ref.template,
             ref.version,
             action,
-            optional_text(args, "if_match"),
+            etag_arg(args),
         )
         return layout_result(
             layout_arg(args),
             _model_text(view, f"Выполнено: {name}. Изменены файлы: {', '.join(view.changed)}"),
             _model_data(view),
         )
+
+
+_TEAM_HINT: Final = (
+    "Командный проект, строка каждого автора (якорь author__<слаг> на общем документе): pack_help (topic: team)."
+)
 
 
 class PackHintsTool(PackTool):
@@ -581,6 +589,8 @@ class PackHintsTool(PackTool):
             for f in hints.meta_fields[:_MAX_FILES]
         ]
         lines += [f"  макрос \\{m.name}: {', '.join(m.keys)} ({m.source})" for m in hints.macros[:_MAX_FILES]]
+        if hints.version and str(args["path"]).rstrip("/").endswith((".tex", ".j2")):
+            lines.append(_TEAM_HINT)
         return layout_result(layout_arg(args), "\n".join(lines), hints)
 
 
@@ -660,6 +670,18 @@ _SUB_PROPS: Final = {
 }
 
 
+def _only_profile(sub: VersionSubmission, wanted: str) -> VersionSubmission:
+    found = tuple(profile for profile in sub.profiles if profile.id == wanted)
+    if not found:
+        known = ", ".join(profile.id for profile in sub.profiles if profile.id) or "-"
+        raise ArgumentError(
+            localized_error(
+                f"profile: нет профиля {wanted!r}, есть: {known}", f"profile: no {wanted!r}, known: {known}"
+            )
+        )
+    return replace(sub, profiles=found)
+
+
 async def _submission_reply(tool: PackTool, actor: Actor, args: dict[str, object], *, edit: bool) -> ToolResult:
     ref = version_arg(args)
     workspace_id = uuid_arg(args, "workspace_id")
@@ -672,13 +694,16 @@ async def _submission_reply(tool: PackTool, actor: Actor, args: dict[str, object
             ref.template,
             ref.version,
             _submission_ops(args.get("ops")),
-            optional_text(args, "if_match"),
+            etag_arg(args),
         )
         head = f"Профили сдачи изменены. etag {view.etag}"
     else:
         view = await service.get(actor, workspace_id, ref.pack, ref.template, ref.version)
         head = f"{view.path} etag {view.etag}" + (f" [{view.read_only}]" if view.read_only else "")
     sub = view.submission
+    wanted = None if edit else optional_text(args, "profile")
+    if wanted is not None:
+        sub = _only_profile(sub, wanted)
     lines = [head, f"Документы: {', '.join(sub.documents)}", f"Слоты: {', '.join(s.id for s in sub.slots)}"]
     lines += submission_lines(sub, current_interface_language().value)
     data: dict[str, Any] = {
@@ -698,6 +723,8 @@ async def _submission_reply(tool: PackTool, actor: Actor, args: dict[str, object
             optional_text(args, "example"),
             {str(k): str(v) for k, v in combo.items()} if isinstance(combo, Mapping) else None,
         )
+        if wanted is not None:
+            routes = replace(routes, profiles=tuple(r for r in routes.profiles if r.id == wanted))
         data["routes"] = jsonable(routes)
         lines += routes_lines(routes)
     text, cut = clip_text("\n".join(lines), _SUBMISSION_CHARS)
@@ -714,7 +741,8 @@ class PackSubmissionTool(PackTool):
             "версии или встроенный), подписи пунктов, слоты сверх точки с условием when и отметкой "
             "«необязательна». routes: true (с example и combination) добавляет маршрут каждого профиля в "
             "комбинации: шаги людьми, кто какую подпись ставит, что условие не пропустило. Итог для вводных "
-            "смотрите pack_outcome. Только чтение."
+            "смотрите pack_outcome. profile (id точки) оставляет в тексте и json только эту точку сдачи, и записанную, "
+            "и посчитанную: весь ответ с routes большой. Только чтение."
         ),
         parameters=_schema(
             {
@@ -722,6 +750,7 @@ class PackSubmissionTool(PackTool):
                 "routes": {"type": "boolean", "default": False},
                 "example": {"type": "string"},
                 "combination": {"type": "object"},
+                "profile": {"type": "string", "description": "Id профиля сдачи: только эта точка; без него все"},
             },
             ("workspace_id", "version"),
         ),

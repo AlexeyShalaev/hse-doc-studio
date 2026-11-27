@@ -269,12 +269,46 @@ describe("подписи утверждений", () => {
         present: false,
       },
       { kind: "route_steps", point: "p", steps: [] },
+      {
+        kind: "route_pair",
+        point: "p",
+        doc: "d",
+        slot: "s",
+        persona: "supervisor",
+        present: true,
+        optional: true,
+      },
     ];
     for (const assertion of all) {
       const text = describeAssertion(assertion, names, t);
       expect(text, assertion.kind).not.toMatch(/scenarios\.|\{\{/);
       expect(text.length).toBeGreaterThan(5);
     }
+  });
+
+  it("необязательность подписи читается из файла, называется и различает утверждения", () => {
+    const pair = {
+      kind: "route_pair",
+      point: "p",
+      doc: "d",
+      slot: "s",
+      persona: "supervisor",
+      present: true,
+    } as const;
+    const optional = ScenarioAssertionSchema.parse({ ...pair, optional: true });
+    const unset = ScenarioAssertionSchema.parse({ ...pair, optional: null });
+    const t = i18n.getFixedT("ru", "packOutcome");
+    const names = namesOf(COURSEWORK_OUTCOME, "ru", t);
+
+    expect(describeAssertion(optional, names, t)).toContain(
+      "подпись необязательна",
+    );
+    expect(describeAssertion({ ...pair, optional: false }, names, t)).toContain(
+      "подпись обязательна",
+    );
+    expect(describeAssertion(unset, names, t)).not.toContain("обязательна");
+    expect(assertionKey(unset)).toBe(assertionKey(pair));
+    expect(assertionKey(optional)).not.toBe(assertionKey(pair));
   });
 });
 

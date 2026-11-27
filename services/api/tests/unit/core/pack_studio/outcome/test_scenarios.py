@@ -302,3 +302,42 @@ def test__id_of__file_name() -> None:
 )
 def test__version_matches(patterns: tuple[str, ...], version: str, expected: bool) -> None:
     assert version_matches(patterns, version) is expected
+
+
+# ── необязательность подписи в route_pair ────────────────────────────────────
+
+
+def _pair_body(**extra: object) -> dict[str, object]:
+    pair = {"kind": "route_pair", "point": "final", "doc": "report", "slot": "author", "persona": "author"}
+    return {"format": 1, "name": {"ru": "A"}, "assertions": [{**pair, "present": True, **extra}]}
+
+
+@pytest.mark.parametrize("optional", [True, False])
+def test__route_pair__optional__parsed_written_and_read_back(optional: bool) -> None:
+    scenario = scenario_from_data(_pair_body(optional=optional))
+    text = scenario_text(scenario)
+
+    assert scenario.assertions[0].optional is optional  # type: ignore[union-attr]
+    assert f"present: true, optional: {str(optional).lower()}" in text
+    assert parse_scenario(text) == scenario
+    assert PackScenario.model_validate(to_json(scenario)).assertions[0].optional is optional  # type: ignore[union-attr]
+
+
+@pytest.mark.parametrize("body", [_pair_body(), _pair_body(optional=None)], ids=["missing", "null"])
+def test__route_pair__optional_not_given__is_not_checked_and_not_written(body: dict[str, object]) -> None:
+    scenario = scenario_from_data(body)
+
+    assert scenario.assertions[0].optional is None  # type: ignore[union-attr]
+    assert "optional" not in scenario_text(scenario)
+
+
+@pytest.mark.parametrize(
+    ("body", "reason"),
+    [
+        (_pair_body(optional="yes"), r"assertions\[0\].optional: true or false"),
+        (_pair_body(present=False, optional=True), r"assertions\[0\].optional: only with present: true"),
+    ],
+)
+def test__route_pair__optional_wrong__scenario_error(body: dict[str, object], reason: str) -> None:
+    with pytest.raises(ScenarioError, match=reason):
+        scenario_from_data(body)

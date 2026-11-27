@@ -214,7 +214,7 @@ export const assertionKey = (a: ScenarioAssertion): string => {
     case "route_steps":
       return `${a.kind}|${a.point}|${JSON.stringify(a.steps.map((step) => [...step].sort()))}`;
     case "route_pair":
-      return `${a.kind}|${a.point}|${a.doc}|${a.slot}|${a.persona}|${String(a.present)}`;
+      return `${a.kind}|${a.point}|${a.doc}|${a.slot}|${a.persona}|${String(a.present)}|${String(a.optional ?? "")}`;
   }
 };
 
@@ -368,8 +368,8 @@ export const describeAssertion = (
                 )
                 .join("; "),
       });
-    case "route_pair":
-      return t(
+    case "route_pair": {
+      const said = t(
         a.present
           ? "scenarios.assertion.route_pair.yes"
           : "scenarios.assertion.route_pair.no",
@@ -380,6 +380,13 @@ export const describeAssertion = (
           point: names.point(a.point),
         },
       );
+      if (a.optional == null) return said;
+      return `${said}, ${t(
+        a.optional
+          ? "scenarios.assertion.route_pair.optional"
+          : "scenarios.assertion.route_pair.required",
+      )}`;
+    }
   }
 };
 

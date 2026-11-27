@@ -364,3 +364,76 @@ def test__lint__date_anchor_on_every_author_covers_the_date_entry(tmp_path: Path
 
     assert report.errors == []
     assert [w for w in report.warnings if "якор" in w or "per_author" in w] == []
+
+
+# Строка автора через макрос из общего файла (как `\hseForEachAuthor` в паке): имя якоря в одном файле, вызов
+# `\hseSignAnchor` в другом, а цикл по авторам в третьем.
+_LOOP = r"""\newcommand{\forEachAuthor}[1]{%
+((* for a in project.authors *))#1{%
+{{ a.group | default('') | texesc }}}{author__{{ a.slug }}}{%
+{{ a.name | texesc }}}%
+((* endfor *))}
+\newcommand{\signLine}[1]{\ifdefined\hseSignAnchor\hseSignAnchor[30mm]{#1}\fi\rule{30mm}{0.4pt}}
+"""
+_TITLE = r"""\newcommand{\authorRow}[3]{#3 (#1) \signLine{#2}\hseDateAnchor[8mm]{#2}{day}\par}
+\ifshared
+\forEachAuthor{\authorRow}
+\else
+\hseSignAnchor[30mm]{author}\rule{30mm}{0.4pt}
+\fi
+"""
+
+
+def _macro_sources(application: str, **more: str) -> dict[str, str]:
+    return {
+        "common/loop.tex": _LOOP,
+        "common/title.ru.tex": _TITLE,
+        "common/title.en.tex": _TITLE,
+        "topic_application/main.tex": application,
+        **more,
+    }
+
+
+_VIA_TITLE = _APPLICATION.replace("\\hseSignAnchor[30mm]{author}\\rule{30mm}{0.4pt}", "\\input{../common/title}")
+
+
+def test__lint__anchor_on_every_author_through_a_common_macro__no_warning(tmp_path: Path) -> None:
+    manifest = _team_manifest()
+    manifest["signatures"]["slots"][0]["default_dates"] = {"topic_application": [{"anchor": "author.day"}]}
+
+    report = lint_version_dir(_write(tmp_path, manifest, sources=_macro_sources(_VIA_TITLE)))
+
+    assert report.errors == []
+    assert [w for w in report.warnings if "per_author" in w or "якор" in w] == []
+
+
+@pytest.mark.parametrize(
+    "application",
+    [
+        # Файл с вызовом цикла документ не подключает.
+        _APPLICATION,
+        # Макросы объявлены, но цикл по авторам не вызван.
+        _APPLICATION.replace("\\input{../common/meta}", "\\input{../common/meta}\\input{../common/loop}"),
+        # Цикл вызван с макросом строки, который якоря не ставит.
+        _APPLICATION.replace(
+            "\\begin{document}", "\\newcommand{\\plainRow}[3]{#3}\\begin{document}\\forEachAuthor{\\plainRow}"
+        ),
+    ],
+    ids=["not_included", "never_called", "row_without_anchor"],
+)
+def test__lint__common_macro_that_does_not_reach_the_document__still_warns(tmp_path: Path, application: str) -> None:
+    warnings = _per_author_warnings(_write(tmp_path, _team_manifest(), sources=_macro_sources(application)))
+
+    assert len(warnings) == 1
+    assert "placements.topic_application" in warnings[0]
+
+
+def test__lint__recursive_macros__lint_still_finishes(tmp_path: Path) -> None:
+    application = _VIA_TITLE.replace(
+        "\\begin{document}",
+        "\\newcommand{\\again}[1]{\\again{#1}\\again{#1x}}\\begin{document}\\again{author__{{ a.slug }}}",
+    )
+
+    report = lint_version_dir(_write(tmp_path, _team_manifest(), sources=_macro_sources(application)))
+
+    assert report.errors == []

@@ -98,8 +98,8 @@ export const describeExpect = (
                 )
                 .join("; "),
       });
-    case "route_pair":
-      return t(
+    case "route_pair": {
+      const said = t(
         item.present
           ? "check.expect.say.route_pair.yes"
           : "check.expect.say.route_pair.no",
@@ -110,6 +110,13 @@ export const describeExpect = (
           point: names.point(item.point),
         },
       );
+      if (item.optional == null) return said;
+      return `${said}, ${t(
+        item.optional
+          ? "check.expect.say.route_pair.optional"
+          : "check.expect.say.route_pair.required",
+      )}`;
+    }
   }
 };
 

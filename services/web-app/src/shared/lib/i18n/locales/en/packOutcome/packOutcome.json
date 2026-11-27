@@ -466,7 +466,9 @@
       "noSteps": "no steps",
       "route_pair": {
         "yes": "Signer \"{{persona}}\" is in the route: document \"{{doc}}\", slot {{slot}}, point \"{{point}}\"",
-        "no": "Signer \"{{persona}}\" is not in the route: document \"{{doc}}\", slot {{slot}}, point \"{{point}}\""
+        "no": "Signer \"{{persona}}\" is not in the route: document \"{{doc}}\", slot {{slot}}, point \"{{point}}\"",
+        "optional": "the signature is optional",
+        "required": "the signature is required"
       }
     },
     "diff": {

@@ -27,7 +27,7 @@ from hse_doc_studio.core.pack_studio.checks_form import (
     ChecksOpKind,
     RuleEntry,
 )
-from hse_doc_studio.use_cases.mcp.tools._base import ArgumentError, optional_text, text_arg, uuid_arg
+from hse_doc_studio.use_cases.mcp.tools._base import ArgumentError, etag_arg, optional_text, text_arg, uuid_arg
 from hse_doc_studio.use_cases.mcp.tools.pack_view import FORMAT_PROP, layout_arg, layout_result
 from hse_doc_studio.use_cases.mcp.tools.packs import (
     _VERSION,
@@ -283,7 +283,7 @@ class PackChecksTool(PackTool):
         ref = version_arg(args)
         workspace_id = uuid_arg(args, "workspace_id")
         service = await self._deps.get(PackChecksFormService)
-        if_match = optional_text(args, "if_match")
+        if_match = etag_arg(args)
         file = optional_text(args, "file")
         if file is not None and args.get("config") is not None:
             raise ArgumentError(localized_error("file и config по отдельности", "file and config one at a time"))

@@ -518,3 +518,46 @@ def test__broken_manifest__raises_value_error(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="не читается"):
         classify_change(base, new)
+
+
+# ── языковые редакции файла: путь в проекте тот же ───────────────────────────
+
+
+@pytest.mark.parametrize(
+    ("before", "after"),
+    [
+        (("annotation_title.tex",), ("annotation_title.ru.tex", "annotation_title.en.tex")),
+        (("annotation_title.ru.tex", "annotation_title.en.tex"), ("annotation_title.tex",)),
+        (("annotation_title.ru.tex", "annotation_title.en.tex"), ("annotation_title.ru.tex",)),
+    ],
+    ids=["split_into_editions", "merged_into_one", "one_edition_removed"],
+)
+def test__file_replaced_by_language_editions__is_a_change_not_a_removal(
+    tmp_path: Path, before: tuple[str, ...], after: tuple[str, ...]
+) -> None:
+    def version(names: tuple[str, ...]) -> _Version:
+        built = _Version()
+        built.files.update({f"files/common/{name}": f"% {name}\n" for name in names})
+        return built
+
+    base = version(before).write(tmp_path / "versions" / "2026.1.0")
+    new = version(after)
+    new.manifest["id"] = "2026.1.1"
+    report = classify_change(base, new.write(tmp_path / "versions" / "2026.1.1"))
+
+    assert "file_removed" not in {reason.code for reason in report.reasons}
+    assert report.minimum is PATCH
+    assert "перестанут собираться" not in report.render()
+
+
+def test__file_removed_with_all_its_editions__is_still_a_removal(tmp_path: Path) -> None:
+    def drop(version: _Version) -> None:
+        del version.files["files/report/report.ru.tex"]
+        del version.files["files/report/report.en.tex"]
+
+    report = _classify(tmp_path, drop)
+
+    assert [r.path for r in report.reasons if r.code == "file_removed"] == [
+        "files/report/report.en.tex",
+        "files/report/report.ru.tex",
+    ]

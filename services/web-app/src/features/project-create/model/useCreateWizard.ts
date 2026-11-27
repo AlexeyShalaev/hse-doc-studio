@@ -64,11 +64,24 @@ const SLUG_RE = /^[a-z][a-z0-9_]*$/;
 
 export const isValidSlug = (slug: string): boolean => SLUG_RE.test(slug);
 
-// Suggest a folder slug from the author's full name: take the surname (the
-// first word of the ФИО), transliterate it and squeeze the result into the
-// ^[a-z][a-z0-9_]*$ shape (leading non-letters and stray symbols dropped).
-export const translitSlug = (fullName: string): string => {
-  const surname = fullName.trim().split(/\s+/)[0] ?? "";
+// The surname in a full name, by the same rule as the backend
+// (owner_short_name): a Russian project writes the surname first; an English
+// one writes it last (initials don't count, "Surname, Given" is read by the
+// comma), while a Cyrillic name keeps the Russian order.
+const surnameOf = (fullName: string, lang: "ru" | "en"): string => {
+  const words = fullName.trim().split(/\s+/);
+  const first = words[0] ?? "";
+  if (lang !== "en" || /[а-яё]/i.test(fullName)) return first;
+  if (first.length > 1 && first.endsWith(",")) return first.replace(/,+$/, "");
+  const full = words.filter((word) => !word.includes(".") && word.length !== 1);
+  return full.at(-1) ?? first;
+};
+
+// Suggest a folder slug from the author's full name: take the surname,
+// transliterate it and squeeze the result into the ^[a-z][a-z0-9_]*$ shape
+// (leading non-letters and stray symbols dropped).
+export const translitSlug = (fullName: string, lang: "ru" | "en"): string => {
+  const surname = surnameOf(fullName, lang);
   let out = "";
   for (const ch of surname.toLowerCase()) {
     out += TRANSLIT[ch] ?? ch;
@@ -188,7 +201,19 @@ export const useCreateWizard = create<CreateWizardState>((set) => ({
   },
 
   setField: (key, value) => {
-    set({ [key]: value } as Partial<CreateWizardState>);
+    set((state) => {
+      const patch = { [key]: value } as Partial<CreateWizardState>;
+      if (key !== "lang") return patch;
+      // The surname depends on the project language: slugs that still follow
+      // the suggestion are re-derived, hand-edited ones are left alone.
+      const lang = value as CreateWizardState["lang"];
+      const authors = state.authors.map((author) =>
+        author.slug === translitSlug(author.name, state.lang)
+          ? { ...author, slug: translitSlug(author.name, lang) }
+          : author,
+      );
+      return { ...patch, authors };
+    });
   },
 
   reset: () => {

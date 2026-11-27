@@ -180,6 +180,72 @@ FLOW_EN: Final = (
         "pack_git_start_over (the tree on the base with no branch)."
     ),
 )
+TEAM_TITLE_RU: Final = "Командный проект: строка каждого автора"
+TEAM_TITLE_EN: Final = "Team project: a line for every author"
+_TEAM_EXAMPLE: Final = (
+    "((* for a in project.authors *))",
+    r"\hseSignAnchor[7cm]{author__{{ a.slug }}}\rule{7cm}{0.4pt} {{ a.name | texesc }}",
+    r"\hseDateAnchor[8mm]{author__{{ a.slug }}}{day}\rule{8mm}{0.4pt}",
+    "((* endfor *))",
+)
+TEAM_RU: Final = (
+    TEAM_TITLE_RU,
+    (
+        "В команде слот per_author размножается по авторам (author--<слаг>), а общий документ (scope: shared) "
+        "подписывают все авторы. Если шаблон ставит на строке каждого автора один и тот же якорь author, Студия видит "
+        "один якорь и место из пака на общем документе не ставит: все авторы встали бы в одну рамку."
+    ),
+    (
+        "Поставьте на строке автора якорь с его слагом: имя слота, два подчёркивания и {{ a.slug }} в цикле по "
+        "авторам. Документ подключает common/anchors (\\input{../common/anchors})."
+    ),
+    *(f"    {line}" for line in _TEAM_EXAMPLE),
+    (
+        "- version.yaml не меняется: запись остаётся anchor: author (метка даты anchor: author.day), строку каждого "
+        "автора Студия берёт сама."
+    ),
+    (
+        "- Годится обёртка из signatures.anchor_macros (\\authorsignatureline[author__{{ a.slug }}]{7cm}) и свои "
+        "макросы: цикл по авторам в common/ передаёт author__{{ a.slug }} аргументом, а \\hseSignAnchor{#2} стоит в "
+        "макросе строки."
+    ),
+    "- Личные документы и solo: якорь остаётся author.",
+    "- Двойное подчёркивание занято под этот разделитель; имя якоря целиком не длиннее 40 знаков.",
+    (
+        "Проверка: pack_lint (предупреждение про слот per_author на общем документе пропадает), pack_preview_build "
+        "с combination {staffing: team2 или team3}, затем pack_signature_render и pack_signature_check: рамка на "
+        "каждого автора (author--<слаг>). Запись в паке одна на всех: двигайте слот author, сдвинутся все."
+    ),
+)
+TEAM_EN: Final = (
+    TEAM_TITLE_EN,
+    (
+        "In a team the per_author slot is copied per author (author--<slug>), and a shared document (scope: shared) "
+        "is signed by every author. If the template puts the same author anchor on each author's line, the Studio "
+        "sees one anchor and does not set the pack place on the shared document: every author would land in one box."
+    ),
+    (
+        "Put an anchor with the author's slug on his line: the slot name, two underscores and {{ a.slug }} in the loop "
+        "over authors. The document includes common/anchors (\\input{../common/anchors})."
+    ),
+    *(f"    {line}" for line in _TEAM_EXAMPLE),
+    (
+        "- version.yaml stays as is: the entry keeps anchor: author (a date mark anchor: author.day), the Studio takes "
+        "each author's line itself."
+    ),
+    (
+        "- A wrapper from signatures.anchor_macros works (\\authorsignatureline[author__{{ a.slug }}]{7cm}), and so do "
+        "your own macros: a loop over authors in common/ passes author__{{ a.slug }} as an argument and "
+        "\\hseSignAnchor{#2} sits in the row macro."
+    ),
+    "- Personal documents and solo projects keep the author anchor.",
+    "- The double underscore is reserved for this separator; the whole anchor name is at most 40 characters.",
+    (
+        "Check: pack_lint (the warning about a per_author slot on a shared document goes away), pack_preview_build "
+        "with combination {staffing: team2 or team3}, then pack_signature_render and pack_signature_check: a box for "
+        "every author (author--<slug>). The pack has one entry for all: move the author slot and every box moves."
+    ),
+)
 _SENTENCE = re.compile(r"^(?:Студия шаблонов:\s*)?(.+?[.:;])(?:\s|$)", re.S)
 
 
@@ -195,7 +261,8 @@ class PackHelpTool(PackTool):
             "Студия шаблонов: каталог возможностей для агента: все инструменты pack_* по задачам (пространства, "
             "чтение, правка, проверка, результат и сценарии, версии, git и предложение) и порядок типового "
             "сценария «создать шаблон и ветку, исправить, проверить, предложить». topic: all (по умолчанию), "
-            "flow (только порядок) или группа workspaces, read, edit, check, outcome, version, git. Начните с "
+            "flow (только порядок), группа workspaces, read, edit, check, outcome, version, git или раздел формата "
+            "team (командный проект: строка и место подписи каждого автора, якорь author__<слаг>). Начните с "
             "него, если не знаете, каким тулом сделать действие. Только чтение."
         ),
         parameters=_schema({"topic": {"type": "string", "default": "all"}, "format": FORMAT_PROP}),
@@ -206,10 +273,13 @@ class PackHelpTool(PackTool):
         from hse_doc_studio.use_cases.mcp.catalog import MCP_TOOL_CLASSES, RULES_BY_NAME  # noqa: PLC0415 — цикл импорта
 
         topic = optional_text(args, "topic") or "all"
-        if topic not in {"all", "flow", *GROUPS}:
-            raise ArgumentError(f"topic: all, flow, {', '.join(GROUPS)}")
+        if topic not in {"all", "flow", "team", *GROUPS}:
+            raise ArgumentError(f"topic: all, flow, team, {', '.join(GROUPS)}")
         specs = {cls.spec.name: cls for cls in MCP_TOOL_CLASSES if cls.spec.name.startswith("pack_")}
         ru = current_interface_language().value == "ru"
+        team = TEAM_RU if ru else TEAM_EN
+        if topic == "team":
+            return layout_result(layout_arg(args), "\n".join(team), {"team": list(team)})
         flow = FLOW_RU if ru else FLOW_EN
         data: dict[str, Any] = {"flow": list(flow), "groups": {}}
         lines: list[str] = []
@@ -240,6 +310,10 @@ class PackHelpTool(PackTool):
             lines.append("")
             lines.append("Типовой сценарий:" if ru else "Typical flow:")
             lines += [f"  {step}" for step in flow]
+        if topic == "all":
+            data["topics"] = {"team": team[0]}
+            lines.append("")
+            lines.append(f"{'Формат пака' if ru else 'Pack format'}: topic: team ({team[0]})")
         if topic == "flow":
             data.pop("groups")
         return layout_result(layout_arg(args), "\n".join(lines).strip(), data)

@@ -192,7 +192,13 @@ def _check_pair(outcome: Outcome, index: int, assertion: RoutePairAssertion) -> 
         if (pair.doc_id, pair.slot_id, pair.persona) == (assertion.doc, assertion.slot, assertion.persona)
     ]
     why = pairs[0].why if pairs else _skipped_why(point, assertion) or point.route.why
-    return _verdict(index, assertion, _flag(assertion.present), _flag(bool(pairs)), why)
+    if not pairs or assertion.optional is None or not assertion.present:
+        return _verdict(index, assertion, _flag(assertion.present), _flag(bool(pairs)), why)
+    return _verdict(index, assertion, _optionality(assertion.optional), _optionality(pairs[0].optional), why)
+
+
+def _optionality(optional: bool) -> str:
+    return "optional" if optional else "required"
 
 
 def _skipped_why(point: PointOutcome, assertion: RoutePairAssertion) -> tuple[str, ...]:

@@ -1151,8 +1151,15 @@ const StepPresentation = () => {
 
 const StepAuthors = () => {
   const { t } = useTranslation("projectCreate");
-  const { packId, templateId, version, authors, sharedEnabled, setField } =
-    useCreateWizard();
+  const {
+    packId,
+    templateId,
+    version,
+    lang,
+    authors,
+    sharedEnabled,
+    setField,
+  } = useCreateWizard();
   const { data: versionDetail } = useVersionDetail(
     packId ?? "",
     templateId ?? "",
@@ -1181,10 +1188,10 @@ const StepAuthors = () => {
     const current = authors[idx];
     if (!current) return;
     const followsAuto =
-      current.slug === "" || current.slug === translitSlug(current.name);
+      current.slug === "" || current.slug === translitSlug(current.name, lang);
     handlePatchAuthor(idx, {
       name,
-      ...(followsAuto ? { slug: translitSlug(name) } : {}),
+      ...(followsAuto ? { slug: translitSlug(name, lang) } : {}),
     });
   };
 
@@ -1209,10 +1216,10 @@ const StepAuthors = () => {
     const followsAuto =
       !current ||
       current.slug === "" ||
-      current.slug === translitSlug(current.name);
+      current.slug === translitSlug(current.name, lang);
     handlePatchAuthor(idx, {
       name: picked.name,
-      ...(followsAuto ? { slug: translitSlug(picked.name) } : {}),
+      ...(followsAuto ? { slug: translitSlug(picked.name, lang) } : {}),
       ...(picked.group && (current?.group ?? "").trim() === ""
         ? { group: picked.group }
         : {}),

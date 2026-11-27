@@ -6,12 +6,19 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+from types import SimpleNamespace
+from uuid import uuid4
+
 import pytest
+from hse_doc_studio.core.access.entities import Actor, ActorSource
 from hse_doc_studio.core.catalog import AnchorDate, AnchorPlace, SignatureDefaultPlacement
 from hse_doc_studio.core.enums import AnchorState, DateMarkAlign, DateMarkFormat
 from hse_doc_studio.core.pack_studio.places import AnchorRef, DocDate, DocFrame, FrameKind, SlotPlaces
+from hse_doc_studio.core.pack_studio.preview import PreviewAuthor
+from hse_doc_studio.core.pack_studio.sign_check import PlaceKind
 from hse_doc_studio.core.signatures.anchors import AnchorKind, BuildAnchor, BuildAnchors
-from hse_doc_studio.use_cases.pack_studio.place_check import _authors, _of_anchor, _of_slot
+from hse_doc_studio.use_cases.pack_studio.place_check import PackPlaceCheckService, _authors, _of_anchor, _of_slot
 
 pytestmark = pytest.mark.unit
 
@@ -84,3 +91,57 @@ def test__slot_filter__covers_the_authors_of_the_slot() -> None:
     assert not _of_slot("supervisor", "author")
     assert _of_anchor("author__ivanov", "author")
     assert not _of_anchor("co_author", "author")
+
+
+def test__authors__label_carries_the_name_the_build_knows() -> None:
+    slot, frame = _slot()
+
+    first, second = _authors(slot, frame, _anchors(IVANOV, PETROV), {"ivanov": "Иванов Иван Иванович"})
+
+    assert (first.slot, first.label) == ("author--ivanov", "Автор работы — Иванов Иван Иванович")
+    # Имени автора сборка не знает: остаётся слаг.
+    assert (second.slot, second.label) == ("author--petrov", "Автор работы — petrov")
+
+
+@pytest.mark.parametrize(
+    ("authors", "labels"),
+    [
+        (
+            (PreviewAuthor("ivanov", "Иванов Иван"), PreviewAuthor("petrov", "Петров Пётр")),
+            ["Автор работы — Иванов Иван", "Автор работы — Петров Пётр"],
+        ),
+        # Старая сборка авторов не помнит.
+        ((), ["Автор работы — ivanov", "Автор работы — petrov"]),
+    ],
+    ids=["build_knows", "old_build"],
+)
+async def test__inspect__author_frames_are_named_after_the_build_authors(
+    tmp_path: Path, authors: tuple[PreviewAuthor, ...], labels: list[str]
+) -> None:
+    slot, _ = _slot()
+    anchors = _anchors(IVANOV, PETROV)
+    build = SimpleNamespace(document="shared_technical_specification", authors=authors)
+    pdf = tmp_path / "document.pdf"
+    pdf.write_bytes(b"%PDF-1.5")
+    view = SimpleNamespace(build=build, places=SimpleNamespace(slots=(slot,)))
+
+    async def get(*_: object) -> object:
+        return view
+
+    async def places_source(*_: object) -> object:
+        return build, anchors
+
+    async def built_pdf(*_: object) -> Path:
+        return pdf
+
+    pages = SimpleNamespace(page_count=lambda _: 1, layouts=lambda *_: {}, ink=lambda *_: [])
+    service = PackPlaceCheckService(
+        SimpleNamespace(get=get),  # type: ignore[arg-type]
+        SimpleNamespace(places_source=places_source, pdf=built_pdf),  # type: ignore[arg-type]
+        pages,  # type: ignore[arg-type]
+    )
+    actor = Actor.user("u1", source=ActorSource.pat, scopes=frozenset({"mcp", "packs"}))
+
+    inspection, _ = await service.inspect(actor, uuid4(), "demo", "report", "2026.1.1", uuid4())
+
+    assert [place.label for place in inspection.places if place.kind is PlaceKind.sign] == labels

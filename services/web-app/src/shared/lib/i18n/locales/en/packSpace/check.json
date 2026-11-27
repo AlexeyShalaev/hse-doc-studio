@@ -380,7 +380,9 @@
       "noSteps": "no signatures",
       "route_pair": {
         "yes": "In “{{point}}” document “{{doc}}” is signed by: {{role}} (signature “{{signature}}”)",
-        "no": "In “{{point}}” document “{{doc}}” is not signed by: {{role}} (signature “{{signature}}”)"
+        "no": "In “{{point}}” document “{{doc}}” is not signed by: {{role}} (signature “{{signature}}”)",
+        "optional": "the signature is optional",
+        "required": "the signature is required"
       }
     }
   },

@@ -344,7 +344,7 @@ def _validate_team_authors(inp: CreateProjectInput, template_version: TemplateVe
                 "A team project requires at least two authors",
             )
         )
-    normalized = normalize_team_authors(inp.authors)
+    normalized = normalize_team_authors(inp.authors, inp.lang.value)
     for original, author in zip(inp.authors, normalized, strict=True):
         if original.managed and not author.slug:
             raise ValueError(

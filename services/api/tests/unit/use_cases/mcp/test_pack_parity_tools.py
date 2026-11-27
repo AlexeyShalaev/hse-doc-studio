@@ -22,6 +22,7 @@ from hse_doc_studio.core.i18n import set_interface_language
 from hse_doc_studio.core.mcp.entities import MCP_PACKS_SCOPE
 from hse_doc_studio.core.pack_studio.entities import WorkspaceKind
 from hse_doc_studio.core.pack_studio.errors import PackStudioError, PackStudioErrorCode
+from hse_doc_studio.core.pack_studio.git_flow import ChangeStatus, FileChange
 from hse_doc_studio.use_cases.mcp.catalog import MCP_TOOL_CLASSES, RULES_BY_NAME
 from hse_doc_studio.use_cases.mcp.tools import (
     pack_changes,
@@ -33,6 +34,7 @@ from hse_doc_studio.use_cases.mcp.tools import (
     pack_signatures,
     pack_workspaces,
 )
+from hse_doc_studio.use_cases.mcp.tools import packs as packs_tools
 from hse_doc_studio.use_cases.mcp.tools._base import ArgumentError
 from hse_doc_studio.use_cases.mcp.tools.packs import default_hint
 from hse_doc_studio.use_cases.pack_studio.access import PackStudioAccess
@@ -370,3 +372,72 @@ def test__default_hint__english_interface() -> None:
 
     assert hint is not None
     assert "immutable" in hint
+
+
+# ── длинные списки файлов: обрезка названа ───────────────────────────────────
+
+
+def _git_view(count: int) -> Any:
+    changed = [FileChange(f"demo/files/f{i:03}.tex", ChangeStatus.added) for i in range(count)]
+    status = SimpleNamespace(
+        branch="feature/x", head_sha="a" * 40, ahead=1, behind=0, uncommitted=tuple(changed), changed=tuple(changed)
+    )
+    workspace = SimpleNamespace(
+        base_branch="main",
+        work_branch="feature/x",
+        pr_url=None,
+        ci_status=None,
+        fork_url=None,
+        license_accepted_at=None,
+        remote_url="file:///repo.git",
+    )
+    return SimpleNamespace(status=status, workspace=workspace, compare_url=None)
+
+
+class _GitViews:
+    def __init__(self, count: int) -> None:
+        self._view = _git_view(count)
+
+    async def view(self, *_: Any) -> Any:
+        return self._view
+
+    async def diff(self, *_: Any) -> tuple[str, bool]:
+        return "+x\n" * 2000, False
+
+
+async def _call(cls: Any, services: dict[object, object], args: dict[str, Any]) -> Any:
+    return await cls(_Deps(_Access(), services)).handle(_ctx(), {"workspace_id": WS, **args})
+
+
+@pytest.mark.parametrize(("count", "cut"), [(250, True), (3, False)])
+async def test__propose_summary__says_when_the_file_list_is_cut(count: int, cut: bool) -> None:
+    official = SimpleNamespace(is_official=lambda _: False)
+    services = {PackGitService: _GitViews(count), packs_tools.OfficialPacks: official}
+
+    result = await _call(packs_tools.PackProposeTool, services, {})
+    body = json.loads(result.text)
+
+    assert (body["changed_total"], len(body["changed"])) == (count, min(count, 200))
+    assert body["files_truncated"] is cut
+    assert result.truncated is cut
+    if cut:
+        assert "Показаны первые 200 из 250" in body["files_note"]
+        assert "pack_git_diff" in body["files_note"]
+    else:
+        assert "files_note" not in body
+
+
+@pytest.mark.parametrize("files_only", [True, False])
+async def test__git_diff__says_what_is_cut(files_only: bool) -> None:
+    services = {PackGitService: _GitViews(250)}
+    args = {"files_only": files_only, "max_chars": 1000}
+
+    text = await _call(pack_git.PackGitDiffTool, services, args)
+    both = json.loads((await _call(pack_git.PackGitDiffTool, services, {**args, "format": "json"})).text)
+
+    assert "Показаны первые 100 из 250" in text.text
+    assert text.truncated is True
+    assert ("Diff обрезан" in text.text) is not files_only
+    # В JSON список полный, обрезается только текст diff.
+    assert len(both["files"]) == both["changed_total"] == 250
+    assert both["truncated"] is not files_only

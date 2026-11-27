@@ -656,7 +656,7 @@ snapshot: # снимок: ставится кнопкой «Записать с�
         # остальные разделы
 ```
 
-Виды утверждений (`kind`): `document_state` (`doc`, `state`), `document_count` (`state`, `count`), `meta_visible` (`field`, `visible`), `participant_present` (`persona`, `present`), `item_active` (`point`, `doc`, `active`), `route_steps` (`point`, `steps`, порядок внутри шага не важен), `route_pair` (`point`, `doc`, `slot`, `persona`, `present`). Набор закрытый: утверждение пишет человек (или кнопка «Утвердить как есть»), проверяет сервер, неизвестный вид это `scenario_invalid`.
+Виды утверждений (`kind`): `document_state` (`doc`, `state`), `document_count` (`state`, `count`), `meta_visible` (`field`, `visible`), `participant_present` (`persona`, `present`), `item_active` (`point`, `doc`, `active`), `route_steps` (`point`, `steps`, порядок внутри шага не важен), `route_pair` (`point`, `doc`, `slot`, `persona`, `present`; необязательный `optional` только при `present: true` проверяет необязательность подписи). Набор закрытый: утверждение пишет человек (или кнопка «Утвердить как есть»), проверяет сервер, неизвестный вид это `scenario_invalid`.
 
 Второй пример, ВКР `hse-cs-se`: «NDA и только руководство программиста» (`kind: project`, `staffing: solo`, `meta.nda: "yes"`, `meta.manuals: "Только программиста"`). Утверждения: `operator_manual` в состоянии `inactive`, `nda` активен, пункт `nda` точки `final` активен, поле `manuals` видимо. Эталон `PackScenario/vkr_nda_programmer.json`.
 

@@ -468,3 +468,24 @@ def test__coverage__contract_shape(version: TemplateVersion, examples: tuple[Pre
     }
     assert set(shape["rules"][0]) == {"rule", "kind", "seen", "possible", "scenarios", "witness"}
     assert set(shape["rules"][0]["rule"]) == {"origin", "file", "pointer", "builtin"}
+
+
+def test__assertions__route_pair_optional__compared_with_the_signature(
+    version: TemplateVersion, examples: tuple[PreviewExample, ...]
+) -> None:
+    outcome = _outcome(version, examples, COMPANY)
+    pair = {"point": "topic", "doc": "report", "slot": "co_supervisor", "persona": "co_supervisor", "present": True}
+    actual = next(
+        p.optional
+        for point in outcome.points
+        if point.id == "topic"
+        for p in point.route.pairs
+        if (p.slot_id, p.persona) == ("co_supervisor", "co_supervisor")
+    )
+
+    same = check_assertions(outcome, (RoutePairAssertion(**pair, optional=actual),))
+    (other,) = check_assertions(outcome, (RoutePairAssertion(**pair, optional=not actual),))
+
+    assert same == ()
+    words = {True: "optional", False: "required"}
+    assert (other.kind, other.expected, other.actual) == ("route_pair", words[not actual], words[actual])

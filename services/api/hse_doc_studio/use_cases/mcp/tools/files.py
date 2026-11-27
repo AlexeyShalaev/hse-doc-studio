@@ -12,6 +12,7 @@ from hse_doc_studio.use_cases.files.move_file import MoveFileInput, MoveFileUC
 from hse_doc_studio.use_cases.files.put_file import PutFileInput, PutFileUC, StaleFileError
 from hse_doc_studio.use_cases.mcp.tools._base import (
     McpTool,
+    etag_arg,
     int_arg,
     json_result,
     optional_text,
@@ -76,7 +77,7 @@ class WriteFileTool(McpTool):
                     project_id=ctx.project_id,
                     path=path,
                     content=content.encode("utf-8"),
-                    if_match=optional_text(args, "if_match"),
+                    if_match=etag_arg(args),
                 )
             )
         except InvalidFilePathError as exc:

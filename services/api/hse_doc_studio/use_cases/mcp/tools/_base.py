@@ -59,6 +59,23 @@ def optional_text(args: Mapping[str, object], key: str) -> str | None:
     return text_arg(args, key, required=False) or None
 
 
+def etag_arg(args: Mapping[str, object], key: str = "if_match") -> str | None:
+    """Etag из аргумента (`if_match`); None: не передан. Принимается и без кавычек (агенты теряют их при копировании
+    из JSON): кавычки возвращаются, а сверка с содержимым остаётся прежней, чужую правку такой etag не пропустит."""
+    raw = optional_text(args, key)
+    if raw is None:
+        return None
+    return ", ".join(_quoted_etag(tag.strip()) for tag in raw.split(","))
+
+
+def _quoted_etag(tag: str) -> str:
+    if tag == "*":
+        return tag
+    weak = "W/" if tag.startswith("W/") else ""
+    bare = tag.removeprefix("W/").strip('"')
+    return f'{weak}"{bare}"'
+
+
 def uuid_arg(args: Mapping[str, object], key: str) -> UUID:
     value = text_arg(args, key)
     try:
