@@ -5,7 +5,7 @@ name:
 description:
   ru: "Общие ТЗ и программу испытаний к защите подписывают оба автора, каждый на своей строке листа утверждения; с соруководителем лист набирается плотнее."
   en: "Both authors sign the shared SoW and test programme for the defence, each on their own line of the approval sheet; with a co-supervisor the sheet is set tighter."
-versions: ["2026.2.*"]
+versions: ["2026.3.*"]
 inputs:
   kind: project
   staffing: team2
@@ -18,6 +18,8 @@ assertions:
   - { kind: document_state, doc: shared_test_program_and_methodology, state: active }
   - { kind: route_steps, point: final, steps: [[author1, author2]] }
   - { kind: route_pair, point: final, doc: shared_technical_specification, slot: author, persona: author2, present: true }
+  - { kind: route_pair, point: final, doc: shared_technical_specification, slot: co_supervisor, persona: co_supervisor, present: false }
+  - { kind: route_pair, point: final, doc: shared_test_program_and_methodology, slot: co_supervisor, persona: co_supervisor, present: false }
 snapshot:
   documents:
     technical_specification: active
@@ -72,5 +74,5 @@ snapshot:
     - { section: forms, fingerprint: baa9eaef9a4a, count: 2 }
     - { section: participants, fingerprint: 3777e03d9ab4, count: 5 }
     - { section: points, fingerprint: 58d003d999b2, count: 14 }
-    - { section: route, fingerprint: 8bdd0870a3ad, count: 16 }
+    - { section: route, fingerprint: 359210c6a5bc, count: 16 }
     - { section: checks, fingerprint: 4f53cda18c2b, count: 0 }

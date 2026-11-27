@@ -5,7 +5,7 @@ name:
 description:
   ru: NDA сдаётся на КТ2 и в финале.
   en: The NDA is handed in at CP2 and in the final.
-versions: ["2026.1.*", "2026.2.*"]
+versions: ["2026.3.*"]
 inputs:
   staffing: team3
   meta.nda: "yes"
@@ -68,5 +68,5 @@ snapshot:
     - { section: forms, fingerprint: baa9eaef9a4a, count: 2 }
     - { section: participants, fingerprint: 69e9b6580a38, count: 5 }
     - { section: points, fingerprint: 0fd87209aa2f, count: 15 }
-    - { section: route, fingerprint: 1f25ffe522dc, count: 21 }
+    - { section: route, fingerprint: f78a9b4aa66c, count: 21 }
     - { section: checks, fingerprint: 4f53cda18c2b, count: 0 }

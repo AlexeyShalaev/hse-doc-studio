@@ -1,0 +1,76 @@
+format: 1
+name:
+  ru: Команда из двух с соруководителем (2026.2)
+  en: Team of two with a co-supervisor (2026.2)
+description:
+  ru: "Общие ТЗ и программу испытаний к защите подписывают оба автора, каждый на своей строке листа утверждения; с соруководителем лист набирается плотнее."
+  en: "Both authors sign the shared SoW and test programme for the defence, each on their own line of the approval sheet; with a co-supervisor the sheet is set tighter."
+versions: ["2026.2.*"]
+inputs:
+  kind: project
+  staffing: team2
+  co_supervisor: "yes"
+assertions:
+  - { kind: participant_present, persona: author2, present: true }
+  - { kind: participant_present, persona: author3, present: false }
+  - { kind: participant_present, persona: co_supervisor, present: true }
+  - { kind: document_state, doc: shared_technical_specification, state: active }
+  - { kind: document_state, doc: shared_test_program_and_methodology, state: active }
+  - { kind: route_steps, point: final, steps: [[author1, author2]] }
+  - { kind: route_pair, point: final, doc: shared_technical_specification, slot: author, persona: author2, present: true }
+snapshot:
+  documents:
+    technical_specification: active
+    shared_technical_specification: active
+    test_program_and_methodology: active
+    shared_test_program_and_methodology: active
+    source_listing: active
+    programmer_manual: active
+    operator_manual: active
+    project_description: active
+    interim_report: absent
+    presentation: active
+    explanatory_note: active
+    report: absent
+    nda: inactive
+  participants: [author1, author2, supervisor, co_supervisor, academic_supervisor]
+  meta_visible:
+    - year
+    - specialization
+    - manuals
+    - name_en
+    - name_short
+    - faculty
+    - city
+    - city_en
+    - program_code
+    - course
+    - academic_supervisor
+    - doc_code_base
+    - font_main
+    - font_sans
+    - font_mono
+    - nda
+    - supervisor
+    - co_supervisor
+  points:
+    - id: checkpoint-1
+      items: [technical_specification, shared_technical_specification, project_description]
+      steps: []
+      pairs: 0
+    - id: checkpoint-2
+      items: [source_listing, project_description]
+      steps: []
+      pairs: 0
+    - id: final
+      items: [technical_specification, shared_technical_specification, explanatory_note, test_program_and_methodology, shared_test_program_and_methodology, source_listing, programmer_manual, operator_manual, presentation]
+      steps: [[author1, author2]]
+      pairs: 16
+  sections:
+    - { section: documents, fingerprint: e496d646d5e8, count: 10 }
+    - { section: meta, fingerprint: d9710863ef2a, count: 18 }
+    - { section: forms, fingerprint: baa9eaef9a4a, count: 2 }
+    - { section: participants, fingerprint: 3777e03d9ab4, count: 5 }
+    - { section: points, fingerprint: 58d003d999b2, count: 14 }
+    - { section: route, fingerprint: 8bdd0870a3ad, count: 16 }
+    - { section: checks, fingerprint: 4f53cda18c2b, count: 0 }

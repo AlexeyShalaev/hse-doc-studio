@@ -1,0 +1,72 @@
+format: 1
+name:
+  ru: Один автор, руководитель из ВШЭ (2026.1 и 2026.2)
+  en: One author, university supervisor (2026.1 and 2026.2)
+description:
+  ru: "Курсовой проект одного студента: общих документов команды нет."
+  en: "A coursework project by one student: no shared team documents."
+versions: ["2026.1.*", "2026.2.*"]
+inputs:
+  staffing: solo
+  supervisor: university
+assertions:
+  - { kind: participant_present, persona: supervisor, present: true }
+  - { kind: document_state, doc: shared_technical_specification, state: absent }
+  - { kind: document_state, doc: nda, state: inactive }
+  - { kind: route_steps, point: final, steps: [[author]] }
+snapshot:
+  documents:
+    technical_specification: active
+    shared_technical_specification: absent
+    test_program_and_methodology: active
+    shared_test_program_and_methodology: absent
+    source_listing: active
+    programmer_manual: active
+    operator_manual: active
+    project_description: active
+    interim_report: absent
+    presentation: active
+    explanatory_note: active
+    report: absent
+    nda: inactive
+  participants: [author, supervisor, academic_supervisor]
+  meta_visible:
+    - year
+    - specialization
+    - manuals
+    - name_en
+    - name_short
+    - faculty
+    - city
+    - city_en
+    - program_code
+    - course
+    - academic_supervisor
+    - doc_code_base
+    - font_main
+    - font_sans
+    - font_mono
+    - nda
+    - supervisor
+    - co_supervisor
+  points:
+    - id: checkpoint-1
+      items: [technical_specification, project_description]
+      steps: []
+      pairs: 0
+    - id: checkpoint-2
+      items: [source_listing, project_description]
+      steps: []
+      pairs: 0
+    - id: final
+      items: [technical_specification, explanatory_note, test_program_and_methodology, source_listing, programmer_manual, operator_manual, presentation]
+      steps: [[author]]
+      pairs: 6
+  sections:
+    - { section: documents, fingerprint: a65ed677fc56, count: 8 }
+    - { section: meta, fingerprint: d9710863ef2a, count: 18 }
+    - { section: forms, fingerprint: baa9eaef9a4a, count: 2 }
+    - { section: participants, fingerprint: f1113ea43c16, count: 3 }
+    - { section: points, fingerprint: 2d14b9e95d2c, count: 11 }
+    - { section: route, fingerprint: ffeb4ece47a5, count: 6 }
+    - { section: checks, fingerprint: 4f53cda18c2b, count: 0 }
