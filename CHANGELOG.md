@@ -6,23 +6,11 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.45.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.44.0...v0.45.0) (2026-11-27)
+## [0.45.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.44.0...v0.45.0) - 2026-11-27
 
-
-### Features
-
-* **hse-cs-se:** курсовой 2026.3.0, место подписи соруководителя на всех листах утверждения ([1a4128c](https://github.com/AlexeyShalaev/hse-doc-studio/commit/1a4128ce7917a7cddfd7cfc0bbe285a323d51225))
-* **pack-studio:** утверждение route_pair проверяет необязательность подписи ([44a0db6](https://github.com/AlexeyShalaev/hse-doc-studio/commit/44a0db686e7f2398308faa9232995910a5be4985))
-
-
-### Bug Fixes
-
-* **mcp:** шероховатости тулов Студии паков, найденные автором пака ([a5e8995](https://github.com/AlexeyShalaev/hse-doc-studio/commit/a5e8995c05289a14b143d51d844f0e85e06b23e4))
-* **pack-classify:** разделение файла на языковые редакции это изменение, а не удаление ([0cc430b](https://github.com/AlexeyShalaev/hse-doc-studio/commit/0cc430b5ffb5c83ec6beef38780848c3573e364c))
-* **pack-lint:** якорь автора, поставленный через макросы из общих файлов, снимает предупреждение per_author ([ca89e83](https://github.com/AlexeyShalaev/hse-doc-studio/commit/ca89e83654e6b0d1c4a50ecc8924e4d2b1bf216f))
-* **pack-studio:** замечания автора паков по MCP и слаг автора из фамилии ([0e8bd78](https://github.com/AlexeyShalaev/hse-doc-studio/commit/0e8bd78c239393df8d13d8ced85ff4db5f5cf5ea))
-* **pack-studio:** рамка автора команды в проверке мест подписана именем автора ([7fadfab](https://github.com/AlexeyShalaev/hse-doc-studio/commit/7fadfabf2dbc6f5e5621356253a4606a54bcb295))
-* **projects:** слаг автора английской команды берётся из фамилии ([2e0a9ae](https://github.com/AlexeyShalaev/hse-doc-studio/commit/2e0a9ae5a7af0b67c2b4a00103529df6a79d886c))
+- Packs: in the BSc Software Engineering course project (hse-cs-se 2026.3.0) the co-supervisor's line on the approval sheets now has a signature place: personal and shared statement of work and test program, explanatory note, source listing, programmer's and operator's manuals. The signing order is unchanged: only the authors sign in the course project. This is a new version line, existing projects do not move to it by themselves.
+- English teams: an author's folder and signatures are now named after the surname (Ivan Ivanov gives ivanov, not ivan). This applies to new projects and new members; existing authors keep their folder names.
+- Pack Studio over MCP: pack_help has a section on a line for every author in a team project; the linter no longer warns about author anchors set through macros; signature boxes in the placement check carry the author's name; pack_submission can show a single submission point; a truncated file list now says so; scenarios can check that a signature is optional and accept the full version id; if_match is accepted without quotes; splitting a file into language editions no longer counts as a removal.
 
 ## [0.44.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.43.0...v0.44.0) - 2026-11-26
 
