@@ -122,9 +122,15 @@
         "doc": { "$ref": "#/$defs/ref" },
         "slot": { "$ref": "#/$defs/ref" },
         "persona": { "$ref": "#/$defs/ref" },
-        "present": { "type": "boolean" }
+        "present": { "type": "boolean" },
+        "optional": {
+          "description": "Только при present: true. true: подпись необязательна, false: обязательна; без ключа не проверяется.",
+          "type": ["boolean", "null"]
+        }
       },
       "required": ["kind", "point", "doc", "slot", "persona", "present"],
+      "if": { "properties": { "present": { "const": false } }, "required": ["present"] },
+      "then": { "properties": { "optional": { "type": "null" } } },
       "additionalProperties": false
     },
     "snapshot": {

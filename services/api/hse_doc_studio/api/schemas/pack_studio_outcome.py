@@ -566,6 +566,8 @@ class RoutePairAssertion(StrictModel):
     slot: str = Field(min_length=1, max_length=_ID)
     persona: str = Field(min_length=1, max_length=_ID)
     present: bool
+    # Только при present: true. true: подпись необязательна, false: обязательна; нет: не проверяется.
+    optional: bool | None = None
 
 
 ScenarioAssertion = Annotated[

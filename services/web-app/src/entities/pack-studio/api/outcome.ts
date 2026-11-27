@@ -484,6 +484,8 @@ export const ScenarioAssertionSchema = z.discriminatedUnion("kind", [
     slot: id128,
     persona: id128,
     present: z.boolean(),
+    // Только при present: true: подпись необязательна (true) или обязательна (false); нет: не проверяется.
+    optional: z.boolean().nullish(),
   }),
 ]);
 

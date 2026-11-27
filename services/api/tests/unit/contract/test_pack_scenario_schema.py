@@ -124,3 +124,20 @@ def test__bare_yes_in_inputs__is_accepted_as_the_parser_accepts_it() -> None:
 def test__schema_for__finds_scenario_files_and_leaves_checks_alone() -> None:
     assert pack_schemas.schema_for(Path("p/templates/t/scenarios/a.yaml")) == "scenario"
     assert pack_schemas.schema_for(Path("p/templates/t/versions/1/checks/a.yaml")) is None
+
+
+@pytest.mark.parametrize(
+    ("extra", "ok"),
+    [
+        ({"optional": True}, True),
+        ({"optional": False}, True),
+        ({"optional": "yes"}, False),
+        ({"present": False, "optional": True}, False),
+    ],
+)
+def test__route_pair_optional__schema_and_parser_agree(extra: dict[str, Any], ok: bool) -> None:
+    data = copy.deepcopy(_BASE)
+    pair = next(a for a in data["assertions"] if a["kind"] == "route_pair")
+    pair.update(extra)
+
+    assert (_schema_ok(data), _parser_ok(data)) == (ok, ok)

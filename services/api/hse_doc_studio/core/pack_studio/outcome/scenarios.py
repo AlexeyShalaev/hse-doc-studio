@@ -122,6 +122,8 @@ class RoutePairAssertion:
     slot: str = ""
     persona: str = ""
     present: bool = True
+    # Подпись маршрута необязательна (True) или обязательна (False); None: не проверяется, ключ в файле не пишется.
+    optional: bool | None = None
 
 
 type Assertion = (
@@ -134,7 +136,8 @@ type Assertion = (
     | RoutePairAssertion
 )
 
-# Ключи каждого вида утверждения по порядку записи: имя поля и способ разобрать значение.
+# Ключи каждого вида утверждения по порядку записи: имя поля и способ разобрать значение. Способ с «?» в конце это
+# необязательный ключ: без него (или с null) поле остаётся None и в файл не пишется.
 _ASSERTION_FIELDS: dict[str, tuple[type[Assertion], tuple[tuple[str, str], ...]]] = {
     "document_state": (DocumentStateAssertion, (("doc", "id"), ("state", "state"))),
     "document_count": (DocumentCountAssertion, (("state", "state"), ("count", "count"))),
@@ -144,7 +147,7 @@ _ASSERTION_FIELDS: dict[str, tuple[type[Assertion], tuple[tuple[str, str], ...]]
     "route_steps": (RouteStepsAssertion, (("point", "id"), ("steps", "steps"))),
     "route_pair": (
         RoutePairAssertion,
-        (("point", "id"), ("doc", "id"), ("slot", "id"), ("persona", "id"), ("present", "bool")),
+        (("point", "id"), ("doc", "id"), ("slot", "id"), ("persona", "id"), ("present", "bool"), ("optional", "bool?")),
     ),
 }
 ASSERTION_KINDS: tuple[str, ...] = tuple(_ASSERTION_FIELDS)
@@ -375,6 +378,7 @@ def _steps(value: Any, where: str) -> tuple[tuple[str, ...], ...]:
 _PARSERS: dict[str, Callable[[Any, str], Any]] = {
     "id": _id,
     "bool": _bool,
+    "bool?": _bool,
     "state": _state,
     "count": _count,
     "steps": _steps,
@@ -400,10 +404,15 @@ def _assertion(value: Any, where: str) -> Assertion:
     _only(value, ("kind", *(name for name, _ in spec)), where)
     args: dict[str, Any] = {}
     for name, how in spec:
+        if how.endswith("?") and value.get(name) is None:
+            continue
         if name not in value:
             raise ScenarioError(f"{where}.{name}: required for {kind}")
         args[name] = _PARSERS[how](value[name], f"{where}.{name}")
-    return cls(**args)
+    assertion = cls(**args)
+    if isinstance(assertion, RoutePairAssertion) and assertion.optional is not None and not assertion.present:
+        raise ScenarioError(f"{where}.optional: only with present: true")
+    return assertion
 
 
 def _snapshot(value: Any) -> Digest:
@@ -503,7 +512,9 @@ def _assertion_line(assertion: Assertion) -> str:
     parts = [f"kind: {assertion.kind}"]
     for name, how in spec:
         item = getattr(assertion, name)
-        if how == "bool":
+        if item is None:
+            continue
+        if how in {"bool", "bool?"}:
             rendered = "true" if item else "false"
         elif how == "count":
             rendered = str(item)
