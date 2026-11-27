@@ -16,10 +16,16 @@ r"""Проверка мест подписей и меток даты на як�
 `\hseSignAnchor[7cm]{author__{{ a.slug }}}`, `\hseDateAnchor{author__{{ a.slug }}}{day}`. Такой вызов закрывает
 запись пака на якоре `author` (`author.day`), а `author_anchor_names` говорит линтеру пака, что место `per_author`
 слота на общем документе встанет на строку каждого автора.
+
+Имя такого якоря может приходить через макросы: цикл по авторам объявлен в одном общем файле и передаёт
+`author__{{ a.slug }}` в макрос строки, а `\hseSignAnchor{#2}` стоит в самом макросе строки. Поэтому вызовы
+документа и подключённых им (`\input`) общих файлов дополнительно раскрываются по макросам
+`\newcommand`/`\renewcommand`/`\providecommand`. Макрос, который документ не вызывает, якорей не даёт.
 """
 
 from __future__ import annotations
 
+import posixpath
 import re
 from collections import Counter
 from dataclasses import dataclass, field
@@ -54,6 +60,19 @@ _DATE_PARAM_RE = re.compile(rf"\\hseDateAnchor\s*{_OPT}\s*\{{\s*#\d\s*\}}\s*\{{\
 _ANCHORS_INPUT_RE = re.compile(r"\\input\s*\{[^}]*common/anchors(?:\.tex)?\s*\}")
 _DEFINITION_START_RE = re.compile(r"\\(?:newcommand|renewcommand|providecommand|NewDocumentCommand|def)\b")
 _COMMENT_RE = re.compile(r"(?<!\\)%.*")
+# Объявление макроса: имя, число параметров и значение необязательного первого; дальше группа с телом.
+_MACRO_RE = re.compile(
+    r"\\(?:newcommand|renewcommand|providecommand)\*?\s*(?:\{\s*\\([A-Za-z@]+)\s*\}|\\([A-Za-z@]+))"
+    r"\s*(?:\[\s*(\d)\s*\])?\s*(?:\[([^\[\]]*)\])?\s*(?=\{)"
+)
+_CALL_RE = re.compile(r"\\([A-Za-z@]+)")
+_INPUT_RE = re.compile(r"\\(?:input|include)\s*\{([^}]+)\}")
+_LANG_SUFFIX_RE = re.compile(r"\.[a-z]{2}(?:-[a-z]{2})?$")
+# Имя якоря на каждого автора в тексте вызова: без него раскрывать макросы незачем.
+_AUTHOR_MARK = f"{AUTHOR_SEPARATOR}{{{{"
+# Пределы раскрытия: глубина вложенных макросов и число разных вызовов на документ (рекурсия не зациклит).
+_MAX_DEPTH = 8
+_MAX_EXPANSIONS = 2000
 _TEX_SUFFIXES = (".tex", ".j2", ".sty", ".cls")
 ANCHORS_FILE = "common/anchors.tex"
 
@@ -135,6 +154,132 @@ def _present(anchor_id: str, found: dict[str, set[str]]) -> bool:
     return anchor_id in found or author_anchor_id(anchor_id, _ANY_AUTHOR) in found
 
 
+@dataclass(frozen=True)
+class _Macro:
+    params: int
+    default: str | None
+    body: str
+
+
+def _group(text: str, start: int, pair: str = "{}") -> tuple[str, int] | None:
+    """Содержимое группы, которая начинается в `text[start]`, и позиция за ней; None: группы там нет."""
+    opening, closing = pair[0], pair[1]
+    if start >= len(text) or text[start] != opening:
+        return None
+    depth, index = 0, start
+    while index < len(text):
+        char = text[index]
+        if char == "\\":
+            index += 2
+            continue
+        if char == opening:
+            depth += 1
+        elif char == closing:
+            depth -= 1
+            if depth == 0:
+                return text[start + 1 : index], index + 1
+        index += 1
+    return None
+
+
+def _skip_spaces(text: str, index: int) -> int:
+    while index < len(text) and text[index].isspace():
+        index += 1
+    return index
+
+
+def _split_macros(texts: dict[str, str]) -> tuple[dict[str, list[_Macro]], dict[str, str]]:
+    """Объявления макросов всех файлов и тексты без них (вызовы вне объявлений). Языковые редакции объявляют макрос
+    дважды, поэтому под именем список."""
+    macros: dict[str, list[_Macro]] = {}
+    rest: dict[str, str] = {}
+    for rel, text in texts.items():
+        kept: list[str] = []
+        position = 0
+        for head in _MACRO_RE.finditer(text):
+            body = _group(text, head.end()) if head.start() >= position else None
+            if body is None:
+                continue
+            macro = _Macro(int(head.group(3) or 0), head.group(4), body[0])
+            macros.setdefault(head.group(1) or head.group(2), []).append(macro)
+            kept.append(text[position : head.start()])
+            position = body[1]
+        kept.append(text[position:])
+        rest[rel] = " ".join(kept)
+    return macros, rest
+
+
+def _arguments(text: str, index: int, macro: _Macro) -> tuple[str, ...] | None:
+    """Аргументы вызова макроса с позиции `index`; None: вызов неполный."""
+    args: list[str] = []
+    if macro.default is not None and macro.params:
+        index = _skip_spaces(text, index)
+        optional = _group(text, index, "[]")
+        args.append(optional[0] if optional else macro.default)
+        index = optional[1] if optional else index
+    while len(args) < macro.params:
+        index = _skip_spaces(text, index)
+        group = _group(text, index)
+        if group is None:
+            token = _CALL_RE.match(text, index)
+            if token is None:
+                return None
+            group = token.group(0), token.end()
+        args.append(group[0])
+        index = group[1]
+    return tuple(args)
+
+
+def _expanded_calls(text: str, macros: dict[str, list[_Macro]], wrappers: dict[str, _Wrapper]) -> set[str]:
+    """id якорей на каждого автора, до которых доходят вызовы макросов из `text` (подстановка `#1`...`#9`)."""
+    found: set[str] = set()
+    seen: set[tuple[str, int, tuple[str, ...]]] = set()
+    queue: list[tuple[str, int]] = [(text, 0)]
+    while queue and len(seen) < _MAX_EXPANSIONS:
+        current, depth = queue.pop()
+        found.update(i for i in _calls("", current, wrappers) if i.partition(".")[0].endswith(_author_marker()))
+        if depth >= _MAX_DEPTH:
+            continue
+        for call in _CALL_RE.finditer(current):
+            name = call.group(1)
+            for number, macro in enumerate(macros.get(name, ())):
+                args = _arguments(current, call.end(), macro)
+                if args is None or (name, number, args) in seen:
+                    continue
+                seen.add((name, number, args))
+                body = macro.body
+                for position, value in enumerate(args, start=1):
+                    body = body.replace(f"#{position}", value)
+                queue.append((body, depth + 1))
+    return found
+
+
+def _author_marker() -> str:
+    return author_anchor_id("", _ANY_AUTHOR)
+
+
+def _input_key(rel: str) -> str:
+    """Путь без `.j2`, `.tex` и кода языка: так `\\input` называет любую редакцию файла."""
+    return _LANG_SUFFIX_RE.sub("", rel.removesuffix(".j2").removesuffix(".tex"))
+
+
+def _reached(top: str, own: dict[str, str], common: dict[str, str]) -> dict[str, str]:
+    """Файлы документа и общие файлы, которые они подключают (`\\input`, в том числе через другие общие)."""
+    by_key: dict[str, list[str]] = {}
+    for rel in common:
+        by_key.setdefault(_input_key(rel), []).append(rel)
+    reached = dict(own)
+    queue = list(own.values())
+    while queue:
+        for ref in _INPUT_RE.findall(queue.pop()):
+            key = _input_key(posixpath.normpath(posixpath.join(top, ref.strip())))
+            for rel in by_key.get(key, ()):
+                if rel not in reached:
+                    reached[rel] = common[rel]
+                    queue.append(common[rel])
+    return reached
+
+
 def _scan(files_dir: Path, top: str, common: dict[str, str], wrappers: dict[str, _Wrapper]) -> _Sources:
     sources = _Sources()
     own = {f.relative_to(files_dir).as_posix(): _text(f) for f in _tex_files(files_dir, top)}
@@ -142,7 +287,20 @@ def _scan(files_dir: Path, top: str, common: dict[str, str], wrappers: dict[str,
         for anchor_id in _calls(rel, text, wrappers):
             sources.add(anchor_id, rel)
     sources.includes_macros = any(_ANCHORS_INPUT_RE.search(text) for text in own.values())
+    _scan_macros(sources, top, own, common, wrappers)
     return sources
+
+
+def _scan_macros(
+    sources: _Sources, top: str, own: dict[str, str], common: dict[str, str], wrappers: dict[str, _Wrapper]
+) -> None:
+    """Якоря на каждого автора, которые документ ставит через макросы (имя и вызов якоря в разных местах)."""
+    if not any(_AUTHOR_MARK in text for text in (*own.values(), *common.values())):
+        return
+    macros, rest = _split_macros({**common, **own})
+    for rel, text in _reached(top, own, common).items():
+        for anchor_id in _expanded_calls(rest.get(rel, text), macros, wrappers):
+            sources.add(anchor_id, rel)
 
 
 @dataclass(frozen=True)

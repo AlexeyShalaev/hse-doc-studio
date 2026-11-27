@@ -234,6 +234,7 @@ To place each author on their own line, put an anchor with the author's slug on 
 ```
 
 - Nothing changes in `version.yaml`: the entry stays `anchor: author`, and the Studio takes each author's own `author__<slug>` line. A date mark on the `author.day` anchor takes `\hseDateAnchor[8mm]{author__{{ a.slug }}}{day}` the same way.
+- The anchor name may come through your own macros: a loop over authors in `common/` passes `author__{{ a.slug }}` as an argument and `\hseSignAnchor{#2}` sits in the row macro. The linter expands `\newcommand` macros starting from the document's files and the shared files it includes (`\input`).
 - A wrapper from `anchor_macros` works too: `\authorsignatureline[author__{{ a.slug }}]{7cm}`, if the wrapper takes the anchor name as its first optional argument.
 - Personal documents and solo projects keep the `author` anchor: lines per author are only needed where a page has more than one author.
 - A double underscore in an anchor name is reserved for this separator; the whole name is at most 40 characters (a slug made from a surname fits).
