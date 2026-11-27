@@ -394,6 +394,17 @@ class PackWorkspaceGit:
             behind=behind,
         )
 
+    async def changed_since(
+        self, dirs: WorkspaceDirs, target: RemoteTarget, *, sha: str, packs_path: str
+    ) -> tuple[FileChange, ...] | None:
+        # Вершину называет и хостинг: в аргументы git идёт только идентификатор коммита.
+        if not _SHA.fullmatch(sha):
+            return None
+        known = await self._run_local(dirs, ["cat-file", "-e", f"{sha}^{{commit}}"], check=False)
+        if known.returncode != 0:
+            return None
+        return tuple(await self._changed_against(dirs, target, sha, packs_path))
+
     async def local_branches(self, dirs: WorkspaceDirs) -> tuple[str, ...]:
         out = await self._local(dirs, ["for-each-ref", "--format=%(refname:short)", "refs/heads/"])
         return tuple(line for line in out.decode("utf-8", errors="replace").splitlines() if line)

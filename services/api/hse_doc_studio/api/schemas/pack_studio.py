@@ -414,6 +414,8 @@ class PackCiResponse(StrictModel):
     web_url: str | None
     # Срез T22: открыт, слит или закрыт PR (null: PR нет или хостинг не сказал).
     pr_state: PullRequestStateName | None = None
+    # Каталоги версий слитого запроса, которые пространство ещё считает черновиками (до обновления); без правок после.
+    accepted_versions: list[str] = Field(default_factory=list)
 
 
 class PackStartOverRequest(StrictModel):

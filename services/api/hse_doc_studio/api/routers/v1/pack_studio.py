@@ -624,6 +624,7 @@ async def get_checks(workspace_id: UUID, git: FromDishka[PackGitService], respon
         reason=report.reason,
         web_url=report.web_url,
         pr_state=report.pr_state.value if report.pr_state else None,
+        accepted_versions=list(report.accepted_versions),
     )
 
 

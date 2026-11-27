@@ -43,6 +43,7 @@ from hse_doc_studio.use_cases.mcp.tools._base import (
     uuid_arg,
 )
 from hse_doc_studio.use_cases.mcp.tools.pack_outcome_view import loc
+from hse_doc_studio.use_cases.mcp.tools.pack_plain import say
 from hse_doc_studio.use_cases.mcp.tools.pack_submission_view import routes_lines, submission_lines
 from hse_doc_studio.use_cases.mcp.tools.pack_view import (
     CONFIRM_PROP,
@@ -53,7 +54,16 @@ from hse_doc_studio.use_cases.mcp.tools.pack_view import (
     layout_arg,
     layout_result,
 )
-from hse_doc_studio.use_cases.mcp.tools.packs import _PATH, _VERSION, _WORKSPACE_ID, PackTool, _schema, version_arg
+from hse_doc_studio.use_cases.mcp.tools.packs import (
+    _PATH,
+    _VERSION,
+    _WORKSPACE_ID,
+    PackTool,
+    _schema,
+    has_unreleased,
+    packs_with_accepted,
+    version_arg,
+)
 from hse_doc_studio.use_cases.pack_studio.files import MAX_YAML_OPS, PackFilesService, YamlOp
 from hse_doc_studio.use_cases.pack_studio.insight import PackInsightService
 from hse_doc_studio.use_cases.pack_studio.model import _MODEL_FILE, ModelView, PackModelService
@@ -361,15 +371,22 @@ class PackMoveFileTool(PackTool):
         return layout_result(layout_arg(args), f"Перенесено: {src} -> {dst}", data)
 
 
-def _versions_text(tree: Any, limit: int) -> list[str]:
+def _flag(released: bool, accepted: bool) -> str:
+    if released:
+        return "released"
+    return say("state.accepted") if accepted else "draft"
+
+
+def _versions_text(tree: Any, limit: int, accepted: frozenset[str] = frozenset()) -> list[str]:
     lines: list[str] = []
     for pack in tree.packs:
         lines.append(f"{pack.id}")
         for template in pack.templates:
             lines.append(f"  {pack.id}/{template.id}")
-            for v in template.versions[:limit]:
-                flag = "released" if v.released else "draft"
-                lines.append(f"    {v.version} {flag}{' *' if v.modified else ''}")
+            lines.extend(
+                f"    {v.version} {_flag(v.released, v.path in accepted)}{' *' if v.modified else ''}"
+                for v in template.versions[:limit]
+            )
     return lines
 
 
@@ -378,7 +395,8 @@ class PackTreeTool(PackTool):
         name="pack_tree",
         description=(
             "Студия шаблонов: дерево файлов пространства (то, что видно в проводнике): паки, шаблоны, версии со "
-            "статусом (released, draft, * изменена) и файлы с размером и read_only (version_released, "
+            "статусом (released, draft, * изменена; «принята, обновите пространство»: запрос с версией принят, "
+            "сделайте pack_workspace_refresh) и файлы с размером и read_only (version_released, "
             "releases_read_only). prefix: показать файлы только под путём (по умолчанию дерево без файлов); "
             "max_files до 200."
         ),
@@ -400,7 +418,9 @@ class PackTreeTool(PackTool):
         prefix = (optional_text(args, "prefix") or "").strip("/")
         limit = int_arg(args, "max_files", 100, lo=1, hi=_MAX_FILES)
         shown = [f for f in tree.files if prefix and (f.path == prefix or f.path.startswith(prefix + "/"))][:limit]
-        lines = _versions_text(tree, 50)
+        workspace_id = uuid_arg(args, "workspace_id")
+        accepted = await self.accepted_dirs(actor, workspace_id) if has_unreleased(tree) else frozenset()
+        lines = _versions_text(tree, 50, accepted)
         if prefix:
             lines.append(f"Файлы под {prefix}: {len(shown)}")
             lines += [
@@ -409,7 +429,7 @@ class PackTreeTool(PackTool):
             ]
         data = {
             "base_sha": view.workspace.base_sha,
-            "packs": jsonable(tree.packs),
+            "packs": packs_with_accepted(tree.packs, accepted),
             "files": [jsonable(f) for f in shown],
             "files_total": len(tree.files),
             "truncated": tree.truncated,

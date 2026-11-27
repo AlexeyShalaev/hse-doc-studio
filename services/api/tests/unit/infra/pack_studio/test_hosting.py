@@ -332,23 +332,24 @@ async def test__ci_status__runs_api_unavailable__checks_still_reported() -> None
         ({"state": "open", "merged": False}, "open"),
     ],
 )
-async def test__pull_request_state__open_merged_closed(body: dict[str, object], expected: str) -> None:
+async def test__pull_request__open_merged_closed_with_head(body: dict[str, object], expected: str) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.url.path == "/repos/acme/packs/pulls/7"
-        return httpx.Response(200, json=body)
+        return httpx.Response(200, json={**body, "head": {"sha": "c" * 40}})
 
-    state = await _hosting(handler).pull_request_state(GH, _target(), 7)
+    pull = await _hosting(handler).pull_request(GH, _target(), 7)
 
-    assert state is not None
-    assert state.value == expected
+    assert pull is not None
+    assert pull.state.value == expected
+    assert pull.head_sha == "c" * 40
 
 
-async def test__pull_request_state__not_github_or_denied__none() -> None:
+async def test__pull_request__not_github_or_denied__none() -> None:
     def handler(_request: httpx.Request) -> httpx.Response:
         return httpx.Response(404, json={})
 
-    assert await _hosting(handler).pull_request_state(GH, _target(), 7) is None
-    assert await _hosting(handler).pull_request_state(GL, _target(), 7) is None
+    assert await _hosting(handler).pull_request(GH, _target(), 7) is None
+    assert await _hosting(handler).pull_request(GL, _target(), 7) is None
 
 
 async def test__account__classic_token__login_and_scopes_from_header() -> None:

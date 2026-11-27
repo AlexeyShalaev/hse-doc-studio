@@ -211,6 +211,13 @@ class PackWorkspaceService:
         registries = await asyncio.to_thread(self._files.registries, root)
         return Protection(released=released, registries=registries)
 
+    async def releases(self, ws: PackWorkspace) -> tuple[ReleasedVersions, ReleasedVersions]:
+        """Выпущенное по базе (как у защиты) и реестры рабочего дерева: ветка может выпустить то, чего в базе ещё
+        нет."""
+        root = self.packs_root(ws)
+        released = await asyncio.to_thread(self._released, ws, root)
+        return released, await asyncio.to_thread(self._files.released_on_disk, root)
+
     def packs_root(self, ws: PackWorkspace) -> Path:
         base = Path(ws.folder or "") if ws.kind is WorkspaceKind.folder else self._dirs(ws.id).tree
         return base if ws.packs_path == "." else base / ws.packs_path

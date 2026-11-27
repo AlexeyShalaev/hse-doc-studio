@@ -4,5 +4,6 @@
   "checks": [],
   "available": true,
   "reason": null,
-  "web_url": null
+  "web_url": null,
+  "accepted_versions": []
 }

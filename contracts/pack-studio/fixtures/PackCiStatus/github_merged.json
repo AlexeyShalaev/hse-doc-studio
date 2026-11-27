@@ -12,5 +12,8 @@
   "available": true,
   "reason": null,
   "web_url": "https://github.com/AlexeyShalaev/hse-doc-studio/commit/1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b/checks",
-  "pr_state": "merged"
+  "pr_state": "merged",
+  "accepted_versions": [
+    "hse-cs-sse/templates/coursework/versions/2026.1.8"
+  ]
 }

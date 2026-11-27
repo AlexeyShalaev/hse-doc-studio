@@ -43,6 +43,8 @@ def test__texts__are_the_interface_strings(lang: str) -> None:
     for key, value in ours["issues"].items():
         assert value == check["issues"][key], key
     assert ours["next"] == changes["next"]
+    for key, value in ours["state"].items():
+        assert value == _locale(lang, "nav")["state"][key], key
     for key, value in ours["situation"].items():
         assert value == situation[key], key
 

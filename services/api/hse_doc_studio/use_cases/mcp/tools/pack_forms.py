@@ -348,6 +348,7 @@ class PackVersionNumberTool(PackTool):
         else:
             moved = await service.move_edits(actor, workspace_id, ref.pack, ref.template, ref.version, to)
         state = await service.state(actor, workspace_id, moved.ref.pack, moved.ref.template, moved.ref.version)
+        accepted = frozenset() if state.released else await self.accepted_dirs(actor, workspace_id)
         return layout_result(
             "json",
             "",
@@ -357,7 +358,7 @@ class PackVersionNumberTool(PackTool):
                 "unreleased": moved.unreleased,
                 "restored": moved.restored,
                 "edited": list(moved.edited),
-                "state": _state(state),
+                "state": _state(state, accepted),
             },
         )
 

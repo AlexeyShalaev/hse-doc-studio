@@ -7,6 +7,7 @@ import type {
 } from "@entities/pack-studio";
 import { pickLocalized } from "@shared/lib";
 import { useSpace } from "../context/SpaceContext";
+import { useAcceptedVersions } from "../context/useAcceptedVersions";
 import { useSpaceNav } from "../context/useSpaceNav";
 import { readLastVersion } from "./lastVisited";
 import {
@@ -40,6 +41,8 @@ export type VersionRow = {
   version: string;
   current: boolean;
   released: boolean;
+  /** Запрос с версией принят, а пространство ещё не обновляли. */
+  accepted: boolean;
   isDefault: boolean;
   /** Сколько моих изменённых файлов в версии. */
   files: number;
@@ -78,6 +81,7 @@ export const useWhere = (): Where => {
   // числа «N файлов изменено» берутся из того же источника, что у панели «Изменения».
   const changed = useChangedPaths();
   const mineChanged = useMyChangedPaths();
+  const accepted = useAcceptedVersions();
   const lang = i18n.language;
   const wsId = workspace.id;
 
@@ -123,6 +127,7 @@ export const useWhere = (): Where => {
         version: v.version,
         current: v.version === versionRef.version,
         released: v.released,
+        accepted: accepted.includes(v.path),
         isDefault: v.version === template?.default_version,
         files: changedFilesOf(counts, v),
       })),
@@ -146,5 +151,16 @@ export const useWhere = (): Where => {
         nav.go({ ref });
       },
     };
-  }, [changed, mineChanged, lang, nav, pack, template, tree, versionRef, wsId]);
+  }, [
+    accepted,
+    changed,
+    mineChanged,
+    lang,
+    nav,
+    pack,
+    template,
+    tree,
+    versionRef,
+    wsId,
+  ]);
 };
