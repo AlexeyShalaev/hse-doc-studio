@@ -6,13 +6,9 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
-## [0.45.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.45.0...v0.45.1) (2026-11-27)
+## [0.45.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.45.0...v0.45.1) - 2026-11-27
 
-
-### Bug Fixes
-
-* **pack-studio:** версия принятого запроса не называется черновиком до обновления пространства ([6fefd28](https://github.com/AlexeyShalaev/hse-doc-studio/commit/6fefd289625445825a452c2c51fece327c2bee6a))
-* **pack-studio:** версия принятого запроса не называется черновиком до обновления пространства ([0bbf463](https://github.com/AlexeyShalaev/hse-doc-studio/commit/0bbf463a8f295cddafd50ccfb8fed27e36e9d533))
+- Pack Studio: a version from an already merged request is no longer called a draft while the workspace still sits on the old branch. It now reads "accepted, refresh the workspace", in the interface and in MCP answers. Versions edited after the merge, requests closed without a merge and drafts without a release are not counted as accepted. The label is available for GitHub repositories only.
 
 ## [0.45.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.44.0...v0.45.0) - 2026-11-27
 

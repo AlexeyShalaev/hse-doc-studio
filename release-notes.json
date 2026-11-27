@@ -1,6 +1,16 @@
 {
   "releases": [
     {
+      "version": "0.45.1",
+      "date": "2026-11-27",
+      "notes": [
+        {
+          "ru": "Студия паков: версия из уже принятого запроса больше не называется черновиком, пока пространство стоит на старой ветке. Теперь написано «принята, обновите пространство», в интерфейсе и в ответах MCP. Версии, которые правили после слияния, запросы, закрытые без слияния, и черновики без выпуска принятыми не считаются. Отметка есть только для репозиториев на GitHub.",
+          "en": "Pack Studio: a version from an already merged request is no longer called a draft while the workspace still sits on the old branch. It now reads \"accepted, refresh the workspace\", in the interface and in MCP answers. Versions edited after the merge, requests closed without a merge and drafts without a release are not counted as accepted. The label is available for GitHub repositories only."
+        }
+      ]
+    },
+    {
       "version": "0.45.0",
       "date": "2026-11-27",
       "notes": [
