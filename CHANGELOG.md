@@ -6,6 +6,14 @@ Generated from `release-notes.json` via `make changelog` — do not edit by hand
 Release notes are hand-written and bilingual (RU/EN); the app shows them in the
 selected interface language.
 
+## [0.45.1](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.45.0...v0.45.1) (2026-11-27)
+
+
+### Bug Fixes
+
+* **pack-studio:** версия принятого запроса не называется черновиком до обновления пространства ([6fefd28](https://github.com/AlexeyShalaev/hse-doc-studio/commit/6fefd289625445825a452c2c51fece327c2bee6a))
+* **pack-studio:** версия принятого запроса не называется черновиком до обновления пространства ([0bbf463](https://github.com/AlexeyShalaev/hse-doc-studio/commit/0bbf463a8f295cddafd50ccfb8fed27e36e9d533))
+
 ## [0.45.0](https://github.com/AlexeyShalaev/hse-doc-studio/compare/v0.44.0...v0.45.0) - 2026-11-27
 
 - Packs: in the BSc Software Engineering course project (hse-cs-se 2026.3.0) the co-supervisor's line on the approval sheets now has a signature place: personal and shared statement of work and test program, explanatory note, source listing, programmer's and operator's manuals. The signing order is unchanged: only the authors sign in the course project. This is a new version line, existing projects do not move to it by themselves.
