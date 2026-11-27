@@ -13,7 +13,7 @@ from hse_doc_studio.core.repositories import (
     IProjectIndexRepository,
     IProjectRepository,
 )
-from hse_doc_studio.core.team import normalize_team_authors
+from hse_doc_studio.core.team import keep_stored_slugs, normalize_team_authors
 from hse_doc_studio.core.value_objects import Author, ChecksOverride, Person
 from hse_doc_studio.use_cases.projects.get_project import GetProjectInput, GetProjectUC
 
@@ -70,7 +70,9 @@ class UpdateProjectUC:
             # (новый автор из настроек приходит без него; слаг — ключ папки,
             # без него комплект нельзя довключить).
             if project.staffing == ProjectStaffing.team:
-                project.authors = normalize_team_authors(inp.authors)
+                # Слаг созданного проекта не выводится заново: клиент мог прислать автора без него.
+                kept = keep_stored_slugs(inp.authors, project.authors)
+                project.authors = normalize_team_authors(kept, project.lang.value)
             else:
                 project.authors = inp.authors
         if inp.supervisor is not _MISSING:

@@ -38,6 +38,7 @@ from hse_doc_studio.core.services import (
 )
 from hse_doc_studio.core.team import (
     doc_instance_id,
+    keep_stored_slugs,
     normalize_team_authors,
     project_bases,
     split_instance_id,
@@ -136,6 +137,61 @@ def test__translit_slug__surname() -> None:
     assert translit_slug("Щукин И.") == "schukin"
     assert translit_slug("Юрьев") == "yurev"
     assert translit_slug("") == ""
+
+
+@pytest.mark.parametrize(
+    ("full_name", "lang", "slug"),
+    [
+        # Русский проект: первое слово, как раньше.
+        ("Иванов Иван Иванович", "ru", "ivanov"),
+        ("Ivan Ivanov", "ru", "ivan"),
+        # Английский проект: фамилия по тому же правилу, что в имени файла.
+        ("Ivan Ivanov", "en", "ivanov"),
+        ("Maria S. Petrova", "en", "petrova"),
+        ("I. I. Ivanov", "en", "ivanov"),
+        ("Ivanov I.", "en", "ivanov"),
+        ("Ivanov, Ivan", "en", "ivanov"),
+        ("Ivanov", "en", "ivanov"),
+        ("Иванов Иван Иванович", "en", "ivanov"),
+        ("", "en", ""),
+    ],
+)
+def test__translit_slug__surname_in_the_language_of_the_project(full_name: str, lang: str, slug: str) -> None:
+    assert translit_slug(full_name, lang) == slug
+
+
+def test__normalize_team_authors__english_project__slugs_from_surnames() -> None:
+    authors = normalize_team_authors([Author(name="Ivan Ivanov"), Author(name="Petr I. Petrov")], "en")
+
+    assert [a.slug for a in authors] == ["ivanov", "petrov"]
+
+
+def test__normalize_team_authors__saved_slug_is_not_taken_by_a_new_author_listed_first() -> None:
+    authors = normalize_team_authors([Author(name="Anna Ivanova"), Author(name="Ivan Ivanova", slug="ivanova")], "en")
+
+    assert [a.slug for a in authors] == ["ivanova2", "ivanova"]
+
+
+def test__keep_stored_slugs__by_name_then_by_the_former_rule() -> None:
+    stored = [Author(name="Ivan Ivanov", slug="ivan"), Author(name="Petr Petrov", slug="petr")]
+    incoming = [
+        Author(name="Petr Petrov"),  # то же ФИО
+        Author(name="Ivan A. Ivanov"),  # переименован, прежнее правило даёт тот же слаг
+        Author(name="Ivan Sidorov"),  # новый: сохранённый слаг уже занят
+        Author(name=""),
+    ]
+
+    kept = keep_stored_slugs(incoming, stored)
+
+    assert [a.slug for a in kept] == ["petr", "ivan", None, None]
+
+
+def test__keep_stored_slugs__slug_sent_by_the_client_wins() -> None:
+    stored = [Author(name="Ivan Ivanov", slug="ivan")]
+
+    kept = keep_stored_slugs([Author(name="Ivan Ivanov", slug="vanya"), Author(name="Ivan Petrov")], stored)
+
+    assert [a.slug for a in kept] == ["vanya", "ivan"]
 
 
 def test__normalize_team_authors__derives_and_dedupes() -> None:

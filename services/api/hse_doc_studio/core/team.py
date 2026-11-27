@@ -11,6 +11,7 @@ doc-code, …), so pack sources with ``\\input{../common/...}`` work unchanged.
 from __future__ import annotations
 
 import re
+from collections.abc import Callable, Sequence
 from dataclasses import replace
 from typing import Any
 
@@ -21,6 +22,7 @@ from hse_doc_studio.core.pack_studio.outcome.predicates import (
     NDA_DOC_ID,
     manual_selected,
     nda_enabled,
+    owner_short_name,
 )
 from hse_doc_studio.core.value_objects import Author
 
@@ -86,23 +88,35 @@ def is_valid_slug(slug: str) -> bool:
     return bool(_SLUG_RE.match(slug))
 
 
-def translit_slug(name: str) -> str:
-    """Слаг из ФИО: транслит первого (фамильного) слова, «Шалаев А.Д.» → "shalaev".
+def translit_slug(name: str, lang: str = "ru") -> str:
+    """Слаг из ФИО: транслит фамилии, «Шалаев А.Д.» -> "shalaev", в проекте на en «Ivan Ivanov» -> "ivanov".
 
-    Возвращает "" для пустых/несловесных имён — вызывающий обязан проверить
+    Какое слово фамилия, решает то же правило, что у имени файла личного документа (`owner_short_name`), и оно же у
+    подсказки мастера в веб-клиенте. Возвращает "" для пустых/несловесных имён — вызывающий обязан проверить
     is_valid_slug и потребовать явный слаг.
     """
-    parts = name.strip().split()
-    surname = parts[0].lower() if parts else ""
+    surname = owner_short_name(name, "", lang).lower()
     out = "".join(_TRANSLIT.get(ch, ch if ch.isascii() and ch.isalnum() else "") for ch in surname)
     return out if is_valid_slug(out) else ""
 
 
-def normalize_team_authors(authors: list[Author]) -> list[Author]:
+def _free_slug(base: str, seen: set[str]) -> str:
+    """`base` или он же с числовым суффиксом, если занят; результат отмечается занятым."""
+    slug = base
+    counter = 2
+    while slug in seen:
+        slug = f"{base}{counter}"
+        counter += 1
+    seen.add(slug)
+    return slug
+
+
+def normalize_team_authors(authors: list[Author], lang: str = "ru") -> list[Author]:
     """Гарантирует авторам валидные уникальные слаги (для team-проекта).
 
-    Пустой/невалидный слаг выводится транслитом фамилии; коллизии и
-    зарезервированные имена разрешаются числовым суффиксом. Порядок сохранён.
+    Пустой/невалидный слаг выводится транслитом фамилии на языке проекта `lang`; коллизии и
+    зарезервированные имена разрешаются числовым суффиксом. Заданные слаги занимаются первыми: новый автор,
+    стоящий в списке раньше, не отнимает слаг (а с ним папку) у прежнего. Порядок сохранён.
 
     НЕ бросает: автор, для которого слаг вывести нельзя (пустое/несловесное
     имя), — это ЧЕРНОВИК из настроек (строку только что добавили и ещё не
@@ -112,19 +126,46 @@ def normalize_team_authors(authors: list[Author]) -> list[Author]:
     проекта (см. create_project), где черновиков быть не должно.
     """
     seen: set[str] = set(RESERVED_SLUGS)
+    given = {
+        index: _free_slug(author.slug, seen)
+        for index, author in enumerate(authors)
+        if author.slug and is_valid_slug(author.slug)
+    }
     result: list[Author] = []
-    for author in authors:
-        slug = author.slug if author.slug and is_valid_slug(author.slug) else translit_slug(author.name)
-        if not slug:
-            result.append(replace(author, slug=None, managed=False))
-            continue
-        base = slug
-        counter = 2
-        while slug in seen:
-            slug = f"{base}{counter}"
-            counter += 1
-        seen.add(slug)
+    for index, author in enumerate(authors):
+        slug = given.get(index)
+        if slug is None:
+            derived = translit_slug(author.name, lang)
+            if not derived:
+                result.append(replace(author, slug=None, managed=False))
+                continue
+            slug = _free_slug(derived, seen)
         result.append(replace(author, slug=slug))
+    return result
+
+
+def keep_stored_slugs(authors: Sequence[Author], stored: Sequence[Author]) -> list[Author]:
+    """Новому списку авторов проекта, присланному без части слагов, вернуть сохранённые.
+
+    Слаг это папка автора: у созданного проекта он не выводится заново. Автор без слага получает свободный
+    сохранённый: сначала по тому же ФИО, затем тот, что дало бы прежнее правило (первое слово ФИО), так что
+    переименование, при котором слаг раньше не менялся, и проект на en, где слагом стало имя, остаются как были.
+    """
+    result = list(authors)
+    claimed = {a.slug for a in result if a.slug}
+    free = [a for a in stored if a.slug and a.slug not in claimed]
+    matches: tuple[Callable[[Author, Author], bool], ...] = (
+        lambda new, old: new.name.strip() == old.name.strip(),
+        lambda new, old: translit_slug(new.name) == old.slug,
+    )
+    for same in matches:
+        for index, author in enumerate(result):
+            if author.slug or not author.name.strip():
+                continue
+            found = next((old for old in free if same(author, old)), None)
+            if found is not None:
+                free.remove(found)
+                result[index] = replace(author, slug=found.slug)
     return result
 
 

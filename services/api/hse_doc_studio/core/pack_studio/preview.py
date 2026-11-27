@@ -491,7 +491,7 @@ def _authors(example: ExampleData, staffing: str, lang: str, group: str, empty: 
             )
         )
     if count > 1:
-        return normalize_team_authors(authors)
+        return normalize_team_authors(authors, lang)
     return authors
 
 
