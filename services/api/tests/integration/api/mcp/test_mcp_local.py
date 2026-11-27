@@ -580,3 +580,18 @@ async def test__call_tool__set_project_people__team__new_author_comes_without_a_
         ("petrov", "Клиент", True),
         ("novikova", "Тесты", False),
     ]
+
+
+async def test__call_tool__write_file_if_match_without_quotes__works_and_still_protects(studio: Studio) -> None:
+    await _enable(studio)
+    args = {"project_id": studio.project_id, "path": "notes.tex"}
+
+    async with _client(studio) as client:
+        first = await client.call_tool("write_file", {**args, "content": "1"})
+        bare = json.loads(first.content[0].text)["etag"].strip('"')  # type: ignore[union-attr]
+        second = await client.call_tool("write_file", {**args, "content": "2", "if_match": bare})
+        stale = await client.call_tool("write_file", {**args, "content": "3", "if_match": bare})
+
+    assert second.is_error is False, second.content
+    assert stale.is_error is True
+    assert (studio.folder / "notes.tex").read_text(encoding="utf-8") == "2"

@@ -21,7 +21,7 @@ from hse_doc_studio.core.pack_studio.errors import PackStudioError, PackStudioEr
 from hse_doc_studio.core.pack_studio.outcome.atlas import decode_key
 from hse_doc_studio.core.pack_studio.outcome.model import ElementRef
 from hse_doc_studio.core.pack_studio.outcome.payload import to_json
-from hse_doc_studio.use_cases.mcp.tools._base import ArgumentError, int_arg, optional_text, text_arg, uuid_arg
+from hse_doc_studio.use_cases.mcp.tools._base import ArgumentError, etag_arg, int_arg, optional_text, text_arg, uuid_arg
 from hse_doc_studio.use_cases.mcp.tools.pack_outcome import (
     _SCENARIO,
     _STATE,
@@ -64,6 +64,30 @@ def template_arg(args: Mapping[str, object], key: str = "template") -> tuple[str
             localized_error(f"{key}: ожидается «<пак>/<шаблон>»", f"{key}: «<pack>/<template>» is expected")
         )
     return raw[0], raw[1]
+
+
+def _version_prop(purpose: str) -> dict[str, str]:
+    forms = "номер («2026.2.0») или «<пак>/<шаблон>/<версия>» того же шаблона"
+    return {"type": "string", "description": f"{purpose}: {forms}"}
+
+
+def _version_number(args: Mapping[str, object], pack: str, template: str) -> str | None:
+    """Номер версии из `version`: сам номер или полный вид «<пак>/<шаблон>/<версия>» (путь внутри каталога версии),
+    как ждут остальные тулы; версия другого шаблона это ошибка аргумента."""
+    raw = (optional_text(args, "version") or "").strip("/")
+    if not raw:
+        return None
+    if "/" not in raw:
+        return raw
+    ref = version_arg(args)
+    if (ref.pack, ref.template) != (pack, template):
+        raise ArgumentError(
+            localized_error(
+                f"version: это версия шаблона {ref.pack}/{ref.template}, а template это {pack}/{template}",
+                f"version: this is a version of {ref.pack}/{ref.template}, but template is {pack}/{template}",
+            )
+        )
+    return ref.version
 
 
 def _cell(cell: Mapping[str, Any]) -> str:
@@ -147,7 +171,9 @@ class PackScenarioWriteTool(PackTool):
             "pack_scenario_list) сценарий правится: названные поля заменяются, остальные остаются. Поля: name "
             "(строка или {ru, en}), description, example, inputs {id: значение}, versions, assertions (kind: "
             "document_state, document_count, meta_visible, participant_present, item_active, route_steps, "
-            "route_pair), snapshot (не нужен: см. record_snapshot). record_snapshot: work_tree, head или base: "
+            "route_pair (point, doc, slot, persona, present; optional true или false проверяет необязательность "
+            "подписи, только при present true)), snapshot (не нужен: см. record_snapshot). record_snapshot: "
+            "work_tree, head или base: "
             "«принять снимок»: текущий результат сценария пишется в snapshot, и прогон сверяет с ним. Не требует "
             "права на выпущенные версии: сценарии лежат вне каталога версии. Результаты считает "
             "pack_scenario_run."
@@ -164,7 +190,7 @@ class PackScenarioWriteTool(PackTool):
                 "versions": {"type": "array", "items": {"type": "string"}},
                 "assertions": {"type": "array", "items": {"type": "object"}},
                 "record_snapshot": {"type": "string", "enum": ["work_tree", "head", "base"]},
-                "version": {"type": "string", "description": "Версия для снимка, если сценарий не привязан к одной"},
+                "version": _version_prop("Версия для снимка, если сценарий не привязан к одной"),
                 "if_match": {"type": "string", "description": "Etag файла сценария: правка существующего"},
                 "format": FORMAT_PROP,
             },
@@ -177,7 +203,7 @@ class PackScenarioWriteTool(PackTool):
         pack, template = template_arg(args)
         workspace_id = uuid_arg(args, "workspace_id")
         scenario_id = text_arg(args, "id")
-        if_match = optional_text(args, "if_match")
+        if_match = etag_arg(args)
         service = await self._deps.get(PackScenarioService)
         body: dict[str, Any] = {
             "format": 1,
@@ -215,7 +241,7 @@ class PackScenarioWriteTool(PackTool):
             body,
             if_match=if_match,
             record_snapshot=_state_arg({"state": snap}) if snap else None,
-            version=optional_text(args, "version"),
+            version=_version_number(args, pack, template),
         )
         data = _entry_json(entry)
         lang = current_interface_language().value
@@ -254,7 +280,7 @@ class PackScenarioDeleteTool(PackTool):
         found = next((e for e in listing.entries if e.id == scenario_id), None)
         if found is None:
             raise PackStudioError(PackStudioErrorCode.scenario_not_found, scenario=scenario_id)
-        await service.delete(actor, workspace_id, pack, template, scenario_id, if_match=optional_text(args, "if_match"))
+        await service.delete(actor, workspace_id, pack, template, scenario_id, if_match=etag_arg(args))
         data = {
             "deleted": True,
             **_entry_json(found),
@@ -308,7 +334,7 @@ class PackScenarioRunTool(PackTool):
                 "template": _TEMPLATE,
                 "scenarios": {"type": "array", "items": {"type": "string"}, "description": "Id сценариев; все"},
                 "state": _STATE,
-                "version": {"type": "string", "description": "Версия (по умолчанию новейшая)"},
+                "version": _version_prop("Версия, по умолчанию новейшая"),
                 "format": FORMAT_PROP,
             },
             ("workspace_id", "template"),
@@ -330,7 +356,7 @@ class PackScenarioRunTool(PackTool):
                 template,
                 state=_state_arg(args),
                 scenarios=list(raw) if isinstance(raw, list) else None,
-                version=optional_text(args, "version"),
+                version=_version_number(args, pack, template),
             )
         except PackStudioError as exc:
             return refusal(exc, hint=outcome_hint(exc))
