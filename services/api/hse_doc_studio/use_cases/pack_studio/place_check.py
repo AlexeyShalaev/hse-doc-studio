@@ -82,11 +82,13 @@ class _SlotFrame:
     dates: tuple[SignatureDefaultDate | None, ...]
 
 
-def _authors(slot: SlotPlaces, frame: DocFrame, anchors: BuildAnchors | None) -> list[_SlotFrame]:
+def _authors(
+    slot: SlotPlaces, frame: DocFrame, anchors: BuildAnchors | None, names: Mapping[str, str] | None = None
+) -> list[_SlotFrame]:
     """Рамки слота на документе сборки. Слот `per_author` на сборке, где шаблон ставит строку на каждого автора
     (`author__<слаг>`, signing-route.md, 15.17.20), даёт рамку каждому автору: слот `author--<слаг>`, якорь
     `author__<слаг>`, как место из пака встанет в командном проекте. Иначе одна рамка слота, как её посчитала модель
-    мест."""
+    мест. Подпись рамки автора несёт его имя из `names` (слаг -> имя, его помнит сборка), без имени слаг."""
     label = _pick(slot.label)
     entry = frame.entry
     keys = anchors.author_keys(entry.anchor) if anchors is not None and isinstance(entry, AnchorPlace) else ()
@@ -108,7 +110,7 @@ def _authors(slot: SlotPlaces, frame: DocFrame, anchors: BuildAnchors | None) ->
         result.append(
             _SlotFrame(
                 slot=f"{slot.id}{OWNER_SEPARATOR}{key}",
-                label=f"{label} — {key}",
+                label=f"{label} — {(names or {}).get(key) or key}",
                 box=box,
                 anchor=author_anchor_id(entry.anchor, key),
                 anchor_state=AnchorState.found if src.line(entry.anchor) is not None else AnchorState.missing,
@@ -139,6 +141,7 @@ class PackPlaceCheckService:
             actor, workspace_id, build_id, version_ref(pack, template, version)
         )
         data = await self._pdf(actor, workspace_id, build_id)
+        names = {author.slug: author.name for author in build.authors}
         places: list[Place] = []
         missing: list[tuple[str, str]] = []
         absent: list[tuple[str, str, str]] = []
@@ -146,7 +149,7 @@ class PackPlaceCheckService:
             frame = slot.document
             if frame is None:
                 continue
-            for author in _authors(slot, frame, anchors):
+            for author in _authors(slot, frame, anchors, names):
                 if author.box is None:
                     if author.anchor_state is AnchorState.missing and author.anchor is not None:
                         absent.append((author.slot, author.label, author.anchor))
